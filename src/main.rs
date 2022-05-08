@@ -2,6 +2,7 @@ extern crate dotenv;
 extern crate tracing;
 
 mod entities;
+pub mod entity_relay_connection;
 use async_graphql::dataloader::DataLoader;
 pub use entities::*;
 pub mod api;
@@ -22,6 +23,10 @@ use tracing::log::*;
 use tracing_subscriber::EnvFilter;
 use warp::http::Response as HttpResponse;
 use warp::Filter;
+
+#[cfg(feature = "dhat-heap")]
+#[global_allocator]
+static ALLOC: dhat::Alloc = dhat::Alloc;
 
 pub struct SchemaData {
   pub db: Arc<DatabaseConnection>,
@@ -97,12 +102,16 @@ async fn serve(db: DatabaseConnection) -> Result<()> {
 
   let routes = hi.or(graphql_playground).or(graphql_post).with(log);
 
-  warp::serve(routes)
-    .run(SocketAddr::new(
-      IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-      5901,
-    ))
-    .await;
+  let (_addr, fut) = warp::serve(routes).bind_with_graceful_shutdown(
+    SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 5901),
+    async move {
+      tokio::signal::ctrl_c()
+        .await
+        .expect("failed to listen to shutdown signal");
+    },
+  );
+
+  fut.await;
 
   Ok(())
 }
@@ -122,6 +131,9 @@ async fn run() -> Result<()> {
 }
 
 fn main() -> Result<()> {
+  #[cfg(feature = "dhat-heap")]
+  let _profiler = dhat::Profiler::new_heap();
+
   dotenv().ok();
 
   let mut builder = tokio::runtime::Builder::new_multi_thread();
@@ -136,6 +148,7 @@ fn main() -> Result<()> {
   }
 
   let rt = builder.build().unwrap();
+  rt.block_on(run())?;
 
-  rt.block_on(run())
+  Ok(())
 }

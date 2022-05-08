@@ -3,14 +3,25 @@ edition = "2021"
 name = "intercode_rust"
 version = "0.1.0"
 
+[profile.release]
+debug = 1
+
+[features]
+dhat-ad-hoc = [] # if you are doing ad hoc profiling
+dhat-heap = [] # if you are doing heap profiling
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 async-graphql = {version = "~3.0.38", features = ["tracing", "dataloader"]}
 async-graphql-warp = "~3.0.38"
+ctrlc = "3.2.2"
+dhat = "0.3.0"
 dotenv = "0.15.0"
+quote = "1.0.18"
 sea-orm = {version = "^0", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros"]}
-tokio = {version = "~1.18.0", features = ["rt-multi-thread", "macros"]}
+syn = "1.0.92"
+tokio = {version = "~1.18.0", features = ["rt-multi-thread", "macros", "signal"]}
 tracing = "0.1.34"
 tracing-subscriber = {version = "0.3", features = ["env-filter"]}
 warp = "~0.3.2"
