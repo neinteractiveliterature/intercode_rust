@@ -2,7 +2,8 @@ use super::objects::EventType;
 use crate::api::objects::ModelBackedType;
 use crate::entities::events;
 use crate::entity_relay_connection::RelayConnectable;
-use crate::SchemaData;
+use crate::liquid_filters::build_liquid_parser;
+use crate::{QueryData, SchemaData};
 use async_graphql::connection::{query, Connection};
 use async_graphql::*;
 use sea_orm::EntityTrait;
@@ -11,9 +12,23 @@ pub struct QueryRoot;
 
 #[Object]
 impl QueryRoot {
-  /// Returns the sum of a and b
-  async fn add(&self, a: i32, b: i32) -> i32 {
-    a + b
+  async fn preview_liquid(&self, ctx: &Context<'_>, content: String) -> Result<String, Error> {
+    let schema_data = &ctx.data::<SchemaData>()?;
+    let query_data = &ctx.data::<QueryData>()?;
+    let parser = build_liquid_parser(schema_data, query_data)?;
+    let template = parser.parse(content.as_str())?;
+
+    let globals = liquid::object!({
+      "num": 4f64,
+      "timespan": liquid::object!({})
+    });
+
+    let result = template.render(&globals);
+
+    match result {
+      Ok(content) => Ok(content),
+      Err(error) => Err(async_graphql::Error::new(error.to_string())),
+    }
   }
 
   async fn events(

@@ -19,6 +19,7 @@ where
   ) -> Self::EntityIdLoaderType;
 }
 
+#[derive(Debug)]
 pub struct EntityIdLoader<E: EntityTrait<PrimaryKey = PK>, PK: PrimaryKeyTrait> {
   pub db: Arc<sea_orm::DatabaseConnection>,
   pub primary_key: PK,

@@ -1,3 +1,5 @@
+extern crate chrono;
+extern crate chrono_tz;
 extern crate dotenv;
 extern crate tracing;
 
@@ -6,13 +8,19 @@ pub mod entity_relay_connection;
 use async_graphql::dataloader::DataLoader;
 pub use entities::*;
 pub mod api;
+pub mod inflections;
+pub mod liquid_filters;
 pub mod loaders;
+pub mod timespan;
 
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql::*;
 use async_graphql_warp::GraphQLResponse;
 use dotenv::dotenv;
+use i18n_embed::fluent::{fluent_language_loader, FluentLanguageLoader};
+use i18n_embed::LanguageLoader;
 use loaders::EntityIdLoader;
+use rust_embed::RustEmbed;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};
 use std::convert::Infallible;
 use std::env;
@@ -28,10 +36,42 @@ use warp::Filter;
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;
 
+#[derive(RustEmbed)]
+#[folder = "i18n"] // path to the compiled localization resources
+pub struct Localizations;
+
 pub struct SchemaData {
   pub db: Arc<DatabaseConnection>,
   pub convention_id_loader:
     DataLoader<EntityIdLoader<conventions::Entity, conventions::PrimaryKey>>,
+  pub language_loader: Arc<FluentLanguageLoader>,
+}
+
+impl std::fmt::Debug for SchemaData {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("SchemaData")
+      .field("db", &self.db)
+      .field(
+        "convention_id_loader.loader()",
+        &self.convention_id_loader.loader(),
+      )
+      .finish()
+  }
+}
+
+#[derive(Debug)]
+pub struct QueryData {
+  pub current_user: Option<users::Model>,
+  pub convention: Option<conventions::Model>,
+}
+
+impl Default for QueryData {
+  fn default() -> Self {
+    Self {
+      current_user: None,
+      convention: None,
+    }
+  }
 }
 
 async fn connect_database() -> Result<DatabaseConnection, DbErr> {
@@ -66,6 +106,9 @@ async fn serve(db: DatabaseConnection) -> Result<()> {
   let log = warp::log("intercode_rust::http");
 
   let convention_id_loader = conventions::Entity.to_entity_id_loader(Arc::clone(&db_arc));
+  let language_loader = fluent_language_loader!();
+  language_loader.load_languages(&Localizations, &[language_loader.fallback_language()])?;
+  let language_loader_arc = Arc::new(language_loader);
 
   let graphql_schema =
     async_graphql::Schema::build(api::QueryRoot, EmptyMutation, EmptySubscription)
@@ -73,23 +116,39 @@ async fn serve(db: DatabaseConnection) -> Result<()> {
       .data(SchemaData {
         db: Arc::clone(&db_arc),
         convention_id_loader: DataLoader::new(convention_id_loader, tokio::spawn),
+        language_loader: language_loader_arc,
       })
       .finish();
-
-  let hi = warp::path("hello")
-    .and(warp::path::param())
-    .and(warp::get())
-    .and(warp::header("user-agent"))
-    .map(|param: String, agent: String| format!("Hello {}, whose agent is {}", param, agent));
 
   let graphql_post = warp::path("graphql")
     .and(warp::post())
     .and(async_graphql_warp::graphql(graphql_schema))
     .and_then(
-      |(schema, request): (
+      move |(schema, request): (
         Schema<api::QueryRoot, EmptyMutation, EmptySubscription>,
         async_graphql::Request,
-      )| async move { Ok::<_, Infallible>(GraphQLResponse::from(schema.execute(request).await)) },
+      )| {
+        let db = Arc::clone(&db_arc);
+
+        async move {
+          use sea_orm::EntityTrait;
+
+          let convention = entities::conventions::Entity::find()
+            .one(db.as_ref())
+            .await
+            .unwrap_or_else(|error| {
+              warn!("Error while querying for convention: {}", error);
+              None
+            });
+
+          let request = request.data(QueryData {
+            convention,
+            current_user: None,
+          });
+
+          Ok::<_, Infallible>(GraphQLResponse::from(schema.execute(request).await))
+        }
+      },
     );
 
   let graphql_playground = warp::path::end().and(warp::get()).map(|| {
@@ -100,7 +159,7 @@ async fn serve(db: DatabaseConnection) -> Result<()> {
       ))
   });
 
-  let routes = hi.or(graphql_playground).or(graphql_post).with(log);
+  let routes = graphql_playground.or(graphql_post).with(log);
 
   let (_addr, fut) = warp::serve(routes).bind_with_graceful_shutdown(
     SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 5901),
