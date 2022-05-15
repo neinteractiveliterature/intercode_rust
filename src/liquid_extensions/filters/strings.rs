@@ -12,8 +12,8 @@ use regex::Regex;
 
 use crate::inflections::IntercodeInflector;
 
-use super::invalid_argument;
-use super::invalid_input;
+use crate::liquid_extensions::invalid_argument;
+use crate::liquid_extensions::invalid_input;
 
 #[derive(Debug, FilterParameters)]
 struct PluralizeArgs {

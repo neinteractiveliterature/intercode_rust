@@ -2,7 +2,7 @@ use liquid_core::{
   Display_filter, Filter, FilterReflection, ParseFilter, Result, Runtime, Value, ValueView,
 };
 
-use super::invalid_input;
+use crate::liquid_extensions::invalid_input;
 
 #[derive(Clone, ParseFilter, FilterReflection)]
 #[filter(

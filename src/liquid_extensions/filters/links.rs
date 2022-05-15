@@ -1,4 +1,4 @@
-use super::invalid_input;
+use crate::liquid_extensions::invalid_input;
 use crate::{conventions, QueryData};
 use liquid_core::{
   Display_filter, Filter, FilterReflection, ParseFilter, Result, Runtime, Value, ValueView,

@@ -9,7 +9,7 @@ use async_graphql::dataloader::DataLoader;
 pub use entities::*;
 pub mod api;
 pub mod inflections;
-pub mod liquid_filters;
+pub mod liquid_extensions;
 pub mod loaders;
 pub mod timespan;
 

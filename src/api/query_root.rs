@@ -2,7 +2,7 @@ use super::objects::EventType;
 use crate::api::objects::ModelBackedType;
 use crate::entities::events;
 use crate::entity_relay_connection::RelayConnectable;
-use crate::liquid_filters::build_liquid_parser;
+use crate::liquid_extensions::build_liquid_parser;
 use crate::{QueryData, SchemaData};
 use async_graphql::connection::{query, Connection};
 use async_graphql::*;

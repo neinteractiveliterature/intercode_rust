@@ -1,15 +1,7 @@
-mod datetime;
-mod digest;
-mod links;
-mod strings;
-
-pub use datetime::*;
-pub use digest::*;
-pub use links::*;
-use liquid::{Error, Parser, ParserBuilder};
-pub use strings::*;
+pub mod filters;
 
 use crate::{QueryData, SchemaData};
+use liquid::{Error, Parser, ParserBuilder};
 
 fn invalid_input<S>(cause: S) -> Error
 where
@@ -32,21 +24,21 @@ pub fn build_liquid_parser(
   query_data: &QueryData,
 ) -> Result<Parser, liquid_core::Error> {
   ParserBuilder::with_stdlib()
-    .filter(Pluralize)
-    .filter(EmailLink)
-    .filter(ToSentence)
-    .filter(Humanize)
-    .filter(Singularize)
-    .filter(Titleize)
-    .filter(AbsoluteUrl {
+    .filter(filters::Pluralize)
+    .filter(filters::EmailLink)
+    .filter(filters::ToSentence)
+    .filter(filters::Humanize)
+    .filter(filters::Singularize)
+    .filter(filters::Titleize)
+    .filter(filters::AbsoluteUrl {
       convention: query_data.convention.clone(),
     })
-    .filter(CondenseWhitespace)
-    .filter(MD5)
-    .filter(DateWithLocalTime {
+    .filter(filters::CondenseWhitespace)
+    .filter(filters::MD5)
+    .filter(filters::DateWithLocalTime {
       convention: query_data.convention.clone(),
     })
-    .filter(TimespanWithLocalTime {
+    .filter(filters::TimespanWithLocalTime {
       convention: query_data.convention.clone(),
       language_loader: schema_data.language_loader.clone(),
     })
