@@ -1,4 +1,5 @@
 pub mod filters;
+pub mod tags;
 
 use crate::{QueryData, SchemaData};
 use liquid::{Error, Parser, ParserBuilder};
@@ -42,5 +43,6 @@ pub fn build_liquid_parser(
       convention: query_data.convention.clone(),
       language_loader: schema_data.language_loader.clone(),
     })
+    .tag(tags::AddToCalendarDropdownTag)
     .build()
 }

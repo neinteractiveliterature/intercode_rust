@@ -21,6 +21,7 @@ chrono-tz = "0.6"
 ctrlc = "3.2.2"
 dhat = "0.3.0"
 dotenv = "0.15.0"
+html-escape = "0.2.11"
 i18n-embed = {version = "0.13", features = ["fluent-system"]}
 i18n-embed-fl = "0.6"
 liquid = "0.26.0"
