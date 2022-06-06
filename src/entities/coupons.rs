@@ -16,8 +16,8 @@ pub struct Model {
   pub percent_discount: Option<Decimal>,
   pub usage_limit: Option<i32>,
   pub expires_at: Option<DateTime>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

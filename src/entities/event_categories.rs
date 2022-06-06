@@ -23,8 +23,8 @@ pub struct Model {
   pub can_provide_tickets: bool,
   pub event_form_id: i64,
   pub event_proposal_form_id: Option<i64>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
   pub department_id: Option<i64>,
   #[sea_orm(column_type = "Text", nullable)]
   pub proposal_description: Option<String>,
@@ -64,10 +64,10 @@ pub enum Relation {
     on_delete = "NoAction"
   )]
   Departments,
-  #[sea_orm(has_many = "super::event_proposals::Entity")]
-  EventProposals,
   #[sea_orm(has_many = "super::events::Entity")]
   Events,
+  #[sea_orm(has_many = "super::event_proposals::Entity")]
+  EventProposals,
   #[sea_orm(has_many = "super::permissions::Entity")]
   Permissions,
 }
@@ -84,15 +84,15 @@ impl Related<super::departments::Entity> for Entity {
   }
 }
 
-impl Related<super::event_proposals::Entity> for Entity {
-  fn to() -> RelationDef {
-    Relation::EventProposals.def()
-  }
-}
-
 impl Related<super::events::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::Events.def()
+  }
+}
+
+impl Related<super::event_proposals::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::EventProposals.def()
   }
 }
 

@@ -11,20 +11,31 @@ pub struct Model {
   pub name: String,
   #[sea_orm(column_type = "Text", nullable)]
   pub content: Option<String>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
   pub parent_type: Option<String>,
   #[sea_orm(column_type = "Text", nullable)]
   pub admin_notes: Option<String>,
   pub invariant: bool,
 }
 
-#[derive(Copy, Clone, Debug, EnumIter)]
-pub enum Relation {}
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+pub enum Relation {
+  #[sea_orm(has_many = "super::cms_partials_pages::Entity")]
+  CmsPartialsPages,
+  #[sea_orm(has_many = "super::cms_layouts_partials::Entity")]
+  CmsLayoutsPartials,
+}
 
-impl RelationTrait for Relation {
-  fn def(&self) -> RelationDef {
-    panic!("No RelationDef")
+impl Related<super::cms_partials_pages::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::CmsPartialsPages.def()
+  }
+}
+
+impl Related<super::cms_layouts_partials::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::CmsLayoutsPartials.def()
   }
 }
 

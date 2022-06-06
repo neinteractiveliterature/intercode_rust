@@ -62,14 +62,16 @@ pub enum Relation {
   FormResponseChanges,
   #[sea_orm(has_many = "super::event_proposals::Entity")]
   EventProposals,
-  #[sea_orm(has_many = "super::orders::Entity")]
-  Orders,
   #[sea_orm(has_many = "super::notification_destinations::Entity")]
   NotificationDestinations,
-  #[sea_orm(has_many = "super::signup_changes::Entity")]
-  SignupChanges,
+  #[sea_orm(has_many = "super::orders::Entity")]
+  Orders,
   #[sea_orm(has_many = "super::signup_requests::Entity")]
   SignupRequests,
+  #[sea_orm(has_many = "super::signup_changes::Entity")]
+  SignupChanges,
+  #[sea_orm(has_many = "super::staff_positions_user_con_profiles::Entity")]
+  StaffPositionsUserConProfiles,
   #[sea_orm(has_many = "super::signups::Entity")]
   Signups,
   #[sea_orm(has_many = "super::team_members::Entity")]
@@ -102,15 +104,21 @@ impl Related<super::event_proposals::Entity> for Entity {
   }
 }
 
+impl Related<super::notification_destinations::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::NotificationDestinations.def()
+  }
+}
+
 impl Related<super::orders::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::Orders.def()
   }
 }
 
-impl Related<super::notification_destinations::Entity> for Entity {
+impl Related<super::signup_requests::Entity> for Entity {
   fn to() -> RelationDef {
-    Relation::NotificationDestinations.def()
+    Relation::SignupRequests.def()
   }
 }
 
@@ -120,9 +128,9 @@ impl Related<super::signup_changes::Entity> for Entity {
   }
 }
 
-impl Related<super::signup_requests::Entity> for Entity {
+impl Related<super::staff_positions_user_con_profiles::Entity> for Entity {
   fn to() -> RelationDef {
-    Relation::SignupRequests.def()
+    Relation::StaffPositionsUserConProfiles.def()
   }
 }
 

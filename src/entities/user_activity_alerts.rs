@@ -15,8 +15,8 @@ pub struct Model {
   pub email: Option<String>,
   pub trigger_on_user_con_profile_create: bool,
   pub trigger_on_ticket_create: bool,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

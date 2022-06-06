@@ -10,8 +10,8 @@ pub struct Model {
   pub parent_id: Option<i64>,
   pub key: String,
   pub value: Option<Json>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
   pub parent_type: Option<String>,
 }
 

@@ -12,8 +12,8 @@ pub struct Model {
   pub name: String,
   #[sea_orm(column_type = "Text", nullable)]
   pub description: Option<String>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
   pub counts_towards_convention_maximum: bool,
   pub maximum_event_provided_tickets: i32,
   pub allows_event_signups: bool,

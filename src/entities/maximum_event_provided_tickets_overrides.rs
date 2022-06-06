@@ -10,8 +10,8 @@ pub struct Model {
   pub event_id: Option<i64>,
   pub ticket_type_id: Option<i64>,
   pub override_value: Option<i32>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

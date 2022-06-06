@@ -13,8 +13,8 @@ pub struct Model {
   #[sea_orm(column_type = "Text", nullable)]
   pub description: Option<String>,
   pub image: Option<String>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
   pub position: Option<i32>,
   pub override_pricing_structure: Option<Json>,
 }

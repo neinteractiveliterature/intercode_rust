@@ -15,7 +15,7 @@ pub struct Model {
   pub service_name: String,
   pub byte_size: i64,
   pub checksum: Option<String>,
-  pub created_at: DateTimeUtc,
+  pub created_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

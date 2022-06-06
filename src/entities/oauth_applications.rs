@@ -14,8 +14,8 @@ pub struct Model {
   pub redirect_uri: String,
   pub scopes: String,
   pub confidential: bool,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

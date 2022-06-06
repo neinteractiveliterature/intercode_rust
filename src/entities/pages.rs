@@ -34,10 +34,14 @@ pub enum Relation {
     on_delete = "NoAction"
   )]
   CmsLayouts,
+  #[sea_orm(has_many = "super::cms_partials_pages::Entity")]
+  CmsPartialsPages,
   #[sea_orm(has_many = "super::cms_navigation_items::Entity")]
   CmsNavigationItems,
   #[sea_orm(has_many = "super::conventions::Entity")]
   Conventions,
+  #[sea_orm(has_many = "super::cms_files_pages::Entity")]
+  CmsFilesPages,
   #[sea_orm(has_many = "super::root_sites::Entity")]
   RootSites,
 }
@@ -45,6 +49,12 @@ pub enum Relation {
 impl Related<super::cms_layouts::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::CmsLayouts.def()
+  }
+}
+
+impl Related<super::cms_partials_pages::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::CmsPartialsPages.def()
   }
 }
 
@@ -57,6 +67,12 @@ impl Related<super::cms_navigation_items::Entity> for Entity {
 impl Related<super::conventions::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::Conventions.def()
+  }
+}
+
+impl Related<super::cms_files_pages::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::CmsFilesPages.def()
   }
 }
 

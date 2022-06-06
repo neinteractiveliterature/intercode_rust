@@ -13,7 +13,7 @@ pub struct Model {
   pub refresh_token: Option<String>,
   pub expires_in: Option<i32>,
   pub revoked_at: Option<DateTime>,
-  pub created_at: DateTimeUtc,
+  pub created_at: DateTime,
   pub scopes: Option<String>,
   pub previous_refresh_token: String,
 }

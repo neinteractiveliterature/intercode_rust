@@ -107,20 +107,20 @@ pub enum Relation {
   Departments,
   #[sea_orm(has_many = "super::event_categories::Entity")]
   EventCategories,
+  #[sea_orm(has_many = "super::events::Entity")]
+  Events,
   #[sea_orm(has_many = "super::event_proposals::Entity")]
   EventProposals,
   #[sea_orm(has_many = "super::notification_templates::Entity")]
   NotificationTemplates,
-  #[sea_orm(has_many = "super::events::Entity")]
-  Events,
-  #[sea_orm(has_many = "super::user_activity_alerts::Entity")]
-  UserActivityAlerts,
-  #[sea_orm(has_many = "super::permissions::Entity")]
-  Permissions,
-  #[sea_orm(has_many = "super::products::Entity")]
-  Products,
   #[sea_orm(has_many = "super::rooms::Entity")]
   Rooms,
+  #[sea_orm(has_many = "super::user_activity_alerts::Entity")]
+  UserActivityAlerts,
+  #[sea_orm(has_many = "super::products::Entity")]
+  Products,
+  #[sea_orm(has_many = "super::permissions::Entity")]
+  Permissions,
   #[sea_orm(has_many = "super::ticket_types::Entity")]
   TicketTypes,
   #[sea_orm(has_many = "super::user_con_profiles::Entity")]
@@ -181,6 +181,12 @@ impl Related<super::event_categories::Entity> for Entity {
   }
 }
 
+impl Related<super::events::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::Events.def()
+  }
+}
+
 impl Related<super::event_proposals::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::EventProposals.def()
@@ -193,9 +199,9 @@ impl Related<super::notification_templates::Entity> for Entity {
   }
 }
 
-impl Related<super::events::Entity> for Entity {
+impl Related<super::rooms::Entity> for Entity {
   fn to() -> RelationDef {
-    Relation::Events.def()
+    Relation::Rooms.def()
   }
 }
 
@@ -205,21 +211,15 @@ impl Related<super::user_activity_alerts::Entity> for Entity {
   }
 }
 
-impl Related<super::permissions::Entity> for Entity {
-  fn to() -> RelationDef {
-    Relation::Permissions.def()
-  }
-}
-
 impl Related<super::products::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::Products.def()
   }
 }
 
-impl Related<super::rooms::Entity> for Entity {
+impl Related<super::permissions::Entity> for Entity {
   fn to() -> RelationDef {
-    Relation::Rooms.def()
+    Relation::Permissions.def()
   }
 }
 

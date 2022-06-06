@@ -9,23 +9,23 @@ pub struct Model {
   pub id: i32,
   pub user_con_profile_id: Option<i64>,
   pub ticket_type_id: Option<i64>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
   pub provided_by_event_id: Option<i64>,
   pub order_entry_id: Option<i64>,
-  pub run_id: Option<i64>,
+  pub event_id: Option<i64>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
   #[sea_orm(
-    belongs_to = "super::runs::Entity",
-    from = "Column::RunId",
-    to = "super::runs::Column::Id",
+    belongs_to = "super::events::Entity",
+    from = "Column::EventId",
+    to = "super::events::Column::Id",
     on_update = "NoAction",
     on_delete = "NoAction"
   )]
-  Runs,
+  Events2,
   #[sea_orm(
     belongs_to = "super::ticket_types::Entity",
     from = "Column::TicketTypeId",
@@ -41,7 +41,7 @@ pub enum Relation {
     on_update = "NoAction",
     on_delete = "NoAction"
   )]
-  Events,
+  Events1,
   #[sea_orm(
     belongs_to = "super::order_entries::Entity",
     from = "Column::OrderEntryId",
@@ -60,21 +60,9 @@ pub enum Relation {
   UserConProfiles,
 }
 
-impl Related<super::runs::Entity> for Entity {
-  fn to() -> RelationDef {
-    Relation::Runs.def()
-  }
-}
-
 impl Related<super::ticket_types::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::TicketTypes.def()
-  }
-}
-
-impl Related<super::events::Entity> for Entity {
-  fn to() -> RelationDef {
-    Relation::Events.def()
   }
 }
 

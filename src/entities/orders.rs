@@ -14,8 +14,8 @@ pub struct Model {
   pub payment_amount_currency: Option<String>,
   #[sea_orm(column_type = "Text", nullable)]
   pub payment_note: Option<String>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
   pub submitted_at: Option<DateTime>,
   pub paid_at: Option<DateTime>,
 }

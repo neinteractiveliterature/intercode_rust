@@ -23,8 +23,8 @@ pub struct Model {
   pub registration_policy: Option<Json>,
   pub can_play_concurrently: Option<bool>,
   pub additional_info: Option<Json>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
   pub timeblock_preferences: Option<Json>,
   pub submitted_at: Option<DateTime>,
   #[sea_orm(column_type = "Text", nullable)]

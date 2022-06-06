@@ -10,8 +10,8 @@ pub struct Model {
   pub organization_id: Option<i64>,
   #[sea_orm(column_type = "Text", nullable)]
   pub name: Option<String>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -24,6 +24,8 @@ pub enum Relation {
     on_delete = "NoAction"
   )]
   Organizations,
+  #[sea_orm(has_many = "super::organization_roles_users::Entity")]
+  OrganizationRolesUsers,
   #[sea_orm(has_many = "super::permissions::Entity")]
   Permissions,
 }
@@ -31,6 +33,12 @@ pub enum Relation {
 impl Related<super::organizations::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::Organizations.def()
+  }
+}
+
+impl Related<super::organization_roles_users::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::OrganizationRolesUsers.def()
   }
 }
 

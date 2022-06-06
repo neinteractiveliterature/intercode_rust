@@ -12,8 +12,8 @@ pub struct Model {
   pub name: Option<String>,
   #[sea_orm(column_type = "Text", nullable)]
   pub email: Option<String>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
   pub visible: Option<bool>,
   #[sea_orm(column_type = "Custom(\"array\".to_owned())")]
   pub cc_addresses: String,
@@ -33,6 +33,8 @@ pub enum Relation {
   Conventions,
   #[sea_orm(has_many = "super::notification_destinations::Entity")]
   NotificationDestinations,
+  #[sea_orm(has_many = "super::staff_positions_user_con_profiles::Entity")]
+  StaffPositionsUserConProfiles,
   #[sea_orm(has_many = "super::permissions::Entity")]
   Permissions,
 }
@@ -46,6 +48,12 @@ impl Related<super::conventions::Entity> for Entity {
 impl Related<super::notification_destinations::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::NotificationDestinations.def()
+  }
+}
+
+impl Related<super::staff_positions_user_con_profiles::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::StaffPositionsUserConProfiles.def()
   }
 }
 

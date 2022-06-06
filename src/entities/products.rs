@@ -14,8 +14,8 @@ pub struct Model {
   #[sea_orm(column_type = "Text", nullable)]
   pub description: Option<String>,
   pub image: Option<String>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
   pub payment_options: Option<Json>,
   pub pricing_structure: Json,
   pub provides_ticket_type_id: Option<i64>,

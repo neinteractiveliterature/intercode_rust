@@ -11,7 +11,7 @@ pub struct Model {
   pub record_type: String,
   pub record_id: i64,
   pub blob_id: i64,
-  pub created_at: DateTimeUtc,
+  pub created_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

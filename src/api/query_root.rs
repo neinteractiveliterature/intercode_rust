@@ -1,4 +1,4 @@
-use super::objects::EventType;
+use super::objects::{ConventionType, EventType};
 use crate::api::objects::ModelBackedType;
 use crate::entities::events;
 use crate::entity_relay_connection::RelayConnectable;
@@ -12,6 +12,18 @@ pub struct QueryRoot;
 
 #[Object]
 impl QueryRoot {
+  async fn convention_by_request_host(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Option<ConventionType>, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+
+    match &query_data.convention {
+      Some(convention) => Ok(Some(ConventionType::new(convention.to_owned()))),
+      None => Ok(None),
+    }
+  }
+
   async fn preview_liquid(&self, ctx: &Context<'_>, content: String) -> Result<String, Error> {
     let schema_data = ctx.data::<SchemaData>()?;
     let query_data = ctx.data::<QueryData>()?;

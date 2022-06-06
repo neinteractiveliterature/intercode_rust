@@ -14,8 +14,8 @@ pub struct Model {
   pub navigation_section_id: Option<i64>,
   pub page_id: Option<i64>,
   pub position: Option<i32>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

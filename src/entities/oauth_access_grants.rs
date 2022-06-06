@@ -13,7 +13,7 @@ pub struct Model {
   pub expires_in: i32,
   #[sea_orm(column_type = "Text")]
   pub redirect_uri: String,
-  pub created_at: DateTimeUtc,
+  pub created_at: DateTime,
   pub revoked_at: Option<DateTime>,
   pub scopes: Option<String>,
 }

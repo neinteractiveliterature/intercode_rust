@@ -37,18 +37,14 @@ pub enum Relation {
     on_delete = "NoAction"
   )]
   Events,
-  #[sea_orm(has_many = "super::order_entries::Entity")]
-  OrderEntries,
-  #[sea_orm(has_many = "super::rooms_runs::Entity")]
-  RoomsRuns,
-  #[sea_orm(has_many = "super::signup_changes::Entity")]
-  SignupChanges,
   #[sea_orm(has_many = "super::signup_requests::Entity")]
   SignupRequests,
+  #[sea_orm(has_many = "super::signup_changes::Entity")]
+  SignupChanges,
+  #[sea_orm(has_many = "super::rooms_runs::Entity")]
+  RoomsRuns,
   #[sea_orm(has_many = "super::signups::Entity")]
   Signups,
-  #[sea_orm(has_many = "super::tickets::Entity")]
-  Tickets,
 }
 
 impl Related<super::users::Entity> for Entity {
@@ -63,15 +59,9 @@ impl Related<super::events::Entity> for Entity {
   }
 }
 
-impl Related<super::order_entries::Entity> for Entity {
+impl Related<super::signup_requests::Entity> for Entity {
   fn to() -> RelationDef {
-    Relation::OrderEntries.def()
-  }
-}
-
-impl Related<super::rooms_runs::Entity> for Entity {
-  fn to() -> RelationDef {
-    Relation::RoomsRuns.def()
+    Relation::SignupRequests.def()
   }
 }
 
@@ -81,21 +71,15 @@ impl Related<super::signup_changes::Entity> for Entity {
   }
 }
 
-impl Related<super::signup_requests::Entity> for Entity {
+impl Related<super::rooms_runs::Entity> for Entity {
   fn to() -> RelationDef {
-    Relation::SignupRequests.def()
+    Relation::RoomsRuns.def()
   }
 }
 
 impl Related<super::signups::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::Signups.def()
-  }
-}
-
-impl Related<super::tickets::Entity> for Entity {
-  fn to() -> RelationDef {
-    Relation::Tickets.def()
   }
 }
 

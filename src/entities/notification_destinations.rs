@@ -11,8 +11,8 @@ pub struct Model {
   pub source_id: i64,
   pub staff_position_id: Option<i64>,
   pub user_con_profile_id: Option<i64>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

@@ -11,8 +11,8 @@ pub struct Model {
   pub receiver_address: String,
   #[sea_orm(column_type = "Custom(\"array\".to_owned())")]
   pub forward_addresses: String,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter)]

@@ -36,14 +36,16 @@ pub enum Relation {
   CmsFiles,
   #[sea_orm(has_many = "super::conventions::Entity")]
   Conventions,
-  #[sea_orm(has_many = "super::user_activity_alerts::Entity")]
-  UserActivityAlerts,
+  #[sea_orm(has_many = "super::signup_requests::Entity")]
+  SignupRequests,
   #[sea_orm(has_many = "super::runs::Entity")]
   Runs,
   #[sea_orm(has_many = "super::signup_changes::Entity")]
   SignupChanges,
-  #[sea_orm(has_many = "super::signup_requests::Entity")]
-  SignupRequests,
+  #[sea_orm(has_many = "super::organization_roles_users::Entity")]
+  OrganizationRolesUsers,
+  #[sea_orm(has_many = "super::user_activity_alerts::Entity")]
+  UserActivityAlerts,
   #[sea_orm(has_many = "super::signups::Entity")]
   Signups,
   #[sea_orm(has_many = "super::user_con_profiles::Entity")]
@@ -62,9 +64,9 @@ impl Related<super::conventions::Entity> for Entity {
   }
 }
 
-impl Related<super::user_activity_alerts::Entity> for Entity {
+impl Related<super::signup_requests::Entity> for Entity {
   fn to() -> RelationDef {
-    Relation::UserActivityAlerts.def()
+    Relation::SignupRequests.def()
   }
 }
 
@@ -80,9 +82,15 @@ impl Related<super::signup_changes::Entity> for Entity {
   }
 }
 
-impl Related<super::signup_requests::Entity> for Entity {
+impl Related<super::organization_roles_users::Entity> for Entity {
   fn to() -> RelationDef {
-    Relation::SignupRequests.def()
+    Relation::OrganizationRolesUsers.def()
+  }
+}
+
+impl Related<super::user_activity_alerts::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::UserActivityAlerts.def()
   }
 }
 

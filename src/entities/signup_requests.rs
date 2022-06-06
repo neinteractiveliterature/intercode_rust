@@ -14,8 +14,8 @@ pub struct Model {
   pub replace_signup_id: Option<i64>,
   pub result_signup_id: Option<i64>,
   pub updated_by_id: Option<i64>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

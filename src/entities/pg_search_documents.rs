@@ -12,8 +12,8 @@ pub struct Model {
   pub convention_id: Option<i64>,
   pub searchable_type: Option<String>,
   pub searchable_id: Option<i64>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
   #[sea_orm(column_type = "Custom(\"tsvector\".to_owned())", nullable)]
   pub content_vector: Option<String>,
   pub hidden_from_search: bool,

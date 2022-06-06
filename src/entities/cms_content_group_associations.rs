@@ -10,8 +10,8 @@ pub struct Model {
   pub content_type: String,
   pub content_id: i64,
   pub cms_content_group_id: i64,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

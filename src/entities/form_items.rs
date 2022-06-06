@@ -14,8 +14,8 @@ pub struct Model {
   #[sea_orm(column_type = "Text", nullable)]
   pub item_type: Option<String>,
   pub properties: Option<Json>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
   #[sea_orm(column_type = "Text", nullable)]
   pub admin_description: Option<String>,
   pub default_value: Option<Json>,

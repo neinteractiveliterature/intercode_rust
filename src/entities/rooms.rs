@@ -9,8 +9,8 @@ pub struct Model {
   pub id: i64,
   pub convention_id: Option<i64>,
   pub name: Option<String>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

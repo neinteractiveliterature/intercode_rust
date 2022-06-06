@@ -15,8 +15,8 @@ pub struct Model {
   pub body_html: Option<String>,
   #[sea_orm(column_type = "Text", nullable)]
   pub body_text: Option<String>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
   #[sea_orm(column_type = "Text", nullable)]
   pub body_sms: Option<String>,
 }

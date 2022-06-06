@@ -42,7 +42,6 @@ pub struct Model {
   pub event_category_id: i64,
   pub minimum_age: Option<i32>,
   #[sea_orm(column_type = "Custom(\"tsvector\".to_owned())", nullable)]
-  #[sea_orm(ignore)]
   pub title_vector: Option<String>,
 }
 
@@ -80,18 +79,16 @@ pub enum Relation {
     on_delete = "NoAction"
   )]
   Users1,
-  #[sea_orm(has_many = "super::event_proposals::Entity")]
-  EventProposals,
   #[sea_orm(has_many = "super::maximum_event_provided_tickets_overrides::Entity")]
   MaximumEventProvidedTicketsOverrides,
+  #[sea_orm(has_many = "super::event_proposals::Entity")]
+  EventProposals,
   #[sea_orm(has_many = "super::runs::Entity")]
   Runs,
   #[sea_orm(has_many = "super::team_members::Entity")]
   TeamMembers,
   #[sea_orm(has_many = "super::ticket_types::Entity")]
   TicketTypes,
-  #[sea_orm(has_many = "super::tickets::Entity")]
-  Tickets,
 }
 
 impl Related<super::conventions::Entity> for Entity {
@@ -106,15 +103,15 @@ impl Related<super::event_categories::Entity> for Entity {
   }
 }
 
-impl Related<super::event_proposals::Entity> for Entity {
-  fn to() -> RelationDef {
-    Relation::EventProposals.def()
-  }
-}
-
 impl Related<super::maximum_event_provided_tickets_overrides::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::MaximumEventProvidedTicketsOverrides.def()
+  }
+}
+
+impl Related<super::event_proposals::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::EventProposals.def()
   }
 }
 
@@ -133,12 +130,6 @@ impl Related<super::team_members::Entity> for Entity {
 impl Related<super::ticket_types::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::TicketTypes.def()
-  }
-}
-
-impl Related<super::tickets::Entity> for Entity {
-  fn to() -> RelationDef {
-    Relation::Tickets.def()
   }
 }
 

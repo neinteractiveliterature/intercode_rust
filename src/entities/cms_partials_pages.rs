@@ -11,12 +11,35 @@ pub struct Model {
   pub page_id: i64,
 }
 
-#[derive(Copy, Clone, Debug, EnumIter)]
-pub enum Relation {}
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+pub enum Relation {
+  #[sea_orm(
+    belongs_to = "super::cms_partials::Entity",
+    from = "Column::CmsPartialId",
+    to = "super::cms_partials::Column::Id",
+    on_update = "NoAction",
+    on_delete = "NoAction"
+  )]
+  CmsPartials,
+  #[sea_orm(
+    belongs_to = "super::pages::Entity",
+    from = "Column::PageId",
+    to = "super::pages::Column::Id",
+    on_update = "NoAction",
+    on_delete = "NoAction"
+  )]
+  Pages,
+}
 
-impl RelationTrait for Relation {
-  fn def(&self) -> RelationDef {
-    panic!("No RelationDef")
+impl Related<super::cms_partials::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::CmsPartials.def()
+  }
+}
+
+impl Related<super::pages::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::Pages.def()
   }
 }
 

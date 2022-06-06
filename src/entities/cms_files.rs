@@ -9,8 +9,8 @@ pub struct Model {
   pub id: i32,
   pub parent_id: Option<i32>,
   pub uploader_id: Option<i64>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
   pub parent_type: Option<String>,
 }
 
@@ -24,11 +24,27 @@ pub enum Relation {
     on_delete = "NoAction"
   )]
   Users,
+  #[sea_orm(has_many = "super::cms_files_layouts::Entity")]
+  CmsFilesLayouts,
+  #[sea_orm(has_many = "super::cms_files_pages::Entity")]
+  CmsFilesPages,
 }
 
 impl Related<super::users::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::Users.def()
+  }
+}
+
+impl Related<super::cms_files_layouts::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::CmsFilesLayouts.def()
+  }
+}
+
+impl Related<super::cms_files_pages::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::CmsFilesPages.def()
   }
 }
 

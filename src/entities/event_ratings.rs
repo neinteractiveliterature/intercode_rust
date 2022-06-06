@@ -10,8 +10,8 @@ pub struct Model {
   pub user_con_profile_id: i64,
   pub event_id: i64,
   pub rating: Option<i32>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter)]

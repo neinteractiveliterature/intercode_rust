@@ -11,12 +11,35 @@ pub struct Model {
   pub user_con_profile_id: i64,
 }
 
-#[derive(Copy, Clone, Debug, EnumIter)]
-pub enum Relation {}
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+pub enum Relation {
+  #[sea_orm(
+    belongs_to = "super::user_con_profiles::Entity",
+    from = "Column::UserConProfileId",
+    to = "super::user_con_profiles::Column::Id",
+    on_update = "NoAction",
+    on_delete = "NoAction"
+  )]
+  UserConProfiles,
+  #[sea_orm(
+    belongs_to = "super::staff_positions::Entity",
+    from = "Column::StaffPositionId",
+    to = "super::staff_positions::Column::Id",
+    on_update = "NoAction",
+    on_delete = "NoAction"
+  )]
+  StaffPositions,
+}
 
-impl RelationTrait for Relation {
-  fn def(&self) -> RelationDef {
-    panic!("No RelationDef")
+impl Related<super::user_con_profiles::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::UserConProfiles.def()
+  }
+}
+
+impl Related<super::staff_positions::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::StaffPositions.def()
   }
 }
 

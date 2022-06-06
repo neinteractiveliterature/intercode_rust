@@ -13,9 +13,8 @@ pub struct Model {
   pub quantity: Option<i32>,
   pub price_per_item_cents: Option<i32>,
   pub price_per_item_currency: Option<String>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
-  pub run_id: Option<i64>,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
@@ -28,14 +27,6 @@ pub enum Relation {
     on_delete = "NoAction"
   )]
   ProductVariants,
-  #[sea_orm(
-    belongs_to = "super::runs::Entity",
-    from = "Column::RunId",
-    to = "super::runs::Column::Id",
-    on_update = "NoAction",
-    on_delete = "NoAction"
-  )]
-  Runs,
   #[sea_orm(
     belongs_to = "super::orders::Entity",
     from = "Column::OrderId",
@@ -59,12 +50,6 @@ pub enum Relation {
 impl Related<super::product_variants::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::ProductVariants.def()
-  }
-}
-
-impl Related<super::runs::Entity> for Entity {
-  fn to() -> RelationDef {
-    Relation::Runs.def()
   }
 }
 

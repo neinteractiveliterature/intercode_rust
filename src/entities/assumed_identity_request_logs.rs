@@ -26,8 +26,8 @@ pub struct Model {
   #[sea_orm(column_type = "Text", nullable)]
   pub graphql_document: Option<String>,
   pub graphql_variables: Option<Json>,
-  pub created_at: DateTimeUtc,
-  pub updated_at: DateTimeUtc,
+  pub created_at: DateTime,
+  pub updated_at: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
