@@ -6,8 +6,10 @@ extern crate tracing;
 mod entities;
 pub mod entity_relay_connection;
 use async_graphql::dataloader::DataLoader;
+use cms_parent::CmsParent;
 pub use entities::*;
 pub mod api;
+pub mod cms_parent;
 pub mod inflections;
 pub mod liquid_extensions;
 pub mod loaders;
@@ -19,7 +21,7 @@ use async_graphql_warp::GraphQLResponse;
 use dotenv::dotenv;
 use i18n_embed::fluent::{fluent_language_loader, FluentLanguageLoader};
 use i18n_embed::LanguageLoader;
-use loaders::EntityIdLoader;
+use loaders::{EntityIdLoader, ToEntityIdLoader};
 use rust_embed::RustEmbed;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};
 use std::convert::Infallible;
@@ -47,6 +49,18 @@ pub struct SchemaData {
   pub language_loader: Arc<FluentLanguageLoader>,
 }
 
+impl Clone for SchemaData {
+  fn clone(&self) -> Self {
+    let convention_id_loader = conventions::Entity.to_entity_id_loader(self.db.clone());
+
+    SchemaData {
+      db: self.db.clone(),
+      language_loader: self.language_loader.clone(),
+      convention_id_loader: DataLoader::new(convention_id_loader, tokio::spawn),
+    }
+  }
+}
+
 impl std::fmt::Debug for SchemaData {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("SchemaData")
@@ -59,8 +73,9 @@ impl std::fmt::Debug for SchemaData {
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct QueryData {
+  pub cms_parent: Option<CmsParent>,
   pub current_user: Option<users::Model>,
   pub convention: Option<conventions::Model>,
 }
@@ -68,6 +83,7 @@ pub struct QueryData {
 impl Default for QueryData {
   fn default() -> Self {
     Self {
+      cms_parent: None,
       current_user: None,
       convention: None,
     }
@@ -100,7 +116,6 @@ async fn connect_database() -> Result<DatabaseConnection, DbErr> {
 }
 
 async fn serve(db: DatabaseConnection) -> Result<()> {
-  use crate::loaders::ToEntityIdLoader;
   let db_arc = Arc::new(db);
 
   let log = warp::log("intercode_rust::http");
@@ -122,28 +137,35 @@ async fn serve(db: DatabaseConnection) -> Result<()> {
 
   let graphql_post = warp::path("graphql")
     .and(warp::post())
+    .and(warp::host::optional())
     .and(async_graphql_warp::graphql(graphql_schema))
     .and_then(
-      move |(schema, request): (
+      move |authority: Option<warp::host::Authority>,
+            (schema, request): (
         Schema<api::QueryRoot, EmptyMutation, EmptySubscription>,
         async_graphql::Request,
       )| {
         let db = Arc::clone(&db_arc);
 
         async move {
-          use sea_orm::EntityTrait;
+          use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 
-          let convention = entities::conventions::Entity::find()
-            .one(db.as_ref())
-            .await
-            .unwrap_or_else(|error| {
-              warn!("Error while querying for convention: {}", error);
-              None
-            });
+          let convention = match authority {
+            Some(authority) => entities::conventions::Entity::find()
+              .filter(entities::conventions::Column::Domain.eq(authority.host()))
+              .one(db.as_ref())
+              .await
+              .unwrap_or_else(|error| {
+                warn!("Error while querying for convention: {}", error);
+                None
+              }),
+            None => None,
+          };
 
           let request = request.data(QueryData {
-            convention,
+            convention: convention.clone(),
             current_user: None,
+            cms_parent: convention.and_then(|c| Some(CmsParent::Convention(c))),
           });
 
           Ok::<_, Infallible>(GraphQLResponse::from(schema.execute(request).await))
@@ -160,17 +182,33 @@ async fn serve(db: DatabaseConnection) -> Result<()> {
   });
 
   let routes = graphql_playground.or(graphql_post).with(log);
-
-  let (_addr, fut) = warp::serve(routes).bind_with_graceful_shutdown(
-    SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 5901),
-    async move {
-      tokio::signal::ctrl_c()
-        .await
-        .expect("failed to listen to shutdown signal");
-    },
+  let addr = SocketAddr::new(
+    IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
+    env::var("PORT").unwrap_or(String::from("5901")).parse()?,
   );
+  let signal = async move {
+    tokio::signal::ctrl_c()
+      .await
+      .expect("failed to listen to shutdown signal");
+  };
 
-  fut.await;
+  let server = warp::serve(routes);
+  if let Ok(cert_path) = env::var("TLS_CERT_PATH") {
+    if let Ok(key_path) = env::var("TLS_KEY_PATH") {
+      let (_addr, fut) = server
+        .tls()
+        .cert_path(cert_path)
+        .key_path(key_path)
+        .bind_with_graceful_shutdown(addr, signal);
+      fut.await;
+    } else {
+      let (_addr, fut) = server.bind_with_graceful_shutdown(addr, signal);
+      fut.await;
+    }
+  } else {
+    let (_addr, fut) = server.bind_with_graceful_shutdown(addr, signal);
+    fut.await;
+  };
 
   Ok(())
 }

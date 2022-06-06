@@ -13,14 +13,16 @@ pub struct QueryRoot;
 #[Object]
 impl QueryRoot {
   async fn preview_liquid(&self, ctx: &Context<'_>, content: String) -> Result<String, Error> {
-    let schema_data = &ctx.data::<SchemaData>()?;
-    let query_data = &ctx.data::<QueryData>()?;
+    let schema_data = ctx.data::<SchemaData>()?;
+    let query_data = ctx.data::<QueryData>()?;
+
     let parser = build_liquid_parser(schema_data, query_data)?;
     let template = parser.parse(content.as_str())?;
 
     let globals = liquid::object!({
       "num": 4f64,
-      "timespan": liquid::object!({})
+      "timespan": liquid::object!({}),
+      "convention": query_data.convention
     });
 
     let result = template.render(&globals);

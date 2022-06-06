@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use chrono::TimeZone;
 use chrono_tz::Tz;
 use i18n_embed::fluent::FluentLanguageLoader;
 use i18n_embed_fl::fl;
@@ -9,9 +8,9 @@ use liquid_core::{
   ParseFilter, Result, Runtime, Value, ValueView,
 };
 
-use crate::{conventions, timespan::Timespan};
-
+use crate::liquid_extensions::dig::liquid_datetime_to_chrono_datetime;
 use crate::liquid_extensions::invalid_input;
+use crate::{conventions, timespan::Timespan};
 
 fn find_effective_timezone(
   timezone_name: Option<&String>,
@@ -20,20 +19,6 @@ fn find_effective_timezone(
   timezone_name
     .or_else(|| convention.and_then(|convention| convention.timezone_name.as_ref()))
     .and_then(|timezone_name| timezone_name.parse::<Tz>().ok())
-}
-
-fn liquid_datetime_to_chrono_datetime(
-  input: &liquid_core::model::DateTime,
-) -> chrono::DateTime<chrono::FixedOffset> {
-  let offset = chrono::FixedOffset::east(input.offset().whole_seconds());
-  offset
-    .ymd(input.year(), input.month().into(), input.day().into())
-    .and_hms_nano(
-      input.hour().into(),
-      input.minute().into(),
-      input.second().into(),
-      input.nanosecond().into(),
-    )
 }
 
 fn common_prefix(a: &str, b: &str, delimiter: &str) -> String {

@@ -7,7 +7,7 @@ use liquid_core::{
 };
 use serde_json::json;
 
-use super::react_component_tag;
+use super::write_react_component_tag;
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct AddToCalendarDropdownTag;
@@ -87,18 +87,13 @@ impl Renderable for AddToCalendarDropdown {
     }
     let class_name = class_name.to_kstr().into_owned();
 
-    let tag = react_component_tag(
+    write_react_component_tag(
+      writer,
       "AddToCalendarDropdown",
       json!({
         "icalSecret": ical_secret,
           "className": class_name
       }),
-    );
-
-    if let Err(error) = writer.write(tag.as_bytes()) {
-      Err(Error::with_msg(error.to_string()))
-    } else {
-      Ok(())
-    }
+    )
   }
 }

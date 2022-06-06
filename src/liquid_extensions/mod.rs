@@ -1,4 +1,8 @@
+pub mod blocks;
+mod dig;
 pub mod filters;
+mod react_component_tag;
+pub mod serialization;
 pub mod tags;
 
 use crate::{QueryData, SchemaData};
@@ -44,5 +48,27 @@ pub fn build_liquid_parser(
       language_loader: schema_data.language_loader.clone(),
     })
     .tag(tags::AddToCalendarDropdownTag)
+    .tag(tags::AssignGraphQLResultTag::new(
+      query_data.cms_parent.clone(),
+      query_data,
+      schema_data,
+    ))
+    .tag(tags::CookieConsentTag)
+    .tag(tags::EventAdminMenuTag)
+    .tag(tags::EventRunsSectionTag)
+    .tag(tags::FileUrlTag::new(
+      query_data.cms_parent.clone(),
+      schema_data.db.clone(),
+    ))
+    .tag(tags::LongFormEventDetailsTag)
+    .tag(tags::MapTag)
+    .tag(tags::MaximumEventSignupsPreviewTag {
+      convention: query_data.convention.clone(),
+    })
+    .tag(tags::NewEventProposalButtonTag)
+    .tag(tags::ShortFormEventDetailsTag)
+    .tag(tags::WithdrawUserSignupButtonTag)
+    .tag(tags::YouTubeTag)
+    .block(blocks::SpoilerBlock)
     .build()
 }
