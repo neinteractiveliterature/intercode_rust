@@ -13,6 +13,7 @@ pub mod cms_parent;
 pub mod inflections;
 pub mod liquid_extensions;
 pub mod loaders;
+pub mod model_ext;
 pub mod timespan;
 
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
@@ -47,16 +48,19 @@ pub struct SchemaData {
   pub convention_id_loader:
     DataLoader<EntityIdLoader<conventions::Entity, conventions::PrimaryKey>>,
   pub language_loader: Arc<FluentLanguageLoader>,
+  pub user_id_loader: DataLoader<EntityIdLoader<users::Entity, users::PrimaryKey>>,
 }
 
 impl Clone for SchemaData {
   fn clone(&self) -> Self {
     let convention_id_loader = conventions::Entity.to_entity_id_loader(self.db.clone());
+    let user_id_loader = users::Entity.to_entity_id_loader(self.db.clone());
 
     SchemaData {
       db: self.db.clone(),
       language_loader: self.language_loader.clone(),
       convention_id_loader: DataLoader::new(convention_id_loader, tokio::spawn),
+      user_id_loader: DataLoader::new(user_id_loader, tokio::spawn),
     }
   }
 }
@@ -124,6 +128,7 @@ async fn serve(db: DatabaseConnection) -> Result<()> {
   let language_loader = fluent_language_loader!();
   language_loader.load_languages(&Localizations, &[language_loader.fallback_language()])?;
   let language_loader_arc = Arc::new(language_loader);
+  let user_id_loader = users::Entity.to_entity_id_loader(Arc::clone(&db_arc));
 
   let graphql_schema =
     async_graphql::Schema::build(api::QueryRoot, EmptyMutation, EmptySubscription)
@@ -132,6 +137,7 @@ async fn serve(db: DatabaseConnection) -> Result<()> {
         db: Arc::clone(&db_arc),
         convention_id_loader: DataLoader::new(convention_id_loader, tokio::spawn),
         language_loader: language_loader_arc,
+        user_id_loader: DataLoader::new(user_id_loader, tokio::spawn),
       })
       .finish();
 

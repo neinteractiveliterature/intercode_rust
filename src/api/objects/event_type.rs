@@ -1,4 +1,4 @@
-use crate::{events, SchemaData};
+use crate::{events, loaders::ExpectModel, SchemaData};
 use async_graphql::*;
 
 use super::{ConventionType, ModelBackedType};
@@ -34,16 +34,8 @@ impl EventType {
     let loader = &ctx.data::<SchemaData>()?.convention_id_loader;
 
     if let Some(convention_id) = self.model.convention_id {
-      let model = loader.load_one(convention_id).await?;
-      if let Some(model) = model {
-        Ok(Some(ConventionType::new(model)))
-      } else {
-        Err(Error::new(format!(
-          "{} {} not found",
-          <ConventionType as async_graphql::OutputType>::type_name(),
-          convention_id
-        )))
-      }
+      let model = loader.load_one(convention_id).await?.expect_model()?;
+      Ok(Some(ConventionType::new(model)))
     } else {
       Ok(None)
     }
