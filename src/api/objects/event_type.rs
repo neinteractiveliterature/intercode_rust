@@ -1,16 +1,9 @@
+use crate::model_backed_type;
 use crate::{events, loaders::ExpectModel, SchemaData};
 use async_graphql::*;
 
 use super::{ConventionType, ModelBackedType};
-pub struct EventType {
-  model: events::Model,
-}
-
-impl ModelBackedType<events::Model> for EventType {
-  fn new(model: events::Model) -> Self {
-    EventType { model }
-  }
-}
+model_backed_type!(EventType, events::Model);
 
 #[Object]
 impl EventType {
@@ -31,7 +24,7 @@ impl EventType {
   }
 
   async fn convention(&self, ctx: &Context<'_>) -> Result<Option<ConventionType>, Error> {
-    let loader = &ctx.data::<SchemaData>()?.convention_id_loader;
+    let loader = &ctx.data::<SchemaData>()?.loaders.conventions_by_id;
 
     if let Some(convention_id) = self.model.convention_id {
       let model = loader.load_one(convention_id).await?.expect_model()?;

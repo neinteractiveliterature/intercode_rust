@@ -43,7 +43,7 @@ impl UserConProfileType {
   }
 
   async fn convention(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {
-    let loader = &ctx.data::<SchemaData>()?.convention_id_loader;
+    let loader = &ctx.data::<SchemaData>()?.loaders.conventions_by_id;
 
     let model = loader
       .load_one(self.model.convention_id)
@@ -56,7 +56,7 @@ impl UserConProfileType {
   #[graphql(name = "gravatar_url")]
   async fn gravatar_url(&self, ctx: &Context<'_>) -> Result<String, Error> {
     if self.model.gravatar_enabled {
-      let loader = &ctx.data::<SchemaData>()?.user_id_loader;
+      let loader = &ctx.data::<SchemaData>()?.loaders.users_by_id;
 
       let model = loader.load_one(self.model.user_id).await?.expect_model()?;
       Ok(format!(

@@ -1,6 +1,6 @@
 mod convention_type;
 mod event_type;
-mod model_backed_type;
+pub mod model_backed_type;
 mod user_con_profile_type;
 mod user_type;
 

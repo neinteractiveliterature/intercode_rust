@@ -5,7 +5,6 @@ extern crate tracing;
 
 mod entities;
 pub mod entity_relay_connection;
-use async_graphql::dataloader::DataLoader;
 use cms_parent::CmsParent;
 pub use entities::*;
 pub mod api;
@@ -22,7 +21,7 @@ use async_graphql_warp::GraphQLResponse;
 use dotenv::dotenv;
 use i18n_embed::fluent::{fluent_language_loader, FluentLanguageLoader};
 use i18n_embed::LanguageLoader;
-use loaders::{EntityIdLoader, ToEntityIdLoader};
+use loaders::LoaderManager;
 use rust_embed::RustEmbed;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};
 use std::convert::Infallible;
@@ -43,43 +42,11 @@ static ALLOC: dhat::Alloc = dhat::Alloc;
 #[folder = "i18n"] // path to the compiled localization resources
 pub struct Localizations;
 
+#[derive(Debug, Clone)]
 pub struct SchemaData {
   pub db: Arc<DatabaseConnection>,
-  pub convention_id_loader:
-    DataLoader<EntityIdLoader<conventions::Entity, conventions::PrimaryKey>>,
   pub language_loader: Arc<FluentLanguageLoader>,
-  pub staff_position_id_loader:
-    DataLoader<EntityIdLoader<staff_positions::Entity, staff_positions::PrimaryKey>>,
-  pub team_member_id_loader:
-    DataLoader<EntityIdLoader<team_members::Entity, team_members::PrimaryKey>>,
-  pub user_id_loader: DataLoader<EntityIdLoader<users::Entity, users::PrimaryKey>>,
-}
-
-impl Clone for SchemaData {
-  fn clone(&self) -> Self {
-    let convention_id_loader = conventions::Entity.to_entity_id_loader(self.db.clone());
-    let user_id_loader = users::Entity.to_entity_id_loader(self.db.clone());
-
-    SchemaData {
-      db: self.db.clone(),
-      language_loader: self.language_loader.clone(),
-      convention_id_loader: DataLoader::new(convention_id_loader, tokio::spawn),
-      team_member_id_loader: DataLoader::new(team_member_id_loader, tokio::spawn),
-      user_id_loader: DataLoader::new(user_id_loader, tokio::spawn),
-    }
-  }
-}
-
-impl std::fmt::Debug for SchemaData {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("SchemaData")
-      .field("db", &self.db)
-      .field(
-        "convention_id_loader.loader()",
-        &self.convention_id_loader.loader(),
-      )
-      .finish()
-  }
+  pub loaders: LoaderManager,
 }
 
 #[derive(Debug, Clone)]
@@ -129,20 +96,17 @@ async fn serve(db: DatabaseConnection) -> Result<()> {
 
   let log = warp::log("intercode_rust::http");
 
-  let convention_id_loader = conventions::Entity.to_entity_id_loader(Arc::clone(&db_arc));
   let language_loader = fluent_language_loader!();
   language_loader.load_languages(&Localizations, &[language_loader.fallback_language()])?;
   let language_loader_arc = Arc::new(language_loader);
-  let user_id_loader = users::Entity.to_entity_id_loader(Arc::clone(&db_arc));
 
   let graphql_schema =
     async_graphql::Schema::build(api::QueryRoot, EmptyMutation, EmptySubscription)
       .extension(async_graphql::extensions::Tracing)
       .data(SchemaData {
         db: Arc::clone(&db_arc),
-        convention_id_loader: DataLoader::new(convention_id_loader, tokio::spawn),
-        language_loader: language_loader_arc,
-        user_id_loader: DataLoader::new(user_id_loader, tokio::spawn),
+        language_loader: Arc::clone(&language_loader_arc),
+        loaders: LoaderManager::new(&db_arc),
       })
       .finish();
 
