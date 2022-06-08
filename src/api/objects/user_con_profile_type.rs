@@ -3,15 +3,8 @@ use async_graphql::*;
 use pulldown_cmark::{html, Options, Parser};
 
 use super::{ConventionType, ModelBackedType};
-pub struct UserConProfileType {
-  model: user_con_profiles::Model,
-}
-
-impl ModelBackedType<user_con_profiles::Model> for UserConProfileType {
-  fn new(model: user_con_profiles::Model) -> Self {
-    UserConProfileType { model }
-  }
-}
+use crate::model_backed_type;
+model_backed_type!(UserConProfileType, user_con_profiles::Model);
 
 #[Object]
 impl UserConProfileType {

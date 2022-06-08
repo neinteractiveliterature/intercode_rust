@@ -6,15 +6,8 @@ use sea_orm::{ColumnTrait, ModelTrait, QueryFilter};
 
 use super::{ModelBackedType, UserConProfileType};
 
-pub struct ConventionType {
-  model: conventions::Model,
-}
-
-impl ConventionType {
-  pub fn new(model: conventions::Model) -> ConventionType {
-    ConventionType { model }
-  }
-}
+use crate::model_backed_type;
+model_backed_type!(ConventionType, conventions::Model);
 
 #[Object]
 impl ConventionType {

@@ -1,8 +1,8 @@
-use crate::model_backed_type;
 use crate::{events, loaders::ExpectModel, SchemaData};
 use async_graphql::*;
 
 use super::{ConventionType, ModelBackedType};
+use crate::model_backed_type;
 model_backed_type!(EventType, events::Model);
 
 #[Object]

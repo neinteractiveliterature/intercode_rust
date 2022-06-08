@@ -1,16 +1,8 @@
 use crate::users;
 use async_graphql::*;
 
-use super::ModelBackedType;
-pub struct UserType {
-  model: users::Model,
-}
-
-impl ModelBackedType<users::Model> for UserType {
-  fn new(model: users::Model) -> Self {
-    UserType { model }
-  }
-}
+use crate::model_backed_type;
+model_backed_type!(UserType, users::Model);
 
 #[Object]
 impl UserType {
