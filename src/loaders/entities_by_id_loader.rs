@@ -23,6 +23,22 @@ where
   ) -> Self::EntityIdLoaderType;
 }
 
+#[macro_export]
+macro_rules! impl_to_entity_id_loader {
+  ($e: path, $pk: path) => {
+    impl ToEntityIdLoader<<$e as sea_orm::EntityTrait>::PrimaryKey> for $e {
+      type EntityIdLoaderType = EntityIdLoader<$e, <$e as sea_orm::EntityTrait>::PrimaryKey>;
+
+      fn to_entity_id_loader(
+        self: &Self,
+        db: std::sync::Arc<sea_orm::DatabaseConnection>,
+      ) -> Self::EntityIdLoaderType {
+        EntityIdLoader::<$e, <$e as sea_orm::EntityTrait>::PrimaryKey>::new(db, $pk)
+      }
+    }
+  };
+}
+
 pub trait ExpectModel<M: ModelTrait> {
   fn expect_model(self: &Self) -> Result<M, async_graphql::Error>;
 }

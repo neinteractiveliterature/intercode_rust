@@ -48,6 +48,10 @@ pub struct SchemaData {
   pub convention_id_loader:
     DataLoader<EntityIdLoader<conventions::Entity, conventions::PrimaryKey>>,
   pub language_loader: Arc<FluentLanguageLoader>,
+  pub staff_position_id_loader:
+    DataLoader<EntityIdLoader<staff_positions::Entity, staff_positions::PrimaryKey>>,
+  pub team_member_id_loader:
+    DataLoader<EntityIdLoader<team_members::Entity, team_members::PrimaryKey>>,
   pub user_id_loader: DataLoader<EntityIdLoader<users::Entity, users::PrimaryKey>>,
 }
 
@@ -60,6 +64,7 @@ impl Clone for SchemaData {
       db: self.db.clone(),
       language_loader: self.language_loader.clone(),
       convention_id_loader: DataLoader::new(convention_id_loader, tokio::spawn),
+      team_member_id_loader: DataLoader::new(team_member_id_loader, tokio::spawn),
       user_id_loader: DataLoader::new(user_id_loader, tokio::spawn),
     }
   }
