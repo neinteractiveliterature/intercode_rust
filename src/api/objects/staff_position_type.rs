@@ -9,4 +9,8 @@ impl StaffPositionType {
   async fn id(&self) -> ID {
     self.model.id.into()
   }
+
+  async fn name(&self) -> &Option<String> {
+    &self.model.name
+  }
 }

@@ -15,9 +15,9 @@ pub struct Model {
   pub created_at: DateTime,
   pub updated_at: DateTime,
   pub visible: Option<bool>,
-  #[sea_orm(column_type = "Custom(\"array\".to_owned())")]
+  #[sea_orm(column_type = "Custom(\"array\".to_owned())", ignore)]
   pub cc_addresses: String,
-  #[sea_orm(column_type = "Custom(\"array\".to_owned())")]
+  #[sea_orm(column_type = "Custom(\"array\".to_owned())", ignore)]
   pub email_aliases: String,
 }
 

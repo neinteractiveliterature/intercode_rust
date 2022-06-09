@@ -1,4 +1,4 @@
-use crate::{events, loaders::ExpectModel, SchemaData};
+use crate::{events, loaders::expect::ExpectModel, SchemaData};
 use async_graphql::*;
 
 use super::{ConventionType, ModelBackedType};

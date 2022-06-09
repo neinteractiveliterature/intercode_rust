@@ -5,6 +5,8 @@ use sea_orm::{
 };
 use std::{collections::HashMap, marker::PhantomData, sync::Arc};
 
+use super::expect::ExpectModel;
+
 pub trait ToEntityIdLoader<PK: PrimaryKeyTrait>
 where
   Self: EntityTrait<PrimaryKey = PK>,
@@ -37,10 +39,6 @@ macro_rules! impl_to_entity_id_loader {
       }
     }
   };
-}
-
-pub trait ExpectModel<M: ModelTrait> {
-  fn expect_model(self: &Self) -> Result<M, async_graphql::Error>;
 }
 
 #[derive(Debug, Clone)]

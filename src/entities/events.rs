@@ -41,7 +41,7 @@ pub struct Model {
   pub private_signup_list: bool,
   pub event_category_id: i64,
   pub minimum_age: Option<i32>,
-  #[sea_orm(column_type = "Custom(\"tsvector\".to_owned())", nullable)]
+  #[sea_orm(column_type = "Custom(\"tsvector\".to_owned())", nullable, ignore)]
   pub title_vector: Option<String>,
 }
 

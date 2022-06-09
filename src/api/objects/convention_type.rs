@@ -1,13 +1,25 @@
 use crate::{
-  conventions, staff_positions_user_con_profiles, team_members, user_con_profiles, SchemaData,
+  conventions, staff_positions, staff_positions_user_con_profiles, team_members, user_con_profiles,
+  SchemaData,
 };
 use async_graphql::*;
-use sea_orm::{ColumnTrait, ModelTrait, QueryFilter};
+use sea_orm::{ColumnTrait, Linked, ModelTrait, QueryFilter, QuerySelect, RelationTrait};
 
-use super::{ModelBackedType, UserConProfileType};
+use super::{ModelBackedType, StaffPositionType, UserConProfileType};
 
 use crate::model_backed_type;
 model_backed_type!(ConventionType, conventions::Model);
+
+pub struct ConventionToStaffPositions;
+
+impl Linked for ConventionToStaffPositions {
+  type FromEntity = conventions::Entity;
+  type ToEntity = staff_positions::Entity;
+
+  fn link(&self) -> Vec<sea_orm::LinkDef> {
+    vec![staff_positions::Relation::Conventions.def().rev()]
+  }
+}
 
 #[Object]
 impl ConventionType {
@@ -36,6 +48,7 @@ impl ConventionType {
           .is_not_null()
           .or(team_members::Column::Id.is_not_null()),
       )
+      .group_by(user_con_profiles::Column::Id)
       .all(db.as_ref())
       .await?
       .iter()
@@ -43,5 +56,41 @@ impl ConventionType {
       .collect::<Vec<UserConProfileType>>();
 
     Ok(profiles)
+  }
+
+  #[graphql(name = "staff_position")]
+  async fn staff_position(&self, ctx: &Context<'_>, id: ID) -> Result<StaffPositionType, Error> {
+    let db = &ctx.data::<SchemaData>()?.db;
+
+    self
+      .model
+      .find_linked(ConventionToStaffPositions)
+      .filter(staff_positions::Column::Id.eq(id.parse::<u64>()?))
+      .one(db.as_ref())
+      .await?
+      .ok_or_else(|| {
+        Error::new(format!(
+          "Staff position with ID {} not found in convention",
+          id.as_str()
+        ))
+      })
+      .map(|staff_position| StaffPositionType::new(staff_position))
+  }
+
+  #[graphql(name = "user_con_profile")]
+  async fn user_con_profile(&self, ctx: &Context<'_>, id: ID) -> Result<UserConProfileType, Error> {
+    let db = &ctx.data::<SchemaData>()?.db;
+
+    self
+      .model
+      .find_related(user_con_profiles::Entity)
+      .filter(user_con_profiles::Column::Id.eq(id.parse::<u64>()?))
+      .one(db.as_ref())
+      .await?
+      .ok_or(Error::new(format!(
+        "No user con profile with ID {} in convention",
+        id.as_str()
+      )))
+      .map(|user_con_profile| UserConProfileType::new(user_con_profile))
   }
 }

@@ -1,8 +1,11 @@
-use crate::{loaders::ExpectModel, user_con_profiles, SchemaData};
+use crate::{
+  loaders::{expect::ExpectModel, expect::ExpectModels},
+  user_con_profiles, SchemaData,
+};
 use async_graphql::*;
 use pulldown_cmark::{html, Options, Parser};
 
-use super::{ConventionType, ModelBackedType};
+use super::{ConventionType, ModelBackedType, StaffPositionType, TeamMemberType};
 use crate::model_backed_type;
 model_backed_type!(UserConProfileType, user_con_profiles::Model);
 
@@ -72,5 +75,41 @@ impl UserConProfileType {
   #[graphql(name = "name_without_nickname")]
   async fn name_without_nickname(&self) -> String {
     self.model.name_without_nickname()
+  }
+
+  #[graphql(name = "staff_positions")]
+  async fn staff_positions(&self, ctx: &Context<'_>) -> Result<Vec<StaffPositionType>, Error> {
+    let loader = &ctx
+      .data::<SchemaData>()?
+      .loaders
+      .user_con_profile_staff_positions;
+
+    Ok(
+      loader
+        .load_one(self.model.id)
+        .await?
+        .expect_models()?
+        .into_iter()
+        .map(|staff_position| StaffPositionType::new(staff_position.to_owned()))
+        .collect(),
+    )
+  }
+
+  #[graphql(name = "team_members")]
+  async fn team_members(&self, ctx: &Context<'_>) -> Result<Vec<TeamMemberType>, Error> {
+    let loader = &ctx
+      .data::<SchemaData>()?
+      .loaders
+      .user_con_profile_team_members;
+
+    Ok(
+      loader
+        .load_one(self.model.id)
+        .await?
+        .expect_models()?
+        .into_iter()
+        .map(|team_member| TeamMemberType::new(team_member.to_owned()))
+        .collect(),
+    )
   }
 }
