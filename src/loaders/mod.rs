@@ -7,6 +7,7 @@ mod entities_by_link_loader;
 pub mod expect;
 
 use std::sync::Arc;
+use std::time::Duration;
 
 use async_graphql::dataloader::DataLoader;
 pub use entities_by_id_loader::*;
@@ -99,28 +100,35 @@ impl LoaderManager {
       conventions_by_id: DataLoader::new(
         conventions::Entity.to_entity_id_loader(db.clone()),
         tokio::spawn,
-      ),
+      )
+      .delay(Duration::from_millis(10)),
       staff_positions_by_id: DataLoader::new(
         staff_positions::Entity.to_entity_id_loader(db.clone()),
         tokio::spawn,
-      ),
+      )
+      .delay(Duration::from_millis(10)),
       team_member_event: DataLoader::new(
         team_members::Entity.to_entity_relation_loader(db.clone()),
         tokio::spawn,
-      ),
+      )
+      .delay(Duration::from_millis(10)),
       team_members_by_id: DataLoader::new(
         team_members::Entity.to_entity_id_loader(db.clone()),
         tokio::spawn,
-      ),
+      )
+      .delay(Duration::from_millis(10)),
       user_con_profile_staff_positions: DataLoader::new(
         user_con_profiles::Entity.to_entity_link_loader(UserConProfileToStaffPositions, db.clone()),
         tokio::spawn,
-      ),
+      )
+      .delay(Duration::from_millis(10)),
       user_con_profile_team_members: DataLoader::new(
         user_con_profiles::Entity.to_entity_relation_loader(db.clone()),
         tokio::spawn,
-      ),
-      users_by_id: DataLoader::new(users::Entity.to_entity_id_loader(db.clone()), tokio::spawn),
+      )
+      .delay(Duration::from_millis(10)),
+      users_by_id: DataLoader::new(users::Entity.to_entity_id_loader(db.clone()), tokio::spawn)
+        .delay(Duration::from_millis(10)),
     }
   }
 }

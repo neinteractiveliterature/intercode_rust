@@ -6,8 +6,8 @@ use sea_orm::entity::prelude::*;
 #[sea_orm(table_name = "cms_files")]
 pub struct Model {
   #[sea_orm(primary_key)]
-  pub id: i32,
-  pub parent_id: Option<i32>,
+  pub id: i64,
+  pub parent_id: Option<i64>,
   pub uploader_id: Option<i64>,
   pub created_at: DateTime,
   pub updated_at: DateTime,

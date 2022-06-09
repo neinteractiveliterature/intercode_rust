@@ -1,11 +1,17 @@
 use async_graphql::{async_trait, dataloader::Loader};
 use sea_orm::{
   sea_query::{IntoValueTuple, ValueTuple},
-  EntityTrait, ModelTrait, PrimaryKeyToColumn, PrimaryKeyTrait, Related, RelationDef,
+  EntityTrait, FromQueryResult, PrimaryKeyToColumn, PrimaryKeyTrait, QuerySelect, Related,
+  RelationDef,
 };
 use std::{collections::HashMap, marker::PhantomData, sync::Arc};
 
 use super::expect::ExpectModels;
+
+#[derive(FromQueryResult)]
+struct ParentModelIdOnly {
+  pub parent_model_id: i64,
+}
 
 pub trait ToEntityRelationLoader<To: EntityTrait, PK: PrimaryKeyTrait + PrimaryKeyToColumn>
 where
@@ -139,7 +145,7 @@ impl<
 where
   <From as sea_orm::EntityTrait>::Model: Sync,
   <To as sea_orm::EntityTrait>::Model: Sync,
-  PK::ValueType: Sync + Clone + Eq + std::hash::Hash + IntoValueTuple,
+  PK::ValueType: Sync + Clone + Eq + std::hash::Hash + IntoValueTuple + std::convert::From<i64>,
 {
   type Value = EntityRelationLoaderResult<From, To>;
   type Error = Arc<sea_orm::DbErr>;
@@ -166,26 +172,27 @@ where
 
     let mut results = From::find()
       .filter(pk_column.is_in(pk_values))
+      .select_only()
+      .column_as(pk_column, "parent_model_id")
       .find_also_related(To::default())
+      .into_model::<ParentModelIdOnly, To::Model>()
       .all(self.db.as_ref())
       .await?
       .into_iter()
       .fold(
         HashMap::<PK::ValueType, EntityRelationLoaderResult<From, To>>::new(),
         |mut acc: HashMap<PK::ValueType, EntityRelationLoaderResult<From, To>>,
-         (from_model, to_model): (From::Model, Option<To::Model>)| {
-          use sea_orm::sea_query::FromValueTuple;
-
+         (from_model, to_model): (ParentModelIdOnly, Option<To::Model>)| {
           if let Some(to_model) = to_model {
-            let id = PK::ValueType::from_value_tuple(from_model.get(pk_column.into()));
-            let result = acc.get_mut(&id);
+            let id = from_model.parent_model_id;
+            let result = acc.get_mut(&id.into());
             if let Some(result) = result {
               result.models.push(to_model);
             } else {
               acc.insert(
-                id.clone(),
+                id.into(),
                 EntityRelationLoaderResult::<From, To> {
-                  from_id: id.clone(),
+                  from_id: id.into(),
                   models: vec![to_model],
                 },
               );

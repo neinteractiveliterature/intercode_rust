@@ -12,7 +12,7 @@ pub struct Model {
   pub slug: Option<String>,
   #[sea_orm(column_type = "Text", nullable)]
   pub content: Option<String>,
-  pub parent_id: Option<i32>,
+  pub parent_id: Option<i64>,
   pub parent_type: Option<String>,
   pub created_at: Option<DateTime>,
   pub updated_at: Option<DateTime>,

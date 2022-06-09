@@ -6,10 +6,10 @@ use sea_orm::entity::prelude::*;
 #[sea_orm(table_name = "team_members")]
 pub struct Model {
   #[sea_orm(primary_key)]
-  pub id: i32,
+  pub id: i64,
   pub event_id: Option<i64>,
   pub updated_at: Option<DateTime>,
-  pub updated_by_id: Option<i32>,
+  pub updated_by_id: Option<i64>,
   pub display: Option<bool>,
   pub show_email: Option<bool>,
   pub receive_con_email: Option<bool>,
