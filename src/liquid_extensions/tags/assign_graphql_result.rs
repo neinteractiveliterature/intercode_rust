@@ -18,22 +18,15 @@ use crate::{
 };
 
 fn liquid_value_to_graphql_const(
-  value: &liquid_core::ValueCow,
+  value: &liquid_core::Value,
 ) -> Result<ConstValue, serde_json::Error> {
-  // total cop-out implementation: both Liquid's Value and async-graphql's ConstValue provide serde serializers
-  // so let's just convert it to json and back, lol
-  let value = value.clone().into_owned();
-  let json = serde_json::to_string(&value)?;
-  ConstValue::from_json(serde_json::from_str(&json)?)
+  serde_json::from_value::<ConstValue>(serde_json::to_value(value)?)
 }
 
 fn graphql_const_to_liquid_value(
   value: ConstValue,
 ) -> Result<liquid_core::Value, serde_json::Error> {
-  // total cop-out implementation: both Liquid's Value and async-graphql's ConstValue provide serde serializers
-  // so let's just convert it to json and back, lol
-  let json = serde_json::to_string(&value)?;
-  serde_json::from_str::<liquid_core::Value>(&json)
+  serde_json::from_value::<liquid_core::Value>(serde_json::to_value(value)?)
 }
 
 #[derive(Clone, Debug)]
@@ -199,7 +192,7 @@ impl Renderable for AssignGraphQLResult {
       .collect::<Result<Vec<(&String, ValueCow)>, Error>>()?
       .iter()
       .map(|(field, value)| {
-        liquid_value_to_graphql_const(value)
+        liquid_value_to_graphql_const(&value.as_view().to_value())
           .and_then(|value| Ok((async_graphql::Name::new(*field), value)))
       })
       .collect::<Result<Vec<(async_graphql::Name, ConstValue)>, serde_json::Error>>()
