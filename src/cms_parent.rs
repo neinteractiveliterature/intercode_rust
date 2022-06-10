@@ -1,6 +1,9 @@
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Select};
+use std::sync::Arc;
 
-use crate::{cms_files, cms_graphql_queries, conventions, pages, root_sites};
+use liquid::partials::InMemorySource;
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Select};
+
+use crate::{cms_files, cms_graphql_queries, cms_partials, conventions, pages, root_sites};
 
 #[derive(Clone, Debug)]
 pub enum CmsParent {
@@ -23,7 +26,10 @@ impl Into<CmsParent> for root_sites::Model {
 pub trait CmsParentTrait {
   fn cms_files(&self) -> Select<cms_files::Entity>;
   fn cms_graphql_queries(&self) -> Select<cms_graphql_queries::Entity>;
+  fn cms_partials(&self) -> Select<cms_partials::Entity>;
   fn pages(&self) -> Select<pages::Entity>;
+
+  fn root_page(&self) -> Select<pages::Entity>;
 }
 
 macro_rules! enum_assoc {
@@ -37,10 +43,37 @@ macro_rules! enum_assoc {
   };
 }
 
+impl CmsParent {
+  pub async fn cms_partial_source(
+    &self,
+    db: Arc<DatabaseConnection>,
+  ) -> Result<InMemorySource, sea_orm::DbErr> {
+    let mut source = InMemorySource::new();
+    let partials = self.cms_partials().all(db.as_ref()).await?;
+
+    for partial in partials.into_iter() {
+      source.add(
+        partial.name,
+        partial.content.unwrap_or_else(|| "".to_string()),
+      );
+    }
+
+    Ok(source)
+  }
+}
+
 impl CmsParentTrait for CmsParent {
   enum_assoc!(cms_files);
   enum_assoc!(cms_graphql_queries);
+  enum_assoc!(cms_partials);
   enum_assoc!(pages);
+
+  fn root_page(&self) -> Select<pages::Entity> {
+    match self {
+      CmsParent::Convention(convention) => convention.root_page(),
+      CmsParent::RootSite(root_site) => root_site.root_page(),
+    }
+  }
 }
 
 macro_rules! convention_assoc {
@@ -56,7 +89,12 @@ macro_rules! convention_assoc {
 impl CmsParentTrait for conventions::Model {
   convention_assoc!(cms_files);
   convention_assoc!(cms_graphql_queries);
+  convention_assoc!(cms_partials);
   convention_assoc!(pages);
+
+  fn root_page(&self) -> Select<pages::Entity> {
+    pages::Entity::find().filter(pages::Column::Id.eq(self.root_page_id))
+  }
 }
 
 macro_rules! root_site_assoc {
@@ -72,5 +110,10 @@ macro_rules! root_site_assoc {
 impl CmsParentTrait for root_sites::Model {
   root_site_assoc!(cms_files);
   root_site_assoc!(cms_graphql_queries);
+  root_site_assoc!(cms_partials);
   root_site_assoc!(pages);
+
+  fn root_page(&self) -> Select<pages::Entity> {
+    pages::Entity::find().filter(pages::Column::Id.eq(self.root_page_id))
+  }
 }

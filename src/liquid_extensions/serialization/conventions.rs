@@ -7,7 +7,7 @@ impl Serialize for conventions::Model {
   where
     S: serde::Serializer,
   {
-    let mut state = serializer.serialize_struct("Convention", 2)?;
+    let mut state = serializer.serialize_struct("Convention", 3)?;
     state.serialize_field("id", &self.id)?;
     state.serialize_field("name", &self.name)?;
     state.serialize_field("location", &self.location)?;

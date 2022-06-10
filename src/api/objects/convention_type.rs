@@ -1,11 +1,12 @@
 use crate::{
-  conventions, staff_positions, staff_positions_user_con_profiles, team_members, user_con_profiles,
-  SchemaData,
+  cms_parent::{CmsParent, CmsParentTrait},
+  conventions, pages, staff_positions, staff_positions_user_con_profiles, team_members,
+  user_con_profiles, SchemaData,
 };
 use async_graphql::*;
 use sea_orm::{ColumnTrait, Linked, ModelTrait, QueryFilter, QuerySelect, RelationTrait};
 
-use super::{ModelBackedType, StaffPositionType, UserConProfileType};
+use super::{ModelBackedType, PageType, StaffPositionType, UserConProfileType};
 
 use crate::model_backed_type;
 model_backed_type!(ConventionType, conventions::Model);
@@ -56,6 +57,39 @@ impl ConventionType {
       .collect::<Vec<UserConProfileType>>();
 
     Ok(profiles)
+  }
+
+  async fn cms_page(
+    &self,
+    ctx: &Context<'_>,
+    id: Option<ID>,
+    slug: Option<String>,
+    root_page: Option<bool>,
+  ) -> Result<PageType, Error> {
+    let db = &ctx.data::<SchemaData>()?.db;
+    let cms_parent: CmsParent = self.model.clone().into();
+
+    let scope = if let Some(id) = id {
+      cms_parent
+        .pages()
+        .filter(pages::Column::Id.eq(id.parse::<i64>()?))
+    } else if let Some(slug) = slug {
+      cms_parent.pages().filter(pages::Column::Slug.eq(slug))
+    } else if let Some(root_page) = root_page {
+      if root_page {
+        cms_parent.root_page()
+      } else {
+        return Err(Error::new("If rootPage is specified, it must be true"));
+      }
+    } else {
+      return Err(Error::new("One of id, slug, or rootPage must be specified"));
+    };
+
+    scope
+      .one(db.as_ref())
+      .await?
+      .ok_or_else(|| Error::new("Page not found"))
+      .map(|page| PageType::new(page))
   }
 
   #[graphql(name = "staff_position")]

@@ -3,8 +3,8 @@ edition = "2021"
 name = "intercode_rust"
 version = "0.1.0"
 
-# [profile.release]
-# debug = 1
+[profile.release]
+debug = 1
 
 [features]
 dhat-heap = ["dep:dhat"] # if you are doing heap profiling

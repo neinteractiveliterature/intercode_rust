@@ -2,7 +2,7 @@ use super::objects::{ConventionType, EventType};
 use crate::api::objects::ModelBackedType;
 use crate::entities::events;
 use crate::entity_relay_connection::RelayConnectable;
-use crate::liquid_extensions::build_liquid_parser;
+use crate::liquid_extensions::parse_and_render_in_graphql_context;
 use crate::{QueryData, SchemaData};
 use async_graphql::connection::{query, Connection};
 use async_graphql::*;
@@ -25,24 +25,7 @@ impl QueryRoot {
   }
 
   async fn preview_liquid(&self, ctx: &Context<'_>, content: String) -> Result<String, Error> {
-    let schema_data = ctx.data::<SchemaData>()?;
-    let query_data = ctx.data::<QueryData>()?;
-
-    let parser = build_liquid_parser(schema_data, query_data)?;
-    let template = parser.parse(content.as_str())?;
-
-    let globals = liquid::object!({
-      "num": 4f64,
-      "timespan": liquid::object!({}),
-      "convention": query_data.convention
-    });
-
-    let result = template.render(&globals);
-
-    match result {
-      Ok(content) => Ok(content),
-      Err(error) => Err(async_graphql::Error::new(error.to_string())),
-    }
+    parse_and_render_in_graphql_context(ctx, content.as_str()).await
   }
 
   async fn events(
