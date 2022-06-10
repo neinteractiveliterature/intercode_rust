@@ -7,7 +7,10 @@ pub mod tags;
 
 use crate::{user_con_profiles, QueryData, SchemaData};
 use async_graphql::Context;
-use liquid::{partials::EagerCompiler, Error, Parser, ParserBuilder};
+use liquid::{
+  partials::{EagerCompiler, InMemorySource, LazyCompiler},
+  Error, Parser, ParserBuilder,
+};
 
 fn invalid_input<S>(cause: S) -> Error
 where
@@ -25,11 +28,28 @@ where
     .context("cause", cause)
 }
 
+pub async fn build_partial_compiler(
+  schema_data: &SchemaData,
+  query_data: &QueryData,
+) -> Result<LazyCompiler<InMemorySource>, liquid_core::Error> {
+  if let Some(cms_parent) = &query_data.cms_parent {
+    Ok(LazyCompiler::new(
+      cms_parent
+        .cms_partial_source(schema_data.db.clone())
+        .await
+        .map_err(|db_err| Error::with_msg(format!("Error loading partials: {}", db_err)))?,
+    ))
+  } else {
+    Ok(LazyCompiler::new(InMemorySource::new()))
+  }
+}
+
 pub async fn build_liquid_parser(
   schema_data: &SchemaData,
   query_data: &QueryData,
 ) -> Result<Parser, liquid_core::Error> {
-  let mut builder = ParserBuilder::with_stdlib()
+  let partial_compiler = build_partial_compiler(schema_data, query_data).await?;
+  let builder = ParserBuilder::with_stdlib()
     .filter(filters::Pluralize)
     .filter(filters::EmailLink)
     .filter(filters::ToSentence)
@@ -70,16 +90,8 @@ pub async fn build_liquid_parser(
     .tag(tags::ShortFormEventDetailsTag)
     .tag(tags::WithdrawUserSignupButtonTag)
     .tag(tags::YouTubeTag)
-    .block(blocks::SpoilerBlock);
-
-  if let Some(cms_parent) = &query_data.cms_parent {
-    builder = builder.partials(EagerCompiler::new(
-      cms_parent
-        .cms_partial_source(schema_data.db.clone())
-        .await
-        .map_err(|db_err| Error::with_msg(format!("Error loading partials: {}", db_err)))?,
-    ));
-  }
+    .block(blocks::SpoilerBlock)
+    .partials(partial_compiler);
 
   builder.build()
 }
