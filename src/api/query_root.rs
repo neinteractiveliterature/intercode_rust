@@ -25,7 +25,7 @@ impl QueryRoot {
   }
 
   async fn preview_liquid(&self, ctx: &Context<'_>, content: String) -> Result<String, Error> {
-    parse_and_render_in_graphql_context(ctx, content.as_str()).await
+    parse_and_render_in_graphql_context(ctx, content.as_str(), None).await
   }
 
   async fn events(

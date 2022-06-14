@@ -22,6 +22,7 @@ ctrlc = "3.2.2"
 dhat = {version = "0.3.0", optional = true}
 dotenv = "0.15.0"
 html-escape = "0.2.11"
+hyper = "0.14.19"
 i18n-embed = {version = "0.13", features = ["fluent-system"]}
 i18n-embed-fl = "0.6"
 liquid = "0.26.0"
@@ -31,13 +32,17 @@ pulldown-cmark = "0.9.1"
 quote = "1.0.18"
 regex = "*"
 rust-embed = "6"
+rustls-pemfile = "1.0.0"
 sea-orm = {version = "^0", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros"]}
 serde = "1.0"
 serde_json = "1.0"
 syn = "1.0.92"
+tls-listener = {version = "0.5.1", features = ["rustls", "tokio-net"]}
 tokio = {version = "~1.18.0", features = ["rt-multi-thread", "macros", "signal"]}
+tokio-rustls = "0.23.4"
+tower = {version = "0.4.12", features = ["limit", "make"]}
 tracing = "0.1.34"
 tracing-subscriber = {version = "0.3", features = ["env-filter"]}
 unic-langid = "0.9"
 url = "*"
-warp = {version = "~0.3.2", features = ["tls"]}
+warp = {version = "~0.3.2"}

@@ -13,26 +13,21 @@ pub mod inflections;
 pub mod liquid_extensions;
 pub mod loaders;
 pub mod model_ext;
+mod server;
 pub mod timespan;
 
-use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql::*;
-use async_graphql_warp::GraphQLResponse;
 use dotenv::dotenv;
-use i18n_embed::fluent::{fluent_language_loader, FluentLanguageLoader};
-use i18n_embed::LanguageLoader;
+use i18n_embed::fluent::FluentLanguageLoader;
 use loaders::LoaderManager;
 use rust_embed::RustEmbed;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};
-use std::convert::Infallible;
+use server::serve;
 use std::env;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::log::*;
 use tracing_subscriber::EnvFilter;
-use warp::http::Response as HttpResponse;
-use warp::Filter;
 
 #[cfg(feature = "dhat-heap")]
 #[global_allocator]
@@ -89,103 +84,6 @@ async fn connect_database() -> Result<DatabaseConnection, DbErr> {
   info!("Connecting: {:#?}", connect_options);
 
   Database::connect(connect_options).await
-}
-
-async fn serve(db: DatabaseConnection) -> Result<()> {
-  let db_arc = Arc::new(db);
-
-  let log = warp::log("intercode_rust::http");
-
-  let language_loader = fluent_language_loader!();
-  language_loader.load_languages(&Localizations, &[language_loader.fallback_language()])?;
-  let language_loader_arc = Arc::new(language_loader);
-
-  let graphql_schema =
-    async_graphql::Schema::build(api::QueryRoot, EmptyMutation, EmptySubscription)
-      .extension(async_graphql::extensions::Tracing)
-      .data(SchemaData {
-        db: Arc::clone(&db_arc),
-        language_loader: Arc::clone(&language_loader_arc),
-        loaders: LoaderManager::new(&db_arc),
-      })
-      .finish();
-
-  let graphql_post = warp::path("graphql")
-    .and(warp::post())
-    .and(warp::host::optional())
-    .and(async_graphql_warp::graphql(graphql_schema))
-    .and_then(
-      move |authority: Option<warp::host::Authority>,
-            (schema, request): (
-        Schema<api::QueryRoot, EmptyMutation, EmptySubscription>,
-        async_graphql::Request,
-      )| {
-        let db = Arc::clone(&db_arc);
-
-        async move {
-          use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-
-          let convention = match authority {
-            Some(authority) => entities::conventions::Entity::find()
-              .filter(entities::conventions::Column::Domain.eq(authority.host()))
-              .one(db.as_ref())
-              .await
-              .unwrap_or_else(|error| {
-                warn!("Error while querying for convention: {}", error);
-                None
-              }),
-            None => None,
-          };
-
-          let request = request.data(QueryData {
-            convention: convention.clone(),
-            current_user: None,
-            cms_parent: convention.and_then(|c| Some(CmsParent::Convention(c))),
-          });
-
-          Ok::<_, Infallible>(GraphQLResponse::from(schema.execute(request).await))
-        }
-      },
-    );
-
-  let graphql_playground = warp::path::end().and(warp::get()).map(|| {
-    HttpResponse::builder()
-      .header("content-type", "text/html")
-      .body(playground_source(
-        GraphQLPlaygroundConfig::new("/graphql").with_setting("schema.polling.interval", 10000),
-      ))
-  });
-
-  let routes = graphql_playground.or(graphql_post).with(log);
-  let addr = SocketAddr::new(
-    IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-    env::var("PORT").unwrap_or(String::from("5901")).parse()?,
-  );
-  let signal = async move {
-    tokio::signal::ctrl_c()
-      .await
-      .expect("failed to listen to shutdown signal");
-  };
-
-  let server = warp::serve(routes);
-  if let Ok(cert_path) = env::var("TLS_CERT_PATH") {
-    if let Ok(key_path) = env::var("TLS_KEY_PATH") {
-      let (_addr, fut) = server
-        .tls()
-        .cert_path(cert_path)
-        .key_path(key_path)
-        .bind_with_graceful_shutdown(addr, signal);
-      fut.await;
-    } else {
-      let (_addr, fut) = server.bind_with_graceful_shutdown(addr, signal);
-      fut.await;
-    }
-  } else {
-    let (_addr, fut) = server.bind_with_graceful_shutdown(addr, signal);
-    fut.await;
-  };
-
-  Ok(())
 }
 
 async fn run() -> Result<()> {

@@ -5,12 +5,12 @@ mod react_component_tag;
 pub mod serialization;
 pub mod tags;
 
-use crate::{user_con_profiles, QueryData, SchemaData};
-use async_graphql::Context;
-use liquid::{
-  partials::{EagerCompiler, InMemorySource, LazyCompiler},
-  Error, Parser, ParserBuilder,
+use crate::{
+  cms_parent::{LazyCmsPartialSource, PreloadPartialsStrategy},
+  user_con_profiles, QueryData, SchemaData,
 };
+use async_graphql::Context;
+use liquid::{partials::LazyCompiler, Error, Parser, ParserBuilder};
 
 fn invalid_input<S>(cause: S) -> Error
 where
@@ -28,27 +28,38 @@ where
     .context("cause", cause)
 }
 
-pub async fn build_partial_compiler(
+pub async fn build_partial_compiler<'a>(
   schema_data: &SchemaData,
   query_data: &QueryData,
-) -> Result<LazyCompiler<InMemorySource>, liquid_core::Error> {
+  preload_partials_strategy: Option<PreloadPartialsStrategy<'a>>,
+) -> Result<LazyCompiler<LazyCmsPartialSource>, liquid_core::Error> {
   if let Some(cms_parent) = &query_data.cms_parent {
-    Ok(LazyCompiler::new(
-      cms_parent
-        .cms_partial_source(schema_data.db.clone())
+    let source = cms_parent
+      .cms_partial_source(schema_data.db.clone())
+      .await
+      .map_err(|db_err| Error::with_msg(format!("Error loading partials: {}", db_err)))?;
+
+    if let Some(strategy) = preload_partials_strategy {
+      source
+        .preload(schema_data.db.as_ref(), cms_parent, strategy)
         .await
-        .map_err(|db_err| Error::with_msg(format!("Error loading partials: {}", db_err)))?,
-    ))
+        .map_err(|db_err| Error::with_msg(format!("Error preloading partials: {}", db_err)))?;
+    }
+
+    Ok(LazyCompiler::new(source))
   } else {
-    Ok(LazyCompiler::new(InMemorySource::new()))
+    Err(Error::with_msg("No CMS parent to load partials from"))
   }
 }
 
-pub async fn build_liquid_parser(
+pub async fn build_liquid_parser<'a>(
   schema_data: &SchemaData,
   query_data: &QueryData,
+  preload_partials_strategy: Option<PreloadPartialsStrategy<'a>>,
 ) -> Result<Parser, liquid_core::Error> {
-  let partial_compiler = build_partial_compiler(schema_data, query_data).await?;
+  let partial_compiler =
+    build_partial_compiler(schema_data, query_data, preload_partials_strategy).await?;
+
   let builder = ParserBuilder::with_stdlib()
     .filter(filters::Pluralize)
     .filter(filters::EmailLink)
@@ -96,14 +107,15 @@ pub async fn build_liquid_parser(
   builder.build()
 }
 
-pub async fn parse_and_render_in_graphql_context(
+pub async fn parse_and_render_in_graphql_context<'a>(
   ctx: &Context<'_>,
   content: &str,
+  preload_partials_strategy: Option<PreloadPartialsStrategy<'a>>,
 ) -> Result<String, async_graphql::Error> {
   let schema_data = ctx.data::<SchemaData>()?;
   let query_data = ctx.data::<QueryData>()?;
 
-  let parser = build_liquid_parser(schema_data, query_data).await?;
+  let parser = build_liquid_parser(schema_data, query_data, preload_partials_strategy).await?;
   let template = parser.parse(content)?;
 
   let globals = liquid::object!({

@@ -6,6 +6,7 @@ mod entities_by_relation_loader;
 mod entities_by_link_loader;
 pub mod expect;
 
+use std::env;
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -95,40 +96,47 @@ pub struct LoaderManager {
 
 impl LoaderManager {
   pub fn new(db: &Arc<sea_orm::DatabaseConnection>) -> Self {
+    let delay_millis = Duration::from_millis(
+      env::var("LOADER_DELAY_MILLIS")
+        .unwrap_or_else(|_| "1".to_string())
+        .parse::<u64>()
+        .unwrap_or(1),
+    );
+
     LoaderManager {
       db: db.clone(),
       conventions_by_id: DataLoader::new(
         conventions::Entity.to_entity_id_loader(db.clone()),
         tokio::spawn,
       )
-      .delay(Duration::from_millis(10)),
+      .delay(delay_millis),
       staff_positions_by_id: DataLoader::new(
         staff_positions::Entity.to_entity_id_loader(db.clone()),
         tokio::spawn,
       )
-      .delay(Duration::from_millis(10)),
+      .delay(delay_millis),
       team_member_event: DataLoader::new(
         team_members::Entity.to_entity_relation_loader(db.clone()),
         tokio::spawn,
       )
-      .delay(Duration::from_millis(10)),
+      .delay(delay_millis),
       team_members_by_id: DataLoader::new(
         team_members::Entity.to_entity_id_loader(db.clone()),
         tokio::spawn,
       )
-      .delay(Duration::from_millis(10)),
+      .delay(delay_millis),
       user_con_profile_staff_positions: DataLoader::new(
         user_con_profiles::Entity.to_entity_link_loader(UserConProfileToStaffPositions, db.clone()),
         tokio::spawn,
       )
-      .delay(Duration::from_millis(10)),
+      .delay(delay_millis),
       user_con_profile_team_members: DataLoader::new(
         user_con_profiles::Entity.to_entity_relation_loader(db.clone()),
         tokio::spawn,
       )
-      .delay(Duration::from_millis(10)),
+      .delay(delay_millis),
       users_by_id: DataLoader::new(users::Entity.to_entity_id_loader(db.clone()), tokio::spawn)
-        .delay(Duration::from_millis(10)),
+        .delay(delay_millis),
     }
   }
 }
