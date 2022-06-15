@@ -15,7 +15,7 @@ pub struct TimespanWithValue<StartTz: TimeZone, FinishTz: TimeZone, T> {
 }
 
 impl<StartTz: TimeZone, FinishTz: TimeZone> Timespan<StartTz, FinishTz> {
-  pub fn contains<Tz: TimeZone>(self: &Self, time: &DateTime<Tz>) -> bool {
+  pub fn contains<Tz: TimeZone>(&self, time: &DateTime<Tz>) -> bool {
     if let Some(start) = &self.start {
       if time < start {
         return false;
@@ -32,7 +32,7 @@ impl<StartTz: TimeZone, FinishTz: TimeZone> Timespan<StartTz, FinishTz> {
   }
 
   pub fn overlaps<OtherStart: TimeZone, OtherFinish: TimeZone>(
-    self: &Self,
+    &self,
     other: &Timespan<OtherStart, OtherFinish>,
   ) -> bool {
     if let Some(finish) = &self.finish {
@@ -54,7 +54,7 @@ impl<StartTz: TimeZone, FinishTz: TimeZone> Timespan<StartTz, FinishTz> {
     true
   }
 
-  pub fn with_value<T>(self: Self, value: T) -> TimespanWithValue<StartTz, FinishTz, T> {
+  pub fn with_value<T>(self, value: T) -> TimespanWithValue<StartTz, FinishTz, T> {
     TimespanWithValue {
       timespan: self,
       value,
@@ -62,7 +62,7 @@ impl<StartTz: TimeZone, FinishTz: TimeZone> Timespan<StartTz, FinishTz> {
   }
 
   pub fn with_timezone<TargetTz: TimeZone>(
-    self: &Self,
+    &self,
     tz: &TargetTz,
   ) -> Timespan<TargetTz, TargetTz> {
     Timespan {
@@ -78,7 +78,7 @@ where
   <FinishTz as TimeZone>::Offset: std::fmt::Display,
 {
   pub fn start_description(
-    self: &Self,
+    &self,
     language_loader: &FluentLanguageLoader,
     format: &str,
   ) -> String {
@@ -94,7 +94,7 @@ where
   }
 
   pub fn finish_description(
-    self: &Self,
+    &self,
     language_loader: &FluentLanguageLoader,
     format: &str,
   ) -> String {

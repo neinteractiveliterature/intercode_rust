@@ -13,7 +13,7 @@ pub trait RelayConnectable<
 >
 {
   fn relay_connection<C: ConnectionTrait>(
-    self: Self,
+    self,
     db: &'db C,
     to_graphql_representation: F,
     after: Option<usize>,
@@ -32,7 +32,7 @@ impl<
   > RelayConnectable<'db, E, M, G, F> for Select<E>
 {
   fn relay_connection<C: ConnectionTrait>(
-    self: Self,
+    self,
     db: &'db C,
     to_graphql_representation: F,
     after: Option<usize>,
@@ -75,7 +75,7 @@ where
   E: EntityTrait<Model = M>,
   F: Fn(M) -> G + Copy,
 {
-  pub async fn total_count(self: &Self) -> Result<usize, sea_orm::DbErr> {
+  pub async fn total_count(&self) -> Result<usize, sea_orm::DbErr> {
     self
       .select
       .clone()
@@ -86,7 +86,7 @@ where
   }
 
   pub async fn to_connection(
-    self: &Self,
+    &self,
   ) -> Result<async_graphql::connection::Connection<usize, G>, sea_orm::DbErr> {
     let iter = self.to_graphql_representation;
     let db = self.db;

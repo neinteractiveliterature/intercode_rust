@@ -20,7 +20,7 @@ where
   >;
 
   fn to_entity_id_loader(
-    self: &Self,
+    &self,
     db: Arc<sea_orm::DatabaseConnection>,
   ) -> Self::EntityIdLoaderType;
 }
@@ -51,7 +51,7 @@ pub struct EntityIdLoaderResult<E: EntityTrait<PrimaryKey = PK>, PK: PrimaryKeyT
 impl<E: EntityTrait<PrimaryKey = PK>, PK: PrimaryKeyTrait> ExpectModel<E::Model>
   for EntityIdLoaderResult<E, PK>
 {
-  fn expect_model(self: &Self) -> Result<E::Model, async_graphql::Error> {
+  fn expect_model(&self) -> Result<E::Model, async_graphql::Error> {
     if let Some(model) = &self.model {
       Ok(model.to_owned())
     } else {
@@ -67,7 +67,7 @@ impl<E: EntityTrait<PrimaryKey = PK>, PK: PrimaryKeyTrait> ExpectModel<E::Model>
 impl<E: EntityTrait<PrimaryKey = PK>, PK: PrimaryKeyTrait> ExpectModel<E::Model>
   for Option<EntityIdLoaderResult<E, PK>>
 {
-  fn expect_model(self: &Self) -> Result<E::Model, async_graphql::Error> {
+  fn expect_model(&self) -> Result<E::Model, async_graphql::Error> {
     if let Some(result) = self {
       result.expect_model()
     } else {
@@ -116,7 +116,7 @@ where
     use sea_orm::QueryFilter;
 
     let pk_column = self.primary_key.into_column();
-    let pk_values = keys.into_iter().map(|key| {
+    let pk_values = keys.iter().map(|key| {
       let tuple = key.clone().into_value_tuple();
       if let ValueTuple::One(single_value) = tuple {
         single_value
@@ -147,7 +147,7 @@ where
       })
       .collect::<HashMap<PK::ValueType, EntityIdLoaderResult<E, PK>>>();
 
-    for key in keys.into_iter() {
+    for key in keys.iter() {
       let tuple = key.clone().into_value_tuple();
       let id = PK::ValueType::from_value_tuple(tuple);
 

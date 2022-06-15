@@ -70,7 +70,7 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
           let request = request.data(QueryData {
             convention: convention.clone(),
             current_user: None,
-            cms_parent: convention.and_then(|c| Some(CmsParent::Convention(c))),
+            cms_parent: convention.map(CmsParent::Convention),
           });
 
           Ok::<_, Infallible>(GraphQLResponse::from(schema.execute(request).await))

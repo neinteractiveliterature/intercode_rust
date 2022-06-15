@@ -118,8 +118,7 @@ impl Filter for DateWithLocalTimeFilter {
     let datetime = liquid_datetime_to_chrono_datetime(&input);
     let timezone_name = args
       .timezone_name
-      .as_ref()
-      .and_then(|expr| Some(expr.to_string()));
+      .as_ref().map(|expr| expr.to_string());
 
     let tz = find_effective_timezone(timezone_name.as_ref(), self.convention.as_ref());
 
@@ -232,8 +231,7 @@ impl Filter for TimespanWithLocalTimeFilter {
     let format_str = args.format.to_string();
     let timezone_name = args
       .timezone_name
-      .as_ref()
-      .and_then(|expr| Some(expr.to_string()));
+      .as_ref().map(|expr| expr.to_string());
     let tz = find_effective_timezone(timezone_name.as_ref(), self.convention.as_ref());
 
     let start_desc: String;
@@ -272,7 +270,7 @@ impl Filter for TimespanWithLocalTimeFilter {
     } else {
       let (deduped_start, deduped_finish) = remove_common_middle(&start_desc, &finish_desc, " ");
 
-      if deduped_start.trim().len() == 0 || deduped_finish.trim().len() == 0 {
+      if deduped_start.trim().is_empty() || deduped_finish.trim().is_empty() {
         Ok(Value::scalar(fl!(
           self.language_loader,
           "timespan_with_bounded_finish",

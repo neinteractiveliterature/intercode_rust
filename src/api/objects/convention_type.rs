@@ -89,7 +89,7 @@ impl ConventionType {
       .one(db.as_ref())
       .await?
       .ok_or_else(|| Error::new("Page not found"))
-      .map(|page| PageType::new(page))
+      .map(PageType::new)
   }
 
   #[graphql(name = "staff_position")]
@@ -108,7 +108,7 @@ impl ConventionType {
           id.as_str()
         ))
       })
-      .map(|staff_position| StaffPositionType::new(staff_position))
+      .map(StaffPositionType::new)
   }
 
   #[graphql(name = "user_con_profile")]
@@ -125,6 +125,6 @@ impl ConventionType {
         "No user con profile with ID {} in convention",
         id.as_str()
       )))
-      .map(|user_con_profile| UserConProfileType::new(user_con_profile))
+      .map(UserConProfileType::new)
   }
 }

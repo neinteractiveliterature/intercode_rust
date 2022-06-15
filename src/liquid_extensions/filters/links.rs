@@ -32,7 +32,7 @@ impl Filter for EmailLinkFilter {
 
         match user {
           None => Ok(Value::scalar(
-            email.replace("@", " AT ").replace(".", " DOT "),
+            email.replace('@', " AT ").replace('.', " DOT "),
           )),
           Some(_u) => Ok(Value::scalar(format!(
             "<a href=\"mailto:{}\">{}</a>",
@@ -97,13 +97,13 @@ impl Filter for AbsoluteUrlFilter {
                 Ok(_) => Ok(Value::scalar(parsed_url.to_string())),
                 Err(error) => Err(invalid_input(format!(
                   "Can't set host on URL: {}",
-                  error.to_string()
+                  error
                 ))),
               }
             }
             Err(error) => Err(invalid_input(format!(
               "Can't parse URL: {}",
-              error.to_string()
+              error
             ))),
           }
         }

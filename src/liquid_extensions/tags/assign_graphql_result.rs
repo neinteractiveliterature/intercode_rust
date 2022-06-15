@@ -82,8 +82,7 @@ impl ParseTag for AssignGraphQLResultTag {
       .expect_next("Identifier expected.")?
       .expect_identifier()
       .into_result()?
-      .to_string()
-      .into();
+      .to_string();
 
     let mut arg_mapping = HashMap::<String, Expression>::new();
 
@@ -192,8 +191,7 @@ impl Renderable for AssignGraphQLResult {
       .collect::<Result<Vec<(&String, ValueCow)>, Error>>()?
       .iter()
       .map(|(field, value)| {
-        liquid_value_to_graphql_const(&value.as_view().to_value())
-          .and_then(|value| Ok((async_graphql::Name::new(*field), value)))
+        liquid_value_to_graphql_const(&value.as_view().to_value()).map(|value| (async_graphql::Name::new(*field), value))
       })
       .collect::<Result<Vec<(async_graphql::Name, ConstValue)>, serde_json::Error>>()
       .map_err(|e| Error::with_msg(e.to_string()))?;
@@ -216,7 +214,7 @@ impl Renderable for AssignGraphQLResult {
         .trace_with(|| self.trace().into())?,
     );
 
-    if response.errors.len() > 0 {
+    if !response.errors.is_empty() {
       let formatted_errors = response
         .errors
         .iter()

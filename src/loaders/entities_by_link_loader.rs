@@ -28,7 +28,7 @@ pub trait ToEntityLinkLoader<
   >;
 
   fn to_entity_link_loader(
-    self: &Self,
+    &self,
     link: Link,
     db: Arc<sea_orm::DatabaseConnection>,
   ) -> Self::EntityLinkLoaderType;
@@ -80,7 +80,7 @@ impl<From: EntityTrait, To: EntityTrait> EntityLinkLoaderResult<From, To>
 where
   <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
 {
-  pub fn expect_one(self: &Self) -> Result<&To::Model, async_graphql::Error> {
+  pub fn expect_one(&self) -> Result<&To::Model, async_graphql::Error> {
     if self.models.len() == 1 {
       Ok(&self.models[0])
     } else {
@@ -97,7 +97,7 @@ impl<From: EntityTrait, To: EntityTrait> ExpectModels<To::Model>
 where
   <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
 {
-  fn expect_models(self: &Self) -> Result<&Vec<To::Model>, async_graphql::Error> {
+  fn expect_models(&self) -> Result<&Vec<To::Model>, async_graphql::Error> {
     if let Some(result) = self {
       Ok(&result.models)
     } else {
@@ -107,7 +107,7 @@ where
     }
   }
 
-  fn expect_one(self: &Self) -> Result<&To::Model, async_graphql::Error> {
+  fn expect_one(&self) -> Result<&To::Model, async_graphql::Error> {
     if let Some(result) = self {
       result.expect_one()
     } else {
@@ -178,7 +178,7 @@ where
     use sea_orm::QueryFilter;
 
     let pk_column = self.primary_key.into_column();
-    let pk_values = keys.into_iter().map(|key| {
+    let pk_values = keys.iter().map(|key| {
       let tuple = key.clone().into_value_tuple();
       if let ValueTuple::One(single_value) = tuple {
         single_value
@@ -223,7 +223,7 @@ where
         },
       );
 
-    for id in keys.into_iter() {
+    for id in keys.iter() {
       if !results.contains_key(id) {
         results.insert(
           id.to_owned(),

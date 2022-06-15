@@ -23,7 +23,7 @@ impl UserConProfileType {
       options.insert(Options::ENABLE_FOOTNOTES);
       options.insert(Options::ENABLE_SMART_PUNCTUATION);
       options.insert(Options::ENABLE_TABLES);
-      let parser = Parser::new_ext(&bio, options);
+      let parser = Parser::new_ext(bio, options);
 
       let mut html_output = String::new();
       html::push_html(&mut html_output, parser);
@@ -89,7 +89,7 @@ impl UserConProfileType {
         .load_one(self.model.id)
         .await?
         .expect_models()?
-        .into_iter()
+        .iter()
         .map(|staff_position| StaffPositionType::new(staff_position.to_owned()))
         .collect(),
     )
@@ -107,7 +107,7 @@ impl UserConProfileType {
         .load_one(self.model.id)
         .await?
         .expect_models()?
-        .into_iter()
+        .iter()
         .map(|team_member| TeamMemberType::new(team_member.to_owned()))
         .collect(),
     )

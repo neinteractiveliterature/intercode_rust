@@ -47,7 +47,7 @@ impl QueryRoot {
         let connection = events::Entity::find()
           .relay_connection(
             db,
-            |model| EventType::new(model),
+            EventType::new,
             after,
             before,
             first,

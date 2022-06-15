@@ -1,7 +1,7 @@
 use crate::user_con_profiles;
 
 impl user_con_profiles::Model {
-  pub fn bio_name(self: &Self) -> String {
+  pub fn bio_name(&self) -> String {
     let mut parts = vec![self.first_name.as_str()];
 
     let nickname_part: String;
@@ -26,13 +26,13 @@ impl user_con_profiles::Model {
       .join(" ")
   }
 
-  pub fn name_without_nickname(self: &Self) -> String {
+  pub fn name_without_nickname(&self) -> String {
     format!("{} {}", self.first_name, self.last_name)
       .trim()
       .to_string()
   }
 
-  pub fn name_inverted(self: &Self) -> String {
+  pub fn name_inverted(&self) -> String {
     format!("{}, {}", self.last_name, self.first_name)
       .trim()
       .to_string()

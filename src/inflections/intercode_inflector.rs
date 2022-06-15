@@ -31,7 +31,7 @@ impl IntercodeInflector {
     }
   }
 
-  pub fn with_default_acronyms(mut self: Self) -> Self {
+  pub fn with_default_acronyms(mut self) -> Self {
     let inflector_config = include_str!("../../config/inflections.json");
     let parsed_config: IntercodeInflectorConfig =
       serde_json::from_str(inflector_config).expect("Invalid inflector config!");
@@ -43,13 +43,13 @@ impl IntercodeInflector {
     self
   }
 
-  pub fn register_acronym(self: &mut Self, acronym: &str) -> () {
+  pub fn register_acronym(&mut self, acronym: &str) {
     self
       .acronyms
       .insert(acronym.to_lowercase(), acronym.to_string());
   }
 
-  pub fn acronymize_if_applicable(self: &Self, word: &str) -> String {
+  pub fn acronymize_if_applicable(&self, word: &str) -> String {
     let acronym = self.acronyms.get(&word.to_lowercase());
 
     match acronym {
@@ -58,8 +58,8 @@ impl IntercodeInflector {
     }
   }
 
-  pub fn humanize(self: &Self, input: &str) -> String {
-    let result = input.replace("_", " ");
+  pub fn humanize(&self, input: &str) -> String {
+    let result = input.replace('_', " ");
     let result = result.trim_start();
 
     let result = self.id_suffix_regex.replace(result, "");

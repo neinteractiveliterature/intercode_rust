@@ -11,8 +11,7 @@ pub fn get_object_from_value<'a>(
   tag_name: &'static str,
   source: &str,
 ) -> Result<&'a dyn ObjectView, Error> {
-  Ok(
-    value
+  value
       .get(key)
       .ok_or(
         Error::with_msg(format!("must contain an object called {}", key))
@@ -22,8 +21,7 @@ pub fn get_object_from_value<'a>(
       .ok_or(
         Error::with_msg(format!("must contain an object called {}", key))
           .context(tag_name, &source.to_string()),
-      )?,
-  )
+      )
 }
 
 pub fn get_array_from_value<'a>(
@@ -32,8 +30,7 @@ pub fn get_array_from_value<'a>(
   tag_name: &'static str,
   source: &str,
 ) -> Result<&'a dyn ArrayView, Error> {
-  Ok(
-    value
+  value
       .get(key)
       .ok_or(
         Error::with_msg(format!("must contain an array called {}", key))
@@ -43,8 +40,7 @@ pub fn get_array_from_value<'a>(
       .ok_or(
         Error::with_msg(format!("must contain an array called {}", key))
           .context(tag_name, &source.to_string()),
-      )?,
-  )
+      )
 }
 
 pub fn liquid_datetime_to_chrono_datetime(
@@ -59,7 +55,7 @@ pub fn liquid_datetime_to_chrono_datetime(
       input.hour().into(),
       input.minute().into(),
       input.second().into(),
-      input.nanosecond().into(),
+      input.nanosecond(),
     )
 }
 
@@ -69,8 +65,7 @@ pub fn get_scalar_from_value<'a>(
   tag_name: &'static str,
   source: &str,
 ) -> Result<ScalarCow<'a>, Error> {
-  Ok(
-    value
+  value
       .get(key)
       .ok_or(
         Error::with_msg(format!("must contain a value called {}", key))
@@ -80,8 +75,7 @@ pub fn get_scalar_from_value<'a>(
       .ok_or(
         Error::with_msg(format!("must contain a value called {}", key))
           .context(tag_name, &source.to_string()),
-      )?,
-  )
+      )
 }
 
 pub fn get_datetime_from_value<'a>(
