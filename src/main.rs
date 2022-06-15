@@ -5,6 +5,7 @@ extern crate tracing;
 
 mod entities;
 pub mod entity_relay_connection;
+use clap::{Command, FromArgMatches, Parser, Subcommand};
 use cms_parent::CmsParent;
 pub use entities::*;
 pub mod api;
@@ -90,25 +91,50 @@ async fn run() -> Result<()> {
   serve(db).await
 }
 
+#[derive(Parser, Debug)]
+enum Subcommands {
+  Serve,
+  ExportSchema,
+}
+
 fn main() -> Result<()> {
   #[cfg(feature = "dhat-heap")]
   let _profiler = dhat::Profiler::new_heap();
 
-  dotenv().ok();
+  let cli = Command::new("Intercode").infer_subcommands(true);
+  // Augment with derived subcommands
+  let cli = Subcommands::augment_subcommands(cli);
 
-  let mut builder = tokio::runtime::Builder::new_multi_thread();
-  builder.enable_all();
+  let matches = cli.get_matches();
+  let derived_subcommands = Subcommands::from_arg_matches(&matches)
+    .map_err(|err| err.exit())
+    .unwrap_or(Subcommands::Serve);
 
-  if let Ok(worker_threads) = env::var("WORKER_THREADS") {
-    builder.worker_threads(
-      worker_threads
-        .parse()
-        .expect("WORKER_THREADS must be a number if set"),
-    );
+  match derived_subcommands {
+    Subcommands::ExportSchema => {
+      let schema =
+        async_graphql::Schema::build(api::QueryRoot, EmptyMutation, EmptySubscription).finish();
+
+      println!("{}", schema.sdl());
+    }
+    Subcommands::Serve => {
+      dotenv().ok();
+
+      let mut builder = tokio::runtime::Builder::new_multi_thread();
+      builder.enable_all();
+
+      if let Ok(worker_threads) = env::var("WORKER_THREADS") {
+        builder.worker_threads(
+          worker_threads
+            .parse()
+            .expect("WORKER_THREADS must be a number if set"),
+        );
+      }
+
+      let rt = builder.build().unwrap();
+      rt.block_on(run())?;
+    }
   }
-
-  let rt = builder.build().unwrap();
-  rt.block_on(run())?;
 
   Ok(())
 }

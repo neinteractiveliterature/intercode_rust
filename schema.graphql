@@ -1,0 +1,92 @@
+type ConventionType {
+	id: ID!
+	name: String
+	bio_eligible_user_con_profiles: [UserConProfileType!]!
+	cmsPage(id: ID, slug: String, rootPage: Boolean): PageType!
+	staff_position(id: ID!): StaffPositionType!
+	user_con_profile(id: ID!): UserConProfileType!
+}
+type EventType {
+	id: ID!
+	title: String!
+	author: String
+	email: String
+	convention: ConventionType
+}
+type EventTypeConnection {
+	"""
+	Information to aid in pagination.
+	"""
+	pageInfo: PageInfo!
+	"""
+	A list of edges.
+	"""
+	edges: [EventTypeEdge]
+}
+"""
+An edge in a connection.
+"""
+type EventTypeEdge {
+	"""
+	The item at the end of the edge
+	"""
+	node: EventType!
+	"""
+	A cursor for use in pagination
+	"""
+	cursor: String!
+}
+"""
+Information about pagination in a connection
+"""
+type PageInfo {
+	"""
+	When paginating backwards, are there more items?
+	"""
+	hasPreviousPage: Boolean!
+	"""
+	When paginating forwards, are there more items?
+	"""
+	hasNextPage: Boolean!
+	"""
+	When paginating backwards, the cursor to continue.
+	"""
+	startCursor: String
+	"""
+	When paginating forwards, the cursor to continue.
+	"""
+	endCursor: String
+}
+type PageType {
+	id: ID!
+	name: String
+	content_html: String!
+}
+type QueryRoot {
+	conventionByRequestHost: ConventionType
+	previewLiquid(content: String!): String!
+	events(after: String, before: String, first: Int, last: Int): EventTypeConnection!
+}
+type StaffPositionType {
+	id: ID!
+	name: String
+}
+type TeamMemberType {
+	id: ID!
+	event: EventType!
+}
+type UserConProfileType {
+	id: ID!
+	bio_html: String
+	bio_name: String!
+	convention: ConventionType!
+	gravatar_url: String!
+	name_inverted: String!
+	name_without_nickname: String!
+	staff_positions: [StaffPositionType!]!
+	team_members: [TeamMemberType!]!
+}
+schema {
+	query: QueryRoot
+}
+

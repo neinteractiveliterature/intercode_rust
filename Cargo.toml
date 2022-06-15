@@ -18,6 +18,7 @@ async-graphql-value = "~3.0.38"
 async-graphql-warp = "~3.0.38"
 chrono = "0.4"
 chrono-tz = "0.6"
+clap = {version = "3.2.4", features = ["derive"]}
 ctrlc = "3.2.2"
 dhat = {version = "0.3.0", optional = true}
 dotenv = "0.15.0"
