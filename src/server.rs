@@ -16,6 +16,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use tls_listener::TlsListener;
 use tokio_rustls::TlsAcceptor;
+use tower_http::compression::CompressionLayer;
 use tracing::log::*;
 use warp::http::Response as HttpResponse;
 use warp::Filter;
@@ -95,6 +96,7 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
         .parse()
         .unwrap_or(25),
     )
+    .layer(CompressionLayer::new())
     .service(warp_service);
 
   let addr = SocketAddr::new(
