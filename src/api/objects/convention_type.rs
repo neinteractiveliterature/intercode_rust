@@ -121,10 +121,12 @@ impl ConventionType {
       .filter(user_con_profiles::Column::Id.eq(id.parse::<u64>()?))
       .one(db.as_ref())
       .await?
-      .ok_or(Error::new(format!(
-        "No user con profile with ID {} in convention",
-        id.as_str()
-      )))
+      .ok_or_else(|| {
+        Error::new(format!(
+          "No user con profile with ID {} in convention",
+          id.as_str()
+        ))
+      })
       .map(UserConProfileType::new)
   }
 }

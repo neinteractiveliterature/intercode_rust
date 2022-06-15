@@ -43,13 +43,12 @@ impl ParseTag for MapTag {
       .expect_value()
       .into_result()?;
 
-    let height: Option<Expression>;
     let height_arg = arguments.next();
-    if let Some(height_arg) = height_arg {
-      height = Some(height_arg.expect_value().into_result()?);
+    let height = if let Some(height_arg) = height_arg {
+      Some(height_arg.expect_value().into_result()?)
     } else {
-      height = None;
-    }
+      None
+    };
 
     arguments.expect_nothing()?;
 
@@ -71,9 +70,9 @@ impl Renderable for Map {
   fn render_to(&self, writer: &mut dyn Write, runtime: &dyn Runtime) -> Result<()> {
     let location = self.location.evaluate(runtime)?;
     let location_source = format!("{}", location.source());
-    let location = location
-      .as_object()
-      .ok_or(Error::with_msg("location must be an object").context("map", &location_source))?;
+    let location = location.as_object().ok_or_else(|| {
+      Error::with_msg("location must be an object").context("map", &location_source)
+    })?;
 
     let center = get_array_from_value(&location, "center", "map", &location_source)?;
     let center = center
@@ -101,7 +100,7 @@ impl Renderable for Map {
           Ok(Some(scalar.into_string().to_string()))
         }
       })?
-      .unwrap_or(String::from("30rem"));
+      .unwrap_or_else(|| String::from("30rem"));
 
     write_react_component_tag(
       writer,

@@ -12,16 +12,16 @@ pub fn get_object_from_value<'a>(
   source: &str,
 ) -> Result<&'a dyn ObjectView, Error> {
   value
-      .get(key)
-      .ok_or(
-        Error::with_msg(format!("must contain an object called {}", key))
-          .context(tag_name, &source.to_string()),
-      )?
-      .as_object()
-      .ok_or(
-        Error::with_msg(format!("must contain an object called {}", key))
-          .context(tag_name, &source.to_string()),
-      )
+    .get(key)
+    .ok_or_else(|| {
+      Error::with_msg(format!("must contain an object called {}", key))
+        .context(tag_name, &source.to_string())
+    })?
+    .as_object()
+    .ok_or_else(|| {
+      Error::with_msg(format!("must contain an object called {}", key))
+        .context(tag_name, &source.to_string())
+    })
 }
 
 pub fn get_array_from_value<'a>(
@@ -31,16 +31,16 @@ pub fn get_array_from_value<'a>(
   source: &str,
 ) -> Result<&'a dyn ArrayView, Error> {
   value
-      .get(key)
-      .ok_or(
-        Error::with_msg(format!("must contain an array called {}", key))
-          .context(tag_name, &source.to_string()),
-      )?
-      .as_array()
-      .ok_or(
-        Error::with_msg(format!("must contain an array called {}", key))
-          .context(tag_name, &source.to_string()),
-      )
+    .get(key)
+    .ok_or_else(|| {
+      Error::with_msg(format!("must contain an array called {}", key))
+        .context(tag_name, &source.to_string())
+    })?
+    .as_array()
+    .ok_or_else(|| {
+      Error::with_msg(format!("must contain an array called {}", key))
+        .context(tag_name, &source.to_string())
+    })
 }
 
 pub fn liquid_datetime_to_chrono_datetime(
@@ -66,16 +66,16 @@ pub fn get_scalar_from_value<'a>(
   source: &str,
 ) -> Result<ScalarCow<'a>, Error> {
   value
-      .get(key)
-      .ok_or(
-        Error::with_msg(format!("must contain a value called {}", key))
-          .context(tag_name, &source.to_string()),
-      )?
-      .as_scalar()
-      .ok_or(
-        Error::with_msg(format!("must contain a value called {}", key))
-          .context(tag_name, &source.to_string()),
-      )
+    .get(key)
+    .ok_or_else(|| {
+      Error::with_msg(format!("must contain a value called {}", key))
+        .context(tag_name, &source.to_string())
+    })?
+    .as_scalar()
+    .ok_or_else(|| {
+      Error::with_msg(format!("must contain a value called {}", key))
+        .context(tag_name, &source.to_string())
+    })
 }
 
 pub fn get_datetime_from_value<'a>(
@@ -98,9 +98,9 @@ pub fn dig_value<'a>(
   tag_name: &'static str,
   source: &str,
 ) -> Result<ScalarCow<'a>, Error> {
-  let (value_key, object_keys) = keys.split_last().ok_or(
-    Error::with_msg("dig_value requires at least one key").context(tag_name, &source.to_string()),
-  )?;
+  let (value_key, object_keys) = keys.split_last().ok_or_else(|| {
+    Error::with_msg("dig_value requires at least one key").context(tag_name, &source.to_string())
+  })?;
 
   let object = object_keys.iter().try_fold(value, |acc, object_key| {
     get_object_from_value(acc, object_key, tag_name, source)

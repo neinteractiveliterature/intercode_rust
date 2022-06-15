@@ -76,10 +76,10 @@ impl Renderable for WithdrawUserSignupButton {
   fn render_to(&self, writer: &mut dyn Write, runtime: &dyn Runtime) -> Result<()> {
     let signup = self.signup.evaluate(runtime)?;
     let signup_source = format!("{}", signup.source());
-    let signup = signup.as_object().ok_or(
+    let signup = signup.as_object().ok_or_else(|| {
       Error::with_msg("signup must be an object")
-        .context("withdraw_user_signup_button", &signup_source),
-    )?;
+        .context("withdraw_user_signup_button", &signup_source)
+    })?;
 
     let event_title = dig_value(
       signup,

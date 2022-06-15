@@ -1,4 +1,3 @@
-use crate::cms_parent::CmsParent;
 use crate::loaders::LoaderManager;
 use crate::{api, conventions, Localizations, QueryData, SchemaData};
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
@@ -70,7 +69,7 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
           let request = request.data(QueryData {
             convention: convention.clone(),
             current_user: None,
-            cms_parent: convention.map(CmsParent::Convention),
+            cms_parent: convention.map(|convention| convention.into()),
           });
 
           Ok::<_, Infallible>(GraphQLResponse::from(schema.execute(request).await))
@@ -101,7 +100,9 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
 
   let addr = SocketAddr::new(
     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
-    env::var("PORT").unwrap_or(String::from("5901")).parse()?,
+    env::var("PORT")
+      .unwrap_or_else(|_| String::from("5901"))
+      .parse()?,
   );
   let signal = async move {
     tokio::signal::ctrl_c()

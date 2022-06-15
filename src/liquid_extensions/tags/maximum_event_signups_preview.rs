@@ -70,10 +70,10 @@ impl Renderable for MaximumEventSignupsPreview {
   fn render_to(&self, writer: &mut dyn Write, runtime: &dyn Runtime) -> Result<()> {
     let scheduled_value = self.scheduled_value.evaluate(runtime)?;
     let scheduled_value_source = format!("{}", scheduled_value.source());
-    let scheduled_value = scheduled_value.as_object().ok_or(
+    let scheduled_value = scheduled_value.as_object().ok_or_else(|| {
       Error::with_msg("scheduled_value must be an object")
-        .context("maximum_event_signups_preview", &scheduled_value_source),
-    )?;
+        .context("maximum_event_signups_preview", &scheduled_value_source)
+    })?;
 
     let timespans = get_array_from_value(
       scheduled_value,

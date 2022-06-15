@@ -42,7 +42,7 @@ impl ParseTag for AddToCalendarDropdownTag {
     let class_name = arguments
       .next()
       .and_then(|arg| arg.expect_value().into_result().ok())
-      .unwrap_or(Expression::Literal(Value::scalar("btn btn-secondary")));
+      .unwrap_or_else(|| Expression::Literal(Value::scalar("btn btn-secondary")));
 
     arguments.expect_nothing()?;
 

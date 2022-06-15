@@ -39,12 +39,12 @@ impl ParseTag for NewEventProposalButtonTag {
     let button_text = arguments
       .next()
       .and_then(|arg| arg.expect_value().into_result().ok())
-      .unwrap_or(Expression::Literal(Value::scalar("Propose an event")));
+      .unwrap_or_else(|| Expression::Literal(Value::scalar("Propose an event")));
 
     let button_class = arguments
       .next()
       .and_then(|arg| arg.expect_value().into_result().ok())
-      .unwrap_or(Expression::Literal(Value::scalar("btn btn-secondary")));
+      .unwrap_or_else(|| Expression::Literal(Value::scalar("btn btn-secondary")));
 
     arguments.expect_nothing()?;
 

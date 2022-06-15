@@ -191,7 +191,8 @@ impl Renderable for AssignGraphQLResult {
       .collect::<Result<Vec<(&String, ValueCow)>, Error>>()?
       .iter()
       .map(|(field, value)| {
-        liquid_value_to_graphql_const(&value.as_view().to_value()).map(|value| (async_graphql::Name::new(*field), value))
+        liquid_value_to_graphql_const(&value.as_view().to_value())
+          .map(|value| (async_graphql::Name::new(*field), value))
       })
       .collect::<Result<Vec<(async_graphql::Name, ConstValue)>, serde_json::Error>>()
       .map_err(|e| Error::with_msg(e.to_string()))?;
@@ -200,9 +201,10 @@ impl Renderable for AssignGraphQLResult {
       variables_map.insert(key, value);
     }
 
-    let request = async_graphql::Request::new(graphql_query.query.unwrap_or(String::from("")))
-      .data(self.query_data.to_owned())
-      .variables(Variables::from_value(ConstValue::Object(variables_map)));
+    let request =
+      async_graphql::Request::new(graphql_query.query.unwrap_or_else(|| String::from("")))
+        .data(self.query_data.to_owned())
+        .variables(Variables::from_value(ConstValue::Object(variables_map)));
     let response = tokio::task::block_in_place(move || {
       Handle::current().block_on(async move { graphql_schema.execute(request).await })
     });

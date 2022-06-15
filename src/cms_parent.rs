@@ -17,19 +17,19 @@ use crate::{
 
 #[derive(Clone, Debug)]
 pub enum CmsParent {
-  Convention(conventions::Model),
-  RootSite(root_sites::Model),
+  Convention(Box<conventions::Model>),
+  RootSite(Box<root_sites::Model>),
 }
 
-impl Into<CmsParent> for conventions::Model {
-  fn into(self) -> CmsParent {
-    CmsParent::Convention(self)
+impl From<conventions::Model> for CmsParent {
+  fn from(convention: conventions::Model) -> Self {
+    CmsParent::Convention(Box::new(convention))
   }
 }
 
-impl Into<CmsParent> for root_sites::Model {
-  fn into(self) -> CmsParent {
-    CmsParent::RootSite(self)
+impl From<root_sites::Model> for CmsParent {
+  fn from(root_site: root_sites::Model) -> Self {
+    CmsParent::RootSite(Box::new(root_site))
   }
 }
 

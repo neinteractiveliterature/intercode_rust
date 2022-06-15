@@ -44,21 +44,11 @@ pub struct SchemaData {
   pub loaders: LoaderManager,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct QueryData {
   pub cms_parent: Option<CmsParent>,
   pub current_user: Option<users::Model>,
   pub convention: Option<conventions::Model>,
-}
-
-impl Default for QueryData {
-  fn default() -> Self {
-    Self {
-      cms_parent: None,
-      current_user: None,
-      convention: None,
-    }
-  }
 }
 
 async fn connect_database() -> Result<DatabaseConnection, DbErr> {
