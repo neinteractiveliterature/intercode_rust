@@ -1,0 +1,27 @@
+[package]
+edition = "2021"
+name = "intercode_liquid"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-graphql = "*"
+async-graphql-value = "*"
+chrono = "*"
+chrono-tz = "*"
+html-escape = "*"
+i18n-embed = "*"
+i18n-embed-fl = "*"
+intercode_entities = {path = "../intercode_entities"}
+intercode_inflector = {path = "../intercode_inflector"}
+intercode_timespan = {path = "../intercode_timespan"}
+liquid = "*"
+liquid-core = "*"
+md5 = "*"
+regex = "*"
+sea-orm = "*"
+serde_json = "*"
+tokio = "*"
+tracing = "*"
+url = "*"

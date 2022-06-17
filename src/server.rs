@@ -1,11 +1,14 @@
-use crate::loaders::LoaderManager;
-use crate::{api, conventions, Localizations, QueryData, SchemaData};
+use crate::Localizations;
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql::*;
 use async_graphql_warp::GraphQLResponse;
 use futures_util::stream::StreamExt;
 use i18n_embed::fluent::fluent_language_loader;
 use i18n_embed::LanguageLoader;
+use intercode_entities::cms_parent::CmsParent;
+use intercode_entities::conventions;
+use intercode_graphql::loaders::LoaderManager;
+use intercode_graphql::{api, QueryData, SchemaData};
 use sea_orm::DatabaseConnection;
 use std::convert::Infallible;
 use std::env;
@@ -29,14 +32,16 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
   language_loader.load_languages(&Localizations, &[language_loader.fallback_language()])?;
   let language_loader_arc = Arc::new(language_loader);
 
+  let schema_data = SchemaData {
+    db: Arc::clone(&db_arc),
+    language_loader: Arc::clone(&language_loader_arc),
+    loaders: LoaderManager::new(&db_arc),
+  };
+
   let graphql_schema =
     async_graphql::Schema::build(api::QueryRoot, EmptyMutation, EmptySubscription)
       .extension(async_graphql::extensions::Tracing)
-      .data(SchemaData {
-        db: Arc::clone(&db_arc),
-        language_loader: Arc::clone(&language_loader_arc),
-        loaders: LoaderManager::new(&db_arc),
-      })
+      .data(schema_data.clone())
       .finish();
 
   let graphql_post = warp::path("graphql")
@@ -54,7 +59,7 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
         async move {
           use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 
-          let convention = match authority {
+          let convention = Arc::new(match authority {
             Some(authority) => conventions::Entity::find()
               .filter(conventions::Column::Domain.eq(authority.host()))
               .one(db.as_ref())
@@ -64,13 +69,12 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
                 None
               }),
             None => None,
-          };
-
-          let request = request.data(QueryData {
-            convention: convention.clone(),
-            current_user: None,
-            cms_parent: convention.map(|convention| convention.into()),
           });
+          let cms_parent: Arc<Option<CmsParent>> =
+            Arc::new(convention.as_ref().as_ref().map(|c| c.clone().into()));
+
+          let query_data = QueryData::new(cms_parent, Arc::new(None), convention);
+          let request = request.data(query_data);
 
           Ok::<_, Infallible>(GraphQLResponse::from(schema.execute(request).await))
         }

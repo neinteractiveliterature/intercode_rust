@@ -12,13 +12,12 @@ dhat-heap = ["dep:dhat"] # if you are doing heap profiling
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-Inflector = "*"
 async-graphql = {version = "~3.0.38", features = ["tracing", "dataloader"]}
 async-graphql-value = "~3.0.38"
 async-graphql-warp = "~3.0.38"
 chrono = "0.4"
 chrono-tz = "0.6"
-clap = {version = "3.2.4", features = ["derive"]}
+clap = {version = "3.2.4", features = ["derive", "cargo"]}
 ctrlc = "3.2.2"
 dhat = {version = "0.3.0", optional = true}
 dotenv = "0.15.0"
@@ -26,6 +25,10 @@ html-escape = "0.2.11"
 hyper = "0.14.19"
 i18n-embed = {version = "0.13", features = ["fluent-system"]}
 i18n-embed-fl = "0.6"
+intercode_entities = {path = "./crates/intercode_entities"}
+intercode_graphql = {path = "./crates/intercode_graphql"}
+intercode_inflector = {path = "./crates/intercode_inflector"}
+intercode_liquid = {path = "./crates/intercode_liquid"}
 liquid = "0.26.0"
 liquid-core = "0.26.0"
 md5 = "*"

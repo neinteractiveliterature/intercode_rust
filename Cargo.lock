@@ -1296,10 +1296,68 @@ dependencies = [
 ]
 
 [[package]]
-name = "intercode_rust"
+name = "intercode_entities"
+version = "0.1.0"
+dependencies = [
+ "sea-orm",
+ "serde",
+]
+
+[[package]]
+name = "intercode_graphql"
+version = "0.1.0"
+dependencies = [
+ "async-graphql",
+ "i18n-embed",
+ "intercode_entities",
+ "intercode_liquid",
+ "liquid",
+ "liquid-core",
+ "md5",
+ "pulldown-cmark",
+ "sea-orm",
+ "tokio",
+]
+
+[[package]]
+name = "intercode_inflector"
 version = "0.1.0"
 dependencies = [
  "Inflector",
+ "regex",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "intercode_liquid"
+version = "0.1.0"
+dependencies = [
+ "async-graphql",
+ "async-graphql-value",
+ "chrono",
+ "chrono-tz",
+ "html-escape",
+ "i18n-embed",
+ "i18n-embed-fl",
+ "intercode_entities",
+ "intercode_inflector",
+ "intercode_timespan",
+ "liquid",
+ "liquid-core",
+ "md5",
+ "regex",
+ "sea-orm",
+ "serde_json",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "intercode_rust"
+version = "0.1.0"
+dependencies = [
  "async-graphql",
  "async-graphql-value",
  "async-graphql-warp",
@@ -1313,6 +1371,10 @@ dependencies = [
  "hyper",
  "i18n-embed",
  "i18n-embed-fl",
+ "intercode_entities",
+ "intercode_graphql",
+ "intercode_inflector",
+ "intercode_liquid",
  "liquid",
  "liquid-core",
  "md5",
@@ -1335,6 +1397,15 @@ dependencies = [
  "unic-langid",
  "url",
  "warp",
+]
+
+[[package]]
+name = "intercode_timespan"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "i18n-embed",
+ "i18n-embed-fl",
 ]
 
 [[package]]

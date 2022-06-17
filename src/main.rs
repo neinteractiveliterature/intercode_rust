@@ -3,29 +3,16 @@ extern crate chrono_tz;
 extern crate dotenv;
 extern crate tracing;
 
-mod entities;
-pub mod entity_relay_connection;
-use clap::{Command, FromArgMatches, Parser, Subcommand};
-use cms_parent::CmsParent;
-pub use entities::*;
-pub mod api;
-pub mod cms_parent;
-pub mod inflections;
-pub mod liquid_extensions;
-pub mod loaders;
-pub mod model_ext;
+use clap::{command, FromArgMatches, Parser, Subcommand};
 mod server;
-pub mod timespan;
 
 use async_graphql::*;
 use dotenv::dotenv;
-use i18n_embed::fluent::FluentLanguageLoader;
-use loaders::LoaderManager;
+use intercode_graphql::api;
 use rust_embed::RustEmbed;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};
 use server::serve;
 use std::env;
-use std::sync::Arc;
 use std::time::Duration;
 use tracing::log::*;
 use tracing_subscriber::EnvFilter;
@@ -37,20 +24,6 @@ static ALLOC: dhat::Alloc = dhat::Alloc;
 #[derive(RustEmbed)]
 #[folder = "i18n"] // path to the compiled localization resources
 pub struct Localizations;
-
-#[derive(Debug, Clone)]
-pub struct SchemaData {
-  pub db: Arc<DatabaseConnection>,
-  pub language_loader: Arc<FluentLanguageLoader>,
-  pub loaders: LoaderManager,
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct QueryData {
-  pub cms_parent: Option<CmsParent>,
-  pub current_user: Option<users::Model>,
-  pub convention: Option<conventions::Model>,
-}
 
 async fn connect_database() -> Result<DatabaseConnection, DbErr> {
   dotenv().ok();
@@ -101,7 +74,9 @@ fn main() -> Result<()> {
   #[cfg(feature = "dhat-heap")]
   let _profiler = dhat::Profiler::new_heap();
 
-  let cli = Command::new("Intercode").infer_subcommands(true);
+  let cli = command!()
+    .about("A one-stop web application for conventions")
+    .infer_subcommands(true);
   // Augment with derived subcommands
   let cli = Subcommands::augment_subcommands(cli);
 

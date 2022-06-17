@@ -1,0 +1,18 @@
+[package]
+edition = "2021"
+name = "intercode_graphql"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-graphql = "*"
+i18n-embed = "*"
+intercode_entities = {path = "../intercode_entities"}
+intercode_liquid = {path = "../intercode_liquid"}
+liquid = "*"
+liquid-core = "*"
+md5 = "*"
+pulldown-cmark = "*"
+sea-orm = "*"
+tokio = "*"
