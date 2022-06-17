@@ -73,7 +73,7 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
           let cms_parent: Arc<Option<CmsParent>> =
             Arc::new(convention.as_ref().as_ref().map(|c| c.clone().into()));
 
-          let query_data = QueryData::new(cms_parent, Arc::new(None), convention);
+          let query_data = QueryData::new(cms_parent, Arc::new(None), convention, Arc::new(None));
           let request = request.data(query_data);
 
           Ok::<_, Infallible>(GraphQLResponse::from(schema.execute(request).await))

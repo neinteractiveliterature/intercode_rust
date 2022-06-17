@@ -1,12 +1,12 @@
 use async_graphql::{EmptyMutation, EmptySubscription};
 use i18n_embed::fluent::FluentLanguageLoader;
-use intercode_entities::{cms_parent::CmsParent, conventions, users};
+use intercode_entities::{cms_parent::CmsParent, conventions, user_con_profiles, users};
 use intercode_liquid::{
   build_liquid_parser,
   cms_parent_partial_source::{LazyCmsPartialSource, PreloadPartialsStrategy},
   GraphQLExecutor,
 };
-use liquid::partials::LazyCompiler;
+use liquid::{object, partials::LazyCompiler};
 use sea_orm::DatabaseConnection;
 use std::{future::Future, sync::Arc};
 
@@ -26,6 +26,7 @@ pub struct QueryData {
   pub cms_parent: Arc<Option<CmsParent>>,
   pub current_user: Arc<Option<users::Model>>,
   pub convention: Arc<Option<conventions::Model>>,
+  pub user_con_profile: Arc<Option<user_con_profiles::Model>>,
 }
 
 #[derive(Clone, Debug)]
@@ -57,11 +58,13 @@ impl QueryData {
     cms_parent: Arc<Option<CmsParent>>,
     current_user: Arc<Option<users::Model>>,
     convention: Arc<Option<conventions::Model>>,
+    user_con_profile: Arc<Option<user_con_profiles::Model>>,
   ) -> QueryData {
     QueryData {
       cms_parent,
       current_user,
       convention,
+      user_con_profile,
     }
   }
 
@@ -131,8 +134,13 @@ impl QueryData {
       partial_compiler,
     )?;
 
+    let mut all_globals = object!({
+      "user_con_profile": self.user_con_profile
+    });
+    all_globals.extend(globals);
+
     let template = parser.parse(content)?;
-    let result = template.render(&globals);
+    let result = template.render(&all_globals);
 
     match result {
       Ok(content) => Ok(content),
