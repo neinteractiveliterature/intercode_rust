@@ -1,3 +1,4 @@
+use crate::filters::{cms_parent_from_convention, query_data};
 use crate::Localizations;
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql::*;
@@ -5,11 +6,12 @@ use async_graphql_warp::GraphQLResponse;
 use futures_util::stream::StreamExt;
 use i18n_embed::fluent::fluent_language_loader;
 use i18n_embed::LanguageLoader;
-use intercode_entities::cms_parent::CmsParent;
-use intercode_entities::conventions;
+use intercode_entities::cms_parent::{CmsParent, CmsParentTrait};
+use intercode_entities::{conventions, events, pages};
 use intercode_graphql::loaders::LoaderManager;
 use intercode_graphql::{api, QueryData, SchemaData};
-use sea_orm::DatabaseConnection;
+use regex::Regex;
+use sea_orm::{ColumnTrait, DatabaseConnection, ModelTrait, QueryFilter};
 use std::convert::Infallible;
 use std::env;
 use std::future::ready;
@@ -21,10 +23,20 @@ use tokio_rustls::TlsAcceptor;
 use tower_http::compression::CompressionLayer;
 use tracing::log::*;
 use warp::http::Response as HttpResponse;
-use warp::Filter;
+use warp::path::FullPath;
+use warp::{Filter, Rejection};
+
+#[derive(Debug)]
+struct FatalDatabaseError {
+  #[allow(dead_code)]
+  db_err: sea_orm::DbErr,
+}
+
+impl warp::reject::Reject for FatalDatabaseError {}
 
 pub async fn serve(db: DatabaseConnection) -> Result<()> {
   let db_arc = Arc::new(db);
+  let event_path_regex: regex::Regex = Regex::new("^/events/(\\d+)")?;
 
   let log = warp::log("intercode_rust::http");
 
@@ -46,34 +58,15 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
 
   let graphql_post = warp::path("graphql")
     .and(warp::post())
-    .and(warp::host::optional())
+    .and(query_data(db_arc.clone()))
     .and(async_graphql_warp::graphql(graphql_schema))
     .and_then(
-      move |authority: Option<warp::host::Authority>,
+      move |query_data: QueryData,
             (schema, request): (
         Schema<api::QueryRoot, EmptyMutation, EmptySubscription>,
         async_graphql::Request,
       )| {
-        let db = Arc::clone(&db_arc);
-
         async move {
-          use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-
-          let convention = Arc::new(match authority {
-            Some(authority) => conventions::Entity::find()
-              .filter(conventions::Column::Domain.eq(authority.host()))
-              .one(db.as_ref())
-              .await
-              .unwrap_or_else(|error| {
-                warn!("Error while querying for convention: {}", error);
-                None
-              }),
-            None => None,
-          });
-          let cms_parent: Arc<Option<CmsParent>> =
-            Arc::new(convention.as_ref().as_ref().map(|c| c.clone().into()));
-
-          let query_data = QueryData::new(cms_parent, Arc::new(None), convention, Arc::new(None));
           let request = request.data(query_data);
 
           Ok::<_, Infallible>(GraphQLResponse::from(schema.execute(request).await))
@@ -81,7 +74,7 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
       },
     );
 
-  let graphql_playground = warp::path::end().and(warp::get()).map(|| {
+  let graphql_playground = warp::path("graphql-playground").and(warp::get()).map(|| {
     HttpResponse::builder()
       .header("content-type", "text/html")
       .body(playground_source(
@@ -89,7 +82,87 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
       ))
   });
 
-  let routes = graphql_playground.or(graphql_post).with(log);
+  let single_page_app_entry = warp::get()
+    .and(query_data(db_arc.clone()))
+    .and(warp::path::full())
+    .and_then(move |query_data: QueryData, full_path: FullPath| {
+      let db = db_arc.clone();
+      let event_path_regex = event_path_regex.clone();
+      let cms_parent = query_data.cms_parent;
+
+      async move {
+        let url = url::Url::parse(full_path.as_str()).map_err(|err| {
+          warn!("Error parsing request URL: {}", err);
+          warp::reject::not_found()
+        })?;
+
+        let path = url.path();
+        let page = if path.starts_with("/pages/") {
+          let (_, slug) = path.split_at(7);
+          cms_parent
+            .pages()
+            .filter(pages::Column::Slug.eq(slug))
+            .one(db.as_ref())
+            .await
+            .map_err(|db_err| warp::reject::custom(FatalDatabaseError { db_err }))?
+        } else {
+          cms_parent
+            .root_page()
+            .one(db.as_ref())
+            .await
+            .map_err(|db_err| warp::reject::custom(FatalDatabaseError { db_err }))?
+        };
+
+        let event = if let Some(convention) = query_data.convention.as_ref() {
+          if convention.site_mode == "single_event" {
+            convention
+              .find_related(events::Entity)
+              .one(db.as_ref())
+              .await
+              .map_err(|db_err| warp::reject::custom(FatalDatabaseError { db_err }))?
+          } else if let Some(event_captures) = event_path_regex.captures(path) {
+            let event_id = event_captures.get(1).unwrap().as_str().parse::<i64>();
+            if let Ok(event_id) = event_id {
+              convention
+                .find_related(events::Entity)
+                .filter(events::Column::Id.eq(event_id))
+                .one(db.as_ref())
+                .await
+                .map_err(|db_err| warp::reject::custom(FatalDatabaseError { db_err }))?
+            } else {
+              None
+            }
+          } else {
+            None
+          }
+        } else {
+          None
+        };
+
+        Ok::<_, Rejection>(
+          HttpResponse::builder()
+            .header("content-type", "text/html")
+            .body(format!(
+              "hello {}",
+              query_data
+                .convention
+                .as_ref()
+                .as_ref()
+                .map(|c| c
+                  .name
+                  .as_ref()
+                  .map(|name| name.as_str())
+                  .unwrap_or("untitled convention"))
+                .unwrap_or("unknown convention")
+            )),
+        )
+      }
+    });
+
+  let routes = graphql_playground
+    .or(graphql_post)
+    .or(single_page_app_entry)
+    .with(log);
   let warp_service = warp::service(routes);
 
   let service = tower::ServiceBuilder::new()

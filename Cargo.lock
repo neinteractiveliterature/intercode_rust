@@ -1308,6 +1308,7 @@ name = "intercode_graphql"
 version = "0.1.0"
 dependencies = [
  "async-graphql",
+ "chrono-tz",
  "i18n-embed",
  "intercode_entities",
  "intercode_liquid",

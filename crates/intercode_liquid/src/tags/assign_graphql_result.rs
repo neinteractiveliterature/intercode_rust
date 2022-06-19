@@ -31,14 +31,14 @@ fn graphql_const_to_liquid_value(
 
 #[derive(Clone, Debug)]
 pub struct AssignGraphQLResultTag<E: GraphQLExecutor> {
-  cms_parent: Arc<Option<CmsParent>>,
+  cms_parent: Arc<CmsParent>,
   db: Arc<DatabaseConnection>,
   graphql_executor: E,
 }
 
 impl<E: GraphQLExecutor> AssignGraphQLResultTag<E> {
   pub fn new(
-    cms_parent: Arc<Option<CmsParent>>,
+    cms_parent: Arc<CmsParent>,
     db: Arc<DatabaseConnection>,
     graphql_executor: E,
   ) -> AssignGraphQLResultTag<E> {
@@ -130,7 +130,7 @@ impl<E: 'static + GraphQLExecutor> ParseTag for AssignGraphQLResultTag<E> {
 
 #[derive(Debug)]
 struct AssignGraphQLResult<E: GraphQLExecutor> {
-  cms_parent: Arc<Option<CmsParent>>,
+  cms_parent: Arc<CmsParent>,
   db: Arc<DatabaseConnection>,
   graphql_executor: E,
   arg_mapping: HashMap<String, Expression>,
@@ -160,12 +160,6 @@ impl<E: GraphQLExecutor> Renderable for AssignGraphQLResult<E> {
     let cms_graphql_queries_select = self
       .cms_parent
       .as_ref()
-      .as_ref()
-      .ok_or_else(|| {
-        liquid_core::Error::with_msg(
-          "assign_graphql_result can only be used inside a CMS parent (root site or convention)",
-        )
-      })?
       .cms_graphql_queries()
       .filter(cms_graphql_queries::Column::Identifier.eq(self.query_name.clone()));
     let graphql_query = tokio::task::block_in_place(move || {

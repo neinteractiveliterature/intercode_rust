@@ -23,9 +23,10 @@ pub struct SchemaData {
 
 #[derive(Debug, Clone)]
 pub struct QueryData {
-  pub cms_parent: Arc<Option<CmsParent>>,
+  pub cms_parent: Arc<CmsParent>,
   pub current_user: Arc<Option<users::Model>>,
   pub convention: Arc<Option<conventions::Model>>,
+  pub timezone: chrono_tz::Tz,
   pub user_con_profile: Arc<Option<user_con_profiles::Model>>,
 }
 
@@ -55,15 +56,17 @@ impl GraphQLExecutor for EmbeddedGraphQLExecutor {
 
 impl QueryData {
   pub fn new(
-    cms_parent: Arc<Option<CmsParent>>,
+    cms_parent: Arc<CmsParent>,
     current_user: Arc<Option<users::Model>>,
     convention: Arc<Option<conventions::Model>>,
+    timezone: chrono_tz::Tz,
     user_con_profile: Arc<Option<user_con_profiles::Model>>,
   ) -> QueryData {
     QueryData {
       cms_parent,
       current_user,
       convention,
+      timezone,
       user_con_profile,
     }
   }
@@ -73,25 +76,18 @@ impl QueryData {
     schema_data: &SchemaData,
     preload_partials_strategy: Option<PreloadPartialsStrategy<'a>>,
   ) -> Result<LazyCompiler<LazyCmsPartialSource>, liquid_core::Error> {
-    if let Some(cms_parent) = self.cms_parent.as_ref().as_ref() {
-      let source =
-        LazyCmsPartialSource::new(Arc::new(cms_parent.to_owned()), schema_data.db.clone());
+    let source = LazyCmsPartialSource::new(self.cms_parent.clone(), schema_data.db.clone());
 
-      if let Some(strategy) = preload_partials_strategy {
-        source
-          .preload(schema_data.db.as_ref(), cms_parent, strategy)
-          .await
-          .map_err(|db_err| {
-            liquid_core::Error::with_msg(format!("Error preloading partials: {}", db_err))
-          })?;
-      }
-
-      Ok(LazyCompiler::new(source))
-    } else {
-      Err(liquid_core::Error::with_msg(
-        "No CMS parent to load partials from",
-      ))
+    if let Some(strategy) = preload_partials_strategy {
+      source
+        .preload(schema_data.db.as_ref(), self.cms_parent.as_ref(), strategy)
+        .await
+        .map_err(|db_err| {
+          liquid_core::Error::with_msg(format!("Error preloading partials: {}", db_err))
+        })?;
     }
+
+    Ok(LazyCompiler::new(source))
   }
 
   pub fn build_embedded_graphql_executor(

@@ -12,12 +12,12 @@ use tokio::runtime::Handle;
 
 #[derive(Clone, Debug)]
 pub struct FileUrlTag {
-  cms_parent: Arc<Option<CmsParent>>,
+  cms_parent: Arc<CmsParent>,
   db: Arc<DatabaseConnection>,
 }
 
 impl FileUrlTag {
-  pub fn new(cms_parent: Arc<Option<CmsParent>>, db: Arc<DatabaseConnection>) -> Self {
+  pub fn new(cms_parent: Arc<CmsParent>, db: Arc<DatabaseConnection>) -> Self {
     FileUrlTag { cms_parent, db }
   }
 }
@@ -58,7 +58,7 @@ impl ParseTag for FileUrlTag {
 #[derive(Debug)]
 struct FileUrl {
   filename: Expression,
-  cms_parent: Arc<Option<CmsParent>>,
+  cms_parent: Arc<CmsParent>,
   db: Arc<DatabaseConnection>,
 }
 
@@ -83,12 +83,6 @@ impl Renderable for FileUrl {
               &mut self
                 .cms_parent
                 .as_ref()
-                .as_ref()
-                .ok_or_else(|| {
-                  liquid_core::Error::with_msg(
-                    "file_url can only be used inside a CMS parent (root site or convention)",
-                  )
-                })?
                 .cms_files()
                 .column(cms_files::Column::Id),
             )

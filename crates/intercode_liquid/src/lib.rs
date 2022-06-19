@@ -38,7 +38,7 @@ where
 pub fn build_liquid_parser<'a>(
   convention: &'a Arc<Option<conventions::Model>>,
   language_loader: &'a Arc<FluentLanguageLoader>,
-  cms_parent: &'a Arc<Option<CmsParent>>,
+  cms_parent: &'a Arc<CmsParent>,
   db: &'a Arc<DatabaseConnection>,
   user_signed_in: bool,
   graphql_executor: impl GraphQLExecutor + 'static,
