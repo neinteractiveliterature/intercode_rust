@@ -5,12 +5,11 @@ use intercode_entities::{
   active_storage_attachments, active_storage_blobs, conventions, events, pages,
 };
 use intercode_graphql::{QueryData, SchemaData};
-use intercode_liquid::cms_parent_partial_source::PreloadPartialsStrategy;
+use intercode_liquid::{cms_parent_partial_source::PreloadPartialsStrategy, react_component_tag};
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use serde_json::json;
 
 const NOSCRIPT_WARNING: &str = r#"
-NOSCRIPT_WARNING = <<~HTML.html_safe
 <noscript id="no-javascript-warning">
   <div class="container">
     <div class="alert alert-danger">
@@ -35,7 +34,6 @@ NOSCRIPT_WARNING = <<~HTML.html_safe
     </div>
   </div>
 </noscript>
-HTML
 "#;
 
 // https://stackoverflow.com/questions/38461429/how-can-i-truncate-a-string-to-have-at-most-n-characters
@@ -182,7 +180,11 @@ async fn open_graph_meta_tags(
   };
 
   format!(
-    r#"{}\n{}\n<meta property="og:type" content="website">"#,
+    r#"
+{}
+{}
+<meta property="og:type" content="website">
+"#,
     open_graph_image_tag(db, convention).await,
     title_and_desc
   )
@@ -225,9 +227,9 @@ async fn content_for_head(
 <meta content="text/html; charset=UTF-8" http-equiv="Content-Type"/>
 <title>{}</title>
 {}
-<script type="application/javascript" src="{}" type="module" defer>
+<script type="application/javascript" src="{}" type="module" defer></script>
 <meta content="width=device-width, initial-scale=1" name="viewport"/>
-<meta property="og:url" content="{}">
+<meta property="og:url" content="{}"/>
 {}
 {}
 "#,
@@ -259,11 +261,7 @@ pub struct CmsRenderingContext {
 }
 
 impl CmsRenderingContext {
-  pub fn new(
-    globals: liquid::Object,
-    schema_data: SchemaData,
-    query_data: QueryData,
-  ) -> Self {
+  pub fn new(globals: liquid::Object, schema_data: SchemaData, query_data: QueryData) -> Self {
     CmsRenderingContext {
       globals,
       query_data,
@@ -285,5 +283,39 @@ impl CmsRenderingContext {
         preload_partials_strategy,
       )
       .await
+  }
+
+  pub async fn render_app_root_content(
+    &self,
+    request_url: &url::Url,
+    page_title: &str,
+    page: Option<&pages::Model>,
+    event: Option<&events::Model>,
+  ) -> String {
+    let content_for_head = content_for_head(
+      request_url,
+      self.schema_data.db.clone(),
+      self.query_data.convention.as_ref().as_ref(),
+      page,
+      event,
+      page_title,
+      self,
+    )
+    .await;
+
+    let browser_warning = self
+      .globals
+      .get("browser_warning")
+      .map(|value| value.as_view());
+
+    format!(
+      r#"<!DOCTYPE html><html><head>{}</head><body>{}{}{}</body></html>"#,
+      content_for_head,
+      NOSCRIPT_WARNING,
+      browser_warning
+        .map(|value| value.to_kstr().to_string())
+        .unwrap_or_else(|| "".to_string()),
+      react_component_tag("AppRoot", json!({}))
+    )
   }
 }

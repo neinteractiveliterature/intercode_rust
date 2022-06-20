@@ -5,6 +5,8 @@ pub mod filters;
 mod react_component_tag;
 pub mod tags;
 
+pub use react_component_tag::react_component_tag;
+
 use std::{fmt::Debug, future::Future, pin::Pin, sync::Arc};
 
 use i18n_embed::fluent::FluentLanguageLoader;

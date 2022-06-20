@@ -1,4 +1,5 @@
-use crate::filters::{cms_parent_from_convention, query_data};
+use crate::cms_rendering_context::CmsRenderingContext;
+use crate::filters::{query_data, request_url};
 use crate::Localizations;
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql::*;
@@ -6,10 +7,11 @@ use async_graphql_warp::GraphQLResponse;
 use futures_util::stream::StreamExt;
 use i18n_embed::fluent::fluent_language_loader;
 use i18n_embed::LanguageLoader;
-use intercode_entities::cms_parent::{CmsParent, CmsParentTrait};
-use intercode_entities::{conventions, events, pages};
+use intercode_entities::cms_parent::CmsParentTrait;
+use intercode_entities::{events, pages};
 use intercode_graphql::loaders::LoaderManager;
 use intercode_graphql::{api, QueryData, SchemaData};
+use liquid::object;
 use regex::Regex;
 use sea_orm::{ColumnTrait, DatabaseConnection, ModelTrait, QueryFilter};
 use std::convert::Infallible;
@@ -23,7 +25,6 @@ use tokio_rustls::TlsAcceptor;
 use tower_http::compression::CompressionLayer;
 use tracing::log::*;
 use warp::http::Response as HttpResponse;
-use warp::path::FullPath;
 use warp::{Filter, Rejection};
 
 #[derive(Debug)]
@@ -84,18 +85,14 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
 
   let single_page_app_entry = warp::get()
     .and(query_data(db_arc.clone()))
-    .and(warp::path::full())
-    .and_then(move |query_data: QueryData, full_path: FullPath| {
+    .and(request_url())
+    .and_then(move |query_data: QueryData, url: url::Url| {
       let db = db_arc.clone();
       let event_path_regex = event_path_regex.clone();
-      let cms_parent = query_data.cms_parent;
+      let cms_parent = query_data.cms_parent.clone();
+      let schema_data = schema_data.clone();
 
       async move {
-        let url = url::Url::parse(full_path.as_str()).map_err(|err| {
-          warn!("Error parsing request URL: {}", err);
-          warp::reject::not_found()
-        })?;
-
         let path = url.path();
         let page = if path.starts_with("/pages/") {
           let (_, slug) = path.split_at(7);
@@ -139,22 +136,17 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
           None
         };
 
+        let cms_rendering_context = CmsRenderingContext::new(object!({}), schema_data, query_data);
+        let page_title = "TODO";
+
         Ok::<_, Rejection>(
           HttpResponse::builder()
             .header("content-type", "text/html")
-            .body(format!(
-              "hello {}",
-              query_data
-                .convention
-                .as_ref()
-                .as_ref()
-                .map(|c| c
-                  .name
-                  .as_ref()
-                  .map(|name| name.as_str())
-                  .unwrap_or("untitled convention"))
-                .unwrap_or("unknown convention")
-            )),
+            .body(
+              cms_rendering_context
+                .render_app_root_content(&url, page_title, page.as_ref(), event.as_ref())
+                .await,
+            ),
         )
       }
     });

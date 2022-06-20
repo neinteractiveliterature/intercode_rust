@@ -3,7 +3,7 @@ use intercode_graphql::QueryData;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use std::{convert::Infallible, sync::Arc};
 use tracing::log::warn;
-use warp::{Filter, Rejection};
+use warp::{path::FullPath, reject, Filter, Rejection};
 
 pub fn convention_by_request_host(
   db: Arc<DatabaseConnection>,
@@ -90,6 +90,33 @@ pub fn query_data(
           timezone,
           Arc::new(None),
         )
+      },
+    )
+}
+
+pub fn request_url() -> impl Filter<Extract = (url::Url,), Error = Rejection> + Copy {
+  warp::any()
+    .and(warp::filters::path::full())
+    .and(warp::filters::query::raw().or_else(|_| async { Ok::<_, Infallible>(("".to_string(),)) }))
+    .and(warp::host::optional())
+    .and_then(
+      |path: FullPath, query: String, authority: Option<warp::host::Authority>| async move {
+        let host = if let Some(authority) = authority {
+          authority.to_string()
+        } else {
+          "".to_string()
+        };
+
+        let path_with_query = if !query.is_empty() {
+          format!("{}?{}", path.as_str(), query)
+        } else {
+          path.as_str().to_string()
+        };
+
+        url::Url::parse(format!("https://{}{}", host, path_with_query).as_str()).map_err(|e| {
+          warn!("Error extracting request URL: {}", e);
+          reject()
+        })
       },
     )
 }
