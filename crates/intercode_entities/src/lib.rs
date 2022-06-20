@@ -6,3 +6,5 @@ pub use generated::*;
 pub mod cms_parent;
 mod model_ext;
 mod serialization;
+
+pub use model_ext::UserNames;

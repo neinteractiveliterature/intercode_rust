@@ -121,6 +121,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "bytes",
+ "chrono",
  "fast_chemail",
  "fnv",
  "futures-channel",
@@ -1308,15 +1309,18 @@ name = "intercode_graphql"
 version = "0.1.0"
 dependencies = [
  "async-graphql",
+ "chrono",
  "chrono-tz",
  "i18n-embed",
  "intercode_entities",
+ "intercode_inflector",
  "intercode_liquid",
  "liquid",
  "liquid-core",
  "md5",
  "pulldown-cmark",
  "sea-orm",
+ "serde",
  "tokio",
 ]
 

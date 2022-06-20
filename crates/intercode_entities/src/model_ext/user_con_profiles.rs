@@ -1,3 +1,4 @@
+use super::UserNames;
 use crate::user_con_profiles;
 
 impl user_con_profiles::Model {
@@ -25,16 +26,14 @@ impl user_con_profiles::Model {
       .collect::<Vec<&str>>()
       .join(" ")
   }
+}
 
-  pub fn name_without_nickname(&self) -> String {
-    format!("{} {}", self.first_name, self.last_name)
-      .trim()
-      .to_string()
+impl UserNames for user_con_profiles::Model {
+  fn get_first_name(&self) -> &str {
+    self.first_name.as_str()
   }
 
-  pub fn name_inverted(&self) -> String {
-    format!("{}, {}", self.last_name, self.first_name)
-      .trim()
-      .to_string()
+  fn get_last_name(&self) -> &str {
+    self.last_name.as_str()
   }
 }

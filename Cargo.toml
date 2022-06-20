@@ -12,7 +12,7 @@ dhat-heap = ["dep:dhat"] # if you are doing heap profiling
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-async-graphql = {version = "~3.0.38", features = ["tracing", "dataloader"]}
+async-graphql = {version = "~3.0.38", features = ["tracing", "dataloader", "chrono"]}
 async-graphql-value = "~3.0.38"
 async-graphql-warp = "~3.0.38"
 chrono = "0.4"

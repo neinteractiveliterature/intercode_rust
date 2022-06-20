@@ -3,7 +3,7 @@ use crate::{
   SchemaData,
 };
 use async_graphql::*;
-use intercode_entities::user_con_profiles;
+use intercode_entities::{user_con_profiles, UserNames};
 use pulldown_cmark::{html, Options, Parser};
 
 use super::{ConventionType, ModelBackedType, StaffPositionType, TeamMemberType};
