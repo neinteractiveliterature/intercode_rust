@@ -50,6 +50,11 @@ impl UserConProfileType {
     Ok(ConventionType::new(model))
   }
 
+  #[graphql(name = "first_name")]
+  async fn first_name(&self) -> &str {
+    self.model.first_name.as_str()
+  }
+
   #[graphql(name = "gravatar_url")]
   async fn gravatar_url(&self, ctx: &Context<'_>) -> Result<String, Error> {
     if self.model.gravatar_enabled {
@@ -66,6 +71,15 @@ impl UserConProfileType {
         md5::compute("badrequest")
       ))
     }
+  }
+
+  #[graphql(name = "last_name")]
+  async fn last_name(&self) -> &str {
+    self.model.last_name.as_str()
+  }
+
+  async fn name(&self) -> String {
+    self.model.name()
   }
 
   #[graphql(name = "name_inverted")]

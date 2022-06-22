@@ -1,4 +1,7 @@
-use crate::{cms_files, cms_graphql_queries, cms_partials, conventions, pages, root_sites};
+use crate::{
+  cms_files, cms_graphql_queries, cms_layouts, cms_navigation_items, cms_partials, conventions,
+  pages, root_sites,
+};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Select};
 
 #[derive(Clone, Debug)]
@@ -22,7 +25,10 @@ impl From<root_sites::Model> for CmsParent {
 pub trait CmsParentTrait {
   fn cms_files(&self) -> Select<cms_files::Entity>;
   fn cms_graphql_queries(&self) -> Select<cms_graphql_queries::Entity>;
+  fn cms_layouts(&self) -> Select<cms_layouts::Entity>;
+  fn cms_navigation_items(&self) -> Select<cms_navigation_items::Entity>;
   fn cms_partials(&self) -> Select<cms_partials::Entity>;
+  fn default_layout(&self) -> Select<cms_layouts::Entity>;
   fn pages(&self) -> Select<pages::Entity>;
 
   fn root_page(&self) -> Select<pages::Entity>;
@@ -42,8 +48,17 @@ macro_rules! enum_assoc {
 impl CmsParentTrait for CmsParent {
   enum_assoc!(cms_files);
   enum_assoc!(cms_graphql_queries);
+  enum_assoc!(cms_layouts);
+  enum_assoc!(cms_navigation_items);
   enum_assoc!(cms_partials);
   enum_assoc!(pages);
+
+  fn default_layout(&self) -> Select<cms_layouts::Entity> {
+    match self {
+      CmsParent::Convention(convention) => convention.default_layout(),
+      CmsParent::RootSite(root_site) => root_site.default_layout(),
+    }
+  }
 
   fn root_page(&self) -> Select<pages::Entity> {
     match self {
@@ -66,8 +81,14 @@ macro_rules! convention_assoc {
 impl CmsParentTrait for conventions::Model {
   convention_assoc!(cms_files);
   convention_assoc!(cms_graphql_queries);
+  convention_assoc!(cms_layouts);
+  convention_assoc!(cms_navigation_items);
   convention_assoc!(cms_partials);
   convention_assoc!(pages);
+
+  fn default_layout(&self) -> Select<cms_layouts::Entity> {
+    cms_layouts::Entity::find().filter(cms_layouts::Column::Id.eq(self.default_layout_id))
+  }
 
   fn root_page(&self) -> Select<pages::Entity> {
     pages::Entity::find().filter(pages::Column::Id.eq(self.root_page_id))
@@ -87,8 +108,14 @@ macro_rules! root_site_assoc {
 impl CmsParentTrait for root_sites::Model {
   root_site_assoc!(cms_files);
   root_site_assoc!(cms_graphql_queries);
+  root_site_assoc!(cms_layouts);
+  root_site_assoc!(cms_navigation_items);
   root_site_assoc!(cms_partials);
   root_site_assoc!(pages);
+
+  fn default_layout(&self) -> Select<cms_layouts::Entity> {
+    cms_layouts::Entity::find().filter(cms_layouts::Column::Id.eq(self.default_layout_id))
+  }
 
   fn root_page(&self) -> Select<pages::Entity> {
     pages::Entity::find().filter(pages::Column::Id.eq(self.root_page_id))

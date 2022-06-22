@@ -77,6 +77,14 @@ where
       )))
     }
   }
+
+  pub fn try_one(&self) -> Option<&To::Model> {
+    if self.models.is_empty() {
+      None
+    } else {
+      Some(&self.models[0])
+    }
+  }
 }
 
 impl<From: EntityTrait + Related<To>, To: EntityTrait> ExpectModels<To::Model>
@@ -102,6 +110,10 @@ where
         "EntityRelationLoader did not insert an expected key!  This should never happen; this is a bug in EntityRelationLoader.",
       ))
     }
+  }
+
+  fn try_one(&self) -> Option<&To::Model> {
+    self.as_ref().and_then(|result| result.try_one())
   }
 }
 

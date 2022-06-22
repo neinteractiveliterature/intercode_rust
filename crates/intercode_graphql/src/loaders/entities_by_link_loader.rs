@@ -80,7 +80,7 @@ impl<From: EntityTrait, To: EntityTrait> EntityLinkLoaderResult<From, To>
 where
   <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
 {
-  pub fn expect_one(&self) -> Result<&To::Model, async_graphql::Error> {
+  fn expect_one(&self) -> Result<&To::Model, async_graphql::Error> {
     if self.models.len() == 1 {
       Ok(&self.models[0])
     } else {
@@ -88,6 +88,14 @@ where
         "Expected one model, but there are {}",
         self.models.len()
       )))
+    }
+  }
+
+  fn try_one(&self) -> Option<&To::Model> {
+    if self.models.is_empty() {
+      None
+    } else {
+      Some(&self.models[0])
     }
   }
 }
@@ -115,6 +123,10 @@ where
         "EntityLinkLoader did not insert an expected key!  This should never happen; this is a bug in EntityLinkLoader.",
       ))
     }
+  }
+
+  fn try_one(&self) -> Option<&To::Model> {
+    self.as_ref().and_then(|result| result.try_one())
   }
 }
 

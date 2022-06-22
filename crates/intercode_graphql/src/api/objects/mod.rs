@@ -1,3 +1,5 @@
+mod cms_layout_type;
+mod cms_navigation_item_type;
 mod convention_type;
 mod event_type;
 pub mod model_backed_type;
@@ -8,6 +10,8 @@ mod team_member_type;
 mod user_con_profile_type;
 mod user_type;
 
+pub use cms_layout_type::CmsLayoutType;
+pub use cms_navigation_item_type::CmsNavigationItemType;
 pub use convention_type::ConventionType;
 pub use event_type::EventType;
 pub use model_backed_type::*;

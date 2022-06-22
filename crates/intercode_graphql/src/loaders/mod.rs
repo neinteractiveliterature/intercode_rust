@@ -17,13 +17,13 @@ pub use entities_by_relation_loader::*;
 use sea_orm::RelationTrait;
 use sea_orm::{Linked, RelationDef};
 
-use intercode_entities::conventions;
 use intercode_entities::events;
 use intercode_entities::staff_positions;
 use intercode_entities::staff_positions_user_con_profiles;
 use intercode_entities::team_members;
 use intercode_entities::user_con_profiles;
 use intercode_entities::users;
+use intercode_entities::{cms_navigation_items, conventions, pages};
 
 #[derive(Debug, Clone)]
 pub struct UserConProfileToStaffPositions;
@@ -41,6 +41,18 @@ impl Linked for UserConProfileToStaffPositions {
     ]
   }
 }
+
+// impl_to_entity_relation_loader!(
+//   cms_navigation_items::Entity,
+//   cms_navigation_items::Entity,
+//   cms_navigation_items::PrimaryKey::Id
+// );
+
+impl_to_entity_relation_loader!(
+  cms_navigation_items::Entity,
+  pages::Entity,
+  cms_navigation_items::PrimaryKey::Id
+);
 
 impl_to_entity_id_loader!(conventions::Entity, conventions::PrimaryKey::Id);
 impl_to_entity_id_loader!(staff_positions::Entity, staff_positions::PrimaryKey::Id);
@@ -68,6 +80,13 @@ impl_to_entity_link_loader!(
 
 pub struct LoaderManager {
   db: Arc<sea_orm::DatabaseConnection>,
+  pub cms_navigation_item_page: DataLoader<
+    EntityRelationLoader<
+      cms_navigation_items::Entity,
+      pages::Entity,
+      cms_navigation_items::PrimaryKey,
+    >,
+  >,
   pub conventions_by_id: DataLoader<EntityIdLoader<conventions::Entity, conventions::PrimaryKey>>,
   pub staff_positions_by_id:
     DataLoader<EntityIdLoader<staff_positions::Entity, staff_positions::PrimaryKey>>,
@@ -105,6 +124,10 @@ impl LoaderManager {
 
     LoaderManager {
       db: db.clone(),
+      cms_navigation_item_page: DataLoader::new(
+        cms_navigation_items::Entity.to_entity_relation_loader(db.clone()),
+        tokio::spawn,
+      ),
       conventions_by_id: DataLoader::new(
         conventions::Entity.to_entity_id_loader(db.clone()),
         tokio::spawn,

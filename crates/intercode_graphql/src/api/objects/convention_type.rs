@@ -1,4 +1,7 @@
-use crate::SchemaData;
+use crate::{
+  api::enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
+  QueryData, SchemaData,
+};
 use async_graphql::*;
 use chrono::{DateTime, Utc};
 use intercode_entities::{
@@ -6,9 +9,14 @@ use intercode_entities::{
   conventions, pages, staff_positions, staff_positions_user_con_profiles, team_members,
   user_con_profiles,
 };
-use sea_orm::{ColumnTrait, Linked, ModelTrait, QueryFilter, QuerySelect, RelationTrait};
+use sea_orm::{
+  ColumnTrait, EntityTrait, Linked, ModelTrait, QueryFilter, QuerySelect, RelationTrait,
+};
 
-use super::{ModelBackedType, PageType, StaffPositionType, UserConProfileType};
+use super::{
+  CmsLayoutType, CmsNavigationItemType, ModelBackedType, PageType, StaffPositionType,
+  UserConProfileType,
+};
 
 use crate::model_backed_type;
 model_backed_type!(ConventionType, conventions::Model);
@@ -26,7 +34,7 @@ impl Linked for ConventionToStaffPositions {
 
 #[Object]
 impl ConventionType {
-  async fn id(&self) -> ID {
+  pub async fn id(&self) -> ID {
     ID(self.model.id.to_string())
   }
 
@@ -75,6 +83,25 @@ impl ConventionType {
     self.model.clickwrap_agreement.as_deref()
   }
 
+  #[graphql(name = "cms_navigation_items")]
+  pub async fn cms_navigation_items(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<CmsNavigationItemType>, Error> {
+    let schema_data = ctx.data::<SchemaData>()?;
+
+    Ok(
+      self
+        .model
+        .cms_navigation_items()
+        .all(schema_data.db.as_ref())
+        .await?
+        .iter()
+        .map(|item| CmsNavigationItemType::new(item.to_owned()))
+        .collect(),
+    )
+  }
+
   async fn cms_page(
     &self,
     ctx: &Context<'_>,
@@ -108,6 +135,29 @@ impl ConventionType {
       .map(PageType::new)
   }
 
+  #[graphql(name = "default_layout")]
+  pub async fn default_layout(&self, ctx: &Context<'_>) -> Result<CmsLayoutType, Error> {
+    let schema_data = ctx.data::<SchemaData>()?;
+
+    self
+      .model
+      .default_layout()
+      .one(schema_data.db.as_ref())
+      .await?
+      .ok_or_else(|| {
+        Error::new(format!(
+          "Default layout not found for {}",
+          self
+            .model
+            .name
+            .as_ref()
+            .map(|name| name.as_str())
+            .unwrap_or("convention")
+        ))
+      })
+      .map(CmsLayoutType::new)
+  }
+
   async fn domain(&self) -> &str {
     self.model.domain.as_str()
   }
@@ -122,6 +172,47 @@ impl ConventionType {
 
   async fn language(&self) -> &str {
     self.model.language.as_str()
+  }
+
+  #[graphql(name = "my_profile")]
+  async fn my_profile(&self, ctx: &Context<'_>) -> Result<Option<UserConProfileType>, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+    let convention_id = query_data.convention.as_ref().as_ref().map(|c| c.id);
+
+    if convention_id == Some(self.model.id) {
+      Ok(
+        query_data
+          .user_con_profile
+          .as_ref()
+          .as_ref()
+          .map(|ucp| UserConProfileType::new(ucp.to_owned())),
+      )
+    } else if let Some(user) = query_data.current_user.as_ref() {
+      let schema_data = ctx.data::<SchemaData>()?;
+
+      user_con_profiles::Entity::find()
+        .filter(
+          user_con_profiles::Column::ConventionId
+            .eq(self.model.id)
+            .and(user_con_profiles::Column::UserId.eq(user.id)),
+        )
+        .one(schema_data.db.as_ref())
+        .await
+        .map(|result| result.map(|ucp| UserConProfileType::new(ucp)))
+        .map_err(|e| async_graphql::Error::new(e.to_string()))
+    } else {
+      Ok(None)
+    }
+  }
+
+  #[graphql(name = "signup_mode")]
+  async fn signup_mode(&self) -> Result<SignupMode, Error> {
+    self.model.signup_mode.as_str().try_into()
+  }
+
+  #[graphql(name = "site_mode")]
+  async fn site_mode(&self) -> Result<SiteMode, Error> {
+    self.model.site_mode.as_str().try_into()
   }
 
   #[graphql(name = "staff_position")]
@@ -161,6 +252,11 @@ impl ConventionType {
     std::env::var("STRIPE_PUBLISHABLE_KEY").ok()
   }
 
+  #[graphql(name = "ticket_mode")]
+  async fn ticket_mode(&self) -> Result<TicketMode, Error> {
+    self.model.ticket_mode.as_str().try_into()
+  }
+
   #[graphql(name = "ticket_name")]
   async fn ticket_name(&self) -> &str {
     self.model.ticket_name.as_str()
@@ -168,6 +264,16 @@ impl ConventionType {
 
   async fn ticket_name_plural(&self) -> String {
     intercode_inflector::inflector::Inflector::to_plural(self.model.ticket_name.as_str())
+  }
+
+  #[graphql(name = "tickets_available_for_purchase")]
+  async fn tickets_available_for_purchase(&self) -> bool {
+    self.model.tickets_available_for_purchase()
+  }
+
+  #[graphql(name = "timezone_mode")]
+  async fn timezone_mode(&self) -> Result<TimezoneMode, Error> {
+    self.model.timezone_mode.as_str().try_into()
   }
 
   #[graphql(name = "timezone_name")]

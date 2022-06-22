@@ -1,3 +1,5 @@
+mod enums;
+mod interfaces;
 mod objects;
 
 mod query_root;

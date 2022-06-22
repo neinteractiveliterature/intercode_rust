@@ -1,21 +1,34 @@
+use super::interfaces::CmsParentInterface;
 use super::objects::{ConventionType, EventType, RootSiteType, UserType};
 use crate::api::objects::ModelBackedType;
 use crate::entity_relay_connection::RelayConnectable;
 use crate::{QueryData, SchemaData};
 use async_graphql::connection::{query, Connection};
 use async_graphql::*;
-use intercode_entities::{events, root_sites};
+use intercode_entities::cms_parent::CmsParent;
+use intercode_entities::{events, oauth_applications, root_sites};
 use liquid::object;
-use sea_orm::EntityTrait;
+use sea_orm::{EntityTrait, PaginatorTrait};
 
 pub struct QueryRoot;
 
 #[Object]
 impl QueryRoot {
-  // async fn cms_parent_by_request_host(&self, ctx: &Context<'_>) -> Result<CmsParentType, Error> {
-  //   let query_data = ctx.data::<QueryData>()?;
-  //   Ok(CmsParentType::new(query_data.cms_parent.clone()))
-  // }
+  pub async fn cms_parent_by_request_host(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<CmsParentInterface, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+
+    Ok(match query_data.cms_parent.as_ref() {
+      CmsParent::Convention(convention) => {
+        CmsParentInterface::Convention(ConventionType::new(*convention.to_owned()))
+      }
+      CmsParent::RootSite(root_site) => {
+        CmsParentInterface::RootSite(RootSiteType::new(*root_site.to_owned()))
+      }
+    })
+  }
 
   async fn convention_by_request_host(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {
     let convention = self.convention_by_request_host_if_present(ctx).await?;
@@ -72,6 +85,15 @@ impl QueryRoot {
       },
     )
     .await
+  }
+
+  async fn has_oauth_applications(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    let schema_data = ctx.data::<SchemaData>()?;
+
+    let count = oauth_applications::Entity::find()
+      .count(schema_data.db.as_ref())
+      .await?;
+    Ok(count > 0)
   }
 
   async fn preview_liquid(&self, ctx: &Context<'_>, content: String) -> Result<String, Error> {

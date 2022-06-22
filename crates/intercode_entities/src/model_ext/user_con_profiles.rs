@@ -26,6 +26,16 @@ impl user_con_profiles::Model {
       .collect::<Vec<&str>>()
       .join(" ")
   }
+
+  pub fn name(&self) -> String {
+    if let Some(nickname) = &self.nickname {
+      if !nickname.trim().is_empty() {
+        return format!("{} \"{}\" {}", self.first_name, nickname, self.last_name);
+      }
+    }
+
+    self.name_without_nickname()
+  }
 }
 
 impl UserNames for user_con_profiles::Model {

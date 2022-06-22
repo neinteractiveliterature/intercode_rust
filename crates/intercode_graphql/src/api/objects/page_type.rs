@@ -12,10 +12,6 @@ impl PageType {
     self.model.id.into()
   }
 
-  async fn name(&self) -> &Option<String> {
-    &self.model.name
-  }
-
   #[graphql(name = "content_html")]
   async fn content_html(&self, ctx: &Context<'_>) -> Result<String, Error> {
     if let Some(content) = &self.model.content {
@@ -32,5 +28,13 @@ impl PageType {
     } else {
       Ok("".to_string())
     }
+  }
+
+  async fn name(&self) -> &Option<String> {
+    &self.model.name
+  }
+
+  async fn slug(&self) -> &Option<String> {
+    &self.model.slug
   }
 }
