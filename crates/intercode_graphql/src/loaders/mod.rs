@@ -17,13 +17,13 @@ pub use entities_by_relation_loader::*;
 use sea_orm::RelationTrait;
 use sea_orm::{Linked, RelationDef};
 
-use intercode_entities::events;
-use intercode_entities::staff_positions;
 use intercode_entities::staff_positions_user_con_profiles;
 use intercode_entities::team_members;
 use intercode_entities::user_con_profiles;
 use intercode_entities::users;
 use intercode_entities::{cms_navigation_items, conventions, pages};
+use intercode_entities::{events, ticket_types};
+use intercode_entities::{products, staff_positions};
 
 #[derive(Debug, Clone)]
 pub struct UserConProfileToStaffPositions;
@@ -42,16 +42,35 @@ impl Linked for UserConProfileToStaffPositions {
   }
 }
 
-// impl_to_entity_relation_loader!(
-//   cms_navigation_items::Entity,
-//   cms_navigation_items::Entity,
-//   cms_navigation_items::PrimaryKey::Id
-// );
+#[derive(Debug, Clone)]
+pub struct CmsNavigationItemToCmsNavigationSection;
+
+impl Linked for CmsNavigationItemToCmsNavigationSection {
+  type FromEntity = cms_navigation_items::Entity;
+  type ToEntity = cms_navigation_items::Entity;
+
+  fn link(&self) -> Vec<RelationDef> {
+    vec![cms_navigation_items::Relation::SelfRef.def()]
+  }
+}
+
+impl_to_entity_link_loader!(
+  cms_navigation_items::Entity,
+  CmsNavigationItemToCmsNavigationSection,
+  cms_navigation_items::Entity,
+  cms_navigation_items::PrimaryKey::Id
+);
 
 impl_to_entity_relation_loader!(
   cms_navigation_items::Entity,
   pages::Entity,
   cms_navigation_items::PrimaryKey::Id
+);
+
+impl_to_entity_relation_loader!(
+  conventions::Entity,
+  ticket_types::Entity,
+  conventions::PrimaryKey::Id
 );
 
 impl_to_entity_id_loader!(conventions::Entity, conventions::PrimaryKey::Id);
@@ -63,6 +82,12 @@ impl_to_entity_relation_loader!(
   team_members::Entity,
   events::Entity,
   team_members::PrimaryKey::Id
+);
+
+impl_to_entity_relation_loader!(
+  ticket_types::Entity,
+  products::Entity,
+  ticket_types::PrimaryKey::Id
 );
 
 impl_to_entity_relation_loader!(
@@ -78,6 +103,12 @@ impl_to_entity_link_loader!(
   user_con_profiles::PrimaryKey::Id
 );
 
+impl_to_entity_relation_loader!(
+  user_con_profiles::Entity,
+  users::Entity,
+  user_con_profiles::PrimaryKey::Id
+);
+
 pub struct LoaderManager {
   db: Arc<sea_orm::DatabaseConnection>,
   pub cms_navigation_item_page: DataLoader<
@@ -87,6 +118,17 @@ pub struct LoaderManager {
       cms_navigation_items::PrimaryKey,
     >,
   >,
+  pub cms_navigation_item_section: DataLoader<
+    EntityLinkLoader<
+      cms_navigation_items::Entity,
+      CmsNavigationItemToCmsNavigationSection,
+      cms_navigation_items::Entity,
+      cms_navigation_items::PrimaryKey,
+    >,
+  >,
+  pub convention_ticket_types: DataLoader<
+    EntityRelationLoader<conventions::Entity, ticket_types::Entity, conventions::PrimaryKey>,
+  >,
   pub conventions_by_id: DataLoader<EntityIdLoader<conventions::Entity, conventions::PrimaryKey>>,
   pub staff_positions_by_id:
     DataLoader<EntityIdLoader<staff_positions::Entity, staff_positions::PrimaryKey>>,
@@ -95,6 +137,9 @@ pub struct LoaderManager {
   >,
   pub team_members_by_id:
     DataLoader<EntityIdLoader<team_members::Entity, team_members::PrimaryKey>>,
+  pub ticket_type_providing_products: DataLoader<
+    EntityRelationLoader<ticket_types::Entity, products::Entity, ticket_types::PrimaryKey>,
+  >,
   pub user_con_profile_staff_positions: DataLoader<
     EntityLinkLoader<
       user_con_profiles::Entity,
@@ -102,6 +147,9 @@ pub struct LoaderManager {
       staff_positions::Entity,
       user_con_profiles::PrimaryKey,
     >,
+  >,
+  pub user_con_profile_user: DataLoader<
+    EntityRelationLoader<user_con_profiles::Entity, users::Entity, user_con_profiles::PrimaryKey>,
   >,
   pub user_con_profile_team_members: DataLoader<
     EntityRelationLoader<
@@ -127,7 +175,19 @@ impl LoaderManager {
       cms_navigation_item_page: DataLoader::new(
         cms_navigation_items::Entity.to_entity_relation_loader(db.clone()),
         tokio::spawn,
-      ),
+      )
+      .delay(delay_millis),
+      cms_navigation_item_section: DataLoader::new(
+        cms_navigation_items::Entity
+          .to_entity_link_loader(CmsNavigationItemToCmsNavigationSection, db.clone()),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
+      convention_ticket_types: DataLoader::new(
+        conventions::Entity.to_entity_relation_loader(db.clone()),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
       conventions_by_id: DataLoader::new(
         conventions::Entity.to_entity_id_loader(db.clone()),
         tokio::spawn,
@@ -148,13 +208,29 @@ impl LoaderManager {
         tokio::spawn,
       )
       .delay(delay_millis),
+      ticket_type_providing_products: DataLoader::new(
+        ticket_types::Entity.to_entity_relation_loader(db.clone()),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
       user_con_profile_staff_positions: DataLoader::new(
         user_con_profiles::Entity.to_entity_link_loader(UserConProfileToStaffPositions, db.clone()),
         tokio::spawn,
       )
       .delay(delay_millis),
       user_con_profile_team_members: DataLoader::new(
-        user_con_profiles::Entity.to_entity_relation_loader(db.clone()),
+        <user_con_profiles::Entity as ToEntityRelationLoader<
+          team_members::Entity,
+          user_con_profiles::PrimaryKey,
+        >>::to_entity_relation_loader(&user_con_profiles::Entity::default(), db.clone()),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
+      user_con_profile_user: DataLoader::new(
+        <user_con_profiles::Entity as ToEntityRelationLoader<
+          users::Entity,
+          user_con_profiles::PrimaryKey,
+        >>::to_entity_relation_loader(&user_con_profiles::Entity::default(), db.clone()),
         tokio::spawn,
       )
       .delay(delay_millis),

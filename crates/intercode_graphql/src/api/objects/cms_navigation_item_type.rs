@@ -12,6 +12,24 @@ impl CmsNavigationItemType {
     self.model.id.into()
   }
 
+  #[graphql(name = "navigation_section")]
+  async fn navigation_section(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Option<CmsNavigationItemType>, Error> {
+    let schema_data = ctx.data::<SchemaData>()?;
+
+    Ok(
+      schema_data
+        .loaders
+        .cms_navigation_item_section
+        .load_one(self.model.id)
+        .await?
+        .try_one()
+        .map(|item| CmsNavigationItemType::new(item.to_owned())),
+    )
+  }
+
   async fn page(&self, ctx: &Context<'_>) -> Result<Option<PageType>, Error> {
     let schema_data = ctx.data::<SchemaData>()?;
 

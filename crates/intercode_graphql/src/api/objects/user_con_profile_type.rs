@@ -16,6 +16,11 @@ impl UserConProfileType {
     self.model.id.into()
   }
 
+  #[graphql(name = "accepted_clickwrap_agreement")]
+  async fn accepted_clickwrap_agreement(&self) -> bool {
+    self.model.accepted_clickwrap_agreement
+  }
+
   #[graphql(name = "bio_html")]
   async fn bio_html(&self) -> Option<String> {
     if let Some(bio) = &self.model.bio {
@@ -50,9 +55,27 @@ impl UserConProfileType {
     Ok(ConventionType::new(model))
   }
 
+  async fn email(&self, ctx: &Context<'_>) -> Result<String, Error> {
+    let loader = &ctx.data::<SchemaData>()?.loaders.user_con_profile_user;
+
+    Ok(
+      loader
+        .load_one(self.model.id)
+        .await?
+        .expect_one()?
+        .email
+        .to_owned(),
+    )
+  }
+
   #[graphql(name = "first_name")]
   async fn first_name(&self) -> &str {
     self.model.first_name.as_str()
+  }
+
+  #[graphql(name = "gravatar_enabled")]
+  async fn gravatar_enabled(&self) -> bool {
+    self.model.gravatar_enabled
   }
 
   #[graphql(name = "gravatar_url")]
@@ -76,6 +99,11 @@ impl UserConProfileType {
   #[graphql(name = "last_name")]
   async fn last_name(&self) -> &str {
     self.model.last_name.as_str()
+  }
+
+  #[graphql(name = "mobile_phone")]
+  async fn mobile_phone(&self) -> Option<&str> {
+    self.model.mobile_phone.as_deref()
   }
 
   async fn name(&self) -> String {

@@ -3,6 +3,7 @@ use crate::{
     enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
     interfaces::CmsParentImplementation,
   },
+  loaders::expect::ExpectModels,
   QueryData, SchemaData,
 };
 use async_graphql::*;
@@ -16,7 +17,7 @@ use sea_orm::{
   ColumnTrait, EntityTrait, Linked, ModelTrait, QueryFilter, QuerySelect, RelationTrait,
 };
 
-use super::{ModelBackedType, PageType, StaffPositionType, UserConProfileType};
+use super::{ModelBackedType, PageType, StaffPositionType, TicketTypeType, UserConProfileType};
 
 use crate::model_backed_type;
 model_backed_type!(ConventionType, conventions::Model);
@@ -222,6 +223,23 @@ impl ConventionType {
 
   async fn ticket_name_plural(&self) -> String {
     intercode_inflector::inflector::Inflector::to_plural(self.model.ticket_name.as_str())
+  }
+
+  #[graphql(name = "ticket_types")]
+  async fn ticket_types(&self, ctx: &Context<'_>) -> Result<Vec<TicketTypeType>, Error> {
+    let schema_data = ctx.data::<SchemaData>()?;
+
+    Ok(
+      schema_data
+        .loaders
+        .convention_ticket_types
+        .load_one(self.model.id)
+        .await?
+        .expect_models()?
+        .iter()
+        .map(|tt| TicketTypeType::new(tt.to_owned()))
+        .collect(),
+    )
   }
 
   #[graphql(name = "tickets_available_for_purchase")]
