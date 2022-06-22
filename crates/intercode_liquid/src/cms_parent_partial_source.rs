@@ -1,4 +1,5 @@
 use intercode_entities::{
+  cms_layouts, cms_layouts_partials,
   cms_parent::{CmsParent, CmsParentTrait},
   cms_partials, cms_partials_pages, pages,
 };
@@ -16,6 +17,7 @@ use tokio::runtime::Handle;
 use tracing::log::warn;
 
 pub enum PreloadPartialsStrategy<'a> {
+  ByLayout(&'a intercode_entities::cms_layouts::Model),
   ByName(Vec<&'a str>),
   ByPage(&'a intercode_entities::pages::Model),
 }
@@ -36,6 +38,20 @@ impl Linked for PageToCmsPartials {
     vec![
       cms_partials_pages::Relation::Pages.def().rev(),
       cms_partials_pages::Relation::CmsPartials.def(),
+    ]
+  }
+}
+
+struct LayoutToCmsPartials;
+
+impl Linked for LayoutToCmsPartials {
+  type FromEntity = cms_layouts::Entity;
+  type ToEntity = cms_partials::Entity;
+
+  fn link(&self) -> Vec<sea_orm::LinkDef> {
+    vec![
+      cms_layouts_partials::Relation::CmsLayouts.def().rev(),
+      cms_layouts_partials::Relation::CmsPartials.def(),
     ]
   }
 }
@@ -153,6 +169,30 @@ impl LazyCmsPartialCache {
     Ok(())
   }
 
+  async fn preload_by_layout(
+    &self,
+    db: &DatabaseConnection,
+    layout: &cms_layouts::Model,
+  ) -> Result<(), sea_orm::DbErr> {
+    let loaded_partials = layout
+      .find_linked(LayoutToCmsPartials)
+      .select_only()
+      .column(cms_partials::Column::Name)
+      .column(cms_partials::Column::Content)
+      .into_model::<PartialNameAndContent>()
+      .all(db)
+      .await?;
+
+    let mut partials = self.cached_partials.lock().unwrap();
+    for partial in loaded_partials {
+      partials
+        .entry(partial.name.clone())
+        .or_insert_with(|| LazyCmsPartialCacheCell::new(partial.name.clone()))
+        .preload(partial);
+    }
+    Ok(())
+  }
+
   async fn preload_by_page(
     &self,
     db: &DatabaseConnection,
@@ -200,6 +240,7 @@ impl LazyCmsPartialSource {
       PreloadPartialsStrategy::ByName(names) => {
         self.cache.preload_by_name(db, cms_parent, names).await
       }
+      PreloadPartialsStrategy::ByLayout(layout) => self.cache.preload_by_layout(db, layout).await,
       PreloadPartialsStrategy::ByPage(page) => self.cache.preload_by_page(db, page).await,
     }
   }

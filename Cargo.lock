@@ -1323,6 +1323,7 @@ dependencies = [
  "pulldown-cmark",
  "sea-orm",
  "serde",
+ "serde_json",
  "tokio",
 ]
 
