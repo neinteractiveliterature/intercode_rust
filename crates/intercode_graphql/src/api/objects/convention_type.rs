@@ -1,5 +1,8 @@
 use crate::{
-  api::enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
+  api::{
+    enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
+    interfaces::CmsParentImplementation,
+  },
   QueryData, SchemaData,
 };
 use async_graphql::*;
@@ -13,10 +16,7 @@ use sea_orm::{
   ColumnTrait, EntityTrait, Linked, ModelTrait, QueryFilter, QuerySelect, RelationTrait,
 };
 
-use super::{
-  CmsLayoutType, CmsNavigationItemType, ModelBackedType, PageType, StaffPositionType,
-  UserConProfileType,
-};
+use super::{ModelBackedType, PageType, StaffPositionType, UserConProfileType};
 
 use crate::model_backed_type;
 model_backed_type!(ConventionType, conventions::Model);
@@ -83,25 +83,6 @@ impl ConventionType {
     self.model.clickwrap_agreement.as_deref()
   }
 
-  #[graphql(name = "cms_navigation_items")]
-  pub async fn cms_navigation_items(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<Vec<CmsNavigationItemType>, Error> {
-    let schema_data = ctx.data::<SchemaData>()?;
-
-    Ok(
-      self
-        .model
-        .cms_navigation_items()
-        .all(schema_data.db.as_ref())
-        .await?
-        .iter()
-        .map(|item| CmsNavigationItemType::new(item.to_owned()))
-        .collect(),
-    )
-  }
-
   async fn cms_page(
     &self,
     ctx: &Context<'_>,
@@ -133,29 +114,6 @@ impl ConventionType {
       .await?
       .ok_or_else(|| Error::new("Page not found"))
       .map(PageType::new)
-  }
-
-  #[graphql(name = "default_layout")]
-  pub async fn default_layout(&self, ctx: &Context<'_>) -> Result<CmsLayoutType, Error> {
-    let schema_data = ctx.data::<SchemaData>()?;
-
-    self
-      .model
-      .default_layout()
-      .one(schema_data.db.as_ref())
-      .await?
-      .ok_or_else(|| {
-        Error::new(format!(
-          "Default layout not found for {}",
-          self
-            .model
-            .name
-            .as_ref()
-            .map(|name| name.as_str())
-            .unwrap_or("convention")
-        ))
-      })
-      .map(CmsLayoutType::new)
   }
 
   async fn domain(&self) -> &str {
@@ -300,3 +258,5 @@ impl ConventionType {
       .map(UserConProfileType::new)
   }
 }
+
+impl CmsParentImplementation<conventions::Model> for ConventionType {}

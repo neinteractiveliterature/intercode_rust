@@ -2,6 +2,7 @@ use sea_orm::ModelTrait;
 
 pub trait ModelBackedType<M: ModelTrait> {
   fn new(model: M) -> Self;
+  fn get_model(&self) -> &M;
 }
 
 #[macro_export]
@@ -15,6 +16,10 @@ macro_rules! model_backed_type {
     impl crate::api::objects::ModelBackedType<$model_type> for $type_name {
       fn new(model: $model_type) -> Self {
         $type_name { model }
+      }
+
+      fn get_model(&self) -> &$model_type {
+        &self.model
       }
     }
   };

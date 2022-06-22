@@ -2,7 +2,8 @@ use crate::{
   cms_files, cms_graphql_queries, cms_layouts, cms_navigation_items, cms_partials, conventions,
   pages, root_sites,
 };
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Select};
+use async_trait::async_trait;
+use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Select};
 
 #[derive(Clone, Debug)]
 pub enum CmsParent {
@@ -22,6 +23,7 @@ impl From<root_sites::Model> for CmsParent {
   }
 }
 
+#[async_trait]
 pub trait CmsParentTrait {
   fn cms_files(&self) -> Select<cms_files::Entity>;
   fn cms_graphql_queries(&self) -> Select<cms_graphql_queries::Entity>;
@@ -32,6 +34,43 @@ pub trait CmsParentTrait {
   fn pages(&self) -> Select<pages::Entity>;
 
   fn root_page(&self) -> Select<pages::Entity>;
+
+  fn cms_page_for_path(&self, path: &str) -> Option<Select<pages::Entity>> {
+    if path.starts_with("/pages/") {
+      let (_, slug) = path.split_at(7);
+      Some(self.pages().filter(pages::Column::Slug.eq(slug)))
+    } else if path == "/" {
+      Some(self.root_page())
+    } else {
+      None
+    }
+  }
+
+  async fn effective_cms_layout(
+    &self,
+    path: &str,
+    db: &DatabaseConnection,
+  ) -> Result<cms_layouts::Model, sea_orm::DbErr> {
+    let page_scope = self.cms_page_for_path(path);
+
+    if let Some(page_scope) = page_scope {
+      let layout_from_page = page_scope
+        .find_also_related(cms_layouts::Entity)
+        .one(db)
+        .await?
+        .and_then(|(_page, layout)| layout);
+
+      if let Some(layout) = layout_from_page {
+        return Ok(layout);
+      }
+    }
+
+    self
+      .default_layout()
+      .one(db)
+      .await?
+      .ok_or_else(|| sea_orm::DbErr::RecordNotFound("No default layout found".to_string()))
+  }
 }
 
 macro_rules! enum_assoc {

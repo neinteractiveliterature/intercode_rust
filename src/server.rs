@@ -8,7 +8,7 @@ use futures_util::stream::StreamExt;
 use i18n_embed::fluent::fluent_language_loader;
 use i18n_embed::LanguageLoader;
 use intercode_entities::cms_parent::CmsParentTrait;
-use intercode_entities::{events, pages};
+use intercode_entities::events;
 use intercode_graphql::loaders::LoaderManager;
 use intercode_graphql::{api, QueryData, SchemaData};
 use liquid::object;
@@ -94,20 +94,15 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
 
       async move {
         let path = url.path();
-        let page = if path.starts_with("/pages/") {
-          let (_, slug) = path.split_at(7);
-          cms_parent
-            .pages()
-            .filter(pages::Column::Slug.eq(slug))
+        let page_scope = cms_parent.cms_page_for_path(path);
+
+        let page = if let Some(page_scope) = page_scope {
+          page_scope
             .one(db.as_ref())
             .await
             .map_err(|db_err| warp::reject::custom(FatalDatabaseError { db_err }))?
         } else {
-          cms_parent
-            .root_page()
-            .one(db.as_ref())
-            .await
-            .map_err(|db_err| warp::reject::custom(FatalDatabaseError { db_err }))?
+          None
         };
 
         let event = if let Some(convention) = query_data.convention.as_ref() {
