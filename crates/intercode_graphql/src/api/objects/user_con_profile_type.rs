@@ -3,10 +3,13 @@ use crate::{
   SchemaData,
 };
 use async_graphql::*;
-use intercode_entities::{user_con_profiles, UserNames};
+use intercode_entities::{order_entries, orders, user_con_profiles, UserNames};
 use pulldown_cmark::{html, Options, Parser};
+use sea_orm::{sea_query::Expr, ColumnTrait, EntityTrait, QueryFilter};
 
-use super::{ConventionType, ModelBackedType, StaffPositionType, TeamMemberType};
+use super::{
+  ConventionType, ModelBackedType, OrderType, StaffPositionType, TeamMemberType, TicketType,
+};
 use crate::model_backed_type;
 model_backed_type!(UserConProfileType, user_con_profiles::Model);
 
@@ -53,6 +56,42 @@ impl UserConProfileType {
       .expect_model()?;
 
     Ok(ConventionType::new(model))
+  }
+
+  #[graphql(name = "current_pending_order")]
+  async fn current_pending_order(&self, ctx: &Context<'_>) -> Result<Option<OrderType>, Error> {
+    // pending_orders = orders.pending.to_a
+    let schema_data = ctx.data::<SchemaData>()?;
+    let pending_orders = orders::Entity::find()
+      .filter(
+        orders::Column::UserConProfileId
+          .eq(self.model.id)
+          .and(orders::Column::Status.eq("pending")),
+      )
+      .all(schema_data.db.as_ref())
+      .await?;
+
+    if pending_orders.is_empty() {
+      Ok(None)
+    } else if pending_orders.len() > 1 {
+      // combine orders into one cart
+      let (first, rest) = pending_orders.split_at(1);
+      order_entries::Entity::update_many()
+        .col_expr(
+          order_entries::Column::OrderId,
+          Expr::value(sea_orm::Value::BigInt(Some(first[0].id))),
+        )
+        .filter(
+          order_entries::Column::OrderId
+            .is_in(rest.iter().map(|order| order.id).collect::<Vec<i64>>()),
+        )
+        .exec(schema_data.db.as_ref())
+        .await?;
+
+      Ok(Some(OrderType::new(first[0].to_owned())))
+    } else {
+      Ok(Some(OrderType::new(pending_orders[0].to_owned())))
+    }
   }
 
   async fn email(&self, ctx: &Context<'_>) -> Result<String, Error> {
@@ -153,6 +192,18 @@ impl UserConProfileType {
         .iter()
         .map(|team_member| TeamMemberType::new(team_member.to_owned()))
         .collect(),
+    )
+  }
+
+  async fn ticket(&self, ctx: &Context<'_>) -> Result<Option<TicketType>, Error> {
+    let loader = &ctx.data::<SchemaData>()?.loaders.user_con_profile_ticket;
+
+    Ok(
+      loader
+        .load_one(self.model.id)
+        .await?
+        .try_one()
+        .map(|ticket| TicketType::new(ticket.to_owned())),
     )
   }
 }

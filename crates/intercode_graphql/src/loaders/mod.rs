@@ -17,13 +17,13 @@ pub use entities_by_relation_loader::*;
 use sea_orm::RelationTrait;
 use sea_orm::{Linked, RelationDef};
 
-use intercode_entities::staff_positions_user_con_profiles;
 use intercode_entities::team_members;
 use intercode_entities::user_con_profiles;
 use intercode_entities::users;
 use intercode_entities::{cms_navigation_items, conventions, pages};
 use intercode_entities::{events, ticket_types};
 use intercode_entities::{products, staff_positions};
+use intercode_entities::{staff_positions_user_con_profiles, tickets};
 
 #[derive(Debug, Clone)]
 pub struct UserConProfileToStaffPositions;
@@ -105,6 +105,12 @@ impl_to_entity_link_loader!(
 
 impl_to_entity_relation_loader!(
   user_con_profiles::Entity,
+  tickets::Entity,
+  user_con_profiles::PrimaryKey::Id
+);
+
+impl_to_entity_relation_loader!(
+  user_con_profiles::Entity,
   users::Entity,
   user_con_profiles::PrimaryKey::Id
 );
@@ -147,6 +153,9 @@ pub struct LoaderManager {
       staff_positions::Entity,
       user_con_profiles::PrimaryKey,
     >,
+  >,
+  pub user_con_profile_ticket: DataLoader<
+    EntityRelationLoader<user_con_profiles::Entity, tickets::Entity, user_con_profiles::PrimaryKey>,
   >,
   pub user_con_profile_user: DataLoader<
     EntityRelationLoader<user_con_profiles::Entity, users::Entity, user_con_profiles::PrimaryKey>,
@@ -226,6 +235,13 @@ impl LoaderManager {
         tokio::spawn,
       )
       .delay(delay_millis),
+      user_con_profile_ticket: DataLoader::new(
+        <user_con_profiles::Entity as ToEntityRelationLoader<
+          tickets::Entity,
+          user_con_profiles::PrimaryKey,
+        >>::to_entity_relation_loader(&user_con_profiles::Entity::default(), db.clone()),
+        tokio::spawn,
+      ),
       user_con_profile_user: DataLoader::new(
         <user_con_profiles::Entity as ToEntityRelationLoader<
           users::Entity,
