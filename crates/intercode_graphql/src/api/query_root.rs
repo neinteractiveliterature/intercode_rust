@@ -1,5 +1,7 @@
 use super::interfaces::CmsParentInterface;
-use super::objects::{ConventionType, EventType, RootSiteType, UserType};
+use super::objects::{
+  AbilityType, ConventionType, EventType, RootSiteType, UserConProfileType, UserType,
+};
 use crate::api::objects::ModelBackedType;
 use crate::entity_relay_connection::RelayConnectable;
 use crate::{QueryData, SchemaData};
@@ -14,6 +16,14 @@ pub struct QueryRoot;
 
 #[Object]
 impl QueryRoot {
+  pub async fn assumed_identity_from_profile(
+    &self,
+    _ctx: &Context<'_>,
+  ) -> Option<UserConProfileType> {
+    // TODO
+    None
+  }
+
   pub async fn cms_parent_by_request_host(
     &self,
     ctx: &Context<'_>,
@@ -49,6 +59,10 @@ impl QueryRoot {
       Some(convention) => Ok(Some(ConventionType::new(convention.to_owned()))),
       None => Ok(None),
     }
+  }
+
+  async fn current_ability(&self) -> AbilityType {
+    AbilityType {}
   }
 
   async fn current_user(&self, ctx: &Context<'_>) -> Result<Option<UserType>, Error> {

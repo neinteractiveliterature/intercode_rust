@@ -17,11 +17,11 @@ pub use entities_by_relation_loader::*;
 use sea_orm::RelationTrait;
 use sea_orm::{Linked, RelationDef};
 
-use intercode_entities::team_members;
 use intercode_entities::user_con_profiles;
 use intercode_entities::users;
 use intercode_entities::{cms_navigation_items, conventions, pages};
 use intercode_entities::{events, ticket_types};
+use intercode_entities::{order_entries, orders, team_members};
 use intercode_entities::{products, staff_positions};
 use intercode_entities::{staff_positions_user_con_profiles, tickets};
 
@@ -77,6 +77,12 @@ impl_to_entity_id_loader!(conventions::Entity, conventions::PrimaryKey::Id);
 impl_to_entity_id_loader!(staff_positions::Entity, staff_positions::PrimaryKey::Id);
 impl_to_entity_id_loader!(team_members::Entity, team_members::PrimaryKey::Id);
 impl_to_entity_id_loader!(users::Entity, users::PrimaryKey::Id);
+
+impl_to_entity_relation_loader!(
+  orders::Entity,
+  order_entries::Entity,
+  orders::PrimaryKey::Id
+);
 
 impl_to_entity_relation_loader!(
   team_members::Entity,
@@ -136,6 +142,8 @@ pub struct LoaderManager {
     EntityRelationLoader<conventions::Entity, ticket_types::Entity, conventions::PrimaryKey>,
   >,
   pub conventions_by_id: DataLoader<EntityIdLoader<conventions::Entity, conventions::PrimaryKey>>,
+  pub order_order_entries:
+    DataLoader<EntityRelationLoader<orders::Entity, order_entries::Entity, orders::PrimaryKey>>,
   pub staff_positions_by_id:
     DataLoader<EntityIdLoader<staff_positions::Entity, staff_positions::PrimaryKey>>,
   pub team_member_event: DataLoader<
@@ -202,6 +210,11 @@ impl LoaderManager {
         tokio::spawn,
       )
       .delay(delay_millis),
+      order_order_entries: DataLoader::new(
+        orders::Entity.to_entity_relation_loader(db.clone()),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
       staff_positions_by_id: DataLoader::new(
         staff_positions::Entity.to_entity_id_loader(db.clone()),
         tokio::spawn,
@@ -241,7 +254,8 @@ impl LoaderManager {
           user_con_profiles::PrimaryKey,
         >>::to_entity_relation_loader(&user_con_profiles::Entity::default(), db.clone()),
         tokio::spawn,
-      ),
+      )
+      .delay(delay_millis),
       user_con_profile_user: DataLoader::new(
         <user_con_profiles::Entity as ToEntityRelationLoader<
           users::Entity,
