@@ -30,8 +30,25 @@ impl PageType {
     }
   }
 
+  #[graphql(name = "current_ability_can_delete")]
+  async fn current_ability_can_delete(&self, _ctx: &Context<'_>) -> bool {
+    // TODO
+    false
+  }
+
+  #[graphql(name = "current_ability_can_update")]
+  async fn current_ability_can_update(&self, _ctx: &Context<'_>) -> bool {
+    // TODO
+    false
+  }
+
   async fn name(&self) -> &Option<String> {
     &self.model.name
+  }
+
+  #[graphql(name = "skip_clickwrap_agreement")]
+  async fn skip_clickwrap_agreement(&self) -> bool {
+    self.model.skip_clickwrap_agreement
   }
 
   async fn slug(&self) -> &Option<String> {

@@ -72,25 +72,28 @@ impl Renderable for FileUrl {
     }
     let filename = filename.to_kstr().into_owned();
 
-    let handle = Handle::current();
-    let attachment = handle.block_on(
-      active_storage_attachments::Entity::find()
-        .filter(active_storage_attachments::Column::RecordType.eq("CmsFile"))
-        .filter(active_storage_attachments::Column::Name.eq("file"))
-        .filter(
-          active_storage_attachments::Column::RecordId.in_subquery(
-            QuerySelect::query(
-              &mut self
-                .cms_parent
-                .as_ref()
-                .cms_files()
-                .column(cms_files::Column::Id),
-            )
-            .to_owned(),
-          ),
-        )
-        .one(self.db.as_ref()),
-    );
+    let attachment = tokio::task::block_in_place(move || {
+      Handle::current().block_on(async move {
+        active_storage_attachments::Entity::find()
+          .filter(active_storage_attachments::Column::RecordType.eq("CmsFile"))
+          .filter(active_storage_attachments::Column::Name.eq("file"))
+          .filter(
+            active_storage_attachments::Column::RecordId.in_subquery(
+              QuerySelect::query(
+                &mut self
+                  .cms_parent
+                  .as_ref()
+                  .cms_files()
+                  .select_only()
+                  .column(cms_files::Column::Id),
+              )
+              .to_owned(),
+            ),
+          )
+          .one(self.db.as_ref())
+          .await
+      })
+    });
 
     let attachment = match attachment {
       Ok(att) => Ok(att),
@@ -105,11 +108,16 @@ impl Renderable for FileUrl {
       ))),
     }?;
 
-    let blob = handle.block_on(
-      attachment
-        .find_related(active_storage_blobs::Entity)
-        .one(self.db.as_ref()),
-    );
+    let att_id = attachment.id;
+    let att_blob_id = attachment.blob_id;
+    let blob = tokio::task::block_in_place(move || {
+      Handle::current().block_on(async move {
+        attachment
+          .find_related(active_storage_blobs::Entity)
+          .one(self.db.as_ref())
+          .await
+      })
+    });
 
     let blob = match blob {
       Ok(b) => Ok(b),
@@ -120,7 +128,7 @@ impl Renderable for FileUrl {
       Some(b) => Ok(b),
       None => Err(liquid_core::Error::with_msg(format!(
         "Attachment {} is missing blob record {} in the database",
-        attachment.id, attachment.blob_id
+        att_id, att_blob_id
       ))),
     }?;
 

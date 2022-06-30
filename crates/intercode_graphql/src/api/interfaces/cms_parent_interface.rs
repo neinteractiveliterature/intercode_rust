@@ -1,9 +1,10 @@
 use async_graphql::{async_trait::async_trait, Context, Error, Interface, ID};
-use intercode_entities::cms_parent::CmsParentTrait;
+use intercode_entities::{cms_parent::CmsParentTrait, pages};
+use sea_orm::{ColumnTrait, QueryFilter};
 
 use crate::{
   api::objects::{
-    CmsLayoutType, CmsNavigationItemType, ConventionType, ModelBackedType, RootSiteType,
+    CmsLayoutType, CmsNavigationItemType, ConventionType, ModelBackedType, PageType, RootSiteType,
   },
   SchemaData,
 };
@@ -17,6 +18,13 @@ use crate::{
     name = "effective_cms_layout",
     type = "CmsLayoutType",
     arg(name = "path", type = "String")
+  ),
+  field(
+    name = "cms_page",
+    type = "PageType",
+    arg(name = "id", type = "Option<ID>"),
+    arg(name = "slug", type = "Option<String>"),
+    arg(name = "root_page", type = "Option<bool>")
   )
 )]
 /// A CMS parent is a web site managed by Intercode. It acts as a container for CMS content, such
@@ -37,6 +45,39 @@ where
   Self: ModelBackedType<M>,
   M: CmsParentTrait + sea_orm::ModelTrait + Sync,
 {
+  async fn cms_page(
+    &self,
+    ctx: &Context<'_>,
+    id: Option<ID>,
+    slug: Option<String>,
+    root_page: Option<bool>,
+  ) -> Result<PageType, Error> {
+    let schema_data = ctx.data::<SchemaData>()?;
+    let pages = if let Some(id) = id {
+      self
+        .get_model()
+        .pages()
+        .filter(pages::Column::Id.eq(id.parse::<i64>()?))
+    } else if let Some(slug) = slug {
+      self
+        .get_model()
+        .pages()
+        .filter(pages::Column::Slug.eq(slug))
+    } else if Some(true) == root_page {
+      self.get_model().root_page()
+    } else {
+      return Err(Error::new(
+        "cmsPage requires either an id, slug, or root_page parameter",
+      ));
+    };
+
+    pages
+      .one(schema_data.db.as_ref())
+      .await?
+      .ok_or_else(|| Error::new("Page not found"))
+      .map(|page| PageType::new(page))
+  }
+
   async fn cms_navigation_items(
     &self,
     ctx: &Context<'_>,

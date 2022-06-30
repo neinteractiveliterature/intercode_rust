@@ -81,6 +81,7 @@ pub fn build_liquid_parser<'a>(
       convention: convention.clone(),
     })
     .tag(tags::NewEventProposalButtonTag)
+    .tag(tags::PageUrlTag)
     .tag(tags::ShortFormEventDetailsTag)
     .tag(tags::WithdrawUserSignupButtonTag)
     .tag(tags::YouTubeTag)
