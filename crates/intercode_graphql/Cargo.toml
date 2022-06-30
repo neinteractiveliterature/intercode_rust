@@ -9,6 +9,7 @@ version = "0.1.0"
 async-graphql = "*"
 chrono = "*"
 chrono-tz = "*"
+html-escape = "*"
 i18n-embed = "*"
 intercode_entities = {path = "../intercode_entities"}
 intercode_inflector = {path = "../intercode_inflector"}
@@ -21,3 +22,4 @@ sea-orm = "*"
 serde = "*"
 serde_json = "*"
 tokio = "*"
+url = "*"

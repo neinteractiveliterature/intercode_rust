@@ -1,6 +1,6 @@
 use crate::{
-  cms_files, cms_graphql_queries, cms_layouts, cms_navigation_items, cms_partials, conventions,
-  pages, root_sites,
+  cms_files, cms_graphql_queries, cms_layouts, cms_navigation_items, cms_partials, cms_variables,
+  conventions, pages, root_sites,
 };
 use async_trait::async_trait;
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Select};
@@ -30,6 +30,7 @@ pub trait CmsParentTrait {
   fn cms_layouts(&self) -> Select<cms_layouts::Entity>;
   fn cms_navigation_items(&self) -> Select<cms_navigation_items::Entity>;
   fn cms_partials(&self) -> Select<cms_partials::Entity>;
+  fn cms_variables(&self) -> Select<cms_variables::Entity>;
   fn default_layout(&self) -> Select<cms_layouts::Entity>;
   fn pages(&self) -> Select<pages::Entity>;
 
@@ -90,6 +91,7 @@ impl CmsParentTrait for CmsParent {
   enum_assoc!(cms_layouts);
   enum_assoc!(cms_navigation_items);
   enum_assoc!(cms_partials);
+  enum_assoc!(cms_variables);
   enum_assoc!(pages);
 
   fn default_layout(&self) -> Select<cms_layouts::Entity> {
@@ -123,6 +125,7 @@ impl CmsParentTrait for conventions::Model {
   convention_assoc!(cms_layouts);
   convention_assoc!(cms_navigation_items);
   convention_assoc!(cms_partials);
+  convention_assoc!(cms_variables);
   convention_assoc!(pages);
 
   fn default_layout(&self) -> Select<cms_layouts::Entity> {
@@ -150,6 +153,7 @@ impl CmsParentTrait for root_sites::Model {
   root_site_assoc!(cms_layouts);
   root_site_assoc!(cms_navigation_items);
   root_site_assoc!(cms_partials);
+  root_site_assoc!(cms_variables);
   root_site_assoc!(pages);
 
   fn default_layout(&self) -> Select<cms_layouts::Entity> {

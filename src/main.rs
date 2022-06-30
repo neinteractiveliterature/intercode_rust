@@ -4,7 +4,6 @@ extern crate dotenv;
 extern crate tracing;
 
 use clap::{command, FromArgMatches, Parser, Subcommand};
-mod cms_rendering_context;
 mod filters;
 mod server;
 

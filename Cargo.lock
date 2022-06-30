@@ -1313,6 +1313,7 @@ dependencies = [
  "async-graphql",
  "chrono",
  "chrono-tz",
+ "html-escape",
  "i18n-embed",
  "intercode_entities",
  "intercode_inflector",
@@ -1325,6 +1326,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "url",
 ]
 
 [[package]]

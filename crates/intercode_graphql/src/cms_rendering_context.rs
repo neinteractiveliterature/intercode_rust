@@ -1,10 +1,11 @@
 use std::{env, sync::Arc};
 
+use crate::{QueryData, SchemaData};
 use html_escape::encode_double_quoted_attribute;
 use intercode_entities::{
-  active_storage_attachments, active_storage_blobs, conventions, events, pages,
+  active_storage_attachments, active_storage_blobs, cms_parent::CmsParentTrait, conventions,
+  events, pages,
 };
-use intercode_graphql::{QueryData, SchemaData};
 use intercode_liquid::{cms_parent_partial_source::PreloadPartialsStrategy, react_component_tag};
 use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
 use serde_json::json;
@@ -139,7 +140,7 @@ async fn open_graph_meta_tags(
   page: Option<&pages::Model>,
   event: Option<&events::Model>,
   page_title: &str,
-  rendering_context: &CmsRenderingContext,
+  rendering_context: &CmsRenderingContext<'_>,
 ) -> String {
   let title_and_desc = if let Some(event) = event {
     let short_blurb = event.short_blurb.to_owned().unwrap_or_default();
@@ -220,7 +221,7 @@ async fn content_for_head(
   page: Option<&pages::Model>,
   event: Option<&events::Model>,
   page_title: &str,
-  rendering_context: &CmsRenderingContext,
+  rendering_context: &CmsRenderingContext<'_>,
 ) -> String {
   format!(
     r#"
@@ -254,19 +255,50 @@ async fn content_for_head(
   )
 }
 
-pub struct CmsRenderingContext {
+pub struct CmsRenderingContext<'a> {
   globals: liquid::Object,
-  query_data: QueryData,
-  schema_data: SchemaData,
+  query_data: &'a QueryData,
+  schema_data: &'a SchemaData,
 }
 
-impl CmsRenderingContext {
-  pub fn new(globals: liquid::Object, schema_data: SchemaData, query_data: QueryData) -> Self {
+impl<'a> CmsRenderingContext<'a> {
+  pub fn new(
+    globals: liquid::Object,
+    schema_data: &'a SchemaData,
+    query_data: &'a QueryData,
+  ) -> Self {
     CmsRenderingContext {
       globals,
       query_data,
       schema_data,
     }
+  }
+
+  pub async fn merged_globals(&self) -> liquid::Object {
+    let cms_variables = self
+      .query_data
+      .cms_parent
+      .cms_variables()
+      .all(self.schema_data.db.as_ref())
+      .await
+      .unwrap_or_else(|_err| vec![]);
+
+    let mut merged_globals = liquid::Object::from_iter(cms_variables.iter().map(|var| {
+      (
+        var.key.to_owned().into(),
+        serde_json::from_value::<liquid::model::Value>(
+          var
+            .value
+            .as_ref()
+            .unwrap_or(&serde_json::Value::Null)
+            .to_owned(),
+        )
+        .unwrap_or(liquid::model::Value::Nil),
+      )
+    }));
+
+    merged_globals.extend(self.globals.to_owned());
+    merged_globals
   }
 
   pub async fn render_liquid(
@@ -279,7 +311,7 @@ impl CmsRenderingContext {
       .render_liquid(
         &self.schema_data,
         content,
-        self.globals.clone(),
+        self.merged_globals().await,
         preload_partials_strategy,
       )
       .await

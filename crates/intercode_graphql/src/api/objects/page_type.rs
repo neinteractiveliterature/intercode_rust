@@ -3,7 +3,7 @@ use intercode_entities::pages;
 use intercode_liquid::cms_parent_partial_source::PreloadPartialsStrategy;
 use liquid::object;
 
-use crate::{model_backed_type, QueryData, SchemaData};
+use crate::{cms_rendering_context::CmsRenderingContext, model_backed_type, QueryData, SchemaData};
 model_backed_type!(PageType, pages::Model);
 
 #[Object]
@@ -17,11 +17,11 @@ impl PageType {
     if let Some(content) = &self.model.content {
       let schema_data = ctx.data::<SchemaData>()?;
       let query_data = ctx.data::<QueryData>()?;
-      query_data
+      let cms_rendering_context = CmsRenderingContext::new(object!({}), schema_data, query_data);
+
+      cms_rendering_context
         .render_liquid(
-          schema_data,
           content.as_str(),
-          object!({}),
           Some(PreloadPartialsStrategy::ByPage(&self.model)),
         )
         .await

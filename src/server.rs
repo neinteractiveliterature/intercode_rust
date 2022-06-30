@@ -1,4 +1,3 @@
-use crate::cms_rendering_context::CmsRenderingContext;
 use crate::filters::{query_data, request_url};
 use crate::Localizations;
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
@@ -9,6 +8,7 @@ use i18n_embed::fluent::fluent_language_loader;
 use i18n_embed::LanguageLoader;
 use intercode_entities::cms_parent::CmsParentTrait;
 use intercode_entities::events;
+use intercode_graphql::cms_rendering_context::CmsRenderingContext;
 use intercode_graphql::loaders::LoaderManager;
 use intercode_graphql::{api, QueryData, SchemaData};
 use liquid::object;
@@ -131,7 +131,8 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
           None
         };
 
-        let cms_rendering_context = CmsRenderingContext::new(object!({}), schema_data, query_data);
+        let cms_rendering_context =
+          CmsRenderingContext::new(object!({}), &schema_data, &query_data);
         let page_title = "TODO";
 
         Ok::<_, Rejection>(

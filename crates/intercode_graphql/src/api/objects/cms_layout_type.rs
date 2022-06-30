@@ -4,7 +4,7 @@ use intercode_liquid::{cms_parent_partial_source::PreloadPartialsStrategy, react
 use liquid::object;
 use serde_json::json;
 
-use crate::{model_backed_type, QueryData, SchemaData};
+use crate::{cms_rendering_context::CmsRenderingContext, model_backed_type, QueryData, SchemaData};
 model_backed_type!(CmsLayoutType, cms_layouts::Model);
 
 const DEFAULT_NAVBAR_CLASSES: &str =
@@ -22,17 +22,21 @@ impl CmsLayoutType {
     let schema_data = ctx.data::<SchemaData>()?;
     let query_data = ctx.data::<QueryData>()?;
 
-    query_data
+    let cms_rendering_context = CmsRenderingContext::new(
+      object!({
+        "content_for_head": "",
+        "content_for_navbar": react_component_tag("NavigationBar", json!({
+          "navbarClasses": self.model.navbar_classes.as_deref().unwrap_or(DEFAULT_NAVBAR_CLASSES)
+        })),
+        "content_for_layout": react_component_tag("AppRouter", json!({}))
+      }),
+      schema_data,
+      query_data,
+    );
+
+    cms_rendering_context
       .render_liquid(
-        schema_data,
         self.model.content.as_deref().unwrap_or(""),
-        object!({
-          "content_for_head": "",
-          "content_for_navbar": react_component_tag("NavigationBar", json!({
-            "navbarClasses": self.model.navbar_classes.as_deref().unwrap_or(DEFAULT_NAVBAR_CLASSES)
-          })),
-          "content_for_layout": react_component_tag("AppRouter", json!({}))
-        }),
         Some(PreloadPartialsStrategy::ByLayout(&self.model)),
       )
       .await

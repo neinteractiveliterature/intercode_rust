@@ -11,6 +11,7 @@ use sea_orm::DatabaseConnection;
 use std::{future::Future, sync::Arc};
 
 pub mod api;
+pub mod cms_rendering_context;
 pub mod entity_relay_connection;
 pub mod loaders;
 
@@ -131,6 +132,7 @@ impl QueryData {
     )?;
 
     let mut all_globals = object!({
+      "convention": self.convention,
       "user_con_profile": self.user_con_profile
     });
     all_globals.extend(globals);
