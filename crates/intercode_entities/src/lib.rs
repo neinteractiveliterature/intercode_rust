@@ -4,6 +4,6 @@ mod generated;
 pub use generated::*;
 
 pub mod cms_parent;
-mod model_ext;
+pub mod model_ext;
 
 pub use model_ext::UserNames;

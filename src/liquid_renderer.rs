@@ -1,12 +1,10 @@
 use async_graphql::async_trait::async_trait;
 use intercode_graphql::{loaders::expect::ExpectModels, LiquidRenderer, QueryData, SchemaData};
-use intercode_liquid::{
-  build_liquid_parser,
-  cms_parent_partial_source::PreloadPartialsStrategy,
-  drops::{ConventionDrop, UserConProfileDrop},
-};
+use intercode_liquid::{build_liquid_parser, cms_parent_partial_source::PreloadPartialsStrategy};
 use liquid::object;
 use std::fmt::Debug;
+
+use crate::drops::{ConventionDrop, UserConProfileDrop};
 
 #[derive(Debug)]
 pub struct IntercodeLiquidRenderer {

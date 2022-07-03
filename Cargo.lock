@@ -1386,6 +1386,7 @@ dependencies = [
  "intercode_graphql",
  "intercode_inflector",
  "intercode_liquid",
+ "intercode_timespan",
  "liquid",
  "liquid-core",
  "md5",

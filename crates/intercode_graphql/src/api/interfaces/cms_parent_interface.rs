@@ -117,7 +117,7 @@ where
       .get_model()
       .effective_cms_layout(path.as_str(), schema_data.db.as_ref())
       .await
-      .map(|layout| CmsLayoutType::new(layout))
+      .map(CmsLayoutType::new)
       .map_err(|db_err| Error::new(db_err.to_string()))
   }
 }

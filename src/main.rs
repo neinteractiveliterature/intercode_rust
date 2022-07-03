@@ -3,12 +3,13 @@ extern crate chrono_tz;
 extern crate dotenv;
 extern crate tracing;
 
-use clap::{command, FromArgMatches, Parser, Subcommand};
+mod drops;
 mod filters;
 mod liquid_renderer;
 mod server;
 
 use async_graphql::*;
+use clap::{command, FromArgMatches, Parser, Subcommand};
 use dotenv::dotenv;
 use intercode_graphql::api;
 use rust_embed::RustEmbed;
