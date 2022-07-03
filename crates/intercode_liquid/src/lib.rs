@@ -1,6 +1,7 @@
 pub mod blocks;
 pub mod cms_parent_partial_source;
 mod dig;
+pub mod drops;
 pub mod filters;
 mod react_component_tag;
 pub mod tags;

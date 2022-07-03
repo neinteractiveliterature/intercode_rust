@@ -1,20 +1,45 @@
-use chrono::{DateTime, TimeZone};
+use std::fmt::Display;
+use std::ops::RangeBounds;
+
+use crate::serialization::{SerializedTimespan, SerializedTimespanWithValue};
+use chrono::{DateTime, FixedOffset, TimeZone};
 use i18n_embed::fluent::FluentLanguageLoader;
 use i18n_embed_fl::fl;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(
+  from = "SerializedTimespan",
+  into = "SerializedTimespan",
+  bound(
+    serialize = "StartTz::Offset: Display, FinishTz::Offset: Display",
+    deserialize = "DateTime<StartTz>: From<DateTime<FixedOffset>>, DateTime<FinishTz>: From<DateTime<FixedOffset>>"
+  )
+)]
 pub struct Timespan<StartTz: TimeZone, FinishTz: TimeZone> {
   pub start: Option<DateTime<StartTz>>,
   pub finish: Option<DateTime<FinishTz>>,
 }
 
-#[derive(Debug)]
-pub struct TimespanWithValue<StartTz: TimeZone, FinishTz: TimeZone, T> {
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(
+  from = "SerializedTimespanWithValue<T>",
+  into = "SerializedTimespanWithValue<T>",
+  bound(
+    serialize = "StartTz::Offset: Display, FinishTz::Offset: Display, T: Serialize",
+    deserialize = "DateTime<StartTz>: From<DateTime<FixedOffset>>, DateTime<FinishTz>: From<DateTime<FixedOffset>>, T: Deserialize<'de>"
+  )
+)]
+pub struct TimespanWithValue<StartTz: TimeZone, FinishTz: TimeZone, T: Clone> {
   pub timespan: Timespan<StartTz, FinishTz>,
   pub value: T,
 }
 
 impl<StartTz: TimeZone, FinishTz: TimeZone> Timespan<StartTz, FinishTz> {
+  pub fn new(start: Option<DateTime<StartTz>>, finish: Option<DateTime<FinishTz>>) -> Self {
+    Timespan { start, finish }
+  }
+
   pub fn contains<Tz: TimeZone>(&self, time: &DateTime<Tz>) -> bool {
     if let Some(start) = &self.start {
       if time < start {
@@ -54,7 +79,7 @@ impl<StartTz: TimeZone, FinishTz: TimeZone> Timespan<StartTz, FinishTz> {
     true
   }
 
-  pub fn with_value<T>(self, value: T) -> TimespanWithValue<StartTz, FinishTz, T> {
+  pub fn with_value<'v, T: Clone + 'v>(self, value: T) -> TimespanWithValue<StartTz, FinishTz, T> {
     TimespanWithValue {
       timespan: self,
       value,
@@ -65,6 +90,31 @@ impl<StartTz: TimeZone, FinishTz: TimeZone> Timespan<StartTz, FinishTz> {
     Timespan {
       start: (&self.start.as_ref()).and_then(|start| Some(start.with_timezone(tz))),
       finish: (&self.finish.as_ref()).and_then(|finish| Some(finish.with_timezone(tz))),
+    }
+  }
+}
+
+impl<Tz: TimeZone> RangeBounds<DateTime<Tz>> for &Timespan<Tz, Tz> {
+  fn start_bound(&self) -> std::ops::Bound<&DateTime<Tz>> {
+    match &self.start {
+      Some(start) => std::ops::Bound::Included(&start),
+      None => std::ops::Bound::Unbounded,
+    }
+  }
+
+  fn end_bound(&self) -> std::ops::Bound<&DateTime<Tz>> {
+    match &self.finish {
+      Some(finish) => std::ops::Bound::Excluded(&finish),
+      None => std::ops::Bound::Unbounded,
+    }
+  }
+}
+
+impl<Tz: TimeZone> Timespan<Tz, Tz> {
+  pub fn instant(time: DateTime<Tz>) -> Self {
+    Timespan {
+      start: Some(time.clone()),
+      finish: Some(time),
     }
   }
 }
@@ -127,6 +177,35 @@ impl<StartTz: TimeZone, FinishTz: TimeZone, OtherStart: TimeZone, OtherFinish: T
   }
 }
 
+impl<
+    'v,
+    StartTz: TimeZone,
+    FinishTz: TimeZone,
+    OtherStart: TimeZone,
+    OtherFinish: TimeZone,
+    T: Clone + 'v,
+  > PartialEq<TimespanWithValue<OtherStart, OtherFinish, T>>
+  for TimespanWithValue<StartTz, FinishTz, T>
+{
+  fn eq(&self, other: &TimespanWithValue<OtherStart, OtherFinish, T>) -> bool {
+    self.timespan.eq(&other.timespan)
+  }
+}
+
+impl<
+    'v,
+    StartTz: TimeZone,
+    FinishTz: TimeZone,
+    OtherStart: TimeZone,
+    OtherFinish: TimeZone,
+    T: Clone + 'v,
+  > PartialEq<Timespan<OtherStart, OtherFinish>> for TimespanWithValue<StartTz, FinishTz, T>
+{
+  fn eq(&self, other: &Timespan<OtherStart, OtherFinish>) -> bool {
+    self.timespan.eq(&other)
+  }
+}
+
 impl<StartTz: TimeZone, FinishTz: TimeZone, OtherStart: TimeZone, OtherFinish: TimeZone>
   PartialOrd<Timespan<OtherStart, OtherFinish>> for Timespan<StartTz, FinishTz>
 {
@@ -159,44 +238,59 @@ impl<StartTz: TimeZone, FinishTz: TimeZone, OtherStart: TimeZone, OtherFinish: T
   }
 }
 
-impl<StartTz: TimeZone, FinishTz: TimeZone, Tz: TimeZone> PartialEq<DateTime<Tz>>
-  for Timespan<StartTz, FinishTz>
+impl<
+    'v,
+    StartTz: TimeZone,
+    FinishTz: TimeZone,
+    OtherStart: TimeZone,
+    OtherFinish: TimeZone,
+    T: 'v + Clone,
+  > PartialOrd<TimespanWithValue<OtherStart, OtherFinish, T>>
+  for TimespanWithValue<StartTz, FinishTz, T>
 {
-  fn eq(&self, other: &DateTime<Tz>) -> bool {
-    if let Some(start) = &self.start {
-      if let Some(finish) = &self.finish {
-        if start == &other.with_timezone(&start.timezone())
-          && finish == &other.with_timezone(&finish.timezone())
-        {
-          return true;
-        }
-      }
-    }
-
-    false
+  fn partial_cmp(
+    &self,
+    other: &TimespanWithValue<OtherStart, OtherFinish, T>,
+  ) -> Option<std::cmp::Ordering> {
+    self.timespan.partial_cmp(&other.timespan)
   }
 }
 
-impl<StartTz: TimeZone, FinishTz: TimeZone, Tz: TimeZone> PartialOrd<DateTime<Tz>>
-  for Timespan<StartTz, FinishTz>
+impl<
+    'v,
+    StartTz: TimeZone,
+    FinishTz: TimeZone,
+    OtherStart: TimeZone,
+    OtherFinish: TimeZone,
+    T: 'v + Clone,
+  > PartialOrd<Timespan<OtherStart, OtherFinish>> for TimespanWithValue<StartTz, FinishTz, T>
 {
-  fn partial_cmp(&self, other: &DateTime<Tz>) -> Option<std::cmp::Ordering> {
-    if self.contains(other) {
-      return None;
-    }
+  fn partial_cmp(&self, other: &Timespan<OtherStart, OtherFinish>) -> Option<std::cmp::Ordering> {
+    self.timespan.partial_cmp(&other)
+  }
+}
 
-    if let Some(finish) = &self.finish {
-      if other >= finish {
-        return Some(core::cmp::Ordering::Less);
-      }
-    }
+impl<StartTz: TimeZone, FinishTz: TimeZone> Eq for Timespan<StartTz, FinishTz> {}
 
-    if let Some(start) = &self.start {
-      if other < start {
-        return Some(core::cmp::Ordering::Greater);
-      }
-    }
+impl<'v, StartTz: TimeZone, FinishTz: TimeZone, T: 'v + Clone> Eq
+  for TimespanWithValue<StartTz, FinishTz, T>
+{
+}
 
-    Some(core::cmp::Ordering::Equal)
+impl<StartTz: TimeZone, FinishTz: TimeZone> Ord for Timespan<StartTz, FinishTz> {
+  fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    if self.eq(other) {
+      return core::cmp::Ordering::Equal;
+    } else {
+      return self.start.cmp(&other.start);
+    }
+  }
+}
+
+impl<'v, StartTz: TimeZone, FinishTz: TimeZone, T: 'v + Clone> Ord
+  for TimespanWithValue<StartTz, FinishTz, T>
+{
+  fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    self.timespan.cmp(&other.timespan)
   }
 }

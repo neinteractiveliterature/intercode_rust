@@ -4,6 +4,7 @@ use intercode_entities::{cms_parent::CmsParent, conventions, user_con_profiles, 
 use intercode_liquid::{
   build_liquid_parser,
   cms_parent_partial_source::{LazyCmsPartialSource, PreloadPartialsStrategy},
+  drops::{ConventionDrop, UserConProfileDrop},
   GraphQLExecutor,
 };
 use liquid::{object, partials::LazyCompiler};
@@ -132,8 +133,8 @@ impl QueryData {
     )?;
 
     let mut all_globals = object!({
-      "convention": self.convention,
-      "user_con_profile": self.user_con_profile
+      "convention": self.convention.as_ref().as_ref().map(|convention| ConventionDrop::new(convention, language_loader.as_ref())),
+      "user_con_profile": self.user_con_profile.as_ref().as_ref().map(|ucp| UserConProfileDrop::new(ucp))
     });
     all_globals.extend(globals);
 

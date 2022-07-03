@@ -1358,6 +1358,7 @@ dependencies = [
  "md5",
  "regex",
  "sea-orm",
+ "serde",
  "serde_json",
  "tokio",
  "tracing",
@@ -1416,6 +1417,7 @@ dependencies = [
  "chrono",
  "i18n-embed",
  "i18n-embed-fl",
+ "serde",
 ]
 
 [[package]]
