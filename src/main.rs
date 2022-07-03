@@ -5,6 +5,7 @@ extern crate tracing;
 
 use clap::{command, FromArgMatches, Parser, Subcommand};
 mod filters;
+mod liquid_renderer;
 mod server;
 
 use async_graphql::*;

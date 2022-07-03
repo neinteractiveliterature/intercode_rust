@@ -6,6 +6,15 @@ version = "0.1.0"
 [profile.release]
 debug = 1
 
+[workspace]
+members = [
+  "./crates/intercode_entities",
+  "./crates/intercode_graphql",
+  "./crates/intercode_inflector",
+  "./crates/intercode_liquid",
+  "./crates/intercode_timespan",
+]
+
 [features]
 dhat-heap = ["dep:dhat"] # if you are doing heap profiling
 
@@ -27,8 +36,8 @@ intercode_entities = {path = "./crates/intercode_entities"}
 intercode_graphql = {path = "./crates/intercode_graphql"}
 intercode_inflector = {path = "./crates/intercode_inflector"}
 intercode_liquid = {path = "./crates/intercode_liquid"}
-liquid = "0.26.0"
-liquid-core = "0.26.0"
+liquid = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
+liquid-core = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
 md5 = "*"
 pulldown-cmark = "0.9.1"
 quote = "1.0.18"

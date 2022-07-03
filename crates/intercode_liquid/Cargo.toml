@@ -16,8 +16,8 @@ i18n-embed-fl = "*"
 intercode_entities = {path = "../intercode_entities"}
 intercode_inflector = {path = "../intercode_inflector"}
 intercode_timespan = {path = "../intercode_timespan"}
-liquid = "*"
-liquid-core = "*"
+liquid = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
+liquid-core = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
 md5 = "*"
 regex = "*"
 sea-orm = "*"

@@ -1,15 +1,13 @@
-use async_graphql::{EmptyMutation, EmptySubscription};
+use async_graphql::{async_trait::async_trait, EmptyMutation, EmptySubscription};
 use i18n_embed::fluent::FluentLanguageLoader;
 use intercode_entities::{cms_parent::CmsParent, conventions, user_con_profiles, users};
 use intercode_liquid::{
-  build_liquid_parser,
   cms_parent_partial_source::{LazyCmsPartialSource, PreloadPartialsStrategy},
-  drops::{ConventionDrop, UserConProfileDrop},
   GraphQLExecutor,
 };
-use liquid::{object, partials::LazyCompiler};
+use liquid::partials::LazyCompiler;
 use sea_orm::DatabaseConnection;
-use std::{future::Future, sync::Arc};
+use std::{fmt::Debug, future::Future, sync::Arc};
 
 pub mod api;
 pub mod cms_rendering_context;
@@ -21,6 +19,16 @@ pub struct SchemaData {
   pub db: Arc<DatabaseConnection>,
   pub language_loader: Arc<FluentLanguageLoader>,
   pub loaders: loaders::LoaderManager,
+}
+
+#[async_trait]
+pub trait LiquidRenderer: Send + Sync + Debug {
+  async fn render_liquid(
+    &self,
+    content: &str,
+    globals: liquid::Object,
+    preload_partials_strategy: Option<PreloadPartialsStrategy<'_>>,
+  ) -> Result<String, async_graphql::Error>;
 }
 
 #[derive(Debug, Clone)]
@@ -99,51 +107,6 @@ impl QueryData {
     EmbeddedGraphQLExecutor {
       query_data: self.clone(),
       schema_data: schema_data.clone(),
-    }
-  }
-
-  pub async fn render_liquid(
-    &self,
-    schema_data: &SchemaData,
-    content: &str,
-    globals: liquid::Object,
-    preload_partials_strategy: Option<PreloadPartialsStrategy<'_>>,
-  ) -> Result<String, async_graphql::Error> {
-    let schema_data: SchemaData = schema_data.clone();
-    let query_data: QueryData = self.clone();
-
-    let partial_compiler = query_data
-      .build_partial_compiler(&schema_data, preload_partials_strategy)
-      .await?;
-    let convention = query_data.convention.clone();
-    let language_loader = schema_data.language_loader.clone();
-    let cms_parent = query_data.cms_parent.clone();
-    let db = schema_data.db.clone();
-    let user_signed_in = query_data.current_user.is_some();
-    let executor = query_data.build_embedded_graphql_executor(&schema_data);
-
-    let parser = build_liquid_parser(
-      &convention,
-      &language_loader,
-      &cms_parent,
-      &db,
-      user_signed_in,
-      executor,
-      partial_compiler,
-    )?;
-
-    let mut all_globals = object!({
-      "convention": self.convention.as_ref().as_ref().map(|convention| ConventionDrop::new(convention, language_loader.as_ref())),
-      "user_con_profile": self.user_con_profile.as_ref().as_ref().map(|ucp| UserConProfileDrop::new(ucp))
-    });
-    all_globals.extend(globals);
-
-    let template = parser.parse(content)?;
-    let result = template.render(&all_globals);
-
-    match result {
-      Ok(content) => Ok(content),
-      Err(error) => Err(async_graphql::Error::new(error.to_string())),
     }
   }
 }

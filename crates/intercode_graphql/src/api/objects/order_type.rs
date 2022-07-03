@@ -21,7 +21,7 @@ impl OrderType {
         .load_one(self.model.id)
         .await?
         .expect_models()?
-        .into_iter()
+        .iter()
         .map(|order_entry| OrderEntryType::new(order_entry.to_owned()))
         .collect(),
     )

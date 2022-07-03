@@ -1,10 +1,12 @@
+use std::sync::Arc;
+
 use super::interfaces::CmsParentInterface;
 use super::objects::{
   AbilityType, ConventionType, EventType, RootSiteType, UserConProfileType, UserType,
 };
 use crate::api::objects::ModelBackedType;
 use crate::entity_relay_connection::RelayConnectable;
-use crate::{QueryData, SchemaData};
+use crate::{LiquidRenderer, QueryData, SchemaData};
 use async_graphql::connection::{query, Connection};
 use async_graphql::*;
 use intercode_entities::cms_parent::CmsParent;
@@ -111,10 +113,9 @@ impl QueryRoot {
   }
 
   async fn preview_liquid(&self, ctx: &Context<'_>, content: String) -> Result<String, Error> {
-    let schema_data = ctx.data::<SchemaData>()?;
-    let query_data = ctx.data::<QueryData>()?;
-    query_data
-      .render_liquid(schema_data, content.as_str(), object!({}), None)
+    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
+    liquid_renderer
+      .render_liquid(content.as_str(), object!({}), None)
       .await
   }
 

@@ -157,7 +157,7 @@ impl ConventionType {
         )
         .one(schema_data.db.as_ref())
         .await
-        .map(|result| result.map(|ucp| UserConProfileType::new(ucp)))
+        .map(|result| result.map(UserConProfileType::new))
         .map_err(|e| async_graphql::Error::new(e.to_string()))
     } else {
       Ok(None)

@@ -1,4 +1,5 @@
 use crate::filters::{query_data, request_url};
+use crate::liquid_renderer::IntercodeLiquidRenderer;
 use crate::Localizations;
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql::*;
@@ -10,7 +11,7 @@ use intercode_entities::cms_parent::CmsParentTrait;
 use intercode_entities::events;
 use intercode_graphql::cms_rendering_context::CmsRenderingContext;
 use intercode_graphql::loaders::LoaderManager;
-use intercode_graphql::{api, QueryData, SchemaData};
+use intercode_graphql::{api, LiquidRenderer, QueryData, SchemaData};
 use liquid::object;
 use regex::Regex;
 use sea_orm::{ColumnTrait, DatabaseConnection, ModelTrait, QueryFilter};
@@ -57,6 +58,7 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
       .data(schema_data.clone())
       .finish();
 
+  let graphql_post_schema_data = schema_data.clone();
   let graphql_post = warp::path("graphql")
     .and(warp::post())
     .and(query_data(db_arc.clone()))
@@ -67,8 +69,13 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
         Schema<api::QueryRoot, EmptyMutation, EmptySubscription>,
         async_graphql::Request,
       )| {
+        let graphql_post_schema_data = graphql_post_schema_data.clone();
         async move {
-          let request = request.data(query_data);
+          let liquid_renderer =
+            IntercodeLiquidRenderer::new(&query_data, &graphql_post_schema_data);
+          let request = request
+            .data(query_data)
+            .data::<Arc<dyn LiquidRenderer>>(Arc::new(liquid_renderer));
 
           Ok::<_, Infallible>(GraphQLResponse::from(schema.execute(request).await))
         }
@@ -131,8 +138,14 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
           None
         };
 
-        let cms_rendering_context =
-          CmsRenderingContext::new(object!({}), &schema_data, &query_data);
+        let liquid_renderer = IntercodeLiquidRenderer::new(&query_data, &schema_data);
+
+        let cms_rendering_context = CmsRenderingContext::new(
+          object!({}),
+          &schema_data,
+          &query_data,
+          Arc::new(liquid_renderer),
+        );
         let page_title = "TODO";
 
         Ok::<_, Rejection>(

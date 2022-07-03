@@ -1,9 +1,14 @@
+use std::sync::Arc;
+
 use async_graphql::*;
 use intercode_entities::pages;
 use intercode_liquid::cms_parent_partial_source::PreloadPartialsStrategy;
 use liquid::object;
 
-use crate::{cms_rendering_context::CmsRenderingContext, model_backed_type, QueryData, SchemaData};
+use crate::{
+  cms_rendering_context::CmsRenderingContext, model_backed_type, LiquidRenderer, QueryData,
+  SchemaData,
+};
 model_backed_type!(PageType, pages::Model);
 
 #[Object]
@@ -17,7 +22,13 @@ impl PageType {
     if let Some(content) = &self.model.content {
       let schema_data = ctx.data::<SchemaData>()?;
       let query_data = ctx.data::<QueryData>()?;
-      let cms_rendering_context = CmsRenderingContext::new(object!({}), schema_data, query_data);
+      let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
+      let cms_rendering_context = CmsRenderingContext::new(
+        object!({}),
+        schema_data,
+        query_data,
+        liquid_renderer.clone(),
+      );
 
       cms_rendering_context
         .render_liquid(

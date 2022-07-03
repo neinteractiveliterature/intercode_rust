@@ -60,7 +60,7 @@ impl<'de> Deserialize<'de> for MaximumEventSignupsValue {
           "not_now" => Ok(MaximumEventSignupsValue::NotNow),
           _ => v
             .parse()
-            .map(|num| MaximumEventSignupsValue::Limited(num))
+            .map(MaximumEventSignupsValue::Limited)
             .map_err(|_e| de::Error::invalid_value(Unexpected::Str(v), &self)),
         }
       }
@@ -95,6 +95,7 @@ pub struct ConventionDrop<'a> {
   maximum_event_signups: ScheduledValueDrop<MaximumEventSignupsValue>,
   starts_at: Option<DateTime>,
   ends_at: Option<DateTime>,
+  ticket_name: &'a str,
 }
 
 impl<'a> ConventionDrop<'a> {
@@ -121,6 +122,7 @@ impl<'a> ConventionDrop<'a> {
       ends_at: convention
         .ends_at
         .and_then(naive_date_time_to_liquid_date_time),
+      ticket_name: convention.ticket_name.as_str(),
     }
   }
 }

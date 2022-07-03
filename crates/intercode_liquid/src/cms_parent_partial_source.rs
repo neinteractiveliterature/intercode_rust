@@ -16,6 +16,7 @@ use liquid::partials::PartialSource;
 use tokio::runtime::Handle;
 use tracing::log::warn;
 
+#[derive(Debug)]
 pub enum PreloadPartialsStrategy<'a> {
   ByLayout(&'a intercode_entities::cms_layouts::Model),
   ByName(Vec<&'a str>),

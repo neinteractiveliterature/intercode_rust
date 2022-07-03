@@ -88,7 +88,7 @@ impl Default for IntercodeInflector {
 
 #[cfg(test)]
 mod tests {
-  use crate::inflections::IntercodeInflector;
+  use crate::IntercodeInflector;
 
   #[test]
   fn default_acronyms_work() {
@@ -120,7 +120,7 @@ mod tests {
   }
 
   mod humanize {
-    use crate::inflections::IntercodeInflector;
+    use crate::IntercodeInflector;
 
     #[test]
     fn humanize_works_with_acronyms() {

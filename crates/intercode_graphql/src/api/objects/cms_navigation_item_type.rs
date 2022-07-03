@@ -49,6 +49,6 @@ impl CmsNavigationItemType {
   }
 
   async fn title(&self) -> Option<&str> {
-    self.model.title.as_ref().map(|title| title.as_str())
+    self.model.title.as_deref()
   }
 }

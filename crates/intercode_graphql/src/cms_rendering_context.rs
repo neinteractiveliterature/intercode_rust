@@ -1,6 +1,6 @@
 use std::{env, sync::Arc};
 
-use crate::{QueryData, SchemaData};
+use crate::{LiquidRenderer, QueryData, SchemaData};
 use html_escape::encode_double_quoted_attribute;
 use intercode_entities::{
   active_storage_attachments, active_storage_blobs, cms_parent::CmsParentTrait, conventions,
@@ -259,6 +259,7 @@ pub struct CmsRenderingContext<'a> {
   globals: liquid::Object,
   query_data: &'a QueryData,
   schema_data: &'a SchemaData,
+  liquid_renderer: Arc<dyn LiquidRenderer>,
 }
 
 impl<'a> CmsRenderingContext<'a> {
@@ -266,11 +267,13 @@ impl<'a> CmsRenderingContext<'a> {
     globals: liquid::Object,
     schema_data: &'a SchemaData,
     query_data: &'a QueryData,
+    liquid_renderer: Arc<dyn LiquidRenderer>,
   ) -> Self {
     CmsRenderingContext {
       globals,
       query_data,
       schema_data,
+      liquid_renderer,
     }
   }
 
@@ -306,14 +309,10 @@ impl<'a> CmsRenderingContext<'a> {
     content: &str,
     preload_partials_strategy: Option<PreloadPartialsStrategy<'_>>,
   ) -> Result<String, async_graphql::Error> {
+    let merged_globals = self.merged_globals().await;
     self
-      .query_data
-      .render_liquid(
-        &self.schema_data,
-        content,
-        self.merged_globals().await,
-        preload_partials_strategy,
-      )
+      .liquid_renderer
+      .render_liquid(content, merged_globals, preload_partials_strategy)
       .await
   }
 
