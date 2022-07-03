@@ -97,14 +97,14 @@ impl<StartTz: TimeZone, FinishTz: TimeZone> Timespan<StartTz, FinishTz> {
 impl<Tz: TimeZone> RangeBounds<DateTime<Tz>> for &Timespan<Tz, Tz> {
   fn start_bound(&self) -> std::ops::Bound<&DateTime<Tz>> {
     match &self.start {
-      Some(start) => std::ops::Bound::Included(&start),
+      Some(start) => std::ops::Bound::Included(start),
       None => std::ops::Bound::Unbounded,
     }
   }
 
   fn end_bound(&self) -> std::ops::Bound<&DateTime<Tz>> {
     match &self.finish {
-      Some(finish) => std::ops::Bound::Excluded(&finish),
+      Some(finish) => std::ops::Bound::Excluded(finish),
       None => std::ops::Bound::Unbounded,
     }
   }
@@ -202,7 +202,7 @@ impl<
   > PartialEq<Timespan<OtherStart, OtherFinish>> for TimespanWithValue<StartTz, FinishTz, T>
 {
   fn eq(&self, other: &Timespan<OtherStart, OtherFinish>) -> bool {
-    self.timespan.eq(&other)
+    self.timespan.eq(other)
   }
 }
 
@@ -266,7 +266,7 @@ impl<
   > PartialOrd<Timespan<OtherStart, OtherFinish>> for TimespanWithValue<StartTz, FinishTz, T>
 {
   fn partial_cmp(&self, other: &Timespan<OtherStart, OtherFinish>) -> Option<std::cmp::Ordering> {
-    self.timespan.partial_cmp(&other)
+    self.timespan.partial_cmp(other)
   }
 }
 
@@ -280,9 +280,9 @@ impl<'v, StartTz: TimeZone, FinishTz: TimeZone, T: 'v + Clone> Eq
 impl<StartTz: TimeZone, FinishTz: TimeZone> Ord for Timespan<StartTz, FinishTz> {
   fn cmp(&self, other: &Self) -> std::cmp::Ordering {
     if self.eq(other) {
-      return core::cmp::Ordering::Equal;
+      core::cmp::Ordering::Equal
     } else {
-      return self.start.cmp(&other.start);
+      self.start.cmp(&other.start)
     }
   }
 }

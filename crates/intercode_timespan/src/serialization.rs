@@ -1,4 +1,4 @@
-use std::{convert::identity, fmt::Display};
+use std::fmt::Display;
 
 use chrono::{DateTime, FixedOffset, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
@@ -112,14 +112,13 @@ where
     SerializedScheduledValue {
       timespans: scheduled_value
         .into_iter()
-        .map(|timespan| {
+        .filter_map(|timespan| {
           if let Some(value) = timespan.value {
             Some(timespan.timespan.with_value(value))
           } else {
             None
           }
         })
-        .filter_map(identity)
         .map(|twv| twv.into())
         .collect(),
     }

@@ -86,20 +86,14 @@ impl<Tz: TimeZone + std::fmt::Debug, V: Clone + std::fmt::Debug + Default> Sched
     }
 
     if let Some(prev) = prev {
-      if let Some(value) = prev.1 {
-        Some(
-          Timespan::new(Some(prev.0.to_owned()), next.map(|next| next.0.to_owned()))
-            .with_value(value.to_owned()),
-        )
-      } else {
-        None
-      }
-    } else if let Some(start_value) = &self.start_value {
-      Some(
-        Timespan::new(None, next.map(|next| next.0.to_owned())).with_value(start_value.to_owned()),
-      )
+      prev.1.as_ref().map(|value| {
+        Timespan::new(Some(prev.0.to_owned()), next.map(|next| next.0.to_owned()))
+          .with_value(value.to_owned())
+      })
     } else {
-      None
+      self.start_value.as_ref().map(|start_value| {
+        Timespan::new(None, next.map(|next| next.0.to_owned())).with_value(start_value.to_owned())
+      })
     }
   }
 
@@ -213,7 +207,7 @@ impl<'a, Tz: TimeZone, V: Clone + Default> IntoIterator for &'a ScheduledValue<T
       output_start: false,
       output_finish: false,
       prev_start: first_change
-        .and_then(|item| Some(item.0.to_owned()))
+        .map(|item| item.0.to_owned())
         .unwrap_or_else(|| Utc::now().with_timezone(&self.tz)), // doesn't matter, we just need to put something here
       prev_value: first_change.and_then(|item| item.1.to_owned()),
       finish_value: self.finish_value.as_ref(),

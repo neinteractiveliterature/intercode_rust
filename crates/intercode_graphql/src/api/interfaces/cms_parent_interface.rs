@@ -75,7 +75,7 @@ where
       .one(schema_data.db.as_ref())
       .await?
       .ok_or_else(|| Error::new("Page not found"))
-      .map(|page| PageType::new(page))
+      .map(PageType::new)
   }
 
   async fn cms_navigation_items(
