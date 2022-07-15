@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use super::utils::date_time_to_liquid_date_time;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct TimespanWithValueDrop<V: Clone + Default> {
   pub start: Option<DateTime>,
   pub finish: Option<DateTime>,

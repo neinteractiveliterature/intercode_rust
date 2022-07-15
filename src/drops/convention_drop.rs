@@ -1,9 +1,10 @@
+use std::sync::Arc;
+
 use chrono::Utc;
 use i18n_embed::fluent::FluentLanguageLoader;
 use intercode_entities::conventions;
 use intercode_timespan::ScheduledValue;
-use liquid::model::DateTime;
-use sea_orm::JsonValue;
+use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 use serde::{
   de::{self, Unexpected},
   Deserialize, Deserializer, Serialize, Serializer,
@@ -87,42 +88,67 @@ impl Default for MaximumEventSignupsValue {
   }
 }
 
-#[derive(Serialize)]
-pub struct ConventionDrop<'a> {
-  id: i64,
-  name: Option<&'a str>,
-  location: Option<&'a JsonValue>,
-  maximum_event_signups: ScheduledValueDrop<MaximumEventSignupsValue>,
-  starts_at: Option<DateTime>,
-  ends_at: Option<DateTime>,
-  ticket_name: &'a str,
+#[liquid_drop_struct]
+pub struct ConventionDrop {
+  convention: conventions::Model,
+  language_loader: Arc<FluentLanguageLoader>,
 }
 
-impl<'a> ConventionDrop<'a> {
-  pub fn new(
-    convention: &'a conventions::Model,
-    language_loader: &'a FluentLanguageLoader,
-  ) -> Self {
+#[liquid_drop_impl]
+impl ConventionDrop {
+  pub fn new(convention: conventions::Model, language_loader: Arc<FluentLanguageLoader>) -> Self {
     ConventionDrop {
-      id: convention.id,
-      name: convention.name.as_deref(),
-      location: convention.location.as_ref(),
-      maximum_event_signups: convention
-        .maximum_event_signups
-        .as_ref()
-        .map(|maximum_event_signups| {
-          let scheduled_value: ScheduledValue<Utc, MaximumEventSignupsValue> =
-            serde_json::from_value(maximum_event_signups.clone()).unwrap_or_default();
-          ScheduledValueDrop::new(scheduled_value, language_loader)
-        })
-        .unwrap_or_else(|| ScheduledValueDrop::new::<Utc>(Default::default(), language_loader)),
-      starts_at: convention
-        .starts_at
-        .and_then(naive_date_time_to_liquid_date_time),
-      ends_at: convention
-        .ends_at
-        .and_then(naive_date_time_to_liquid_date_time),
-      ticket_name: convention.ticket_name.as_str(),
+      convention,
+      language_loader,
     }
+  }
+
+  fn id(&self) -> i64 {
+    self.convention.id
+  }
+
+  fn name(&self) -> Option<&str> {
+    self.convention.name.as_deref()
+  }
+
+  #[drop(serialize_value = true)]
+  fn location(&self) -> Option<&JsonValue> {
+    self.convention.location.as_ref()
+  }
+
+  #[drop(serialize_value = true)]
+  fn maximum_event_signups(&self) -> ScheduledValueDrop<MaximumEventSignupsValue> {
+    self
+      .convention
+      .maximum_event_signups
+      .as_ref()
+      .map(|maximum_event_signups| {
+        let scheduled_value: ScheduledValue<Utc, MaximumEventSignupsValue> =
+          serde_json::from_value(maximum_event_signups.clone()).unwrap_or_default();
+        ScheduledValueDrop::new(scheduled_value, self.language_loader.as_ref())
+      })
+      .unwrap_or_else(|| {
+        ScheduledValueDrop::new::<Utc>(Default::default(), self.language_loader.as_ref())
+      })
+  }
+
+  #[drop(serialize_value = true)]
+  fn starts_at(&self) -> Option<liquid::model::DateTime> {
+    self
+      .convention
+      .starts_at
+      .and_then(naive_date_time_to_liquid_date_time)
+  }
+
+  #[drop(serialize_value = true)]
+  fn ends_at(&self) -> Option<liquid::model::DateTime> {
+    self
+      .convention
+      .ends_at
+      .and_then(naive_date_time_to_liquid_date_time)
+  }
+
+  fn ticket_name(&self) -> &str {
+    self.convention.ticket_name.as_str()
   }
 }

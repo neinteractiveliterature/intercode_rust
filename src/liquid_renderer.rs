@@ -1,12 +1,12 @@
 use async_graphql::async_trait::async_trait;
-use intercode_graphql::{loaders::expect::ExpectModels, LiquidRenderer, QueryData, SchemaData};
+use intercode_graphql::{LiquidRenderer, QueryData, SchemaData};
 use intercode_liquid::{build_liquid_parser, cms_parent_partial_source::PreloadPartialsStrategy};
 use liquid::object;
 use std::fmt::Debug;
 
 use crate::drops::{ConventionDrop, UserConProfileDrop};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IntercodeLiquidRenderer {
   query_data: QueryData,
   schema_data: SchemaData,
@@ -41,17 +41,6 @@ impl LiquidRenderer for IntercodeLiquidRenderer {
     let db = schema_data.db.clone();
     let user_signed_in = query_data.current_user.is_some();
     let executor = query_data.build_embedded_graphql_executor(&schema_data);
-    let signups = if let Some(user_con_profile) = query_data.user_con_profile.as_ref().as_ref() {
-      schema_data
-        .loaders
-        .user_con_profile_signups
-        .load_one(user_con_profile.id)
-        .await?
-        .expect_models()?
-        .to_owned()
-    } else {
-      vec![]
-    };
 
     let parser = build_liquid_parser(
       &convention,
@@ -63,16 +52,27 @@ impl LiquidRenderer for IntercodeLiquidRenderer {
       partial_compiler,
     )?;
 
-    let mut all_globals = object!({
-      "convention": query_data.convention.as_ref().as_ref().map(|convention| ConventionDrop::new(convention, language_loader.as_ref())),
-      "user_con_profile": query_data.user_con_profile.as_ref().as_ref().map(|ucp| {
-        UserConProfileDrop::new(ucp, query_data.current_user.as_ref().as_ref().unwrap(), Box::new(signups.into_iter()))
-      })
-    });
-    all_globals.extend(globals);
+    let convention_drop = convention
+      .as_ref()
+      .as_ref()
+      .map(|convention| ConventionDrop::new(convention.clone(), language_loader.clone()));
+    let user_con_profile_drop =
+      query_data
+        .user_con_profile
+        .as_ref()
+        .as_ref()
+        .map(|user_con_profile| {
+          UserConProfileDrop::new(user_con_profile.clone(), schema_data.clone())
+        });
+
+    let mut globals = globals.clone();
+    globals.extend(object!({
+      "convention": convention_drop,
+      "user_con_profile": user_con_profile_drop
+    }));
 
     let template = parser.parse(content)?;
-    let result = template.render(&all_globals);
+    let result = template.render(&globals);
 
     match result {
       Ok(content) => Ok(content),

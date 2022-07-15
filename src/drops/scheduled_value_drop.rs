@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{utils::date_time_to_liquid_date_time, TimespanWithValueDrop};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct ScheduledValueDrop<V: Clone + Default> {
   now: DateTime,
   covers_all_time: bool,
