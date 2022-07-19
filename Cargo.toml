@@ -46,7 +46,7 @@ liquid-core = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-
 md5 = "*"
 once_cell = "1.12.1"
 pulldown-cmark = "0.9.1"
-quote = "1.0.18"
+quote = "1.0.20"
 regex = "*"
 rust-embed = "6"
 rustls-pemfile = "1.0.0"
