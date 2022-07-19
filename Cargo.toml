@@ -32,7 +32,7 @@ dhat = {version = "0.3.0", optional = true}
 dotenv = "0.15.0"
 futures = "0.3.21"
 html-escape = "0.2.11"
-hyper = "0.14.19"
+hyper = "0.14.20"
 i18n-embed = {version = "0.13", features = ["fluent-system"]}
 i18n-embed-fl = "0.6"
 intercode_entities = {path = "./crates/intercode_entities"}
