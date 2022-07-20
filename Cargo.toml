@@ -23,7 +23,7 @@ dhat-heap = ["dep:dhat"] # if you are doing heap profiling
 [dependencies]
 async-graphql = {version = "~4.0.5", features = ["tracing", "dataloader", "chrono"]}
 async-graphql-value = "~4.0.5"
-async-graphql-warp = "~3.0.38"
+async-graphql-warp = "~4.0.5"
 chrono = "0.4"
 chrono-tz = "0.6"
 clap = {version = "3.2.13", features = ["derive", "cargo"]}
