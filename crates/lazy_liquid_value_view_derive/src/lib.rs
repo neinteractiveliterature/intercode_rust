@@ -278,7 +278,7 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
 
   let destructure_var_names = getter_idents.clone();
   let get_all_blocking = quote!(
-    let (#(#destructure_var_names),*) = tokio::task::block_in_place(move || {
+    let (#(#destructure_var_names ,)*) = tokio::task::block_in_place(move || {
       tokio::runtime::Handle::current().block_on(async move {
         futures::join!(
           #(#getter_invocations),*
