@@ -111,43 +111,13 @@ dependencies = [
 
 [[package]]
 name = "async-graphql"
-version = "3.0.38"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2106123e9c79a8d649bf0f7e9f58462a90ce2ca71ad9a0b69b4f2b67382c376f"
-dependencies = [
- "async-graphql-derive 3.0.38",
- "async-graphql-parser 3.0.38",
- "async-graphql-value 3.0.38",
- "async-stream",
- "async-trait",
- "bytes",
- "fast_chemail",
- "fnv",
- "futures-util",
- "http",
- "indexmap",
- "mime",
- "multer",
- "num-traits",
- "once_cell",
- "pin-project-lite",
- "regex",
- "serde",
- "serde_json",
- "static_assertions",
- "tempfile",
- "thiserror",
-]
-
-[[package]]
-name = "async-graphql"
 version = "4.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d7bef6458f7fb35c16443c6c8af7d219c54e676f47c5a47fd834c8bb8f3bd16"
 dependencies = [
- "async-graphql-derive 4.0.5",
- "async-graphql-parser 4.0.5",
- "async-graphql-value 4.0.5",
+ "async-graphql-derive",
+ "async-graphql-parser",
+ "async-graphql-value",
  "async-stream",
  "async-trait",
  "bytes",
@@ -177,47 +147,18 @@ dependencies = [
 
 [[package]]
 name = "async-graphql-derive"
-version = "3.0.38"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a6ec150ac445a660169a3ad5075b953a7351ec75fe28095e639f6282aac9fdb"
-dependencies = [
- "Inflector",
- "async-graphql-parser 3.0.38",
- "darling 0.13.4",
- "proc-macro-crate",
- "proc-macro2",
- "quote",
- "syn",
- "thiserror",
-]
-
-[[package]]
-name = "async-graphql-derive"
 version = "4.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8c50c6f67f2cc6a0f22e8efdf1e92b459151feefd4c2ae8adc8c1a223e0ebd89"
 dependencies = [
  "Inflector",
- "async-graphql-parser 4.0.5",
- "darling 0.14.1",
+ "async-graphql-parser",
+ "darling",
  "proc-macro-crate",
  "proc-macro2",
  "quote",
  "syn",
  "thiserror",
-]
-
-[[package]]
-name = "async-graphql-parser"
-version = "3.0.38"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0302764f05e0e50fd3b381646d4a0ed07d4ce5c9fc1eaf79bbd7745bd4893adb"
-dependencies = [
- "async-graphql-value 3.0.38",
- "pest",
- "pest_derive",
- "serde",
- "serde_json",
 ]
 
 [[package]]
@@ -226,20 +167,8 @@ version = "4.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a73c90d34c7456bf28a764bfa201c41ac1929b3c376af1815d5f6b176bf74fe4"
 dependencies = [
- "async-graphql-value 4.0.5",
+ "async-graphql-value",
  "pest",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "async-graphql-value"
-version = "3.0.38"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba2e19876bcd2068f597fd0182f4ba602ce3c89cb04c4b8810d7c36f44724e92"
-dependencies = [
- "bytes",
- "indexmap",
  "serde",
  "serde_json",
 ]
@@ -258,11 +187,11 @@ dependencies = [
 
 [[package]]
 name = "async-graphql-warp"
-version = "3.0.38"
+version = "4.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e7feb19d00f7f706a08ad1affaef7dae99816e86f59b53f7c3119c9a4928748"
+checksum = "5f293c69ca8425c5b3cd4541ba3d094fd6be6cc5512a5fc1df94356772c251f8"
 dependencies = [
- "async-graphql 3.0.38",
+ "async-graphql",
  "futures-util",
  "serde_json",
  "warp",
@@ -653,36 +582,12 @@ dependencies = [
 
 [[package]]
 name = "darling"
-version = "0.13.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a01d95850c592940db9b8194bc39f4bc0e89dee5c4265e4b1807c34a9aba453c"
-dependencies = [
- "darling_core 0.13.4",
- "darling_macro 0.13.4",
-]
-
-[[package]]
-name = "darling"
 version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4529658bdda7fd6769b8614be250cdcfc3aeb0ee72fe66f9e41e5e5eb73eac02"
 dependencies = [
- "darling_core 0.14.1",
- "darling_macro 0.14.1",
-]
-
-[[package]]
-name = "darling_core"
-version = "0.13.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "859d65a907b6852c9361e3185c862aae7fafd2887876799fa55f5f99dc40d610"
-dependencies = [
- "fnv",
- "ident_case",
- "proc-macro2",
- "quote",
- "strsim",
- "syn",
+ "darling_core",
+ "darling_macro",
 ]
 
 [[package]]
@@ -701,22 +606,11 @@ dependencies = [
 
 [[package]]
 name = "darling_macro"
-version = "0.13.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c972679f83bdf9c42bd905396b6c3588a843a17f0f16dfcfa3e2c5d57441835"
-dependencies = [
- "darling_core 0.13.4",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "darling_macro"
 version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ddfc69c5bfcbd2fc09a0f38451d2daf0e372e367986a83906d1b0dbc88134fb5"
 dependencies = [
- "darling_core 0.14.1",
+ "darling_core",
  "quote",
  "syn",
 ]
@@ -1421,7 +1315,7 @@ dependencies = [
 name = "intercode_graphql"
 version = "0.1.0"
 dependencies = [
- "async-graphql 3.0.38",
+ "async-graphql",
  "chrono",
  "chrono-tz",
  "html-escape",
@@ -1454,8 +1348,8 @@ dependencies = [
 name = "intercode_liquid"
 version = "0.1.0"
 dependencies = [
- "async-graphql 3.0.38",
- "async-graphql-value 3.0.38",
+ "async-graphql",
+ "async-graphql-value",
  "chrono",
  "chrono-tz",
  "html-escape",
@@ -1480,8 +1374,8 @@ dependencies = [
 name = "intercode_rust"
 version = "0.1.0"
 dependencies = [
- "async-graphql 4.0.5",
- "async-graphql-value 4.0.5",
+ "async-graphql",
+ "async-graphql-value",
  "async-graphql-warp",
  "chrono",
  "chrono-tz",
