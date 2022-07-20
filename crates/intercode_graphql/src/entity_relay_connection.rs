@@ -1,4 +1,4 @@
-use async_graphql::connection::Edge;
+use async_graphql::{connection::Edge, OutputType};
 use sea_orm::{ConnectionTrait, EntityTrait, FromQueryResult, PaginatorTrait, QuerySelect, Select};
 
 pub const DEFAULT_PER_PAGE: usize = 10;
@@ -74,6 +74,7 @@ where
   M: FromQueryResult + Sized + Send + Sync + 'db,
   E: EntityTrait<Model = M>,
   F: Fn(M) -> G + Copy,
+  G: OutputType
 {
   pub async fn total_count(&self) -> Result<usize, sea_orm::DbErr> {
     self
@@ -113,7 +114,7 @@ where
       .limit((end - start).try_into().unwrap())
       .offset(start.try_into().unwrap());
 
-    connection.append(
+    connection.edges.extend(
       scope
         .all(db)
         .await?

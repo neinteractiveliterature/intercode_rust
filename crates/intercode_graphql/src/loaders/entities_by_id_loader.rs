@@ -19,10 +19,7 @@ where
     Error = Arc<sea_orm::DbErr>,
   >;
 
-  fn to_entity_id_loader(
-    &self,
-    db: Arc<sea_orm::DatabaseConnection>,
-  ) -> Self::EntityIdLoaderType;
+  fn to_entity_id_loader(&self, db: Arc<sea_orm::DatabaseConnection>) -> Self::EntityIdLoaderType;
 }
 
 #[macro_export]
