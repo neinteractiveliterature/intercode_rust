@@ -1481,7 +1481,7 @@ name = "intercode_rust"
 version = "0.1.0"
 dependencies = [
  "async-graphql 4.0.5",
- "async-graphql-value 3.0.38",
+ "async-graphql-value 4.0.5",
  "async-graphql-warp",
  "chrono",
  "chrono-tz",
