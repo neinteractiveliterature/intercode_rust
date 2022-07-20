@@ -52,10 +52,13 @@ impl LiquidRenderer for IntercodeLiquidRenderer {
       partial_compiler,
     )?;
 
-    let convention_drop = convention
-      .as_ref()
-      .as_ref()
-      .map(|convention| ConventionDrop::new(convention.clone(), language_loader.clone()));
+    let convention_drop = convention.as_ref().as_ref().map(|convention| {
+      ConventionDrop::new(
+        schema_data.clone(),
+        convention.clone(),
+        language_loader.clone(),
+      )
+    });
     let user_con_profile_drop =
       query_data
         .user_con_profile

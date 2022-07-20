@@ -3,14 +3,16 @@ use std::sync::Arc;
 use chrono::Utc;
 use i18n_embed::fluent::FluentLanguageLoader;
 use intercode_entities::conventions;
+use intercode_graphql::SchemaData;
 use intercode_timespan::ScheduledValue;
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
+use liquid::model::ValueView;
 use serde::{
   de::{self, Unexpected},
   Deserialize, Deserializer, Serialize, Serializer,
 };
 
-use super::{utils::naive_date_time_to_liquid_date_time, ScheduledValueDrop};
+use super::{utils::naive_date_time_to_liquid_date_time, EventsCreatedSince, ScheduledValueDrop};
 
 #[derive(Clone, Debug)]
 pub enum MaximumEventSignupsValue {
@@ -90,16 +92,26 @@ impl Default for MaximumEventSignupsValue {
 
 #[liquid_drop_struct]
 pub struct ConventionDrop {
+  schema_data: SchemaData,
   convention: conventions::Model,
+  events_created_since: EventsCreatedSince,
   language_loader: Arc<FluentLanguageLoader>,
 }
 
 #[liquid_drop_impl]
 impl ConventionDrop {
-  pub fn new(convention: conventions::Model, language_loader: Arc<FluentLanguageLoader>) -> Self {
+  pub fn new(
+    schema_data: SchemaData,
+    convention: conventions::Model,
+    language_loader: Arc<FluentLanguageLoader>,
+  ) -> Self {
+    let convention_id = convention.id;
+
     ConventionDrop {
+      schema_data: schema_data.clone(),
       convention,
       language_loader,
+      events_created_since: EventsCreatedSince::new(schema_data, convention_id),
     }
   }
 
@@ -109,6 +121,10 @@ impl ConventionDrop {
 
   fn name(&self) -> Option<&str> {
     self.convention.name.as_deref()
+  }
+
+  fn events_created_since(&self) -> &dyn ValueView {
+    &self.events_created_since
   }
 
   #[drop(serialize_value = true)]

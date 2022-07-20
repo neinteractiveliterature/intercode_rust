@@ -61,6 +61,7 @@ tower = {version = "0.4.13", features = ["limit", "make"]}
 tower-http = {version = "0.3.4", features = ["compression-br", "compression-deflate", "compression-gzip"]}
 tracing = "0.1.35"
 tracing-subscriber = {version = "0.3", features = ["env-filter"]}
+typed-arena = "2.0.1"
 unic-langid = "0.9"
 url = "*"
 warp = {version = "~0.3.2"}
