@@ -59,7 +59,7 @@ tokio = {version = "~1.20.0", features = ["rt-multi-thread", "macros", "signal"]
 tokio-rustls = "0.23.4"
 tower = {version = "0.4.13", features = ["limit", "make"]}
 tower-http = {version = "0.3.4", features = ["compression-br", "compression-deflate", "compression-gzip"]}
-tracing = "0.1.35"
+tracing = "0.1.36"
 tracing-subscriber = {version = "0.3", features = ["env-filter"]}
 typed-arena = "2.0.1"
 unic-langid = "0.9"
