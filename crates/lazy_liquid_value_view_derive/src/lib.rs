@@ -7,7 +7,8 @@ use syn::{
   parse::{self, Parse, ParseStream, Parser},
   parse_macro_input, parse_quote,
   punctuated::Punctuated,
-  DeriveInput, Error, Field, FieldValue, Ident, ImplItem, ItemImpl, ItemStruct, Path, Token,
+  DeriveInput, Error, Field, FieldValue, GenericParam, Ident, ImplItem, ItemImpl, ItemStruct,
+  Lifetime, LifetimeDef, Path, Token,
 };
 
 mod drop_getter_method;
@@ -150,12 +151,20 @@ pub fn liquid_drop_struct(_args: TokenStream, input: TokenStream) -> TokenStream
     syn::Fields::Named(named_fields) => named_fields.named.push(
       Field::parse_named
         .parse2(quote!(
-          drop_cache: #cache_struct_ident
+          drop_cache: #cache_struct_ident<'cache>
         ))
         .unwrap(),
     ),
     _ => unimplemented!(),
   }
+
+  input
+    .generics
+    .params
+    .push(GenericParam::Lifetime(LifetimeDef::new(Lifetime::new(
+      "'cache",
+      Span::call_site().into(),
+    ))));
 
   quote!(
     #[derive(Debug, Clone)]
@@ -227,13 +236,12 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
     .collect();
 
   let method_getters = methods.iter().map(|method| {
-    let sig = method.sig();
     let getter = method.getter();
+    let caching_getter = method.caching_getter();
 
     quote!(
-      #sig {
-        #getter
-      }
+      #getter
+      #caching_getter
     )
   });
 
@@ -249,7 +257,7 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
     let name_str = method.name_str();
 
     quote!(
-      struct_serializer.serialize_field(#name_str, &#ident.to_value());
+      struct_serializer.serialize_field(#name_str, &#ident.to_value())?;
     )
   });
 
@@ -257,21 +265,21 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
     let ident = method.ident();
 
     quote!(
-      #ident: tokio::sync::OnceCell<liquid::model::Value>
+      #ident: tokio::sync::OnceCell<::lazy_liquid_value_view::DropResult<'cache>>
     )
   });
 
   let drop_cache_struct = quote!(
     #[derive(Debug, Clone, Default)]
-    struct #cache_struct_ident {
+    struct #cache_struct_ident<'cache> {
       #(#cache_fields),*
     }
   );
 
   let getter_invocations = methods.iter().map(|method| {
-    let ident = method.ident();
+    let caching_getter_ident = method.caching_getter_ident();
 
-    quote!(self.#ident())
+    quote!(self.#caching_getter_ident())
   });
 
   let getter_idents = methods.iter().map(|method| method.ident());
@@ -288,12 +296,13 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
   );
 
   let serialize_impl = quote!(
-    impl serde::ser::Serialize for #self_ty {
+    impl<'cache> serde::ser::Serialize for #self_ty<'cache> {
       fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
       where
         S: serde::ser::Serializer,
       {
-        use serde::ser::SerializeStruct;
+        use ::serde::ser::SerializeStruct;
+        use ::liquid_core::ValueView;
 
         let mut struct_serializer = serializer.serialize_struct(#type_name, #method_count)?;
         #get_all_blocking
@@ -304,7 +313,7 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
   );
 
   let value_view_impl = quote!(
-    impl liquid::ValueView for #self_ty {
+    impl<'cache> liquid::ValueView for #self_ty<'cache> {
       fn as_debug(&self) -> &dyn std::fmt::Debug {
         self as &dyn std::fmt::Debug
       }
@@ -337,6 +346,10 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
       fn to_value(&self) -> liquid_core::Value {
         todo!()
       }
+
+      fn as_object(&self) -> Option<&dyn ::liquid::model::ObjectView> {
+        Some(self)
+      }
     }
   );
 
@@ -350,16 +363,30 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
   });
 
   let object_getters = methods.iter().map(|method| {
-    let ident = method.ident();
+    let ident = method.caching_getter_ident();
     let name_str = method.name_str();
 
     quote!(
-      #name_str => Some(self.#ident().await)
+      #name_str => Some(self.#ident().await as &dyn liquid::ValueView)
     )
   });
 
+  let drop_result_from_impl = quote!(
+    impl<'a, 'cache: 'a> From<#self_ty<'cache>> for ::lazy_liquid_value_view::DropResult<'a> {
+      fn from(drop: #self_ty<'cache>) -> Self {
+        ::lazy_liquid_value_view::DropResult::new(drop.clone())
+      }
+    }
+
+    impl<'a, 'cache: 'a> From<&'a #self_ty<'cache>> for ::lazy_liquid_value_view::DropResult<'a> {
+      fn from(drop: &'a #self_ty<'cache>) -> Self {
+        ::lazy_liquid_value_view::DropResult::new(drop.clone())
+      }
+    }
+  );
+
   let object_view_impl = quote!(
-    impl liquid::ObjectView for #self_ty {
+    impl<'cache> liquid::ObjectView for #self_ty<'cache> {
       fn as_value(&self) -> &dyn liquid::ValueView {
         self as &dyn liquid::ValueView
       }
@@ -384,7 +411,7 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
           #(#getter_idents),*
         ];
 
-        Box::new(values.into_iter())
+        Box::new(values.into_iter().map(|drop_result| drop_result as &dyn ::liquid::ValueView))
       }
 
       fn iter<'k>(
@@ -398,7 +425,7 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
         Box::new(
           pairs
             .into_iter()
-            .map(|(key, value)| (key.into(), value)),
+            .map(|(key, value)| (key.into(), value as &dyn ::liquid::ValueView)),
         )
       }
 
@@ -422,18 +449,27 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
     }
   );
 
-  quote!(
+  let ret = quote!(
     #drop_cache_struct
 
-    impl #self_ty {
+    impl<'cache> #self_ty<'cache> {
       #(#constructors)*
       #(#other_items)*
       #(#method_getters)*
+
+      pub fn extend(&self, extensions: liquid::model::Object) -> ::lazy_liquid_value_view::ExtendedDropResult<'_> {
+        ::lazy_liquid_value_view::ExtendedDropResult {
+          drop_result: self.into(),
+          extensions,
+        }
+      }
     }
 
     #serialize_impl
     #value_view_impl
     #object_view_impl
-  )
-  .into()
+    #drop_result_from_impl
+  );
+
+  ret.into()
 }

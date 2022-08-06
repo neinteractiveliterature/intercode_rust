@@ -6,7 +6,7 @@ use intercode_entities::conventions;
 use intercode_graphql::SchemaData;
 use intercode_timespan::ScheduledValue;
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
-use liquid::model::ValueView;
+use sea_orm::JsonValue;
 use serde::{
   de::{self, Unexpected},
   Deserialize, Deserializer, Serialize, Serializer,
@@ -123,16 +123,14 @@ impl ConventionDrop {
     self.convention.name.as_deref()
   }
 
-  fn events_created_since(&self) -> &dyn ValueView {
+  fn events_created_since(&self) -> &EventsCreatedSince {
     &self.events_created_since
   }
 
-  #[drop(serialize_value = true)]
   fn location(&self) -> Option<&JsonValue> {
     self.convention.location.as_ref()
   }
 
-  #[drop(serialize_value = true)]
   fn maximum_event_signups(&self) -> ScheduledValueDrop<MaximumEventSignupsValue> {
     self
       .convention
@@ -148,7 +146,6 @@ impl ConventionDrop {
       })
   }
 
-  #[drop(serialize_value = true)]
   fn starts_at(&self) -> Option<liquid::model::DateTime> {
     self
       .convention
@@ -156,7 +153,6 @@ impl ConventionDrop {
       .and_then(naive_date_time_to_liquid_date_time)
   }
 
-  #[drop(serialize_value = true)]
   fn ends_at(&self) -> Option<liquid::model::DateTime> {
     self
       .convention

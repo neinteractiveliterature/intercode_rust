@@ -1,10 +1,52 @@
 use async_graphql::async_trait::async_trait;
 use intercode_graphql::{LiquidRenderer, QueryData, SchemaData};
 use intercode_liquid::{build_liquid_parser, cms_parent_partial_source::PreloadPartialsStrategy};
-use liquid::object;
+use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 use std::fmt::Debug;
 
 use crate::drops::{ConventionDrop, UserConProfileDrop};
+
+#[liquid_drop_struct]
+struct IntercodeGlobals {
+  query_data: QueryData,
+  schema_data: SchemaData,
+}
+
+#[liquid_drop_impl]
+impl IntercodeGlobals {
+  pub fn new(query_data: QueryData, schema_data: SchemaData) -> Self {
+    IntercodeGlobals {
+      query_data,
+      schema_data,
+    }
+  }
+
+  fn convention(&self) -> Option<ConventionDrop<'cache>> {
+    self
+      .query_data
+      .convention
+      .as_ref()
+      .as_ref()
+      .map(|convention| {
+        ConventionDrop::new(
+          self.schema_data.clone(),
+          convention.clone(),
+          self.schema_data.language_loader.clone(),
+        )
+      })
+  }
+
+  fn user_con_profile(&self) -> Option<UserConProfileDrop<'cache>> {
+    self
+      .query_data
+      .user_con_profile
+      .as_ref()
+      .as_ref()
+      .map(|user_con_profile| {
+        UserConProfileDrop::new(user_con_profile.clone(), self.schema_data.clone())
+      })
+  }
+}
 
 #[derive(Debug, Clone)]
 pub struct IntercodeLiquidRenderer {
@@ -52,30 +94,11 @@ impl LiquidRenderer for IntercodeLiquidRenderer {
       partial_compiler,
     )?;
 
-    let convention_drop = convention.as_ref().as_ref().map(|convention| {
-      ConventionDrop::new(
-        schema_data.clone(),
-        convention.clone(),
-        language_loader.clone(),
-      )
-    });
-    let user_con_profile_drop =
-      query_data
-        .user_con_profile
-        .as_ref()
-        .as_ref()
-        .map(|user_con_profile| {
-          UserConProfileDrop::new(user_con_profile.clone(), schema_data.clone())
-        });
-
-    let mut globals = globals.clone();
-    globals.extend(object!({
-      "convention": convention_drop,
-      "user_con_profile": user_con_profile_drop
-    }));
+    let builtins = IntercodeGlobals::new(query_data, schema_data);
+    let globals_with_builtins = builtins.extend(globals);
 
     let template = parser.parse(content)?;
-    let result = template.render(&globals);
+    let result = template.render(&globals_with_builtins);
 
     match result {
       Ok(content) => Ok(content),

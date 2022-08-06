@@ -1,55 +1,52 @@
 use quote::quote;
-use syn::{
-  parse::Parser, token::RArrow, Data, Error, Field, Path, PathArguments, ReturnType, Type,
-  TypeGroup, TypeParamBound, TypePath,
-};
+use syn::{parse::Parser, Data, Error, Field, Path, Type, TypeGroup, TypeParamBound};
 
-pub fn extract_path_and_args(path: &Type) -> Option<(String, Option<PathArguments>)> {
-  if let Type::Path(type_path) = path {
-    Some((
-      extract_type_path(type_path),
-      extract_last_segment_arguments(type_path),
-    ))
-  } else if let Type::Reference(type_ref) = path {
-    extract_path_and_args(type_ref.elem.as_ref())
-  } else {
-    None
-  }
-}
+// pub fn extract_path_and_args(path: &Type) -> Option<(String, Option<PathArguments>)> {
+//   if let Type::Path(type_path) = path {
+//     Some((
+//       extract_type_path(type_path),
+//       extract_last_segment_arguments(type_path),
+//     ))
+//   } else if let Type::Reference(type_ref) = path {
+//     extract_path_and_args(type_ref.elem.as_ref())
+//   } else {
+//     None
+//   }
+// }
 
-pub fn extract_return_type(output: &ReturnType) -> Option<(RArrow, String, Option<PathArguments>)> {
-  let return_type = if let ReturnType::Type(rarrow, ref return_type) = output {
-    Some((rarrow, return_type.as_ref().clone()))
-  } else {
-    None
-  };
+// pub fn extract_return_type(output: &ReturnType) -> Option<(RArrow, String, Option<PathArguments>)> {
+//   let return_type = if let ReturnType::Type(rarrow, ref return_type) = output {
+//     Some((rarrow, return_type.as_ref().clone()))
+//   } else {
+//     None
+//   };
 
-  if let Some((rarrow, the_type)) = return_type {
-    extract_path_and_args(&the_type).map(|(path_only, last_segment_arguments)| {
-      (rarrow.to_owned(), path_only, last_segment_arguments)
-    })
-  } else {
-    None
-  }
-}
+//   if let Some((rarrow, the_type)) = return_type {
+//     extract_path_and_args(&the_type).map(|(path_only, last_segment_arguments)| {
+//       (rarrow.to_owned(), path_only, last_segment_arguments)
+//     })
+//   } else {
+//     None
+//   }
+// }
 
-pub fn extract_type_path(type_path: &TypePath) -> String {
-  type_path
-    .path
-    .segments
-    .iter()
-    .map(|segment| segment.ident.to_string())
-    .collect::<Vec<_>>()
-    .join("::")
-}
+// pub fn extract_type_path(type_path: &TypePath) -> String {
+//   type_path
+//     .path
+//     .segments
+//     .iter()
+//     .map(|segment| segment.ident.to_string())
+//     .collect::<Vec<_>>()
+//     .join("::")
+// }
 
-pub fn extract_last_segment_arguments(type_path: &TypePath) -> Option<PathArguments> {
-  type_path
-    .path
-    .segments
-    .last()
-    .map(|segment| segment.arguments.clone())
-}
+// pub fn extract_last_segment_arguments(type_path: &TypePath) -> Option<PathArguments> {
+//   type_path
+//     .path
+//     .segments
+//     .last()
+//     .map(|segment| segment.arguments.clone())
+// }
 
 pub fn add_value_cell(data: &mut Data, value_type: &Path) {
   match data {

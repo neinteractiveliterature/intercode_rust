@@ -1,5 +1,6 @@
 use intercode_entities::events;
 use intercode_graphql::SchemaData;
+use lazy_liquid_value_view::DropResult;
 use liquid::{ObjectView, ValueView};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Select};
 use typed_arena::Arena;
@@ -27,7 +28,7 @@ impl Clone for EventsCreatedSince {
   fn clone(&self) -> Self {
     Self {
       schema_data: self.schema_data.clone(),
-      convention_id: self.convention_id.clone(),
+      convention_id: self.convention_id,
       arena: Default::default(),
     }
   }
@@ -94,6 +95,7 @@ impl ValueView for EventsCreatedSince {
   }
 
   fn to_value(&self) -> liquid_core::Value {
+    println!("o hai");
     todo!()
   }
 }
@@ -139,5 +141,17 @@ impl ObjectView for EventsCreatedSince {
       }
       None => Some(EMPTY_RESULT.as_view()),
     }
+  }
+}
+
+impl<'a> From<EventsCreatedSince> for DropResult<'a> {
+  fn from(value: EventsCreatedSince) -> Self {
+    DropResult::new(value)
+  }
+}
+
+impl<'a> From<&EventsCreatedSince> for DropResult<'a> {
+  fn from(drop: &EventsCreatedSince) -> Self {
+    DropResult::new(drop.clone())
   }
 }

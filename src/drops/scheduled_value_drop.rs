@@ -1,6 +1,7 @@
 use chrono::{TimeZone, Utc};
 use i18n_embed::fluent::FluentLanguageLoader;
 use intercode_timespan::ScheduledValue;
+use lazy_liquid_value_view::DropResult;
 use liquid::model::DateTime;
 use serde::{Deserialize, Serialize};
 
@@ -44,5 +45,11 @@ impl<V: Clone + Default + std::fmt::Debug> ScheduledValueDrop<V> {
         .and_then(|t| scheduled_value.value_at(t.to_owned())),
       next_value_change: next_value_change.and_then(date_time_to_liquid_date_time),
     }
+  }
+}
+
+impl<'a, V: Clone + Default + Serialize> From<ScheduledValueDrop<V>> for DropResult<'a> {
+  fn from(drop: ScheduledValueDrop<V>) -> Self {
+    DropResult::new(liquid::model::to_value(&drop).unwrap())
   }
 }

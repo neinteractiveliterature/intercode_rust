@@ -33,7 +33,6 @@ impl UserConProfileDrop {
     self.user_con_profile.last_name.as_str()
   }
 
-  #[drop(serialize_value = true)]
   async fn privileges(&self) -> Result<Vec<String>, DropError> {
     let result = self
       .schema_data
@@ -54,8 +53,7 @@ impl UserConProfileDrop {
     )
   }
 
-  #[drop(serialize_value = true)]
-  async fn signups(&self) -> Result<Vec<SignupDrop>, DropError> {
+  async fn signups(&self) -> Result<Vec<SignupDrop<'cache>>, DropError> {
     let result = self
       .schema_data
       .loaders
@@ -64,6 +62,11 @@ impl UserConProfileDrop {
       .await?;
     let signups = result.expect_models()?;
 
-    Ok(signups.iter().map(SignupDrop::new).collect::<Vec<_>>())
+    Ok(
+      signups
+        .iter()
+        .map(|signup| SignupDrop::new(signup.clone()))
+        .collect::<Vec<_>>(),
+    )
   }
 }

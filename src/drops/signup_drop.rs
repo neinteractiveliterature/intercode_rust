@@ -1,13 +1,18 @@
 use intercode_entities::signups;
-use serde::{Deserialize, Serialize};
+use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[liquid_drop_struct]
 pub struct SignupDrop {
-  id: i64,
+  signup: signups::Model,
 }
 
+#[liquid_drop_impl]
 impl SignupDrop {
-  pub fn new(signup: &signups::Model) -> Self {
-    SignupDrop { id: signup.id }
+  pub fn new(signup: signups::Model) -> Self {
+    SignupDrop { signup }
+  }
+
+  fn id(&self) -> i64 {
+    self.signup.id
   }
 }
