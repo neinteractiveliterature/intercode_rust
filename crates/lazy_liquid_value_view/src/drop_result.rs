@@ -30,7 +30,7 @@ impl<'a> liquid::ValueView for DropResult<'a> {
   }
 
   fn as_object(&self) -> Option<&dyn liquid::ObjectView> {
-    Some(self)
+    self.value.as_object()
   }
 
   fn render(&self) -> liquid::model::DisplayCow<'_> {

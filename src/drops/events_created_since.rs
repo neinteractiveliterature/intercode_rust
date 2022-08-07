@@ -7,8 +7,6 @@ use typed_arena::Arena;
 
 use super::EventDrop;
 
-static EMPTY_RESULT: liquid::model::Value = liquid::model::Value::Array(vec![]);
-
 pub struct EventsCreatedSince {
   schema_data: SchemaData,
   convention_id: i64,
@@ -43,13 +41,23 @@ impl EventsCreatedSince {
     }
   }
 
-  fn select_for_start_date(&self, start_date: liquid::model::DateTime) -> Select<events::Entity> {
-    events::Entity::find()
-      .filter(events::Column::ConventionId.eq(self.convention_id))
-      .filter(events::Column::CreatedAt.gte(start_date.to_rfc2822()))
+  fn select_for_start_date(
+    &self,
+    start_date: Option<liquid::model::DateTime>,
+  ) -> Select<events::Entity> {
+    let scope = events::Entity::find().filter(events::Column::ConventionId.eq(self.convention_id));
+
+    if let Some(start_date) = start_date {
+      scope.filter(events::Column::CreatedAt.gte(start_date.to_rfc2822()))
+    } else {
+      scope
+    }
   }
 
-  async fn query_and_store(&self, start_date: liquid::model::DateTime) -> &liquid::model::Value {
+  async fn query_and_store(
+    &self,
+    start_date: Option<liquid::model::DateTime>,
+  ) -> &liquid::model::Value {
     let value = self
       .select_for_start_date(start_date)
       .all(self.schema_data.db.as_ref())
@@ -67,6 +75,10 @@ impl EventsCreatedSince {
 impl ValueView for EventsCreatedSince {
   fn as_debug(&self) -> &dyn std::fmt::Debug {
     self
+  }
+
+  fn as_object(&self) -> Option<&dyn ObjectView> {
+    Some(self)
   }
 
   fn render(&self) -> liquid::model::DisplayCow<'_> {
@@ -95,8 +107,7 @@ impl ValueView for EventsCreatedSince {
   }
 
   fn to_value(&self) -> liquid_core::Value {
-    println!("o hai");
-    todo!()
+    unimplemented!()
   }
 }
 
@@ -106,41 +117,36 @@ impl ObjectView for EventsCreatedSince {
   }
 
   fn size(&self) -> i64 {
-    todo!()
+    unimplemented!()
   }
 
   fn keys<'k>(&'k self) -> Box<dyn Iterator<Item = liquid::model::KStringCow<'k>> + 'k> {
-    todo!()
+    unimplemented!()
   }
 
   fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn ValueView> + 'k> {
-    todo!()
+    unimplemented!()
   }
 
   fn iter<'k>(
     &'k self,
   ) -> Box<dyn Iterator<Item = (liquid::model::KStringCow<'k>, &'k dyn ValueView)> + 'k> {
-    todo!()
+    unimplemented!()
   }
 
-  fn contains_key(&self, index: &str) -> bool {
-    liquid::model::DateTime::from_str(index).is_some()
+  fn contains_key(&self, _index: &str) -> bool {
+    true
   }
 
   fn get<'s>(&'s self, index: &str) -> Option<&'s dyn ValueView> {
     let start_date = liquid::model::DateTime::from_str(index);
 
-    match start_date {
-      Some(start_date) => {
-        let result = tokio::task::block_in_place(|| {
-          tokio::runtime::Handle::current()
-            .block_on(async move { self.query_and_store(start_date).await })
-        });
+    let result = tokio::task::block_in_place(|| {
+      tokio::runtime::Handle::current()
+        .block_on(async move { self.query_and_store(start_date).await })
+    });
 
-        Some(result.as_view())
-      }
-      None => Some(EMPTY_RESULT.as_view()),
-    }
+    Some(result.as_view())
   }
 }
 

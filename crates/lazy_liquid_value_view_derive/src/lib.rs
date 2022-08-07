@@ -344,7 +344,12 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
       }
 
       fn to_value(&self) -> liquid_core::Value {
-        todo!()
+        println!("Warning!  to_value called on {}", #type_name);
+        liquid::model::Value::Object(
+          liquid::model::Object::from_iter(
+            self.as_object().unwrap().iter().map(|(key, value)| (key.into(), value.to_value()))
+          )
+        )
       }
 
       fn as_object(&self) -> Option<&dyn ::liquid::model::ObjectView> {

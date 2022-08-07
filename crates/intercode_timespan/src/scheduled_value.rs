@@ -102,7 +102,6 @@ impl<Tz: TimeZone + std::fmt::Debug, V: Clone + std::fmt::Debug + Default> Sched
     other: &Timespan<OtherStart, OtherFinish>,
   ) -> Option<TimespanWithValue<Tz, Tz, Option<V>>> {
     self
-      .to_owned()
       .into_iter()
       .find(|timespan| timespan.timespan.overlaps(other))
   }
