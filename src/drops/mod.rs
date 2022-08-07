@@ -1,5 +1,6 @@
 mod convention_drop;
 mod drop_error;
+mod event_category_drop;
 mod event_drop;
 mod events_created_since;
 mod scheduled_value_drop;
@@ -10,6 +11,7 @@ mod utils;
 
 pub use convention_drop::ConventionDrop;
 pub use drop_error::DropError;
+pub use event_category_drop::EventCategoryDrop;
 pub use event_drop::EventDrop;
 pub use events_created_since::EventsCreatedSince;
 pub use scheduled_value_drop::ScheduledValueDrop;

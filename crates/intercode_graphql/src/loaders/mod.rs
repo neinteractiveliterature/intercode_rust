@@ -17,8 +17,8 @@ pub use entities_by_relation_loader::*;
 use sea_orm::RelationTrait;
 use sea_orm::{Linked, RelationDef};
 
-use intercode_entities::users;
 use intercode_entities::{cms_navigation_items, conventions, pages};
+use intercode_entities::{event_categories, users};
 use intercode_entities::{events, ticket_types};
 use intercode_entities::{order_entries, orders, team_members};
 use intercode_entities::{products, staff_positions};
@@ -59,6 +59,12 @@ impl_to_entity_link_loader!(
   CmsNavigationItemToCmsNavigationSection,
   cms_navigation_items::Entity,
   cms_navigation_items::PrimaryKey::Id
+);
+
+impl_to_entity_relation_loader!(
+  conventions::Entity,
+  event_categories::Entity,
+  conventions::PrimaryKey::Id
 );
 
 impl_to_entity_relation_loader!(
@@ -144,6 +150,9 @@ pub struct LoaderManager {
       cms_navigation_items::PrimaryKey,
     >,
   >,
+  pub convention_event_categories: DataLoader<
+    EntityRelationLoader<conventions::Entity, event_categories::Entity, conventions::PrimaryKey>,
+  >,
   pub convention_ticket_types: DataLoader<
     EntityRelationLoader<conventions::Entity, ticket_types::Entity, conventions::PrimaryKey>,
   >,
@@ -209,8 +218,19 @@ impl LoaderManager {
         tokio::spawn,
       )
       .delay(delay_millis),
+      convention_event_categories: DataLoader::new(
+        <conventions::Entity as ToEntityRelationLoader<
+          event_categories::Entity,
+          conventions::PrimaryKey,
+        >>::to_entity_relation_loader(&conventions::Entity::default(), db.clone()),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
       convention_ticket_types: DataLoader::new(
-        conventions::Entity.to_entity_relation_loader(db.clone()),
+        <conventions::Entity as ToEntityRelationLoader<
+          ticket_types::Entity,
+          conventions::PrimaryKey,
+        >>::to_entity_relation_loader(&conventions::Entity::default(), db.clone()),
         tokio::spawn,
       )
       .delay(delay_millis),
