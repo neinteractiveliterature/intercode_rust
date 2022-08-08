@@ -10,7 +10,7 @@ use sea_orm::JsonValue;
 
 use super::{
   utils::naive_date_time_to_liquid_date_time, DropError, EventCategoryDrop, EventsCreatedSince,
-  ScheduledValueDrop,
+  ScheduledValueDrop, StaffPositionDrop, StaffPositionsByName,
 };
 
 #[liquid_drop_struct]
@@ -84,6 +84,28 @@ impl ConventionDrop {
       .unwrap_or_else(|| {
         ScheduledValueDrop::new::<Utc>(Default::default(), self.language_loader.as_ref())
       })
+  }
+
+  async fn staff_positions(&self) -> Result<Vec<StaffPositionDrop<'cache>>, DropError> {
+    Ok(
+      self
+        .schema_data
+        .loaders
+        .convention_staff_positions
+        .load_one(self.convention.id)
+        .await?
+        .expect_models()?
+        .iter()
+        .filter(|staff_position| staff_position.visible.unwrap_or(false))
+        .map(|staff_position| {
+          StaffPositionDrop::new(staff_position.clone(), self.schema_data.clone())
+        })
+        .collect::<Vec<_>>(),
+    )
+  }
+
+  fn staff_positions_by_name(&self) -> StaffPositionsByName<'cache> {
+    StaffPositionsByName::new(self.schema_data.clone(), self.convention.id)
   }
 
   fn starts_at(&self) -> Option<liquid::model::DateTime> {

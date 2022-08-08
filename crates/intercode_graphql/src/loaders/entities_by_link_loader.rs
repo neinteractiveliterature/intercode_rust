@@ -38,13 +38,13 @@ pub trait ToEntityLinkLoader<
 macro_rules! impl_to_entity_link_loader {
   ($from: ty, $link: path, $to: ty, $pk: path) => {
     impl
-      crate::loaders::entities_by_link_loader::ToEntityLinkLoader<
+      $crate::loaders::entities_by_link_loader::ToEntityLinkLoader<
         $to,
         $link,
         <$from as sea_orm::EntityTrait>::PrimaryKey,
       > for $from
     {
-      type EntityLinkLoaderType = crate::loaders::entities_by_link_loader::EntityLinkLoader<
+      type EntityLinkLoaderType = $crate::loaders::entities_by_link_loader::EntityLinkLoader<
         $from,
         $link,
         $to,
@@ -56,7 +56,7 @@ macro_rules! impl_to_entity_link_loader {
         link: $link,
         db: std::sync::Arc<sea_orm::DatabaseConnection>,
       ) -> Self::EntityLinkLoaderType {
-        crate::loaders::entities_by_link_loader::EntityLinkLoader::<
+        $crate::loaders::entities_by_link_loader::EntityLinkLoader::<
           $from,
           $link,
           $to,

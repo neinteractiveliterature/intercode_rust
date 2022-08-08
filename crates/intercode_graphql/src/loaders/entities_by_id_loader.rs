@@ -25,14 +25,17 @@ where
 #[macro_export]
 macro_rules! impl_to_entity_id_loader {
   ($e: path, $pk: path) => {
-    impl ToEntityIdLoader<<$e as sea_orm::EntityTrait>::PrimaryKey> for $e {
-      type EntityIdLoaderType = EntityIdLoader<$e, <$e as sea_orm::EntityTrait>::PrimaryKey>;
+    impl $crate::loaders::ToEntityIdLoader<<$e as sea_orm::EntityTrait>::PrimaryKey> for $e {
+      type EntityIdLoaderType =
+        $crate::loaders::EntityIdLoader<$e, <$e as sea_orm::EntityTrait>::PrimaryKey>;
 
       fn to_entity_id_loader(
         self: &Self,
         db: std::sync::Arc<sea_orm::DatabaseConnection>,
       ) -> Self::EntityIdLoaderType {
-        EntityIdLoader::<$e, <$e as sea_orm::EntityTrait>::PrimaryKey>::new(db, $pk)
+        $crate::loaders::EntityIdLoader::<$e, <$e as sea_orm::EntityTrait>::PrimaryKey>::new(
+          db, $pk,
+        )
       }
     }
   };

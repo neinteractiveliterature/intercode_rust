@@ -1,4 +1,4 @@
-use intercode_entities::user_con_profiles;
+use intercode_entities::{user_con_profiles, UserNames};
 use intercode_graphql::loaders::expect::ExpectModels;
 use intercode_graphql::SchemaData;
 use intercode_inflector::IntercodeInflector;
@@ -31,6 +31,10 @@ impl UserConProfileDrop {
 
   fn last_name(&self) -> &str {
     self.user_con_profile.last_name.as_str()
+  }
+
+  fn name_without_nickname(&self) -> String {
+    self.user_con_profile.name_without_nickname()
   }
 
   async fn privileges(&self) -> Result<Vec<String>, DropError> {

@@ -34,17 +34,24 @@ where
 #[macro_export]
 macro_rules! impl_to_entity_relation_loader {
   ($from: ty, $to: ty, $pk: path) => {
-    impl ToEntityRelationLoader<$to, <$from as sea_orm::EntityTrait>::PrimaryKey> for $from {
-      type EntityRelationLoaderType =
-        EntityRelationLoader<$from, $to, <$from as sea_orm::EntityTrait>::PrimaryKey>;
+    impl $crate::loaders::ToEntityRelationLoader<$to, <$from as sea_orm::EntityTrait>::PrimaryKey>
+      for $from
+    {
+      type EntityRelationLoaderType = $crate::loaders::EntityRelationLoader<
+        $from,
+        $to,
+        <$from as sea_orm::EntityTrait>::PrimaryKey,
+      >;
 
       fn to_entity_relation_loader(
         self: &Self,
         db: std::sync::Arc<sea_orm::DatabaseConnection>,
       ) -> Self::EntityRelationLoaderType {
-        EntityRelationLoader::<$from, $to, <$from as sea_orm::EntityTrait>::PrimaryKey>::new(
-          db, $pk,
-        )
+        $crate::loaders::EntityRelationLoader::<
+          $from,
+          $to,
+          <$from as sea_orm::EntityTrait>::PrimaryKey,
+        >::new(db, $pk)
       }
     }
   };

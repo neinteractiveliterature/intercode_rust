@@ -4,7 +4,15 @@ mod entities_by_id_loader;
 mod entities_by_relation_loader;
 #[macro_use]
 mod entities_by_link_loader;
+mod cms_navigation_item_loaders;
+mod convention_loaders;
 pub mod expect;
+mod order_loaders;
+mod staff_position_loaders;
+mod team_member_loaders;
+mod ticket_type_loaders;
+mod user_con_profile_loaders;
+mod user_loaders;
 
 use std::env;
 use std::sync::Arc;
@@ -14,124 +22,13 @@ use async_graphql::dataloader::DataLoader;
 pub use entities_by_id_loader::*;
 pub use entities_by_link_loader::*;
 pub use entities_by_relation_loader::*;
-use sea_orm::RelationTrait;
-use sea_orm::{Linked, RelationDef};
 
-use intercode_entities::{cms_navigation_items, conventions, pages};
-use intercode_entities::{event_categories, users};
-use intercode_entities::{events, ticket_types};
-use intercode_entities::{order_entries, orders, team_members};
-use intercode_entities::{products, staff_positions};
-use intercode_entities::{signups, user_con_profiles};
-use intercode_entities::{staff_positions_user_con_profiles, tickets};
+use intercode_entities::*;
 
-#[derive(Debug, Clone)]
-pub struct UserConProfileToStaffPositions;
-
-impl Linked for UserConProfileToStaffPositions {
-  type FromEntity = user_con_profiles::Entity;
-  type ToEntity = staff_positions::Entity;
-
-  fn link(&self) -> Vec<RelationDef> {
-    vec![
-      staff_positions_user_con_profiles::Relation::UserConProfiles
-        .def()
-        .rev(),
-      staff_positions_user_con_profiles::Relation::StaffPositions.def(),
-    ]
-  }
-}
-
-#[derive(Debug, Clone)]
-pub struct CmsNavigationItemToCmsNavigationSection;
-
-impl Linked for CmsNavigationItemToCmsNavigationSection {
-  type FromEntity = cms_navigation_items::Entity;
-  type ToEntity = cms_navigation_items::Entity;
-
-  fn link(&self) -> Vec<RelationDef> {
-    vec![cms_navigation_items::Relation::SelfRef.def()]
-  }
-}
-
-impl_to_entity_link_loader!(
-  cms_navigation_items::Entity,
-  CmsNavigationItemToCmsNavigationSection,
-  cms_navigation_items::Entity,
-  cms_navigation_items::PrimaryKey::Id
-);
-
-impl_to_entity_relation_loader!(
-  conventions::Entity,
-  event_categories::Entity,
-  conventions::PrimaryKey::Id
-);
-
-impl_to_entity_relation_loader!(
-  cms_navigation_items::Entity,
-  pages::Entity,
-  cms_navigation_items::PrimaryKey::Id
-);
-
-impl_to_entity_relation_loader!(
-  conventions::Entity,
-  ticket_types::Entity,
-  conventions::PrimaryKey::Id
-);
-
-impl_to_entity_id_loader!(conventions::Entity, conventions::PrimaryKey::Id);
-impl_to_entity_id_loader!(staff_positions::Entity, staff_positions::PrimaryKey::Id);
-impl_to_entity_id_loader!(team_members::Entity, team_members::PrimaryKey::Id);
-impl_to_entity_id_loader!(users::Entity, users::PrimaryKey::Id);
-
-impl_to_entity_relation_loader!(
-  orders::Entity,
-  order_entries::Entity,
-  orders::PrimaryKey::Id
-);
-
-impl_to_entity_relation_loader!(
-  team_members::Entity,
-  events::Entity,
-  team_members::PrimaryKey::Id
-);
-
-impl_to_entity_relation_loader!(
-  ticket_types::Entity,
-  products::Entity,
-  ticket_types::PrimaryKey::Id
-);
-
-impl_to_entity_relation_loader!(
-  user_con_profiles::Entity,
-  team_members::Entity,
-  user_con_profiles::PrimaryKey::Id
-);
-
-impl_to_entity_relation_loader!(
-  user_con_profiles::Entity,
-  signups::Entity,
-  user_con_profiles::PrimaryKey::Id
-);
-
-impl_to_entity_link_loader!(
-  user_con_profiles::Entity,
-  UserConProfileToStaffPositions,
-  staff_positions::Entity,
-  user_con_profiles::PrimaryKey::Id
-);
-
-impl_to_entity_relation_loader!(
-  user_con_profiles::Entity,
-  tickets::Entity,
-  user_con_profiles::PrimaryKey::Id
-);
-
-impl_to_entity_relation_loader!(
-  user_con_profiles::Entity,
-  users::Entity,
-  user_con_profiles::PrimaryKey::Id
-);
+use self::cms_navigation_item_loaders::CmsNavigationItemToCmsNavigationSection;
+use self::convention_loaders::ConventionToStaffPositions;
+use self::staff_position_loaders::StaffPositionToUserConProfiles;
+use self::user_con_profile_loaders::UserConProfileToStaffPositions;
 
 pub struct LoaderManager {
   db: Arc<sea_orm::DatabaseConnection>,
@@ -153,12 +50,28 @@ pub struct LoaderManager {
   pub convention_event_categories: DataLoader<
     EntityRelationLoader<conventions::Entity, event_categories::Entity, conventions::PrimaryKey>,
   >,
+  pub convention_staff_positions: DataLoader<
+    EntityLinkLoader<
+      conventions::Entity,
+      ConventionToStaffPositions,
+      staff_positions::Entity,
+      conventions::PrimaryKey,
+    >,
+  >,
   pub convention_ticket_types: DataLoader<
     EntityRelationLoader<conventions::Entity, ticket_types::Entity, conventions::PrimaryKey>,
   >,
   pub conventions_by_id: DataLoader<EntityIdLoader<conventions::Entity, conventions::PrimaryKey>>,
   pub order_order_entries:
     DataLoader<EntityRelationLoader<orders::Entity, order_entries::Entity, orders::PrimaryKey>>,
+  pub staff_position_user_con_profiles: DataLoader<
+    EntityLinkLoader<
+      staff_positions::Entity,
+      StaffPositionToUserConProfiles,
+      user_con_profiles::Entity,
+      staff_positions::PrimaryKey,
+    >,
+  >,
   pub staff_positions_by_id:
     DataLoader<EntityIdLoader<staff_positions::Entity, staff_positions::PrimaryKey>>,
   pub team_member_event: DataLoader<
@@ -226,6 +139,11 @@ impl LoaderManager {
         tokio::spawn,
       )
       .delay(delay_millis),
+      convention_staff_positions: DataLoader::new(
+        conventions::Entity.to_entity_link_loader(ConventionToStaffPositions, db.clone()),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
       convention_ticket_types: DataLoader::new(
         <conventions::Entity as ToEntityRelationLoader<
           ticket_types::Entity,
@@ -241,6 +159,11 @@ impl LoaderManager {
       .delay(delay_millis),
       order_order_entries: DataLoader::new(
         orders::Entity.to_entity_relation_loader(db.clone()),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
+      staff_position_user_con_profiles: DataLoader::new(
+        staff_positions::Entity.to_entity_link_loader(StaffPositionToUserConProfiles, db.clone()),
         tokio::spawn,
       )
       .delay(delay_millis),
