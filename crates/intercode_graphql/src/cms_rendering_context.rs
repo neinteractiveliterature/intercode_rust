@@ -2,6 +2,7 @@ use std::{env, sync::Arc};
 
 use crate::{LiquidRenderer, QueryData, SchemaData};
 use html_escape::encode_double_quoted_attribute;
+use http::Uri;
 use intercode_entities::{
   active_storage_attachments, active_storage_blobs, cms_parent::CmsParentTrait, conventions,
   events, pages,
@@ -45,10 +46,14 @@ fn truncate(s: &str, max_chars: usize) -> &str {
   }
 }
 
-fn url_with_possible_host(request_url: &url::Url, path: &str, host: Option<String>) -> String {
+fn url_with_possible_host(path: &str, host: Option<String>) -> String {
   if let Some(host) = host {
-    url::Url::parse(format!("{}://{}{}", request_url.scheme(), host, path).as_str())
-      .map(|url| url.to_string())
+    Uri::builder()
+      .scheme("https")
+      .authority(host)
+      .path_and_query(path)
+      .build()
+      .map(|uri| uri.to_string())
       .unwrap_or_else(|_| path.to_string())
   } else {
     path.to_string()
@@ -215,7 +220,7 @@ async fn convention_favicon_tag(
 }
 
 async fn content_for_head(
-  request_url: &url::Url,
+  request_url: &Uri,
   db: Arc<DatabaseConnection>,
   convention: Option<&conventions::Model>,
   page: Option<&pages::Model>,
@@ -236,12 +241,8 @@ async fn content_for_head(
 "#,
     page_title,
     assets_host_script(),
-    url_with_possible_host(
-      request_url,
-      "/packs/application.js",
-      env::var("ASSETS_HOST").ok()
-    ),
-    request_url.as_str(),
+    url_with_possible_host("/packs/application.js", env::var("ASSETS_HOST").ok()),
+    request_url,
     open_graph_meta_tags(
       db.clone(),
       convention,
@@ -318,7 +319,7 @@ impl<'a> CmsRenderingContext<'a> {
 
   pub async fn render_app_root_content(
     &self,
-    request_url: &url::Url,
+    request_url: &Uri,
     page_title: &str,
     page: Option<&pages::Model>,
     event: Option<&events::Model>,

@@ -7,13 +7,13 @@ use typed_arena::Arena;
 
 use super::EventDrop;
 
-pub struct EventsCreatedSince {
+pub struct EventsCreatedSince<'a> {
   schema_data: SchemaData,
   convention_id: i64,
-  arena: Arena<liquid::model::Value>,
+  arena: Arena<Vec<EventDrop<'a>>>,
 }
 
-impl std::fmt::Debug for EventsCreatedSince {
+impl<'a> std::fmt::Debug for EventsCreatedSince<'a> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("EventsCreatedSince")
       .field("schema_data", &self.schema_data)
@@ -22,7 +22,7 @@ impl std::fmt::Debug for EventsCreatedSince {
   }
 }
 
-impl Clone for EventsCreatedSince {
+impl<'a> Clone for EventsCreatedSince<'a> {
   fn clone(&self) -> Self {
     Self {
       schema_data: self.schema_data.clone(),
@@ -32,7 +32,7 @@ impl Clone for EventsCreatedSince {
   }
 }
 
-impl EventsCreatedSince {
+impl<'a> EventsCreatedSince<'a> {
   pub fn new(schema_data: SchemaData, convention_id: i64) -> Self {
     EventsCreatedSince {
       schema_data,
@@ -54,25 +54,21 @@ impl EventsCreatedSince {
     }
   }
 
-  async fn query_and_store(
-    &self,
-    start_date: Option<liquid::model::DateTime>,
-  ) -> &liquid::model::Value {
+  async fn query_and_store(&self, start_date: Option<liquid::model::DateTime>) -> &dyn ValueView {
     let value = self
       .select_for_start_date(start_date)
       .all(self.schema_data.db.as_ref())
       .await
       .unwrap_or_else(|_| vec![])
       .into_iter()
-      .map(EventDrop::new)
-      .collect::<Vec<_>>()
-      .to_value();
+      .map(|event| EventDrop::new(event, self.schema_data.clone()))
+      .collect::<Vec<_>>();
 
     self.arena.alloc(value)
   }
 }
 
-impl ValueView for EventsCreatedSince {
+impl<'a> ValueView for EventsCreatedSince<'a> {
   fn as_debug(&self) -> &dyn std::fmt::Debug {
     self
   }
@@ -111,7 +107,7 @@ impl ValueView for EventsCreatedSince {
   }
 }
 
-impl ObjectView for EventsCreatedSince {
+impl<'a> ObjectView for EventsCreatedSince<'a> {
   fn as_value(&self) -> &dyn ValueView {
     self
   }
@@ -146,18 +142,18 @@ impl ObjectView for EventsCreatedSince {
         .block_on(async move { self.query_and_store(start_date).await })
     });
 
-    Some(result.as_view())
+    Some(result)
   }
 }
 
-impl<'a> From<EventsCreatedSince> for DropResult<'a> {
-  fn from(value: EventsCreatedSince) -> Self {
+impl<'a, 'b: 'a> From<EventsCreatedSince<'b>> for DropResult<'a> {
+  fn from(value: EventsCreatedSince<'b>) -> Self {
     DropResult::new(value)
   }
 }
 
-impl<'a> From<&EventsCreatedSince> for DropResult<'a> {
-  fn from(drop: &EventsCreatedSince) -> Self {
+impl<'a, 'b: 'a> From<&EventsCreatedSince<'b>> for DropResult<'a> {
+  fn from(drop: &EventsCreatedSince<'b>) -> Self {
     DropResult::new(drop.clone())
   }
 }

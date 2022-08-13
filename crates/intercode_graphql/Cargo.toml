@@ -10,6 +10,7 @@ async-graphql = {version = "~4.0.5", features = ["dataloader", "tracing", "chron
 chrono = "*"
 chrono-tz = "*"
 html-escape = "*"
+http = "0.2.8"
 i18n-embed = "*"
 intercode_entities = {path = "../intercode_entities"}
 intercode_inflector = {path = "../intercode_inflector"}
