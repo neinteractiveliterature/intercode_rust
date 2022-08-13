@@ -4,8 +4,8 @@ extern crate dotenv;
 extern crate tracing;
 
 mod drops;
-mod filters;
 mod liquid_renderer;
+mod middleware;
 mod server;
 
 use async_graphql::*;

@@ -6,6 +6,7 @@ mod entities_by_relation_loader;
 mod entities_by_link_loader;
 mod cms_navigation_item_loaders;
 mod convention_loaders;
+mod event_loaders;
 pub mod expect;
 mod order_loaders;
 mod staff_position_loaders;
@@ -62,6 +63,9 @@ pub struct LoaderManager {
     EntityRelationLoader<conventions::Entity, ticket_types::Entity, conventions::PrimaryKey>,
   >,
   pub conventions_by_id: DataLoader<EntityIdLoader<conventions::Entity, conventions::PrimaryKey>>,
+  pub event_runs:
+    DataLoader<EntityRelationLoader<events::Entity, runs::Entity, events::PrimaryKey>>,
+  pub events_by_id: DataLoader<EntityIdLoader<events::Entity, events::PrimaryKey>>,
   pub order_order_entries:
     DataLoader<EntityRelationLoader<orders::Entity, order_entries::Entity, orders::PrimaryKey>>,
   pub staff_position_user_con_profiles: DataLoader<
@@ -157,6 +161,13 @@ impl LoaderManager {
         tokio::spawn,
       )
       .delay(delay_millis),
+      event_runs: DataLoader::new(
+        events::Entity.to_entity_relation_loader(db.clone()),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
+      events_by_id: DataLoader::new(events::Entity.to_entity_id_loader(db.clone()), tokio::spawn)
+        .delay(delay_millis),
       order_order_entries: DataLoader::new(
         orders::Entity.to_entity_relation_loader(db.clone()),
         tokio::spawn,

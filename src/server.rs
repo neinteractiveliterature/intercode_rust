@@ -1,9 +1,13 @@
-use crate::filters::{query_data, request_url};
 use crate::liquid_renderer::IntercodeLiquidRenderer;
+use crate::middleware::QueryDataFromRequest;
 use crate::Localizations;
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql::*;
-use async_graphql_warp::GraphQLResponse;
+use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
+use axum::extract::OriginalUri;
+use axum::response::{self, IntoResponse};
+use axum::routing::get;
+use axum::{Extension, Router};
 use futures_util::stream::StreamExt;
 use i18n_embed::fluent::fluent_language_loader;
 use i18n_embed::LanguageLoader;
@@ -11,11 +15,10 @@ use intercode_entities::cms_parent::CmsParentTrait;
 use intercode_entities::events;
 use intercode_graphql::cms_rendering_context::CmsRenderingContext;
 use intercode_graphql::loaders::LoaderManager;
-use intercode_graphql::{api, LiquidRenderer, QueryData, SchemaData};
+use intercode_graphql::{api, LiquidRenderer, SchemaData};
 use liquid::object;
 use regex::Regex;
 use sea_orm::{ColumnTrait, DatabaseConnection, ModelTrait, QueryFilter};
-use std::convert::Infallible;
 use std::env;
 use std::future::ready;
 use std::io::BufReader;
@@ -23,10 +26,10 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use tls_listener::TlsListener;
 use tokio_rustls::TlsAcceptor;
+use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::compression::CompressionLayer;
+use tower_http::trace::TraceLayer;
 use tracing::log::*;
-use warp::http::Response as HttpResponse;
-use warp::{Filter, Rejection};
 
 #[derive(Debug)]
 struct FatalDatabaseError {
@@ -34,13 +37,94 @@ struct FatalDatabaseError {
   db_err: sea_orm::DbErr,
 }
 
-impl warp::reject::Reject for FatalDatabaseError {}
+type IntercodeSchema = Schema<api::QueryRoot, EmptyMutation, EmptySubscription>;
+
+async fn single_page_app_entry(
+  OriginalUri(url): OriginalUri,
+  schema_data: Extension<SchemaData>,
+  QueryDataFromRequest(query_data): QueryDataFromRequest,
+) -> Result<impl IntoResponse, ::http::StatusCode> {
+  let event_path_regex: regex::Regex =
+    Regex::new("^/events/(\\d+)").map_err(|_| ::http::StatusCode::INTERNAL_SERVER_ERROR)?;
+  let db = &schema_data.db;
+  let path = url.path();
+  let page_scope = query_data.cms_parent.cms_page_for_path(path);
+
+  let page = if let Some(page_scope) = page_scope {
+    page_scope
+      .one(db.as_ref())
+      .await
+      .map_err(|_db_err| ::http::StatusCode::INTERNAL_SERVER_ERROR)?
+  } else {
+    None
+  };
+
+  let event = if let Some(convention) = query_data.convention.as_ref() {
+    if convention.site_mode == "single_event" {
+      convention
+        .find_related(events::Entity)
+        .one(db.as_ref())
+        .await
+        .map_err(|_db_err| ::http::StatusCode::INTERNAL_SERVER_ERROR)?
+    } else if let Some(event_captures) = event_path_regex.captures(path) {
+      let event_id = event_captures.get(1).unwrap().as_str().parse::<i64>();
+      if let Ok(event_id) = event_id {
+        convention
+          .find_related(events::Entity)
+          .filter(events::Column::Id.eq(event_id))
+          .one(db.as_ref())
+          .await
+          .map_err(|_db_err| ::http::StatusCode::INTERNAL_SERVER_ERROR)?
+      } else {
+        None
+      }
+    } else {
+      None
+    }
+  } else {
+    None
+  };
+
+  let liquid_renderer = IntercodeLiquidRenderer::new(&query_data, &schema_data);
+
+  let cms_rendering_context = CmsRenderingContext::new(
+    object!({}),
+    &schema_data,
+    &query_data,
+    Arc::new(liquid_renderer),
+  );
+  let page_title = "TODO";
+
+  Ok(response::Html(
+    cms_rendering_context
+      .render_app_root_content(&url, page_title, page.as_ref(), event.as_ref())
+      .await,
+  ))
+}
+
+async fn graphql_handler(
+  schema: Extension<IntercodeSchema>,
+  schema_data: Extension<SchemaData>,
+  QueryDataFromRequest(query_data): QueryDataFromRequest,
+  req: GraphQLRequest,
+) -> GraphQLResponse {
+  let liquid_renderer = IntercodeLiquidRenderer::new(&query_data, &schema_data);
+  let req = req
+    .into_inner()
+    .data(query_data)
+    .data::<Arc<dyn LiquidRenderer>>(Arc::new(liquid_renderer));
+
+  schema.execute(req).await.into()
+}
+
+async fn graphql_playground() -> impl IntoResponse {
+  response::Html(playground_source(
+    GraphQLPlaygroundConfig::new("/graphql").with_setting("schema.polling.interval", 10000),
+  ))
+}
 
 pub async fn serve(db: DatabaseConnection) -> Result<()> {
   let db_arc = Arc::new(db);
-  let event_path_regex: regex::Regex = Regex::new("^/events/(\\d+)")?;
-
-  let log = warp::log("intercode_rust::http");
 
   let language_loader = fluent_language_loader!();
   language_loader.load_languages(&Localizations, &[language_loader.fallback_language()])?;
@@ -58,113 +142,11 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
       .data(schema_data.clone())
       .finish();
 
-  let graphql_post_schema_data = schema_data.clone();
-  let graphql_post = warp::path("graphql")
-    .and(warp::post())
-    .and(query_data(db_arc.clone()))
-    .and(async_graphql_warp::graphql(graphql_schema))
-    .and_then(
-      move |query_data: QueryData,
-            (schema, request): (
-        Schema<api::QueryRoot, EmptyMutation, EmptySubscription>,
-        async_graphql::Request,
-      )| {
-        let graphql_post_schema_data = graphql_post_schema_data.clone();
-        async move {
-          let liquid_renderer =
-            IntercodeLiquidRenderer::new(&query_data, &graphql_post_schema_data);
-          let request = request
-            .data(query_data)
-            .data::<Arc<dyn LiquidRenderer>>(Arc::new(liquid_renderer));
-
-          Ok::<_, Infallible>(GraphQLResponse::from(schema.execute(request).await))
-        }
-      },
-    );
-
-  let graphql_playground = warp::path("graphql-playground").and(warp::get()).map(|| {
-    HttpResponse::builder()
-      .header("content-type", "text/html")
-      .body(playground_source(
-        GraphQLPlaygroundConfig::new("/graphql").with_setting("schema.polling.interval", 10000),
-      ))
-  });
-
-  let single_page_app_entry = warp::get()
-    .and(query_data(db_arc.clone()))
-    .and(request_url())
-    .and_then(move |query_data: QueryData, url: url::Url| {
-      let db = db_arc.clone();
-      let event_path_regex = event_path_regex.clone();
-      let cms_parent = query_data.cms_parent.clone();
-      let schema_data = schema_data.clone();
-
-      async move {
-        let path = url.path();
-        let page_scope = cms_parent.cms_page_for_path(path);
-
-        let page = if let Some(page_scope) = page_scope {
-          page_scope
-            .one(db.as_ref())
-            .await
-            .map_err(|db_err| warp::reject::custom(FatalDatabaseError { db_err }))?
-        } else {
-          None
-        };
-
-        let event = if let Some(convention) = query_data.convention.as_ref() {
-          if convention.site_mode == "single_event" {
-            convention
-              .find_related(events::Entity)
-              .one(db.as_ref())
-              .await
-              .map_err(|db_err| warp::reject::custom(FatalDatabaseError { db_err }))?
-          } else if let Some(event_captures) = event_path_regex.captures(path) {
-            let event_id = event_captures.get(1).unwrap().as_str().parse::<i64>();
-            if let Ok(event_id) = event_id {
-              convention
-                .find_related(events::Entity)
-                .filter(events::Column::Id.eq(event_id))
-                .one(db.as_ref())
-                .await
-                .map_err(|db_err| warp::reject::custom(FatalDatabaseError { db_err }))?
-            } else {
-              None
-            }
-          } else {
-            None
-          }
-        } else {
-          None
-        };
-
-        let liquid_renderer = IntercodeLiquidRenderer::new(&query_data, &schema_data);
-
-        let cms_rendering_context = CmsRenderingContext::new(
-          object!({}),
-          &schema_data,
-          &query_data,
-          Arc::new(liquid_renderer),
-        );
-        let page_title = "TODO";
-
-        Ok::<_, Rejection>(
-          HttpResponse::builder()
-            .header("content-type", "text/html")
-            .body(
-              cms_rendering_context
-                .render_app_root_content(&url, page_title, page.as_ref(), event.as_ref())
-                .await,
-            ),
-        )
-      }
-    });
-
-  let routes = graphql_playground
-    .or(graphql_post)
-    .or(single_page_app_entry)
-    .with(log);
-  let warp_service = warp::service(routes);
+  let app = Router::new()
+    .route("/graphql", get(graphql_playground).post(graphql_handler))
+    .fallback(get(single_page_app_entry))
+    .layer(Extension(schema_data))
+    .layer(Extension(graphql_schema));
 
   let service = tower::ServiceBuilder::new()
     .concurrency_limit(
@@ -174,7 +156,9 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
         .unwrap_or(25),
     )
     .layer(CompressionLayer::new())
-    .service(warp_service);
+    .layer(TraceLayer::new_for_http())
+    .layer(CatchPanicLayer::new())
+    .service(app);
 
   let addr = SocketAddr::new(
     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),

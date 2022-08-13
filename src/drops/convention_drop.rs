@@ -17,7 +17,7 @@ use super::{
 pub struct ConventionDrop {
   schema_data: SchemaData,
   convention: conventions::Model,
-  events_created_since: EventsCreatedSince,
+  events_created_since: EventsCreatedSince<'cache>,
   language_loader: Arc<FluentLanguageLoader>,
 }
 
@@ -63,7 +63,7 @@ impl ConventionDrop {
     )
   }
 
-  fn events_created_since(&self) -> &EventsCreatedSince {
+  fn events_created_since(&self) -> &EventsCreatedSince<'cache> {
     &self.events_created_since
   }
 

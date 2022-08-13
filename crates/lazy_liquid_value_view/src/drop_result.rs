@@ -33,6 +33,18 @@ impl<'a> liquid::ValueView for DropResult<'a> {
     self.value.as_object()
   }
 
+  fn as_array(&self) -> Option<&dyn liquid::model::ArrayView> {
+    self.value.as_array()
+  }
+
+  fn as_scalar(&self) -> Option<liquid::model::ScalarCow<'_>> {
+    self.value.as_scalar()
+  }
+
+  fn as_state(&self) -> Option<liquid::model::State> {
+    self.value.as_state()
+  }
+
   fn render(&self) -> liquid::model::DisplayCow<'_> {
     self.value.render()
   }
