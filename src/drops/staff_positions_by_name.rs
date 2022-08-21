@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
-use intercode_graphql::{loaders::expect::ExpectModels, SchemaData};
+use intercode_entities::{conventions, links::ConventionToStaffPositions};
+use intercode_graphql::SchemaData;
 use lazy_liquid_value_view::DropResult;
 use liquid::{ObjectView, ValueView};
 use regex::Regex;
+use sea_orm::ModelTrait;
 use tokio::sync::OnceCell;
 
 use super::{DropError, StaffPositionDrop};
@@ -18,15 +20,15 @@ fn normalize_staff_position_name(name: &str) -> String {
 #[derive(Debug, Clone)]
 pub struct StaffPositionsByName {
   schema_data: SchemaData,
-  convention_id: i64,
+  convention: conventions::Model,
   staff_positions: OnceCell<HashMap<String, StaffPositionDrop>>,
 }
 
 impl StaffPositionsByName {
-  pub fn new(schema_data: SchemaData, convention_id: i64) -> Self {
+  pub fn new(schema_data: SchemaData, convention: conventions::Model) -> Self {
     StaffPositionsByName {
       schema_data,
-      convention_id,
+      convention,
       staff_positions: Default::default(),
     }
   }
@@ -34,17 +36,15 @@ impl StaffPositionsByName {
   async fn query_and_store(&self) -> Result<HashMap<String, StaffPositionDrop>, DropError> {
     Ok(
       self
-        .schema_data
-        .loaders
-        .convention_staff_positions
-        .load_one(self.convention_id)
+        .convention
+        .find_linked(ConventionToStaffPositions)
+        .all(self.schema_data.db.as_ref())
         .await?
-        .expect_models()?
-        .iter()
+        .into_iter()
         .map(|model| {
           (
             normalize_staff_position_name(model.name.as_deref().unwrap_or("")),
-            StaffPositionDrop::new(model.clone(), self.schema_data.clone()),
+            StaffPositionDrop::new(model, self.schema_data.clone()),
           )
         })
         .collect(),

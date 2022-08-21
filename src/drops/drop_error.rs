@@ -1,27 +1,15 @@
-use std::{
-  fmt::{Debug, Display},
-  sync::Arc,
-};
+use std::{fmt::Debug, sync::Arc};
 
+use sea_orm::strum::Display;
 use tokio::sync::SetError;
 
-#[derive(Debug)]
+#[derive(Debug, Display)]
 pub enum DropError {
   GraphQLError(async_graphql::Error),
   LiquidError(liquid::Error),
   DbErr(sea_orm::DbErr),
   TokioSyncSetError(String),
-}
-
-impl Display for DropError {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    match self {
-      DropError::GraphQLError(err) => err.fmt(f),
-      DropError::LiquidError(err) => std::fmt::Display::fmt(&err, f),
-      DropError::DbErr(err) => std::fmt::Display::fmt(&err, f),
-      DropError::TokioSyncSetError(err) => std::fmt::Display::fmt(&err, f),
-    }
-  }
+  ExpectedEntityNotFound(String),
 }
 
 impl From<async_graphql::Error> for DropError {

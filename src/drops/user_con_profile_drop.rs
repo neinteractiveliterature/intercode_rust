@@ -1,8 +1,8 @@
-use intercode_entities::{user_con_profiles, UserNames};
-use intercode_graphql::loaders::expect::ExpectModels;
+use intercode_entities::{signups, user_con_profiles, users, UserNames};
 use intercode_graphql::SchemaData;
 use intercode_inflector::IntercodeInflector;
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
+use sea_orm::ModelTrait;
 
 use super::{DropError, SignupDrop, UserDrop};
 
@@ -54,30 +54,23 @@ impl UserConProfileDrop {
   }
 
   async fn signups(&self) -> Result<Vec<SignupDrop>, DropError> {
-    let result = self
-      .schema_data
-      .loaders
-      .user_con_profile_signups
-      .load_one(self.user_con_profile.id)
+    let signups = self
+      .user_con_profile
+      .find_related(signups::Entity)
+      .all(self.schema_data.db.as_ref())
       .await?;
-    let signups = result.expect_models()?;
 
-    Ok(
-      signups
-        .iter()
-        .map(|signup| SignupDrop::new(signup.clone()))
-        .collect::<Vec<_>>(),
-    )
+    Ok(signups.into_iter().map(SignupDrop::new).collect::<Vec<_>>())
   }
 
   async fn user(&self) -> Result<UserDrop, DropError> {
-    let result = self
-      .schema_data
-      .loaders
-      .user_con_profile_user
-      .load_one(self.user_con_profile.id)
-      .await?;
-    let user = result.expect_one()?;
-    Ok(UserDrop::new(user.clone()))
+    let user = self
+      .user_con_profile
+      .find_related(users::Entity)
+      .one(self.schema_data.db.as_ref())
+      .await?
+      .ok_or_else(|| DropError::ExpectedEntityNotFound("User".to_string()))?;
+
+    Ok(UserDrop::new(user))
   }
 }

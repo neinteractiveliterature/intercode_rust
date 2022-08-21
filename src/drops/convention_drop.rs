@@ -2,11 +2,13 @@ use std::sync::Arc;
 
 use chrono::Utc;
 use i18n_embed::fluent::FluentLanguageLoader;
-use intercode_entities::{conventions, MaximumEventSignupsValue};
-use intercode_graphql::{loaders::expect::ExpectModels, SchemaData};
+use intercode_entities::{
+  conventions, event_categories, staff_positions, MaximumEventSignupsValue,
+};
+use intercode_graphql::SchemaData;
 use intercode_timespan::ScheduledValue;
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
-use sea_orm::JsonValue;
+use sea_orm::{JsonValue, ModelTrait};
 
 use super::{
   utils::naive_date_time_to_liquid_date_time, DropError, EventCategoryDrop, EventsCreatedSince,
@@ -47,18 +49,16 @@ impl ConventionDrop {
   }
 
   async fn event_categories(&self) -> Result<Vec<EventCategoryDrop>, DropError> {
-    let result = self
-      .schema_data
-      .loaders
-      .convention_event_categories
-      .load_one(self.convention.id)
+    let models = self
+      .convention
+      .find_related(event_categories::Entity)
+      .all(self.schema_data.db.as_ref())
       .await?;
-    let models = result.expect_models()?;
 
     Ok(
       models
-        .iter()
-        .map(|event_category| EventCategoryDrop::new(event_category.clone()))
+        .into_iter()
+        .map(EventCategoryDrop::new)
         .collect::<Vec<_>>(),
     )
   }
@@ -86,17 +86,13 @@ impl ConventionDrop {
 
   async fn staff_positions(&self) -> Result<Vec<StaffPositionDrop>, DropError> {
     let drops = self
-      .schema_data
-      .loaders
-      .convention_staff_positions
-      .load_one(self.convention.id)
+      .convention
+      .find_related(staff_positions::Entity)
+      .all(self.schema_data.db.as_ref())
       .await?
-      .expect_models()?
-      .iter()
+      .into_iter()
       .filter(|staff_position| staff_position.visible.unwrap_or(false))
-      .map(|staff_position| {
-        StaffPositionDrop::new(staff_position.clone(), self.schema_data.clone())
-      })
+      .map(|staff_position| StaffPositionDrop::new(staff_position, self.schema_data.clone()))
       .collect::<Vec<_>>();
 
     StaffPositionDrop::preload_user_con_profiles(
@@ -109,7 +105,7 @@ impl ConventionDrop {
   }
 
   fn staff_positions_by_name(&self) -> StaffPositionsByName {
-    StaffPositionsByName::new(self.schema_data.clone(), self.convention.id)
+    StaffPositionsByName::new(self.schema_data.clone(), self.convention.clone())
   }
 
   fn starts_at(&self) -> Option<liquid::model::DateTime> {

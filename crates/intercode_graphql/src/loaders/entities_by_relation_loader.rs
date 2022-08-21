@@ -198,6 +198,36 @@ where
   }
 }
 
+impl<From: EntityTrait + Related<To>, To: EntityTrait> ExpectModels<To::Model>
+  for Option<&EntityRelationLoaderResult<From, To>>
+where
+  <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
+{
+  fn expect_models(&self) -> Result<&Vec<To::Model>, async_graphql::Error> {
+    if let Some(result) = self {
+      Ok(&result.models)
+    } else {
+      Err(async_graphql::Error::new(
+        "EntityRelationLoader did not insert an expected key!  This should never happen; this is a bug in EntityRelationLoader.",
+      ))
+    }
+  }
+
+  fn expect_one(&self) -> Result<&To::Model, async_graphql::Error> {
+    if let Some(result) = self {
+      result.expect_one()
+    } else {
+      Err(async_graphql::Error::new(
+        "EntityRelationLoader did not insert an expected key!  This should never happen; this is a bug in EntityRelationLoader.",
+      ))
+    }
+  }
+
+  fn try_one(&self) -> Option<&To::Model> {
+    self.as_ref().and_then(|result| result.try_one())
+  }
+}
+
 #[derive(Debug)]
 pub struct EntityRelationLoader<
   From: EntityTrait<PrimaryKey = PK> + Related<To>,

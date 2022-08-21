@@ -24,11 +24,10 @@ pub use entities_by_id_loader::*;
 pub use entities_by_link_loader::*;
 pub use entities_by_relation_loader::*;
 
-use intercode_entities::links::StaffPositionToUserConProfiles;
+use intercode_entities::links::{ConventionToStaffPositions, StaffPositionToUserConProfiles};
 use intercode_entities::*;
 
 use self::cms_navigation_item_loaders::CmsNavigationItemToCmsNavigationSection;
-use self::convention_loaders::ConventionToStaffPositions;
 use self::user_con_profile_loaders::UserConProfileToStaffPositions;
 
 pub struct LoaderManager {
