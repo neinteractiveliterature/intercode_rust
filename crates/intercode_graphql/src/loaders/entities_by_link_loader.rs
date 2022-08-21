@@ -1,7 +1,8 @@
 use async_graphql::{async_trait, dataloader::Loader};
 use sea_orm::{
   sea_query::{IntoValueTuple, ValueTuple},
-  EntityTrait, FromQueryResult, Linked, PrimaryKeyToColumn, PrimaryKeyTrait, QuerySelect,
+  DatabaseConnection, DbErr, EntityTrait, FromQueryResult, Linked, PrimaryKeyToColumn,
+  PrimaryKeyTrait, QuerySelect,
 };
 use std::{collections::HashMap, marker::PhantomData, sync::Arc};
 
@@ -10,6 +11,83 @@ use super::expect::ExpectModels;
 #[derive(FromQueryResult)]
 struct ParentModelIdOnly {
   pub parent_model_id: i64,
+}
+
+pub async fn load_all_linked<
+  From: EntityTrait<PrimaryKey = PK>,
+  Link: Linked<FromEntity = From, ToEntity = To>,
+  To: EntityTrait,
+  PK: PrimaryKeyTrait + PrimaryKeyToColumn<Column = From::Column>,
+>(
+  pk_column: PK::Column,
+  keys: &[PK::ValueType],
+  link: &Link,
+  db: &DatabaseConnection,
+) -> Result<HashMap<PK::ValueType, EntityLinkLoaderResult<From, To>>, DbErr>
+where
+  Link: Clone,
+  PK::ValueType: Eq + std::hash::Hash + Clone + std::convert::From<i64>,
+{
+  use sea_orm::{ColumnTrait, QueryFilter};
+
+  let pk_values = keys.iter().map(|key| {
+    let tuple = key.clone().into_value_tuple();
+    if let ValueTuple::One(single_value) = tuple {
+      single_value
+    } else {
+      panic!(
+        "EntityRelationshipLoader does not work with composite primary keys (encountered {:?})",
+        tuple
+      )
+    }
+  });
+
+  let mut results = From::find()
+    .filter(pk_column.is_in(pk_values))
+    .select_only()
+    .column_as(pk_column, "parent_model_id")
+    .find_also_linked(link.clone())
+    .into_model::<ParentModelIdOnly, To::Model>()
+    .all(db)
+    .await?
+    .into_iter()
+    .fold(
+      HashMap::<PK::ValueType, EntityLinkLoaderResult<From, To>>::new(),
+      |mut acc: HashMap<PK::ValueType, EntityLinkLoaderResult<From, To>>,
+       (from_model, to_model): (ParentModelIdOnly, Option<To::Model>)| {
+        if let Some(to_model) = to_model {
+          let id = from_model.parent_model_id;
+          let result = acc.get_mut(&id.into());
+          if let Some(result) = result {
+            result.models.push(to_model);
+          } else {
+            acc.insert(
+              id.into(),
+              EntityLinkLoaderResult::<From, To> {
+                from_id: id.into(),
+                models: vec![to_model],
+              },
+            );
+          }
+        }
+
+        acc
+      },
+    );
+
+  for id in keys {
+    if !results.contains_key(id) {
+      results.insert(
+        id.to_owned(),
+        EntityLinkLoaderResult::<From, To> {
+          from_id: id.to_owned(),
+          models: vec![],
+        },
+      );
+    }
+  }
+
+  Ok(results)
 }
 
 pub trait ToEntityLinkLoader<
@@ -130,6 +208,36 @@ where
   }
 }
 
+impl<From: EntityTrait, To: EntityTrait> ExpectModels<To::Model>
+  for Option<&EntityLinkLoaderResult<From, To>>
+where
+  <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
+{
+  fn expect_models(&self) -> Result<&Vec<To::Model>, async_graphql::Error> {
+    if let Some(result) = self {
+      Ok(&result.models)
+    } else {
+      Err(async_graphql::Error::new(
+        "EntityLinkLoader did not insert an expected key!  This should never happen; this is a bug in EntityLinkLoader.",
+      ))
+    }
+  }
+
+  fn expect_one(&self) -> Result<&To::Model, async_graphql::Error> {
+    if let Some(result) = self {
+      result.expect_one()
+    } else {
+      Err(async_graphql::Error::new(
+        "EntityLinkLoader did not insert an expected key!  This should never happen; this is a bug in EntityLinkLoader.",
+      ))
+    }
+  }
+
+  fn try_one(&self) -> Option<&To::Model> {
+    self.as_ref().and_then(|result| result.try_one())
+  }
+}
+
 #[derive(Debug)]
 pub struct EntityLinkLoader<
   From: EntityTrait<PrimaryKey = PK>,
@@ -186,67 +294,8 @@ where
     &self,
     keys: &[PK::ValueType],
   ) -> Result<HashMap<PK::ValueType, EntityLinkLoaderResult<From, To>>, Self::Error> {
-    use sea_orm::ColumnTrait;
-    use sea_orm::QueryFilter;
-
     let pk_column = self.primary_key.into_column();
-    let pk_values = keys.iter().map(|key| {
-      let tuple = key.clone().into_value_tuple();
-      if let ValueTuple::One(single_value) = tuple {
-        single_value
-      } else {
-        panic!(
-          "EntityRelationshipLoader does not work with composite primary keys (encountered {:?})",
-          tuple
-        )
-      }
-    });
 
-    let mut results = From::find()
-      .filter(pk_column.is_in(pk_values))
-      .select_only()
-      .column_as(pk_column, "parent_model_id")
-      .find_also_linked(self.link.clone())
-      .into_model::<ParentModelIdOnly, To::Model>()
-      .all(self.db.as_ref())
-      .await?
-      .into_iter()
-      .fold(
-        HashMap::<PK::ValueType, EntityLinkLoaderResult<From, To>>::new(),
-        |mut acc: HashMap<PK::ValueType, EntityLinkLoaderResult<From, To>>,
-         (from_model, to_model): (ParentModelIdOnly, Option<To::Model>)| {
-          if let Some(to_model) = to_model {
-            let id = from_model.parent_model_id;
-            let result = acc.get_mut(&id.into());
-            if let Some(result) = result {
-              result.models.push(to_model);
-            } else {
-              acc.insert(
-                id.into(),
-                EntityLinkLoaderResult::<From, To> {
-                  from_id: id.into(),
-                  models: vec![to_model],
-                },
-              );
-            }
-          }
-
-          acc
-        },
-      );
-
-    for id in keys.iter() {
-      if !results.contains_key(id) {
-        results.insert(
-          id.to_owned(),
-          EntityLinkLoaderResult::<From, To> {
-            from_id: id.to_owned(),
-            models: vec![],
-          },
-        );
-      }
-    }
-
-    Ok(results)
+    Ok(load_all_linked(pk_column, keys, &self.link, self.db.as_ref()).await?)
   }
 }

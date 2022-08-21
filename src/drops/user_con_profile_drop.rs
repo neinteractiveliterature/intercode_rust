@@ -4,7 +4,7 @@ use intercode_graphql::SchemaData;
 use intercode_inflector::IntercodeInflector;
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 
-use super::{DropError, SignupDrop};
+use super::{DropError, SignupDrop, UserDrop};
 
 #[liquid_drop_struct]
 pub struct UserConProfileDrop {
@@ -21,7 +21,7 @@ impl UserConProfileDrop {
     }
   }
 
-  fn id(&self) -> i64 {
+  pub fn id(&self) -> i64 {
     self.user_con_profile.id
   }
 
@@ -38,18 +38,14 @@ impl UserConProfileDrop {
   }
 
   async fn privileges(&self) -> Result<Vec<String>, DropError> {
-    let result = self
-      .schema_data
-      .loaders
-      .user_con_profile_user
-      .load_one(self.user_con_profile.id)
-      .await?;
-    let user = result.expect_one()?;
-
     let inflector = IntercodeInflector::new();
 
     Ok(
-      user
+      self
+        .caching_user()
+        .await
+        .get_inner()
+        .unwrap()
         .privileges()
         .iter()
         .map(|priv_name| inflector.humanize(priv_name))
@@ -57,7 +53,7 @@ impl UserConProfileDrop {
     )
   }
 
-  async fn signups(&self) -> Result<Vec<SignupDrop<'cache>>, DropError> {
+  async fn signups(&self) -> Result<Vec<SignupDrop>, DropError> {
     let result = self
       .schema_data
       .loaders
@@ -72,5 +68,16 @@ impl UserConProfileDrop {
         .map(|signup| SignupDrop::new(signup.clone()))
         .collect::<Vec<_>>(),
     )
+  }
+
+  async fn user(&self) -> Result<UserDrop, DropError> {
+    let result = self
+      .schema_data
+      .loaders
+      .user_con_profile_user
+      .load_one(self.user_con_profile.id)
+      .await?;
+    let user = result.expect_one()?;
+    Ok(UserDrop::new(user.clone()))
   }
 }

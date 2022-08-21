@@ -7,13 +7,13 @@ use typed_arena::Arena;
 
 use super::EventDrop;
 
-pub struct EventsCreatedSince<'a> {
+pub struct EventsCreatedSince {
   schema_data: SchemaData,
   convention_id: i64,
-  arena: Arena<Vec<EventDrop<'a>>>,
+  arena: Arena<Vec<EventDrop>>,
 }
 
-impl<'a> std::fmt::Debug for EventsCreatedSince<'a> {
+impl std::fmt::Debug for EventsCreatedSince {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("EventsCreatedSince")
       .field("schema_data", &self.schema_data)
@@ -22,7 +22,7 @@ impl<'a> std::fmt::Debug for EventsCreatedSince<'a> {
   }
 }
 
-impl<'a> Clone for EventsCreatedSince<'a> {
+impl Clone for EventsCreatedSince {
   fn clone(&self) -> Self {
     Self {
       schema_data: self.schema_data.clone(),
@@ -32,7 +32,7 @@ impl<'a> Clone for EventsCreatedSince<'a> {
   }
 }
 
-impl<'a> EventsCreatedSince<'a> {
+impl EventsCreatedSince {
   pub fn new(schema_data: SchemaData, convention_id: i64) -> Self {
     EventsCreatedSince {
       schema_data,
@@ -68,7 +68,7 @@ impl<'a> EventsCreatedSince<'a> {
   }
 }
 
-impl<'a> ValueView for EventsCreatedSince<'a> {
+impl ValueView for EventsCreatedSince {
   fn as_debug(&self) -> &dyn std::fmt::Debug {
     self
   }
@@ -107,7 +107,7 @@ impl<'a> ValueView for EventsCreatedSince<'a> {
   }
 }
 
-impl<'a> ObjectView for EventsCreatedSince<'a> {
+impl ObjectView for EventsCreatedSince {
   fn as_value(&self) -> &dyn ValueView {
     self
   }
@@ -146,14 +146,8 @@ impl<'a> ObjectView for EventsCreatedSince<'a> {
   }
 }
 
-impl<'a, 'b: 'a> From<EventsCreatedSince<'b>> for DropResult<'a> {
-  fn from(value: EventsCreatedSince<'b>) -> Self {
+impl From<EventsCreatedSince> for DropResult<EventsCreatedSince> {
+  fn from(value: EventsCreatedSince) -> Self {
     DropResult::new(value)
-  }
-}
-
-impl<'a, 'b: 'a> From<&EventsCreatedSince<'b>> for DropResult<'a> {
-  fn from(drop: &EventsCreatedSince<'b>) -> Self {
-    DropResult::new(drop.clone())
   }
 }

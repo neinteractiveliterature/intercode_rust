@@ -1,14 +1,14 @@
 extern crate proc_macro;
 use drop_getter_method::DropGetterMethod;
-use helpers::{add_value_cell, get_type_path_and_name};
+use helpers::{add_value_cell, build_generic_args, get_type_path_and_name_and_arguments};
 use proc_macro::{Span, TokenStream};
 use quote::quote;
 use syn::{
   parse::{self, Parse, ParseStream, Parser},
   parse_macro_input, parse_quote,
   punctuated::Punctuated,
-  DeriveInput, Error, Field, FieldValue, GenericParam, Ident, ImplItem, ItemImpl, ItemStruct,
-  Lifetime, LifetimeDef, Path, Token,
+  DeriveInput, Error, Field, FieldValue, Ident, ImplItem, ItemImpl, ItemStruct, Path,
+  PathArguments, Token,
 };
 
 mod drop_getter_method;
@@ -145,26 +145,19 @@ pub fn lazy_value_view(args: TokenStream, input: TokenStream) -> TokenStream {
 pub fn liquid_drop_struct(_args: TokenStream, input: TokenStream) -> TokenStream {
   let mut input = parse_macro_input!(input as ItemStruct);
   let ident = &input.ident;
+  let generic_args = build_generic_args(input.generics.params.iter());
   let cache_struct_ident = Ident::new(format!("{}Cache", ident).as_str(), Span::call_site().into());
 
   match &mut input.fields {
     syn::Fields::Named(named_fields) => named_fields.named.push(
       Field::parse_named
         .parse2(quote!(
-          drop_cache: #cache_struct_ident<'cache>
+          pub drop_cache: #cache_struct_ident #generic_args
         ))
         .unwrap(),
     ),
     _ => unimplemented!(),
   }
-
-  input
-    .generics
-    .params
-    .push(GenericParam::Lifetime(LifetimeDef::new(Lifetime::new(
-      "'cache",
-      Span::call_site().into(),
-    ))));
 
   quote!(
     #[derive(Debug, Clone)]
@@ -176,7 +169,9 @@ pub fn liquid_drop_struct(_args: TokenStream, input: TokenStream) -> TokenStream
 #[proc_macro_attribute]
 pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
   let input = parse_macro_input!(input as ItemImpl);
-  let (self_ty, self_name) = get_type_path_and_name(&input.self_ty).unwrap();
+  let (self_ty, self_name, self_type_arguments) =
+    get_type_path_and_name_and_arguments(&input.self_ty).unwrap();
+  let generics = input.generics;
   let type_name = syn::LitStr::new(&self_name, Span::call_site().into());
   let cache_struct_ident = Ident::new(
     format!("{}Cache", self_name).as_str(),
@@ -263,16 +258,67 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
 
   let cache_fields = methods.iter().map(|method| {
     let ident = method.ident();
+    let cache_type = method.cache_type();
 
     quote!(
-      #ident: tokio::sync::OnceCell<::lazy_liquid_value_view::DropResult<'cache>>
+      #ident: tokio::sync::OnceCell<::lazy_liquid_value_view::DropResult<#cache_type>>
     )
   });
 
+  let default_fields = methods.iter().map(|method| {
+    let ident = method.ident();
+
+    quote!(
+      #ident: ::tokio::sync::OnceCell::new()
+    )
+  });
+
+  let cache_field_setters = methods.iter().map(|method| {
+    let ident = method.ident();
+    let setter_ident = Ident::new(format!("set_{}", ident).as_str(), ident.span());
+    let cache_type = method.cache_type();
+
+    quote!(
+      pub fn #setter_ident(
+        &self,
+        value: ::lazy_liquid_value_view::DropResult<#cache_type>,
+      ) -> Result<(), ::tokio::sync::SetError<::lazy_liquid_value_view::DropResult<#cache_type>>> {
+        self.#ident.set(value)
+      }
+    )
+  });
+
+  let phantom_data = self_type_arguments.as_ref().and_then(|path_args| {
+    if let PathArguments::AngleBracketed(angle_bracketed_args) = path_args {
+      let args = &angle_bracketed_args.args;
+      Some(quote!(_phantom: ::std::marker::PhantomData<(#args)>,))
+    } else {
+      None
+    }
+  });
+
+  let phantom_default = phantom_data
+    .as_ref()
+    .map(|_| quote!(_phantom: Default::default(),));
+
   let drop_cache_struct = quote!(
-    #[derive(Debug, Clone, Default)]
-    struct #cache_struct_ident<'cache> {
-      #(#cache_fields),*
+    #[derive(Debug, Clone)]
+    pub struct #cache_struct_ident #generics {
+      #phantom_data
+      #(#cache_fields,)*
+    }
+
+    impl #generics #cache_struct_ident #self_type_arguments {
+      #(#cache_field_setters)*
+    }
+
+    impl #generics Default for #cache_struct_ident #self_type_arguments {
+      fn default() -> Self {
+        Self {
+          #phantom_default
+          #(#default_fields,)*
+        }
+      }
     }
   );
 
@@ -289,14 +335,14 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
     let (#(#destructure_var_names ,)*) = tokio::task::block_in_place(move || {
       tokio::runtime::Handle::current().block_on(async move {
         futures::join!(
-          #(#getter_invocations),*
+          #(#getter_invocations,)*
         )
       })
     });
   );
 
   let serialize_impl = quote!(
-    impl<'cache> serde::ser::Serialize for #self_ty<'cache> {
+    impl #generics serde::ser::Serialize for #self_ty {
       fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
       where
         S: serde::ser::Serializer,
@@ -313,7 +359,7 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
   );
 
   let value_view_impl = quote!(
-    impl<'cache> liquid::ValueView for #self_ty<'cache> {
+    impl #generics liquid::ValueView for #self_ty {
       fn as_debug(&self) -> &dyn std::fmt::Debug {
         self as &dyn std::fmt::Debug
       }
@@ -378,21 +424,15 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
   });
 
   let drop_result_from_impl = quote!(
-    impl<'a, 'cache: 'a> From<#self_ty<'cache>> for ::lazy_liquid_value_view::DropResult<'a> {
-      fn from(drop: #self_ty<'cache>) -> Self {
-        ::lazy_liquid_value_view::DropResult::new(drop.clone())
-      }
-    }
-
-    impl<'a, 'cache: 'a> From<&'a #self_ty<'cache>> for ::lazy_liquid_value_view::DropResult<'a> {
-      fn from(drop: &'a #self_ty<'cache>) -> Self {
+    impl #generics From<#self_ty> for ::lazy_liquid_value_view::DropResult<#self_ty> {
+      fn from(drop: #self_ty) -> Self {
         ::lazy_liquid_value_view::DropResult::new(drop.clone())
       }
     }
   );
 
   let object_view_impl = quote!(
-    impl<'cache> liquid::ObjectView for #self_ty<'cache> {
+    impl #generics liquid::ObjectView for #self_ty {
       fn as_value(&self) -> &dyn liquid::ValueView {
         self as &dyn liquid::ValueView
       }
@@ -413,7 +453,7 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
 
       fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn liquid::ValueView> + 'k> {
         #get_all_blocking
-        let values = vec![
+        let values: Vec<&dyn liquid::ValueView> = vec![
           #(#getter_idents),*
         ];
 
@@ -424,7 +464,7 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
         &'k self,
       ) -> Box<dyn Iterator<Item = (liquid::model::KStringCow<'k>, &'k dyn liquid::ValueView)> + 'k> {
         #get_all_blocking
-        let pairs = vec![
+        let pairs: Vec<(&str, &dyn liquid::ValueView)> = vec![
           #(#object_pairs ,)*
         ];
 
@@ -455,22 +495,24 @@ pub fn liquid_drop_impl(_args: TokenStream, input: TokenStream) -> TokenStream {
     }
   );
 
-  let ret = quote!(
-    #drop_cache_struct
-
-    impl<'cache> #self_ty<'cache> {
+  let drop_impl = quote!(
+    impl #generics #self_ty {
       #(#constructors)*
       #(#other_items)*
       #(#method_getters)*
 
-      pub fn extend(&self, extensions: liquid::model::Object) -> ::lazy_liquid_value_view::ExtendedDropResult<'_> {
+      pub fn extend(&self, extensions: liquid::model::Object) -> ::lazy_liquid_value_view::ExtendedDropResult<#self_ty> {
         ::lazy_liquid_value_view::ExtendedDropResult {
           drop_result: self.into(),
           extensions,
         }
       }
     }
+  );
 
+  let ret = quote!(
+    #drop_cache_struct
+    #drop_impl
     #serialize_impl
     #value_view_impl
     #object_view_impl

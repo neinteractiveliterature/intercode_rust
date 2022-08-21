@@ -17,7 +17,7 @@ use super::{
 pub struct ConventionDrop {
   schema_data: SchemaData,
   convention: conventions::Model,
-  events_created_since: EventsCreatedSince<'cache>,
+  events_created_since: EventsCreatedSince,
   language_loader: Arc<FluentLanguageLoader>,
 }
 
@@ -46,7 +46,7 @@ impl ConventionDrop {
     self.convention.name.as_deref()
   }
 
-  async fn event_categories(&self) -> Result<Vec<EventCategoryDrop<'cache>>, DropError> {
+  async fn event_categories(&self) -> Result<Vec<EventCategoryDrop>, DropError> {
     let result = self
       .schema_data
       .loaders
@@ -63,7 +63,7 @@ impl ConventionDrop {
     )
   }
 
-  fn events_created_since(&self) -> &EventsCreatedSince<'cache> {
+  fn events_created_since(&self) -> &EventsCreatedSince {
     &self.events_created_since
   }
 
@@ -71,7 +71,7 @@ impl ConventionDrop {
     self.convention.location.as_ref()
   }
 
-  fn maximum_event_signups(&self) -> ScheduledValueDrop<MaximumEventSignupsValue> {
+  fn maximum_event_signups(&self) -> ScheduledValueDrop<Utc, MaximumEventSignupsValue> {
     self
       .convention
       .maximum_event_signups
@@ -79,32 +79,36 @@ impl ConventionDrop {
       .map(|maximum_event_signups| {
         let scheduled_value: ScheduledValue<Utc, MaximumEventSignupsValue> =
           serde_json::from_value(maximum_event_signups.clone()).unwrap_or_default();
-        ScheduledValueDrop::new(scheduled_value, self.language_loader.as_ref())
+        ScheduledValueDrop::new(scheduled_value, self.language_loader.clone())
       })
-      .unwrap_or_else(|| {
-        ScheduledValueDrop::new::<Utc>(Default::default(), self.language_loader.as_ref())
-      })
+      .unwrap_or_else(|| ScheduledValueDrop::new(Default::default(), self.language_loader.clone()))
   }
 
-  async fn staff_positions(&self) -> Result<Vec<StaffPositionDrop<'cache>>, DropError> {
-    Ok(
-      self
-        .schema_data
-        .loaders
-        .convention_staff_positions
-        .load_one(self.convention.id)
-        .await?
-        .expect_models()?
-        .iter()
-        .filter(|staff_position| staff_position.visible.unwrap_or(false))
-        .map(|staff_position| {
-          StaffPositionDrop::new(staff_position.clone(), self.schema_data.clone())
-        })
-        .collect::<Vec<_>>(),
+  async fn staff_positions(&self) -> Result<Vec<StaffPositionDrop>, DropError> {
+    let drops = self
+      .schema_data
+      .loaders
+      .convention_staff_positions
+      .load_one(self.convention.id)
+      .await?
+      .expect_models()?
+      .iter()
+      .filter(|staff_position| staff_position.visible.unwrap_or(false))
+      .map(|staff_position| {
+        StaffPositionDrop::new(staff_position.clone(), self.schema_data.clone())
+      })
+      .collect::<Vec<_>>();
+
+    StaffPositionDrop::preload_user_con_profiles(
+      &self.schema_data,
+      &drops.iter().collect::<Vec<_>>(),
     )
+    .await?;
+
+    Ok(drops)
   }
 
-  fn staff_positions_by_name(&self) -> StaffPositionsByName<'cache> {
+  fn staff_positions_by_name(&self) -> StaffPositionsByName {
     StaffPositionsByName::new(self.schema_data.clone(), self.convention.id)
   }
 

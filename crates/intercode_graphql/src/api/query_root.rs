@@ -34,7 +34,7 @@ impl QueryRoot {
 
     Ok(match query_data.cms_parent.as_ref() {
       CmsParent::Convention(convention) => {
-        CmsParentInterface::Convention(ConventionType::new(*convention.to_owned()))
+        CmsParentInterface::Convention(Box::new(ConventionType::new(*convention.to_owned())))
       }
       CmsParent::RootSite(root_site) => {
         CmsParentInterface::RootSite(RootSiteType::new(*root_site.to_owned()))

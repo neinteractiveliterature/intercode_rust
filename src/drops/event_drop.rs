@@ -28,7 +28,7 @@ impl EventDrop {
       .and_then(naive_date_time_to_liquid_date_time)
   }
 
-  async fn runs(&self) -> Result<Vec<RunDrop<'cache>>, DropError> {
+  async fn runs(&self) -> Result<Vec<RunDrop>, DropError> {
     Ok(
       self
         .schema_data

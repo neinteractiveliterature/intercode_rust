@@ -28,7 +28,7 @@ use tls_listener::TlsListener;
 use tokio_rustls::TlsAcceptor;
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::compression::CompressionLayer;
-use tower_http::trace::TraceLayer;
+use tower_http::trace::{DefaultOnResponse, TraceLayer};
 use tracing::log::*;
 
 #[derive(Debug)]
@@ -156,7 +156,9 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
         .unwrap_or(25),
     )
     .layer(CompressionLayer::new())
-    .layer(TraceLayer::new_for_http())
+    .layer(
+      TraceLayer::new_for_http().on_response(DefaultOnResponse::new().level(tracing::Level::INFO)),
+    )
     .layer(CatchPanicLayer::new())
     .service(app);
 
@@ -210,6 +212,9 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
       .with_graceful_shutdown(signal)
       .await?;
   } else {
+    warn!(
+      "TLS_CERT_PATH and/or TLS_KEY_PATH not present in env.  Falling back to unencrypted HTTP."
+    );
     let listener = std::net::TcpListener::bind(addr)?;
     hyper::Server::from_tcp(listener)?
       .serve(tower::make::Shared::new(service))

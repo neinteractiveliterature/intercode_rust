@@ -16,13 +16,13 @@ fn normalize_staff_position_name(name: &str) -> String {
 }
 
 #[derive(Debug, Clone)]
-pub struct StaffPositionsByName<'a> {
+pub struct StaffPositionsByName {
   schema_data: SchemaData,
   convention_id: i64,
-  staff_positions: OnceCell<HashMap<String, StaffPositionDrop<'a>>>,
+  staff_positions: OnceCell<HashMap<String, StaffPositionDrop>>,
 }
 
-impl<'a> StaffPositionsByName<'a> {
+impl StaffPositionsByName {
   pub fn new(schema_data: SchemaData, convention_id: i64) -> Self {
     StaffPositionsByName {
       schema_data,
@@ -31,7 +31,7 @@ impl<'a> StaffPositionsByName<'a> {
     }
   }
 
-  async fn query_and_store(&self) -> Result<HashMap<String, StaffPositionDrop<'a>>, DropError> {
+  async fn query_and_store(&self) -> Result<HashMap<String, StaffPositionDrop>, DropError> {
     Ok(
       self
         .schema_data
@@ -51,7 +51,7 @@ impl<'a> StaffPositionsByName<'a> {
     )
   }
 
-  fn blocking_get_all(&self) -> Result<&HashMap<String, StaffPositionDrop<'a>>, DropError> {
+  fn blocking_get_all(&self) -> Result<&HashMap<String, StaffPositionDrop>, DropError> {
     tokio::task::block_in_place(|| {
       tokio::runtime::Handle::current().block_on(async move {
         self
@@ -63,7 +63,7 @@ impl<'a> StaffPositionsByName<'a> {
   }
 }
 
-impl<'a> ValueView for StaffPositionsByName<'a> {
+impl ValueView for StaffPositionsByName {
   fn as_debug(&self) -> &dyn std::fmt::Debug {
     self
   }
@@ -102,7 +102,7 @@ impl<'a> ValueView for StaffPositionsByName<'a> {
   }
 }
 
-impl<'a> ObjectView for StaffPositionsByName<'a> {
+impl ObjectView for StaffPositionsByName {
   fn as_value(&self) -> &dyn ValueView {
     self
   }
@@ -159,14 +159,8 @@ impl<'a> ObjectView for StaffPositionsByName<'a> {
   }
 }
 
-impl<'a, 'b: 'a> From<StaffPositionsByName<'b>> for DropResult<'a> {
-  fn from(value: StaffPositionsByName<'b>) -> Self {
+impl From<StaffPositionsByName> for DropResult<StaffPositionsByName> {
+  fn from(value: StaffPositionsByName) -> Self {
     DropResult::new(value)
-  }
-}
-
-impl<'a, 'b: 'a> From<&StaffPositionsByName<'b>> for DropResult<'a> {
-  fn from(drop: &StaffPositionsByName<'b>) -> Self {
-    DropResult::new(drop.clone())
   }
 }

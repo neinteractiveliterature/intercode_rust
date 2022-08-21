@@ -3,11 +3,14 @@ use std::{
   sync::Arc,
 };
 
+use tokio::sync::SetError;
+
 #[derive(Debug)]
 pub enum DropError {
   GraphQLError(async_graphql::Error),
   LiquidError(liquid::Error),
   DbErr(sea_orm::DbErr),
+  TokioSyncSetError(String),
 }
 
 impl Display for DropError {
@@ -16,6 +19,7 @@ impl Display for DropError {
       DropError::GraphQLError(err) => err.fmt(f),
       DropError::LiquidError(err) => std::fmt::Display::fmt(&err, f),
       DropError::DbErr(err) => std::fmt::Display::fmt(&err, f),
+      DropError::TokioSyncSetError(err) => std::fmt::Display::fmt(&err, f),
     }
   }
 }
@@ -41,5 +45,11 @@ impl From<sea_orm::DbErr> for DropError {
 impl From<Arc<sea_orm::DbErr>> for DropError {
   fn from(err: Arc<sea_orm::DbErr>) -> Self {
     DropError::DbErr(err.as_ref().clone())
+  }
+}
+
+impl<T> From<SetError<T>> for DropError {
+  fn from(err: SetError<T>) -> Self {
+    DropError::TokioSyncSetError(err.to_string())
   }
 }

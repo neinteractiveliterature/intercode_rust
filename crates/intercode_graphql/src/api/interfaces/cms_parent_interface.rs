@@ -36,7 +36,7 @@ use crate::{
 /// object for more details about this.)
 pub enum CmsParentInterface {
   RootSite(RootSiteType),
-  Convention(ConventionType),
+  Convention(Box<ConventionType>),
 }
 
 #[async_trait]

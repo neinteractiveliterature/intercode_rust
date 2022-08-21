@@ -10,6 +10,7 @@ mod staff_position_drop;
 mod staff_positions_by_name;
 mod timespan_with_value_drop;
 mod user_con_profile_drop;
+mod user_drop;
 mod utils;
 
 pub use convention_drop::ConventionDrop;
@@ -24,3 +25,4 @@ pub use staff_position_drop::StaffPositionDrop;
 pub use staff_positions_by_name::StaffPositionsByName;
 pub use timespan_with_value_drop::TimespanWithValueDrop;
 pub use user_con_profile_drop::UserConProfileDrop;
+pub use user_drop::UserDrop;

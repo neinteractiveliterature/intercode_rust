@@ -13,7 +13,7 @@ macro_rules! model_backed_type {
       model: $model_type,
     }
 
-    impl crate::api::objects::ModelBackedType<$model_type> for $type_name {
+    impl $crate::api::objects::ModelBackedType<$model_type> for $type_name {
       fn new(model: $model_type) -> Self {
         $type_name { model }
       }

@@ -1,8 +1,8 @@
 use async_graphql::{async_trait, dataloader::Loader};
 use sea_orm::{
   sea_query::{IntoValueTuple, ValueTuple},
-  EntityTrait, FromQueryResult, PrimaryKeyToColumn, PrimaryKeyTrait, QuerySelect, Related,
-  RelationDef,
+  DatabaseConnection, DbErr, EntityTrait, FromQueryResult, PrimaryKeyToColumn, PrimaryKeyTrait,
+  QuerySelect, Related, RelationDef,
 };
 use std::{collections::HashMap, marker::PhantomData, sync::Arc};
 
@@ -11,6 +11,80 @@ use super::expect::ExpectModels;
 #[derive(FromQueryResult)]
 struct ParentModelIdOnly {
   pub parent_model_id: i64,
+}
+
+pub async fn load_all_related<
+  From: EntityTrait<PrimaryKey = PK> + Related<To>,
+  To: EntityTrait,
+  PK: PrimaryKeyTrait + PrimaryKeyToColumn<Column = From::Column>,
+>(
+  pk_column: PK::Column,
+  keys: &[PK::ValueType],
+  db: &DatabaseConnection,
+) -> Result<HashMap<PK::ValueType, EntityRelationLoaderResult<From, To>>, DbErr>
+where
+  PK::ValueType: Eq + std::hash::Hash + Clone + std::convert::From<i64>,
+{
+  use sea_orm::{ColumnTrait, QueryFilter};
+
+  let pk_values = keys.iter().map(|key| {
+    let tuple = key.clone().into_value_tuple();
+    if let ValueTuple::One(single_value) = tuple {
+      single_value
+    } else {
+      panic!(
+        "EntityRelationshipLoader does not work with composite primary keys (encountered {:?})",
+        tuple
+      )
+    }
+  });
+
+  let mut results = From::find()
+    .filter(pk_column.is_in(pk_values))
+    .select_only()
+    .column_as(pk_column, "parent_model_id")
+    .find_also_related(To::default())
+    .into_model::<ParentModelIdOnly, To::Model>()
+    .all(db)
+    .await?
+    .into_iter()
+    .fold(
+      HashMap::<PK::ValueType, EntityRelationLoaderResult<From, To>>::new(),
+      |mut acc: HashMap<PK::ValueType, EntityRelationLoaderResult<From, To>>,
+       (from_model, to_model): (ParentModelIdOnly, Option<To::Model>)| {
+        if let Some(to_model) = to_model {
+          let id = from_model.parent_model_id;
+          let result = acc.get_mut(&id.into());
+          if let Some(result) = result {
+            result.models.push(to_model);
+          } else {
+            acc.insert(
+              id.into(),
+              EntityRelationLoaderResult::<From, To> {
+                from_id: id.into(),
+                models: vec![to_model],
+              },
+            );
+          }
+        }
+
+        acc
+      },
+    );
+
+  for id in keys.iter() {
+    if !results.contains_key(id) {
+      results.insert(
+        id.to_owned(),
+        EntityRelationLoaderResult::<From, To> {
+          from_id: id.to_owned(),
+          models: vec![],
+        },
+      );
+    }
+  }
+
+  Ok(results)
 }
 
 pub trait ToEntityRelationLoader<To: EntityTrait, PK: PrimaryKeyTrait + PrimaryKeyToColumn>
@@ -22,7 +96,7 @@ where
   type EntityRelationLoaderType: Loader<
     <<Self as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType,
     Value = EntityRelationLoaderResult<Self, To>,
-    Error = Arc<sea_orm::DbErr>,
+    Error = sea_orm::DbErr,
   >;
 
   fn to_entity_relation_loader(
@@ -167,73 +241,14 @@ where
   PK::ValueType: Sync + Clone + Eq + std::hash::Hash + IntoValueTuple + std::convert::From<i64>,
 {
   type Value = EntityRelationLoaderResult<From, To>;
-  type Error = Arc<sea_orm::DbErr>;
+  type Error = sea_orm::DbErr;
 
   async fn load(
     &self,
     keys: &[PK::ValueType],
   ) -> Result<HashMap<PK::ValueType, EntityRelationLoaderResult<From, To>>, Self::Error> {
-    use sea_orm::ColumnTrait;
-    use sea_orm::QueryFilter;
-
     let pk_column = self.primary_key.into_column();
-    let pk_values = keys.iter().map(|key| {
-      let tuple = key.clone().into_value_tuple();
-      if let ValueTuple::One(single_value) = tuple {
-        single_value
-      } else {
-        panic!(
-          "EntityRelationshipLoader does not work with composite primary keys (encountered {:?})",
-          tuple
-        )
-      }
-    });
 
-    let mut results = From::find()
-      .filter(pk_column.is_in(pk_values))
-      .select_only()
-      .column_as(pk_column, "parent_model_id")
-      .find_also_related(To::default())
-      .into_model::<ParentModelIdOnly, To::Model>()
-      .all(self.db.as_ref())
-      .await?
-      .into_iter()
-      .fold(
-        HashMap::<PK::ValueType, EntityRelationLoaderResult<From, To>>::new(),
-        |mut acc: HashMap<PK::ValueType, EntityRelationLoaderResult<From, To>>,
-         (from_model, to_model): (ParentModelIdOnly, Option<To::Model>)| {
-          if let Some(to_model) = to_model {
-            let id = from_model.parent_model_id;
-            let result = acc.get_mut(&id.into());
-            if let Some(result) = result {
-              result.models.push(to_model);
-            } else {
-              acc.insert(
-                id.into(),
-                EntityRelationLoaderResult::<From, To> {
-                  from_id: id.into(),
-                  models: vec![to_model],
-                },
-              );
-            }
-          }
-
-          acc
-        },
-      );
-
-    for id in keys.iter() {
-      if !results.contains_key(id) {
-        results.insert(
-          id.to_owned(),
-          EntityRelationLoaderResult::<From, To> {
-            from_id: id.to_owned(),
-            models: vec![],
-          },
-        );
-      }
-    }
-
-    Ok(results)
+    load_all_related::<From, To, PK>(pk_column, keys, self.db.as_ref()).await
   }
 }

@@ -21,7 +21,7 @@ impl IntercodeGlobals {
     }
   }
 
-  fn convention(&self) -> Option<ConventionDrop<'cache>> {
+  fn convention(&self) -> Option<ConventionDrop> {
     self
       .query_data
       .convention
@@ -36,7 +36,7 @@ impl IntercodeGlobals {
       })
   }
 
-  fn user_con_profile(&self) -> Option<UserConProfileDrop<'cache>> {
+  fn user_con_profile(&self) -> Option<UserConProfileDrop> {
     self
       .query_data
       .user_con_profile
