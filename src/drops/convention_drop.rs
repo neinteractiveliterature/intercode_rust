@@ -3,7 +3,7 @@ use std::sync::Arc;
 use chrono::Utc;
 use i18n_embed::fluent::FluentLanguageLoader;
 use intercode_entities::{
-  conventions, event_categories, staff_positions, MaximumEventSignupsValue,
+  conventions, event_categories, links::ConventionToStaffPositions, MaximumEventSignupsValue,
 };
 use intercode_graphql::SchemaData;
 use intercode_timespan::ScheduledValue;
@@ -87,7 +87,7 @@ impl ConventionDrop {
   async fn staff_positions(&self) -> Result<Vec<StaffPositionDrop>, DropError> {
     let drops = self
       .convention
-      .find_related(staff_positions::Entity)
+      .find_linked(ConventionToStaffPositions)
       .all(self.schema_data.db.as_ref())
       .await?
       .into_iter()
