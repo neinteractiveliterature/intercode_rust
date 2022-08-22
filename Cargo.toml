@@ -23,7 +23,7 @@ flamegraph = ["dep:tracing-flame"]
 
 [dependencies]
 async-graphql = {version = "~4.0.5", features = ["tracing", "dataloader", "chrono"]}
-async-graphql-axum = "4.0.6"
+async-graphql-axum = "4.0.10"
 async-graphql-value = "~4.0.5"
 axum = "0.5.13"
 chrono = "0.4"
