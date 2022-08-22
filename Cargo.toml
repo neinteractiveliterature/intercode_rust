@@ -54,7 +54,7 @@ pulldown-cmark = "0.9.1"
 quote = "1.0.20"
 regex = "*"
 rust-embed = "6"
-rustls-pemfile = "1.0.0"
+rustls-pemfile = "1.0.1"
 sea-orm = {version = "^0", features = ["sqlx-postgres", "runtime-tokio-native-tls", "macros"]}
 serde = "1.0"
 serde_json = "1.0"
