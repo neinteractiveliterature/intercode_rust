@@ -1608,7 +1608,7 @@ checksum = "5916d2ae698f6de9bfb891ad7a8d65c09d232dc58cc4ac433c7da3b2fd84bc2b"
 [[package]]
 name = "liquid"
 version = "0.26.0"
-source = "git+https://github.com/nbudin/liquid-rust.git?branch=lax-nulls#654844cd67db7d314e345e9df8fe6be8ae679b3f"
+source = "git+https://github.com/nbudin/liquid-rust.git?branch=lax-nulls#5e119e1e7755bd66163d84cb60d12f097464f2ff"
 dependencies = [
  "doc-comment",
  "liquid-core",
@@ -1620,7 +1620,7 @@ dependencies = [
 [[package]]
 name = "liquid-core"
 version = "0.26.0"
-source = "git+https://github.com/nbudin/liquid-rust.git?branch=lax-nulls#654844cd67db7d314e345e9df8fe6be8ae679b3f"
+source = "git+https://github.com/nbudin/liquid-rust.git?branch=lax-nulls#5e119e1e7755bd66163d84cb60d12f097464f2ff"
 dependencies = [
  "anymap2",
  "itertools",
@@ -1637,7 +1637,7 @@ dependencies = [
 [[package]]
 name = "liquid-derive"
 version = "0.26.0"
-source = "git+https://github.com/nbudin/liquid-rust.git?branch=lax-nulls#654844cd67db7d314e345e9df8fe6be8ae679b3f"
+source = "git+https://github.com/nbudin/liquid-rust.git?branch=lax-nulls#5e119e1e7755bd66163d84cb60d12f097464f2ff"
 dependencies = [
  "proc-macro2",
  "proc-quote",
@@ -1647,7 +1647,7 @@ dependencies = [
 [[package]]
 name = "liquid-lib"
 version = "0.26.0"
-source = "git+https://github.com/nbudin/liquid-rust.git?branch=lax-nulls#654844cd67db7d314e345e9df8fe6be8ae679b3f"
+source = "git+https://github.com/nbudin/liquid-rust.git?branch=lax-nulls#5e119e1e7755bd66163d84cb60d12f097464f2ff"
 dependencies = [
  "itertools",
  "liquid-core",
