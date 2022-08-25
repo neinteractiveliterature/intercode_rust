@@ -68,6 +68,26 @@ impl<T: liquid::model::ValueView> liquid::ValueView for DropResult<T> {
     self.get_value().as_state()
   }
 
+  fn is_array(&self) -> bool {
+    self.get_value().is_array()
+  }
+
+  fn is_object(&self) -> bool {
+    self.get_value().is_object()
+  }
+
+  fn is_scalar(&self) -> bool {
+    self.get_value().is_scalar()
+  }
+
+  fn is_state(&self) -> bool {
+    self.get_value().is_state()
+  }
+
+  fn is_nil(&self) -> bool {
+    self.get_value().is_nil()
+  }
+
   fn render(&self) -> liquid::model::DisplayCow<'_> {
     self.get_value().render()
   }
