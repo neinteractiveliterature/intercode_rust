@@ -18,19 +18,11 @@ pub struct PreloaderResult<Id: Eq + Hash, Value: ValueView> {
 
 impl<Id: Eq + Hash, Value: ValueView> PreloaderResult<Id, Value> {
   pub fn get(&self, id: &Id) -> DropResult<Value> {
-    self
-      .values_by_id
-      .get(id)
-      .map(|value| value.clone())
-      .unwrap_or_default()
+    self.values_by_id.get(id).cloned().unwrap_or_default()
   }
 
   pub fn all_values(&self) -> Vec<DropResult<Value>> {
-    self
-      .values_by_id
-      .values()
-      .map(|value| value.clone())
-      .collect::<Vec<_>>()
+    self.values_by_id.values().cloned().collect::<Vec<_>>()
   }
 }
 
@@ -43,6 +35,12 @@ impl<Id: Eq + Hash, Value: ValueView> PreloaderResult<Id, Vec<Value>> {
       .collect::<Vec<_>>()
   }
 }
+
+pub type GetIdFn<ID, Drop> = dyn Fn(&Drop) -> ID + Send + Sync;
+pub type GetValueFn<LoaderResult, Value> =
+  dyn Fn(Option<&LoaderResult>) -> Result<Value, DropError> + Send + Sync;
+pub type SetValueFn<Drop, Value> =
+  dyn Fn(&Drop, DropResult<Value>) -> Result<(), DropError> + Send + Sync;
 
 #[async_trait]
 pub trait Preloader<Drop, Id: Eq + Hash, Value: ValueView> {
@@ -64,15 +62,9 @@ pub struct EntityRelationPreloader<
   PK::ValueType: Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
 {
   pk_column: PK::Column,
-  get_id: Pin<Box<dyn Fn(&Drop) -> PK::ValueType + Send + Sync>>,
-  get_value: Pin<
-    Box<
-      dyn Fn(Option<&EntityRelationLoaderResult<From, To>>) -> Result<Value, DropError>
-        + Send
-        + Sync,
-    >,
-  >,
-  set_value: Pin<Box<dyn Fn(&Drop, DropResult<Value>) -> Result<(), DropError> + Send + Sync>>,
+  get_id: Pin<Box<GetIdFn<PK::ValueType, Drop>>>,
+  get_value: Pin<Box<GetValueFn<EntityRelationLoaderResult<From, To>, Value>>>,
+  set_value: Pin<Box<SetValueFn<Drop, Value>>>,
   _phantom: PhantomData<(From, To, Drop)>,
 }
 
@@ -159,13 +151,9 @@ pub struct EntityLinkPreloader<
 {
   pk_column: PK::Column,
   link: Link,
-  get_id: Pin<Box<dyn Fn(&Drop) -> PK::ValueType + Send + Sync>>,
-  get_value: Pin<
-    Box<
-      dyn Fn(Option<&EntityLinkLoaderResult<From, To>>) -> Result<Value, DropError> + Send + Sync,
-    >,
-  >,
-  set_value: Pin<Box<dyn Fn(&Drop, DropResult<Value>) -> Result<(), DropError> + Send + Sync>>,
+  get_id: Pin<Box<GetIdFn<PK::ValueType, Drop>>>,
+  get_value: Pin<Box<GetValueFn<EntityLinkLoaderResult<From, To>, Value>>>,
+  set_value: Pin<Box<SetValueFn<Drop, Value>>>,
   _phantom: PhantomData<(From, Link, To, Drop)>,
 }
 
