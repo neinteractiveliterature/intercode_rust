@@ -25,4 +25,11 @@ impl RunDrop {
       .created_at
       .and_then(naive_date_time_to_liquid_date_time)
   }
+
+  fn starts_at(&self) -> Option<DateTime> {
+    self
+      .run
+      .starts_at
+      .and_then(naive_date_time_to_liquid_date_time)
+  }
 }

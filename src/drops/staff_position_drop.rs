@@ -1,17 +1,16 @@
-use std::collections::HashMap;
-
-use futures::join;
 use intercode_entities::{
-  links::StaffPositionToUserConProfiles, signups, staff_positions, user_con_profiles, users,
+  links::StaffPositionToUserConProfiles, staff_positions, user_con_profiles,
 };
 use intercode_graphql::{
-  loaders::{expect::ExpectModels, load_all_linked, load_all_related},
+  loaders::{expect::ExpectModels, EntityLinkLoaderResult},
   SchemaData,
 };
-use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
+use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct, DropResult};
 use sea_orm::PrimaryKeyToColumn;
 
-use super::{DropError, SignupDrop, UserConProfileDrop, UserDrop};
+use crate::drops::preloaders::Preloader;
+
+use super::{preloaders::EntityLinkPreloader, DropError, UserConProfileDrop};
 
 #[liquid_drop_struct]
 pub struct StaffPositionDrop {
@@ -46,88 +45,53 @@ impl StaffPositionDrop {
     self.staff_position.name.as_deref()
   }
 
+  pub fn user_con_profiles_preloader(
+    schema_data: SchemaData,
+  ) -> EntityLinkPreloader<
+    staff_positions::Entity,
+    StaffPositionToUserConProfiles,
+    user_con_profiles::Entity,
+    staff_positions::PrimaryKey,
+    Self,
+    Vec<UserConProfileDrop>,
+  > {
+    EntityLinkPreloader::new(
+      staff_positions::PrimaryKey::Id.into_column(),
+      StaffPositionToUserConProfiles,
+      |drop: &Self| drop.id(),
+      move |value: Option<
+        &EntityLinkLoaderResult<staff_positions::Entity, user_con_profiles::Entity>,
+      >| {
+        let user_con_profiles = value.expect_models()?;
+        Ok(
+          user_con_profiles
+            .iter()
+            .map(|ucp| UserConProfileDrop::new(ucp.clone(), schema_data.clone()))
+            .collect(),
+        )
+      },
+      |drop: &Self, value: DropResult<Vec<UserConProfileDrop>>| {
+        drop
+          .drop_cache
+          .set_user_con_profiles(value)
+          .map_err(|err| err.into())
+      },
+    )
+  }
+
   pub async fn preload_user_con_profiles(
-    schema_data: &SchemaData,
+    schema_data: SchemaData,
     drops: &[&StaffPositionDrop],
   ) -> Result<(), DropError> {
-    let user_con_profile_lists = load_all_linked(
-      staff_positions::PrimaryKey::Id.into_column(),
-      &drops.iter().map(|drop| drop.id()).collect::<Vec<_>>(),
-      &StaffPositionToUserConProfiles,
-      schema_data.db.as_ref(),
-    )
-    .await?;
+    let preloader = StaffPositionDrop::user_con_profiles_preloader(schema_data.clone());
+    let preloader_result = preloader.preload(schema_data.db.as_ref(), drops).await?;
 
-    let mut user_con_profile_drops_by_staff_position_id: HashMap<i64, Vec<UserConProfileDrop>> =
-      Default::default();
-
-    for drop in drops {
-      let result = user_con_profile_lists.get(&drop.id());
-      let user_con_profiles = result.expect_models()?;
-
-      let user_con_profile_drops = user_con_profiles
-        .iter()
-        .map(|ucp| UserConProfileDrop::new(ucp.clone(), schema_data.clone()))
-        .collect::<Vec<_>>();
-      user_con_profile_drops_by_staff_position_id.insert(drop.id(), user_con_profile_drops);
-    }
-
-    let user_con_profile_ids = user_con_profile_drops_by_staff_position_id
-      .values()
-      .flat_map(|user_con_profile_drops| user_con_profile_drops.iter().map(|ucp| ucp.id()))
-      .collect::<Vec<_>>();
-
-    let (users, signups) = join!(
-      load_all_related::<user_con_profiles::Entity, users::Entity, user_con_profiles::PrimaryKey>(
-        user_con_profiles::PrimaryKey::Id.into_column(),
-        &user_con_profile_ids,
-        schema_data.db.as_ref(),
-      ),
-      load_all_related::<user_con_profiles::Entity, signups::Entity, user_con_profiles::PrimaryKey>(
-        user_con_profiles::PrimaryKey::Id.into_column(),
-        &user_con_profile_ids,
-        schema_data.db.as_ref(),
-      )
-    );
-
-    let users = users?;
-    let signups = signups?;
-
-    for ucp_drop in user_con_profile_drops_by_staff_position_id
-      .values()
-      .flatten()
-    {
-      let user = users.get(&ucp_drop.id()).unwrap().expect_one()?;
-      let signups_result = signups.get(&ucp_drop.id());
-      let signups = signups_result.expect_models()?;
-
-      ucp_drop
-        .drop_cache
-        .set_user(UserDrop::new(user.clone()).into())?;
-
-      ucp_drop.drop_cache.set_signups(
-        signups
-          .iter()
-          .map(|signup| SignupDrop::new(signup.clone()))
-          .collect::<Vec<_>>()
-          .into(),
-      )?;
-    }
-
-    for drop in drops {
-      drop.drop_cache.set_user_con_profiles(
-        user_con_profile_drops_by_staff_position_id
-          .remove(&drop.id())
-          .unwrap()
-          .into(),
-      )?;
-    }
-
-    Ok(())
+    UserConProfileDrop::preload_users_and_signups(schema_data, &preloader_result.all_values_flat())
+      .await
   }
 
   async fn user_con_profiles(&self) -> Result<&Vec<UserConProfileDrop>, DropError> {
-    StaffPositionDrop::preload_user_con_profiles(&self.schema_data, &[self]).await?;
+    StaffPositionDrop::preload_user_con_profiles(self.schema_data.clone(), &[self]).await?;
     Ok(
       self
         .drop_cache

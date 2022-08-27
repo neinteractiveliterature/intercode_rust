@@ -1,10 +1,16 @@
+use futures::try_join;
 use intercode_entities::{signups, user_con_profiles, users, UserNames};
-use intercode_graphql::SchemaData;
+use intercode_graphql::{
+  loaders::{expect::ExpectModels, EntityRelationLoaderResult},
+  SchemaData,
+};
 use intercode_inflector::IntercodeInflector;
-use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
-use sea_orm::ModelTrait;
+use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct, DropResult};
+use sea_orm::{ModelTrait, PrimaryKeyToColumn};
 
-use super::{DropError, SignupDrop, UserDrop};
+use crate::drops::preloaders::Preloader;
+
+use super::{preloaders::EntityRelationPreloader, DropError, SignupDrop, UserDrop};
 
 #[liquid_drop_struct]
 pub struct UserConProfileDrop {
@@ -72,5 +78,72 @@ impl UserConProfileDrop {
       .ok_or_else(|| DropError::ExpectedEntityNotFound("User".to_string()))?;
 
     Ok(UserDrop::new(user))
+  }
+
+  pub fn signups_preloader() -> EntityRelationPreloader<
+    user_con_profiles::Entity,
+    signups::Entity,
+    user_con_profiles::PrimaryKey,
+    Self,
+    Vec<SignupDrop>,
+  > {
+    EntityRelationPreloader::new(
+      user_con_profiles::PrimaryKey::Id.into_column(),
+      |drop: &Self| drop.id(),
+      |result| {
+        let signups: &Vec<signups::Model> = result.expect_models()?;
+        Ok(
+          signups
+            .iter()
+            .map(|signup| SignupDrop::new(signup.clone()))
+            .collect(),
+        )
+      },
+      |drop: &Self, value: DropResult<Vec<SignupDrop>>| {
+        drop.drop_cache.set_signups(value).map_err(|err| err.into())
+      },
+    )
+  }
+
+  pub fn users_preloader() -> EntityRelationPreloader<
+    user_con_profiles::Entity,
+    users::Entity,
+    user_con_profiles::PrimaryKey,
+    Self,
+    UserDrop,
+  > {
+    EntityRelationPreloader::new(
+      user_con_profiles::PrimaryKey::Id.into_column(),
+      |drop: &Self| drop.id(),
+      |result: Option<&EntityRelationLoaderResult<user_con_profiles::Entity, users::Entity>>| {
+        let user = result.expect_one()?;
+        Ok(UserDrop::new(user.clone()))
+      },
+      |drop: &Self, value: DropResult<UserDrop>| {
+        drop.drop_cache.set_user(value).map_err(|err| err.into())
+      },
+    )
+  }
+
+  pub async fn preload_users_and_signups(
+    schema_data: SchemaData,
+    drops: &[&UserConProfileDrop],
+  ) -> Result<(), DropError> {
+    try_join!(
+      async {
+        UserConProfileDrop::users_preloader()
+          .preload(schema_data.db.as_ref(), drops)
+          .await?;
+        Ok::<(), DropError>(())
+      },
+      async {
+        UserConProfileDrop::signups_preloader()
+          .preload(schema_data.db.as_ref(), drops)
+          .await?;
+        Ok::<(), DropError>(())
+      }
+    )?;
+
+    Ok(())
   }
 }

@@ -96,7 +96,7 @@ impl ConventionDrop {
       .collect::<Vec<_>>();
 
     StaffPositionDrop::preload_user_con_profiles(
-      &self.schema_data,
+      self.schema_data.clone(),
       &drops.iter().collect::<Vec<_>>(),
     )
     .await?;

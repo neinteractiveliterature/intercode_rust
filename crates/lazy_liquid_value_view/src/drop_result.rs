@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use liquid::ObjectView;
 
-use crate::ExtendedDropResult;
+use crate::{ArcValueView, ExtendedDropResult};
 
 #[derive(Debug)]
 pub struct DropResult<T: liquid::ValueView> {
-  pub value: Option<Arc<T>>,
+  pub value: Option<ArcValueView<T>>,
 }
 
 impl<T: liquid::model::ValueView> Clone for DropResult<T> {
@@ -148,7 +148,7 @@ impl<T: liquid::model::ValueView> ObjectView for DropResult<T> {
 impl<T: liquid::model::ValueView> DropResult<T> {
   pub fn new(value_view: T) -> Self {
     DropResult {
-      value: Some(Arc::new(value_view)),
+      value: Some(ArcValueView(Arc::new(value_view))),
     }
   }
 }
@@ -179,6 +179,18 @@ impl From<&str> for DropResult<String> {
 impl<T: liquid::model::ValueView + Clone> From<&T> for DropResult<T> {
   fn from(value_view_ref: &T) -> Self {
     DropResult::new(value_view_ref.to_owned())
+  }
+}
+
+impl<T: liquid::model::ValueView> From<Arc<T>> for DropResult<ArcValueView<T>> {
+  fn from(value_view_arc: Arc<T>) -> Self {
+    DropResult::new(ArcValueView(value_view_arc))
+  }
+}
+
+impl<T: liquid::model::ValueView> From<ArcValueView<T>> for DropResult<ArcValueView<T>> {
+  fn from(arc_value_view: ArcValueView<T>) -> Self {
+    DropResult::new(arc_value_view)
   }
 }
 

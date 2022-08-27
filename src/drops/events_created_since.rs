@@ -1,3 +1,4 @@
+use futures::join;
 use intercode_entities::events;
 use intercode_graphql::SchemaData;
 use lazy_liquid_value_view::DropResult;
@@ -5,7 +6,9 @@ use liquid::{ObjectView, ValueView};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Select};
 use typed_arena::Arena;
 
-use super::EventDrop;
+use crate::drops::UserConProfileDrop;
+
+use super::{preloaders::Preloader, EventDrop};
 
 pub struct EventsCreatedSince {
   schema_data: SchemaData,
@@ -63,6 +66,35 @@ impl EventsCreatedSince {
       .into_iter()
       .map(|event| EventDrop::new(event, self.schema_data.clone()))
       .collect::<Vec<_>>();
+
+    join![
+      async {
+        EventDrop::runs_preloader()
+          .preload(
+            &self.schema_data.db,
+            value.iter().collect::<Vec<_>>().as_slice(),
+          )
+          .await
+          .ok()
+      },
+      async {
+        let result = EventDrop::team_member_user_con_profiles_preloader(self.schema_data.clone())
+          .preload(
+            &self.schema_data.db,
+            value.iter().collect::<Vec<_>>().as_slice(),
+          )
+          .await;
+
+        if let Ok(result) = result {
+          UserConProfileDrop::preload_users_and_signups(
+            self.schema_data.clone(),
+            &result.all_values_flat(),
+          )
+          .await
+          .ok();
+        }
+      }
+    ];
 
     self.arena.alloc(value)
   }

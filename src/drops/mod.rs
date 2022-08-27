@@ -3,6 +3,7 @@ mod drop_error;
 mod event_category_drop;
 mod event_drop;
 mod events_created_since;
+pub mod preloaders;
 mod run_drop;
 mod scheduled_value_drop;
 mod signup_drop;
