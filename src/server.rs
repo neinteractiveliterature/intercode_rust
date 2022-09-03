@@ -17,6 +17,7 @@ use intercode_graphql::cms_rendering_context::CmsRenderingContext;
 use intercode_graphql::loaders::LoaderManager;
 use intercode_graphql::{api, LiquidRenderer, SchemaData};
 use liquid::object;
+use opentelemetry::global::shutdown_tracer_provider;
 use regex::Regex;
 use sea_orm::{ColumnTrait, DatabaseConnection, ModelTrait, QueryFilter};
 use std::env;
@@ -28,7 +29,7 @@ use tls_listener::TlsListener;
 use tokio_rustls::TlsAcceptor;
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::compression::CompressionLayer;
-use tower_http::trace::{DefaultOnResponse, TraceLayer};
+use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::log::*;
 
 #[derive(Debug)]
@@ -157,7 +158,9 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
     )
     .layer(CompressionLayer::new())
     .layer(
-      TraceLayer::new_for_http().on_response(DefaultOnResponse::new().level(tracing::Level::INFO)),
+      TraceLayer::new_for_http()
+        .make_span_with(DefaultMakeSpan::new().level(tracing::Level::INFO))
+        .on_response(DefaultOnResponse::new().level(tracing::Level::INFO)),
     )
     .layer(CatchPanicLayer::new())
     .service(app);
@@ -221,6 +224,8 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
       .with_graceful_shutdown(signal)
       .await?;
   };
+
+  shutdown_tracer_provider();
 
   Ok(())
 }

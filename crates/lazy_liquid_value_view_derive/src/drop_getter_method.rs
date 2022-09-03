@@ -68,24 +68,7 @@ impl DropGetterMethod {
     let caching_getter_ident = self.caching_getter_ident();
     let return_type = self.cache_type();
 
-    // let ref_type = if let Type::Reference(type_reference) = *return_type.clone() {
-    //   Some(type_reference)
-    // } else {
-    //   None
-    // };
-
-    let caching_getter_sig =
-    // if let Some(ref_type) = ref_type {
-    //   if let Some(lifetime) = ref_type.lifetime {
-    //     quote!(async fn #caching_getter_ident<#lifetime>(&self) -> &::lazy_liquid_value_view::DropResult<#return_type>)
-    //   } else {
-    //     let mut return_type_with_lifetime = ref_type.clone();
-    //     return_type_with_lifetime.lifetime = Some(Lifetime::new("'a", ident.span()));
-    //     quote!(async fn #caching_getter_ident<'a>(&self) -> &::lazy_liquid_value_view::DropResult<#return_type_with_lifetime>)
-    //   }
-    // } else {
-      quote!(async fn #caching_getter_ident(&self) -> &::lazy_liquid_value_view::DropResult<#return_type>);
-    // };
+    let caching_getter_sig = quote!(async fn #caching_getter_ident(&self) -> &::lazy_liquid_value_view::DropResult<#return_type>);
 
     match self {
       DropGetterMethod::Uncached(_) => Box::new(quote!(

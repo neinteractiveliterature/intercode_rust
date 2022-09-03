@@ -1,0 +1,10 @@
+/target
+/crates/*/target
+/crates/*/Cargo.lock
+/.env
+.DS_Store
+/dev_ca.*
+/dev_certificate.*
+/dhat-heap.json
+/Dockerfile
+/.dockerignore

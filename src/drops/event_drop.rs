@@ -1,5 +1,5 @@
 use intercode_entities::{
-  events, links::EventToTeamMemberUserConProfiles, runs, user_con_profiles,
+  event_categories, events, links::EventToTeamMemberUserConProfiles, runs, user_con_profiles,
 };
 use intercode_graphql::{loaders::expect::ExpectModels, SchemaData};
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
@@ -7,9 +7,9 @@ use liquid::model::DateTime;
 use sea_orm::{ModelTrait, PrimaryKeyToColumn};
 
 use super::{
-  preloaders::{EntityLinkPreloader, EntityRelationPreloader},
+  preloaders::{EntityLinkPreloader, EntityRelationPreloader, Preloader},
   utils::naive_date_time_to_liquid_date_time,
-  DropError, RunDrop, UserConProfileDrop,
+  DropError, EventCategoryDrop, RunDrop, UserConProfileDrop,
 };
 
 #[liquid_drop_struct]
@@ -35,6 +35,34 @@ impl EventDrop {
       .and_then(naive_date_time_to_liquid_date_time)
   }
 
+  pub fn event_category_preloader() -> EntityRelationPreloader<
+    events::Entity,
+    event_categories::Entity,
+    events::PrimaryKey,
+    Self,
+    EventCategoryDrop,
+  > {
+    EntityRelationPreloader::new(
+      events::PrimaryKey::Id.into_column(),
+      |drop: &Self| drop.id(),
+      |result| {
+        result
+          .expect_one()
+          .map(|event_category: &event_categories::Model| {
+            EventCategoryDrop::new(event_category.clone())
+          })
+          .map_err(|err| err.into())
+      },
+      |cache| &cache.event_category,
+    )
+  }
+
+  pub async fn event_category(&self) -> Result<EventCategoryDrop, DropError> {
+    EventDrop::event_category_preloader()
+      .load_single(&self.schema_data.db, self)
+      .await
+  }
+
   fn title(&self) -> &str {
     self.event.title.as_str()
   }
@@ -49,7 +77,7 @@ impl EventDrop {
         let runs: &Vec<runs::Model> = result.expect_models()?;
         Ok(runs.iter().map(|run| RunDrop::new(run.clone())).collect())
       },
-      |drop, value| drop.drop_cache.set_runs(value).map_err(|err| err.into()),
+      |cache| &cache.runs,
     )
   }
 
@@ -89,12 +117,7 @@ impl EventDrop {
             .collect(),
         )
       },
-      |drop, value| {
-        drop
-          .drop_cache
-          .set_team_member_user_con_profiles(value)
-          .map_err(|err| err.into())
-      },
+      |cache| &cache.team_member_user_con_profiles,
     )
   }
 

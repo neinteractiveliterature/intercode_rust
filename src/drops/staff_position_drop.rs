@@ -5,7 +5,7 @@ use intercode_graphql::{
   loaders::{expect::ExpectModels, EntityLinkLoaderResult},
   SchemaData,
 };
-use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct, DropResult};
+use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 use sea_orm::PrimaryKeyToColumn;
 
 use crate::drops::preloaders::Preloader;
@@ -70,12 +70,7 @@ impl StaffPositionDrop {
             .collect(),
         )
       },
-      |drop: &Self, value: DropResult<Vec<UserConProfileDrop>>| {
-        drop
-          .drop_cache
-          .set_user_con_profiles(value)
-          .map_err(|err| err.into())
-      },
+      |cache| &cache.user_con_profiles,
     )
   }
 
@@ -85,9 +80,12 @@ impl StaffPositionDrop {
   ) -> Result<(), DropError> {
     let preloader = StaffPositionDrop::user_con_profiles_preloader(schema_data.clone());
     let preloader_result = preloader.preload(schema_data.db.as_ref(), drops).await?;
-
-    UserConProfileDrop::preload_users_and_signups(schema_data, &preloader_result.all_values_flat())
-      .await
+    let values = preloader_result.all_values_flat_unwrapped();
+    UserConProfileDrop::preload_users_and_signups(
+      schema_data.clone(),
+      values.iter().collect::<Vec<_>>().as_slice(),
+    )
+    .await
   }
 
   async fn user_con_profiles(&self) -> Result<&Vec<UserConProfileDrop>, DropError> {

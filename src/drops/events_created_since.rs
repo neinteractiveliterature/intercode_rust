@@ -86,13 +86,24 @@ impl EventsCreatedSince {
           .await;
 
         if let Ok(result) = result {
+          let values = result.all_values_flat_unwrapped();
+
           UserConProfileDrop::preload_users_and_signups(
             self.schema_data.clone(),
-            &result.all_values_flat(),
+            values.iter().collect::<Vec<_>>().as_slice(),
           )
           .await
           .ok();
         }
+      },
+      async {
+        EventDrop::event_category_preloader()
+          .preload(
+            &self.schema_data.db,
+            value.iter().collect::<Vec<_>>().as_slice(),
+          )
+          .await
+          .ok()
       }
     ];
 

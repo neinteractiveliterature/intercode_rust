@@ -27,10 +27,10 @@ pub fn add_value_cell(data: &mut Data, value_type: &Path) {
 // stolen from async_graphql_derive
 pub fn get_type_path_and_name_and_arguments(
   ty: &Type,
-) -> Result<(&Type, String, Option<PathArguments>), syn::Error> {
+) -> Result<(Type, String, Option<PathArguments>), syn::Error> {
   match ty {
     Type::Path(path) => Ok((
-      ty,
+      ty.clone(),
       path
         .path
         .segments
@@ -41,7 +41,7 @@ pub fn get_type_path_and_name_and_arguments(
     )),
     Type::Group(TypeGroup { elem, .. }) => get_type_path_and_name_and_arguments(elem),
     Type::TraitObject(trait_object) => Ok((
-      ty,
+      ty.clone(),
       trait_object
         .bounds
         .iter()

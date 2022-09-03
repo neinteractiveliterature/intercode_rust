@@ -5,8 +5,8 @@ use intercode_graphql::{
   SchemaData,
 };
 use intercode_inflector::IntercodeInflector;
-use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct, DropResult};
-use sea_orm::{ModelTrait, PrimaryKeyToColumn};
+use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
+use sea_orm::PrimaryKeyToColumn;
 
 use crate::drops::preloaders::Preloader;
 
@@ -60,24 +60,15 @@ impl UserConProfileDrop {
   }
 
   async fn signups(&self) -> Result<Vec<SignupDrop>, DropError> {
-    let signups = self
-      .user_con_profile
-      .find_related(signups::Entity)
-      .all(self.schema_data.db.as_ref())
-      .await?;
-
-    Ok(signups.into_iter().map(SignupDrop::new).collect::<Vec<_>>())
+    UserConProfileDrop::signups_preloader()
+      .load_single(self.schema_data.db.as_ref(), self)
+      .await
   }
 
   async fn user(&self) -> Result<UserDrop, DropError> {
-    let user = self
-      .user_con_profile
-      .find_related(users::Entity)
-      .one(self.schema_data.db.as_ref())
-      .await?
-      .ok_or_else(|| DropError::ExpectedEntityNotFound("User".to_string()))?;
-
-    Ok(UserDrop::new(user))
+    UserConProfileDrop::users_preloader()
+      .load_single(self.schema_data.db.as_ref(), self)
+      .await
   }
 
   pub fn signups_preloader() -> EntityRelationPreloader<
@@ -99,9 +90,7 @@ impl UserConProfileDrop {
             .collect(),
         )
       },
-      |drop: &Self, value: DropResult<Vec<SignupDrop>>| {
-        drop.drop_cache.set_signups(value).map_err(|err| err.into())
-      },
+      |cache| &cache.signups,
     )
   }
 
@@ -119,9 +108,7 @@ impl UserConProfileDrop {
         let user = result.expect_one()?;
         Ok(UserDrop::new(user.clone()))
       },
-      |drop: &Self, value: DropResult<UserDrop>| {
-        drop.drop_cache.set_user(value).map_err(|err| err.into())
-      },
+      |cache| &cache.user,
     )
   }
 

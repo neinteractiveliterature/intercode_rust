@@ -25,10 +25,10 @@ use tonic::metadata::{AsciiMetadataValue, MetadataMap};
 use tonic::transport::ClientTlsConfig;
 use tracing::{log::*, Subscriber};
 use tracing_opentelemetry::OpenTelemetryLayer;
-use tracing_subscriber::layer::Layered;
+use tracing_subscriber::layer::Filter;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
-use tracing_subscriber::EnvFilter;
+use tracing_subscriber::{EnvFilter, Layer};
 
 #[cfg(feature = "dhat-heap")]
 #[global_allocator]
@@ -58,6 +58,7 @@ async fn connect_database() -> Result<DatabaseConnection, DbErr> {
       0,
     ));
   }
+  connect_options.sqlx_logging(false);
   info!("Connecting: {:#?}", connect_options);
 
   Database::connect(connect_options).await
@@ -76,7 +77,7 @@ fn setup_flamegraph_subscriber<
   >,
   impl Drop,
 ) {
-  eprintln!("Installing flamegraph subscriber; will output to tracing.folded");
+  info!("Installing flamegraph subscriber; will output to tracing.folded");
   let (flame_layer, _guard) = tracing_flame::FlameLayer::with_file("./tracing.folded").unwrap();
 
   (subscriber.with(flame_layer), _guard)
@@ -87,49 +88,71 @@ fn setup_flamegraph_subscriber<S: Subscriber>(subscriber: S) -> (S, impl Drop) {
   (subscriber, Box::new("shim droppable value"))
 }
 
-fn setup_honeycomb_tracing<
-  S: Subscriber + for<'span> tracing_subscriber::registry::LookupSpan<'span>,
->(
-  subscriber: S,
-) -> Result<Layered<OpenTelemetryLayer<S, Tracer>, S>> {
+struct RequestFilter;
+impl<S> Filter<S> for RequestFilter {
+  fn enabled(
+    &self,
+    meta: &tracing::Metadata<'_>,
+    cx: &tracing_subscriber::layer::Context<'_, S>,
+  ) -> bool {
+    true
+    // meta.
+    // meta.name() == "request"
+  }
+}
+
+fn setup_otlp<S: Subscriber + for<'span> tracing_subscriber::registry::LookupSpan<'span>>(
+  _subscriber: &S,
+  endpoint: String,
+) -> Result<OpenTelemetryLayer<S, Tracer>> {
   let mut map = MetadataMap::with_capacity(1);
-  map.insert(
-    "x-honeycomb-team",
-    AsciiMetadataValue::try_from_bytes(env::var("HONEYCOMB_API_KEY")?.as_bytes())?,
-  );
+  if let Ok(value) = env::var("HONEYCOMB_API_KEY") {
+    map.insert(
+      "x-honeycomb-team",
+      AsciiMetadataValue::try_from_bytes(value.as_bytes())?,
+    );
+  }
+
+  let use_tls = endpoint.starts_with("https");
+  let exporter = opentelemetry_otlp::new_exporter()
+    .tonic()
+    .with_endpoint(endpoint)
+    .with_metadata(map);
+  let exporter = if use_tls {
+    exporter.with_tls_config(ClientTlsConfig::new())
+  } else {
+    exporter
+  };
 
   let tracer = opentelemetry_otlp::new_pipeline()
     .tracing()
-    .with_exporter(
-      opentelemetry_otlp::new_exporter()
-        .tonic()
-        .with_endpoint(env::var("OTEL_EXPORTER_OTLP_ENDPOINT")?)
-        .with_tls_config(ClientTlsConfig::new())
-        .with_metadata(map),
-    )
+    .with_exporter(exporter)
     .with_trace_config(config().with_resource(Resource::new(vec![KeyValue::new(
       "service.name",
-      env::var("OTEL_SERVICE_NAME")?,
+      env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "intercode_rust".to_string()),
     )])))
     .install_batch(opentelemetry::runtime::Tokio)?;
-  let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
 
-  Ok(subscriber.with(telemetry))
+  Ok(
+    tracing_opentelemetry::layer().with_tracer(tracer), // .with_filter(RequestFilter),
+  )
 }
 
 async fn run() -> Result<()> {
-  let subscriber = tracing_subscriber::fmt()
-    .with_env_filter(EnvFilter::from_default_env())
+  let fmt_layer = tracing_subscriber::fmt::layer()
     .with_test_writer()
-    .finish();
+    .with_filter(EnvFilter::from_default_env());
+  let subscriber = tracing_subscriber::registry().with(fmt_layer);
 
   let (subscriber, _guard) = setup_flamegraph_subscriber(subscriber);
 
-  if env::var("OTEL_EXPORTER_OTLP_ENDPOINT").is_ok() {
-    setup_honeycomb_tracing(subscriber)?.init();
-  } else {
-    subscriber.init();
-  }
+  let otlp_layer = env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
+    .map_err(Into::into)
+    .and_then(|endpoint| setup_otlp(&subscriber, endpoint))
+    .ok();
+  let subscriber = subscriber.with(otlp_layer);
+
+  subscriber.init();
 
   let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
   info!("Connecting: {}", database_url);

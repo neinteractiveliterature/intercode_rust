@@ -1,8 +1,6 @@
-use std::sync::Arc;
-
-use liquid::ObjectView;
-
 use crate::{ArcValueView, ExtendedDropResult};
+use liquid::ObjectView;
+use std::sync::Arc;
 
 #[derive(Debug)]
 pub struct DropResult<T: liquid::ValueView> {
