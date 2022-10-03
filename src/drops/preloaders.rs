@@ -1,20 +1,20 @@
-use std::{collections::HashMap, future::Future, hash::Hash, marker::PhantomData, pin::Pin};
+use std::{collections::HashMap, fmt::Debug, hash::Hash, marker::PhantomData, pin::Pin};
 
 use axum::async_trait;
-use futures::future::join_all;
 use intercode_graphql::loaders::{
   load_all_linked, load_all_related, EntityLinkLoaderResult, EntityRelationLoaderResult,
 };
 use lazy_liquid_value_view::{DropResult, LiquidDrop};
 use liquid::ValueView;
+use once_cell::race::OnceBox;
 use sea_orm::{
   DatabaseConnection, EntityTrait, Linked, PrimaryKeyToColumn, PrimaryKeyTrait, Related,
 };
-use tokio::sync::OnceCell;
 use tracing::warn;
 
 use super::DropError;
 
+#[derive(Debug)]
 pub struct PreloaderResult<Id: Eq + Hash, Value: ValueView + Clone> {
   values_by_id: HashMap<Id, DropResult<Value>>,
 }
@@ -68,7 +68,7 @@ pub type GetIdFn<ID, Drop> = dyn Fn(&Drop) -> ID + Send + Sync;
 pub type GetValueFn<LoaderResult, Value> =
   dyn Fn(Option<&LoaderResult>) -> Result<Value, DropError> + Send + Sync;
 pub type GetOnceCellFn<Drop, Value> =
-  dyn Fn(&<Drop as LiquidDrop>::Cache) -> &OnceCell<DropResult<Value>> + Send + Sync;
+  dyn Fn(&<Drop as LiquidDrop>::Cache) -> &OnceBox<DropResult<Value>> + Send + Sync;
 
 #[async_trait]
 pub trait Preloader<Drop: Send + Sync, Id: Eq + Hash, V: ValueView + Clone> {
@@ -106,8 +106,6 @@ async fn populate_db_preloader_results<
   get_once_cell: &Pin<Box<GetOnceCellFn<Drop, Value>>>,
 ) -> Result<PreloaderResult<ID, Value>, DropError> {
   let mut values_by_id: HashMap<ID, DropResult<Value>> = HashMap::with_capacity(model_lists.len());
-  // let mut init_cache_futures: Vec<Pin<Box<dyn Future<Output = ()> + Send + Sync>>> =
-  //   Vec::with_capacity(drops.len());
 
   for drop in drops {
     let id = get_id(drop);
@@ -118,13 +116,9 @@ async fn populate_db_preloader_results<
     values_by_id.insert(id, drop_result.clone());
 
     let once_cell = (get_once_cell)(drop.get_cache());
-    once_cell.set(drop_result).ok();
-    // init_cache_futures.push(Box::pin(async {
-    //   once_cell.get_or_init(|| async move { drop_result }).await;
-    // }));
+    // once_cell.set(drop_result).ok();
+    once_cell.get_or_init(|| Box::new(drop_result));
   }
-
-  // join_all(init_cache_futures.iter_mut()).await;
 
   Ok(PreloaderResult { values_by_id })
 }
@@ -163,7 +157,7 @@ where
       + Send
       + Sync
       + 'static,
-    get_once_cell: impl Fn(&Drop::Cache) -> &OnceCell<DropResult<Value>> + Send + Sync + 'static,
+    get_once_cell: impl Fn(&Drop::Cache) -> &OnceBox<DropResult<Value>> + Send + Sync + 'static,
   ) -> Self {
     EntityRelationPreloader {
       pk_column,
@@ -242,6 +236,26 @@ impl<
     PK: PrimaryKeyTrait + PrimaryKeyToColumn<Column = From::Column>,
     Drop: LiquidDrop + Send + Sync,
     Value: ValueView,
+  > Debug for EntityLinkPreloader<From, Link, To, PK, Drop, Value>
+where
+  PK::ValueType: Eq + std::hash::Hash + Clone + std::convert::From<i64>,
+  Value: Into<DropResult<Value>>,
+{
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("EntityLinkPreloader")
+      .field("pk_column", &self.pk_column)
+      .field("_phantom", &self._phantom)
+      .finish_non_exhaustive()
+  }
+}
+
+impl<
+    From: EntityTrait<PrimaryKey = PK>,
+    Link: Linked<FromEntity = From, ToEntity = To>,
+    To: EntityTrait,
+    PK: PrimaryKeyTrait + PrimaryKeyToColumn<Column = From::Column>,
+    Drop: LiquidDrop + Send + Sync,
+    Value: ValueView,
   > EntityLinkPreloader<From, Link, To, PK, Drop, Value>
 where
   PK::ValueType: Eq + std::hash::Hash + Clone + std::convert::From<i64>,
@@ -255,7 +269,7 @@ where
       + Send
       + Sync
       + 'static,
-    get_once_cell: impl Fn(&Drop::Cache) -> &OnceCell<DropResult<Value>> + Send + Sync + 'static,
+    get_once_cell: impl Fn(&Drop::Cache) -> &OnceBox<DropResult<Value>> + Send + Sync + 'static,
   ) -> Self {
     Self {
       pk_column,

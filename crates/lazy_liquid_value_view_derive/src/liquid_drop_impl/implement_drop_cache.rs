@@ -15,7 +15,7 @@ pub fn implement_drop_cache(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
     let cache_type = method.cache_type();
 
     quote!(
-      #ident: tokio::sync::OnceCell<::lazy_liquid_value_view::DropResult<#cache_type>>
+      #ident: once_cell::race::OnceBox<::lazy_liquid_value_view::DropResult<#cache_type>>
     )
   });
 
@@ -23,7 +23,7 @@ pub fn implement_drop_cache(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
     let ident = method.ident();
 
     quote!(
-      #ident: ::tokio::sync::OnceCell::new()
+      #ident: ::once_cell::race::OnceBox::new()
     )
   });
 
@@ -37,9 +37,8 @@ pub fn implement_drop_cache(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
       pub fn #setter_ident(
         &self,
         value: ::lazy_liquid_value_view::DropResult<#cache_type>,
-      ) -> Result<(), ::tokio::sync::SetError<::lazy_liquid_value_view::DropResult<#cache_type>>> {
-        eprintln!("Setting cache field {} on {}", #ident_str, #self_name);
-        self.#ident.set(value)
+      ) -> Result<(), Box<::lazy_liquid_value_view::DropResult<#cache_type>>> {
+        self.#ident.set(Box::new(value))
       }
     )
   });
@@ -58,7 +57,7 @@ pub fn implement_drop_cache(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
     .map(|_| quote!(_phantom: Default::default(),));
 
   Box::new(quote!(
-    #[derive(Debug, Clone)]
+    #[derive(Debug)]
     pub struct #cache_struct_ident #generics {
       #phantom_data
       #(#cache_fields,)*
@@ -66,6 +65,12 @@ pub fn implement_drop_cache(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
 
     impl #generics #cache_struct_ident #self_type_arguments {
       #(#cache_field_setters)*
+    }
+
+    impl #generics Clone for #cache_struct_ident #self_type_arguments {
+      fn clone(&self) -> Self {
+        Default::default()
+      }
     }
 
     impl #generics Default for #cache_struct_ident #self_type_arguments {

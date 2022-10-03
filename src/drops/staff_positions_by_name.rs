@@ -4,9 +4,9 @@ use intercode_entities::{conventions, links::ConventionToStaffPositions};
 use intercode_graphql::SchemaData;
 use lazy_liquid_value_view::DropResult;
 use liquid::{ObjectView, ValueView};
+use once_cell::race::OnceBox;
 use regex::Regex;
 use sea_orm::ModelTrait;
-use tokio::sync::OnceCell;
 
 use super::{DropError, StaffPositionDrop};
 
@@ -17,11 +17,11 @@ fn normalize_staff_position_name(name: &str) -> String {
     .to_string()
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct StaffPositionsByName {
   schema_data: SchemaData,
   convention: conventions::Model,
-  staff_positions: OnceCell<HashMap<String, StaffPositionDrop>>,
+  staff_positions: OnceBox<HashMap<String, StaffPositionDrop>>,
 }
 
 impl StaffPositionsByName {
@@ -52,12 +52,10 @@ impl StaffPositionsByName {
   }
 
   fn blocking_get_all(&self) -> Result<&HashMap<String, StaffPositionDrop>, DropError> {
-    tokio::task::block_in_place(|| {
-      tokio::runtime::Handle::current().block_on(async move {
-        self
-          .staff_positions
-          .get_or_try_init(|| async move { self.query_and_store().await })
-          .await
+    self.staff_positions.get_or_try_init(|| {
+      tokio::task::block_in_place(|| {
+        tokio::runtime::Handle::current()
+          .block_on(async move { self.query_and_store().await.map(Box::new) })
       })
     })
   }

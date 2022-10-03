@@ -12,7 +12,7 @@ pub fn add_value_cell(data: &mut Data, value_type: &Path) {
         named_fields.named.push(
           Field::parse_named
             .parse2(quote!(
-              value_cell: tokio::sync::OnceCell<#value_type>
+              value_cell: once_cell::race::OnceBox<#value_type>
             ))
             .unwrap(),
         );

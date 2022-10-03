@@ -81,10 +81,16 @@ impl DropGetterMethod {
           self
             .drop_cache
             .#ident.
-            get_or_init(|| async move {
-              self.#ident().await.into()
-            })
-            .await
+            get_or_init(
+              || Box::<::lazy_liquid_value_view::DropResult<#return_type>>::new(
+                ::tokio::task::block_in_place(|| {
+                  ::tokio::runtime::Handle::current()
+                    .block_on(async move {
+                      self.#ident().await.into()
+                    })
+                  })
+                )
+              )
         }
       )),
       _ => Box::new(quote!(
@@ -92,10 +98,9 @@ impl DropGetterMethod {
           self
             .drop_cache
             .#ident.
-            get_or_init(|| async move {
-              self.#ident().into()
+            get_or_init(|| {
+              Box::new(self.#ident().into())
             })
-            .await
         }
       )),
     }

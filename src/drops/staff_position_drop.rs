@@ -90,14 +90,17 @@ impl StaffPositionDrop {
 
   async fn user_con_profiles(&self) -> Result<&Vec<UserConProfileDrop>, DropError> {
     StaffPositionDrop::preload_user_con_profiles(self.schema_data.clone(), &[self]).await?;
-    Ok(
-      self
-        .drop_cache
-        .user_con_profiles
-        .get()
-        .unwrap()
-        .get_inner()
-        .unwrap(),
-    )
+    self
+      .drop_cache
+      .user_con_profiles
+      .get()
+      .unwrap()
+      .get_inner()
+      .ok_or_else(|| {
+        DropError::ExpectedEntityNotFound(format!(
+          "Expected preloaded user con profiles for StaffPositionDrop {:?}",
+          self
+        ))
+      })
   }
 }

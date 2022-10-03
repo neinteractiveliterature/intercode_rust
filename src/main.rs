@@ -93,7 +93,7 @@ impl<S> Filter<S> for RequestFilter {
   fn enabled(
     &self,
     meta: &tracing::Metadata<'_>,
-    cx: &tracing_subscriber::layer::Context<'_, S>,
+    ctx: &tracing_subscriber::layer::Context<'_, S>,
   ) -> bool {
     true
     // meta.
