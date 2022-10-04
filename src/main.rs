@@ -58,7 +58,6 @@ async fn connect_database() -> Result<DatabaseConnection, DbErr> {
       0,
     ));
   }
-  connect_options.sqlx_logging(false);
   info!("Connecting: {:#?}", connect_options);
 
   Database::connect(connect_options).await
