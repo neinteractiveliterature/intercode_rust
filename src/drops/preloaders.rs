@@ -36,6 +36,7 @@ impl<Id: Eq + Hash, Value: ValueView + Clone> PreloaderResult<Id, Value> {
     self.values_by_id.values().cloned().collect::<Vec<_>>()
   }
 
+  #[allow(dead_code)]
   pub fn all_values_unwrapped(&self) -> Vec<Value> {
     self
       .all_values()
@@ -71,7 +72,7 @@ pub type GetOnceCellFn<Drop, Value> =
   dyn Fn(&<Drop as LiquidDrop>::Cache) -> &OnceBox<DropResult<Value>> + Send + Sync;
 
 #[async_trait]
-pub trait Preloader<Drop: Send + Sync, Id: Eq + Hash, V: ValueView + Clone> {
+pub trait Preloader<Drop: Send + Sync + Debug, Id: Eq + Hash, V: ValueView + Clone> {
   fn get_id(&self, drop: &Drop) -> Id;
   async fn preload(
     &self,
@@ -81,8 +82,8 @@ pub trait Preloader<Drop: Send + Sync, Id: Eq + Hash, V: ValueView + Clone> {
 
   async fn load_single(&self, db: &DatabaseConnection, drop: &Drop) -> Result<V, DropError> {
     warn!(
-      "N+1 query detected for {} -> {}",
-      std::any::type_name::<Drop>(),
+      "N+1 query detected for {:?} -> {}",
+      drop,
       std::any::type_name::<V>()
     );
 

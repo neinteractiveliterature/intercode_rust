@@ -92,8 +92,8 @@ struct RequestFilter;
 impl<S> Filter<S> for RequestFilter {
   fn enabled(
     &self,
-    meta: &tracing::Metadata<'_>,
-    ctx: &tracing_subscriber::layer::Context<'_, S>,
+    _meta: &tracing::Metadata<'_>,
+    _ctx: &tracing_subscriber::layer::Context<'_, S>,
   ) -> bool {
     true
     // meta.

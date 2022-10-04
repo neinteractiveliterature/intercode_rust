@@ -14,7 +14,7 @@ pub fn eval_liquid_drop_struct_macro(_args: TokenStream, input: TokenStream) -> 
     syn::Fields::Named(named_fields) => named_fields.named.push(
       Field::parse_named
         .parse2(quote!(
-          pub drop_cache: #cache_struct_ident #generic_args
+          pub drop_cache: ::std::sync::Arc<#cache_struct_ident #generic_args>
         ))
         .unwrap(),
     ),

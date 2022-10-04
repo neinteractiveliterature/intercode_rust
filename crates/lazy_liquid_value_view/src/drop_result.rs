@@ -37,6 +37,10 @@ impl<T: liquid::model::ValueView> DropResult<T> {
     self.value.as_deref()
   }
 
+  pub fn get_shared(&self) -> Option<ArcValueView<T>> {
+    self.value.clone()
+  }
+
   pub fn get_value(&self) -> Box<&dyn liquid::ValueView> {
     match &self.value {
       Some(value) => Box::new(value.as_ref()),

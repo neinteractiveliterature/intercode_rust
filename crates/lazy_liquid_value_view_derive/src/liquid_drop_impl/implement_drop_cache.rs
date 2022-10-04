@@ -5,7 +5,6 @@ use super::LiquidDropImpl;
 
 pub fn implement_drop_cache(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTokens> {
   let methods = &liquid_drop_impl.methods;
-  let self_name = &liquid_drop_impl.self_name;
   let self_type_arguments = &liquid_drop_impl.self_type_arguments;
   let cache_struct_ident = &liquid_drop_impl.cache_struct_ident;
   let generics = &liquid_drop_impl.generics;
@@ -29,7 +28,6 @@ pub fn implement_drop_cache(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
 
   let cache_field_setters = methods.iter().map(|method| {
     let ident = method.ident();
-    let ident_str = ident.to_string();
     let setter_ident = Ident::new(format!("set_{}", ident).as_str(), ident.span());
     let cache_type = method.cache_type();
 
@@ -65,12 +63,6 @@ pub fn implement_drop_cache(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
 
     impl #generics #cache_struct_ident #self_type_arguments {
       #(#cache_field_setters)*
-    }
-
-    impl #generics Clone for #cache_struct_ident #self_type_arguments {
-      fn clone(&self) -> Self {
-        Default::default()
-      }
     }
 
     impl #generics Default for #cache_struct_ident #self_type_arguments {

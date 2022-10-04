@@ -88,8 +88,8 @@ impl<StartTz: TimeZone, FinishTz: TimeZone> Timespan<StartTz, FinishTz> {
 
   pub fn with_timezone<TargetTz: TimeZone>(&self, tz: &TargetTz) -> Timespan<TargetTz, TargetTz> {
     Timespan {
-      start: (&self.start.as_ref()).and_then(|start| Some(start.with_timezone(tz))),
-      finish: (&self.finish.as_ref()).and_then(|finish| Some(finish.with_timezone(tz))),
+      start: self.start.as_ref().map(|start| start.with_timezone(tz)),
+      finish: self.finish.as_ref().map(|finish| finish.with_timezone(tz)),
     }
   }
 }

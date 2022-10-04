@@ -22,7 +22,6 @@ mod implement_value_view;
 
 pub struct LiquidDropImpl {
   self_ty: Type,
-  self_name: String,
   self_type_arguments: Option<PathArguments>,
   generics: Generics,
   type_name: syn::LitStr,
@@ -82,7 +81,6 @@ impl LiquidDropImpl {
 
     LiquidDropImpl {
       self_ty,
-      self_name,
       self_type_arguments,
       generics,
       type_name,

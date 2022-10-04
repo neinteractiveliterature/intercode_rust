@@ -121,16 +121,18 @@ impl EventDrop {
     )
   }
 
-  pub async fn team_member_user_con_profiles(&self) -> Result<Vec<UserConProfileDrop>, DropError> {
+  pub async fn team_member_user_con_profiles(&self) -> Result<&Vec<UserConProfileDrop>, DropError> {
+    EventDrop::team_member_user_con_profiles_preloader(self.schema_data.clone())
+      .load_single(&self.schema_data.db, self)
+      .await?;
     Ok(
       self
-        .event
-        .find_linked(EventToTeamMemberUserConProfiles)
-        .all(self.schema_data.db.as_ref())
-        .await?
-        .into_iter()
-        .map(|ucp| UserConProfileDrop::new(ucp, self.schema_data.clone()))
-        .collect(),
+        .drop_cache
+        .team_member_user_con_profiles
+        .get()
+        .unwrap()
+        .get_inner()
+        .unwrap(),
     )
   }
 }
