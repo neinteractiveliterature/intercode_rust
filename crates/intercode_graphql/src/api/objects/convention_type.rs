@@ -17,7 +17,10 @@ use sea_orm::{
   ColumnTrait, EntityTrait, Linked, ModelTrait, QueryFilter, QuerySelect, RelationTrait,
 };
 
-use super::{ModelBackedType, PageType, StaffPositionType, TicketTypeType, UserConProfileType};
+use super::{
+  EventsPaginationType, ModelBackedType, PageType, StaffPositionType, TicketTypeType,
+  UserConProfileType,
+};
 
 use crate::model_backed_type;
 model_backed_type!(ConventionType, conventions::Model);
@@ -127,6 +130,11 @@ impl ConventionType {
       .model
       .ends_at
       .map(|t| DateTime::<Utc>::from_utc(t, Utc))
+  }
+
+  #[graphql(name = "events_paginated")]
+  async fn events_paginated(&self) -> EventsPaginationType {
+    EventsPaginationType::new(None, None, None)
   }
 
   async fn language(&self) -> &str {

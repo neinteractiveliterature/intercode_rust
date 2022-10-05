@@ -9,6 +9,7 @@ mod convention_loaders;
 mod event_loaders;
 pub mod expect;
 mod order_loaders;
+mod run_loaders;
 mod staff_position_loaders;
 mod team_member_loaders;
 mod ticket_type_loaders;
@@ -28,6 +29,7 @@ use intercode_entities::links::{ConventionToStaffPositions, StaffPositionToUserC
 use intercode_entities::*;
 
 use self::cms_navigation_item_loaders::CmsNavigationItemToCmsNavigationSection;
+use self::run_loaders::RunToRooms;
 use self::user_con_profile_loaders::UserConProfileToStaffPositions;
 
 pub struct LoaderManager {
@@ -62,11 +64,18 @@ pub struct LoaderManager {
     EntityRelationLoader<conventions::Entity, ticket_types::Entity, conventions::PrimaryKey>,
   >,
   pub conventions_by_id: DataLoader<EntityIdLoader<conventions::Entity, conventions::PrimaryKey>>,
+  pub event_event_category:
+    DataLoader<EntityRelationLoader<events::Entity, event_categories::Entity, events::PrimaryKey>>,
   pub event_runs:
     DataLoader<EntityRelationLoader<events::Entity, runs::Entity, events::PrimaryKey>>,
+  pub event_team_members:
+    DataLoader<EntityRelationLoader<events::Entity, team_members::Entity, events::PrimaryKey>>,
   pub events_by_id: DataLoader<EntityIdLoader<events::Entity, events::PrimaryKey>>,
   pub order_order_entries:
     DataLoader<EntityRelationLoader<orders::Entity, order_entries::Entity, orders::PrimaryKey>>,
+  pub run_event: DataLoader<EntityRelationLoader<runs::Entity, events::Entity, runs::PrimaryKey>>,
+  pub run_rooms:
+    DataLoader<EntityLinkLoader<runs::Entity, RunToRooms, rooms::Entity, runs::PrimaryKey>>,
   pub staff_position_user_con_profiles: DataLoader<
     EntityLinkLoader<
       staff_positions::Entity,
@@ -79,6 +88,9 @@ pub struct LoaderManager {
     DataLoader<EntityIdLoader<staff_positions::Entity, staff_positions::PrimaryKey>>,
   pub team_member_event: DataLoader<
     EntityRelationLoader<team_members::Entity, events::Entity, team_members::PrimaryKey>,
+  >,
+  pub team_member_user_con_profile: DataLoader<
+    EntityRelationLoader<team_members::Entity, user_con_profiles::Entity, team_members::PrimaryKey>,
   >,
   pub team_members_by_id:
     DataLoader<EntityIdLoader<team_members::Entity, team_members::PrimaryKey>>,
@@ -160,8 +172,17 @@ impl LoaderManager {
         tokio::spawn,
       )
       .delay(delay_millis),
+      event_event_category: DataLoader::new(
+        <events::Entity as ToEntityRelationLoader<event_categories::Entity, events::PrimaryKey>>::to_entity_relation_loader(&events::Entity, db.clone()),
+        tokio::spawn,
+      ).delay(delay_millis),
       event_runs: DataLoader::new(
-        events::Entity.to_entity_relation_loader(db.clone()),
+        <events::Entity as ToEntityRelationLoader<runs::Entity, events::PrimaryKey>>::to_entity_relation_loader(&events::Entity, db.clone()),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
+      event_team_members: DataLoader::new(
+        <events::Entity as ToEntityRelationLoader<team_members::Entity, events::PrimaryKey>>::to_entity_relation_loader(&events::Entity, db.clone()),
         tokio::spawn,
       )
       .delay(delay_millis),
@@ -172,6 +193,12 @@ impl LoaderManager {
         tokio::spawn,
       )
       .delay(delay_millis),
+      run_event: DataLoader::new(
+        runs::Entity.to_entity_relation_loader(db.clone()), tokio::spawn
+      ).delay(delay_millis),
+      run_rooms: DataLoader::new(
+        runs::Entity.to_entity_link_loader(RunToRooms, db.clone()), tokio::spawn
+      ).delay(delay_millis),
       staff_position_user_con_profiles: DataLoader::new(
         staff_positions::Entity.to_entity_link_loader(StaffPositionToUserConProfiles, db.clone()),
         tokio::spawn,
@@ -182,8 +209,12 @@ impl LoaderManager {
         tokio::spawn,
       )
       .delay(delay_millis),
+      team_member_user_con_profile: DataLoader::new(
+        <team_members::Entity as ToEntityRelationLoader<user_con_profiles::Entity, team_members::PrimaryKey>>::to_entity_relation_loader(&team_members::Entity, db.clone()),
+        tokio::spawn
+      ).delay(delay_millis),
       team_member_event: DataLoader::new(
-        team_members::Entity.to_entity_relation_loader(db.clone()),
+        <team_members::Entity as ToEntityRelationLoader<events::Entity, team_members::PrimaryKey>>::to_entity_relation_loader(&team_members::Entity, db.clone()),
         tokio::spawn,
       )
       .delay(delay_millis),

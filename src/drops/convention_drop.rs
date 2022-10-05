@@ -104,6 +104,10 @@ impl ConventionDrop {
     Ok(drops)
   }
 
+  fn show_schedule(&self) -> &str {
+    &self.convention.show_schedule
+  }
+
   fn staff_positions_by_name(&self) -> StaffPositionsByName {
     StaffPositionsByName::new(self.schema_data.clone(), self.convention.clone())
   }

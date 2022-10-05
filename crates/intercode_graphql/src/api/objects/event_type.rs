@@ -1,8 +1,11 @@
-use crate::{loaders::expect::ExpectModel, SchemaData};
+use crate::{
+  loaders::expect::{ExpectModel, ExpectModels},
+  SchemaData,
+};
 use async_graphql::*;
 use intercode_entities::events;
 
-use super::{ConventionType, ModelBackedType};
+use super::{ConventionType, EventCategoryType, ModelBackedType, RunType, TeamMemberType};
 use crate::model_backed_type;
 model_backed_type!(EventType, events::Model);
 
@@ -12,16 +15,8 @@ impl EventType {
     self.model.id.into()
   }
 
-  async fn title(&self) -> &String {
-    &self.model.title
-  }
-
   async fn author(&self) -> &Option<String> {
     &self.model.author
-  }
-
-  async fn email(&self) -> &Option<String> {
-    &self.model.email
   }
 
   async fn convention(&self, ctx: &Context<'_>) -> Result<Option<ConventionType>, Error> {
@@ -33,5 +28,58 @@ impl EventType {
     } else {
       Ok(None)
     }
+  }
+
+  async fn email(&self) -> &Option<String> {
+    &self.model.email
+  }
+
+  #[graphql(name = "event_category")]
+  async fn event_category(&self, ctx: &Context<'_>) -> Result<EventCategoryType, Error> {
+    let loader = &ctx.data::<SchemaData>()?.loaders.event_event_category;
+
+    Ok(EventCategoryType::new(
+      loader.load_one(self.model.id).await?.expect_one()?.clone(),
+    ))
+  }
+
+  #[graphql(name = "length_seconds")]
+  async fn length_seconds(&self) -> i32 {
+    self.model.length_seconds
+  }
+
+  async fn runs(&self, ctx: &Context<'_>) -> Result<Vec<RunType>, Error> {
+    let schema_data = ctx.data::<SchemaData>()?;
+    Ok(
+      schema_data
+        .loaders
+        .event_runs
+        .load_one(self.model.id)
+        .await?
+        .expect_models()?
+        .iter()
+        .map(|model| RunType::new(model.clone()))
+        .collect(),
+    )
+  }
+
+  #[graphql(name = "team_members")]
+  async fn team_members(&self, ctx: &Context<'_>) -> Result<Vec<TeamMemberType>, Error> {
+    let schema_data = ctx.data::<SchemaData>()?;
+    Ok(
+      schema_data
+        .loaders
+        .event_team_members
+        .load_one(self.model.id)
+        .await?
+        .expect_models()?
+        .iter()
+        .map(|model| TeamMemberType::new(model.clone()))
+        .collect(),
+    )
+  }
+
+  async fn title(&self) -> &String {
+    &self.model.title
   }
 }
