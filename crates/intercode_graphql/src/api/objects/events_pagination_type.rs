@@ -33,7 +33,7 @@ impl EventsPaginationType {
     let (paginator, _) = self.paginator_and_page_size(db);
     Ok(
       paginator
-        .fetch_page(self.page)
+        .fetch_page(self.page - 1) // sqlx uses 0-based pagination, intercode uses 1-based
         .await?
         .into_iter()
         .map(EventType::new)

@@ -1,6 +1,7 @@
 use crate::{
   api::{
     enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
+    inputs::{EventFiltersInput, SortInput},
     interfaces::CmsParentImplementation,
   },
   loaders::expect::ExpectModels,
@@ -10,7 +11,7 @@ use async_graphql::*;
 use chrono::{DateTime, Utc};
 use intercode_entities::{
   cms_parent::{CmsParent, CmsParentTrait},
-  conventions, pages, staff_positions, staff_positions_user_con_profiles, team_members,
+  conventions, events, pages, staff_positions, staff_positions_user_con_profiles, team_members,
   user_con_profiles,
 };
 use sea_orm::{
@@ -133,8 +134,24 @@ impl ConventionType {
   }
 
   #[graphql(name = "events_paginated")]
-  async fn events_paginated(&self) -> EventsPaginationType {
-    EventsPaginationType::new(None, None, None)
+  async fn events_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<usize>,
+    per_page: Option<usize>,
+    filters: Option<EventFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<EventsPaginationType, Error> {
+    let mut scope = self
+      .model
+      .find_related(events::Entity)
+      .filter(events::Column::Status.eq("active"));
+
+    if let Some(filters) = filters {
+      scope = filters.apply_filters(ctx, &scope)?;
+    }
+
+    Ok(EventsPaginationType::new(Some(scope), page, per_page))
   }
 
   async fn language(&self) -> &str {

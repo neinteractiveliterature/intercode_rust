@@ -15,12 +15,35 @@ pub struct Model {
   pub updated_at: DateTime,
 }
 
-#[derive(Copy, Clone, Debug, EnumIter)]
-pub enum Relation {}
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+pub enum Relation {
+  #[sea_orm(
+    belongs_to = "super::events::Entity",
+    from = "Column::EventId",
+    to = "super::events::Column::Id",
+    on_update = "NoAction",
+    on_delete = "NoAction"
+  )]
+  Event,
+  #[sea_orm(
+    belongs_to = "super::user_con_profiles::Entity",
+    from = "Column::UserConProfileId",
+    to = "super::user_con_profiles::Column::Id",
+    on_update = "NoAction",
+    on_delete = "NoAction"
+  )]
+  UserConProfile,
+}
 
-impl RelationTrait for Relation {
-  fn def(&self) -> RelationDef {
-    panic!("No RelationDef")
+impl Related<super::events::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::Event.def()
+  }
+}
+
+impl Related<super::user_con_profiles::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::UserConProfile.def()
   }
 }
 

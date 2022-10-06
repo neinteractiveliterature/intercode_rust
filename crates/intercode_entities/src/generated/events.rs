@@ -84,6 +84,8 @@ pub enum Relation {
   MaximumEventProvidedTicketsOverrides,
   #[sea_orm(has_many = "super::event_proposals::Entity")]
   EventProposals,
+  #[sea_orm(has_many = "super::event_ratings::Entity")]
+  EventRatings,
   #[sea_orm(has_many = "super::runs::Entity")]
   Runs,
   #[sea_orm(has_many = "super::team_members::Entity")]
@@ -101,6 +103,12 @@ impl Related<super::conventions::Entity> for Entity {
 impl Related<super::event_categories::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::EventCategories.def()
+  }
+}
+
+impl Related<super::event_ratings::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::EventRatings.def()
   }
 }
 
