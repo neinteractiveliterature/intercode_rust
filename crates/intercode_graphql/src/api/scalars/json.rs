@@ -1,6 +1,6 @@
 use async_graphql::{Scalar, ScalarType};
 
-pub struct JsonScalar(serde_json::Value);
+pub struct JsonScalar(pub serde_json::Value);
 
 #[Scalar]
 impl ScalarType for JsonScalar {

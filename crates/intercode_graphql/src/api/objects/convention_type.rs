@@ -11,11 +11,12 @@ use async_graphql::*;
 use chrono::{DateTime, Utc};
 use intercode_entities::{
   cms_parent::{CmsParent, CmsParentTrait},
-  conventions, events, pages, staff_positions, staff_positions_user_con_profiles, team_members,
-  user_con_profiles,
+  conventions, events, pages, runs, staff_positions, staff_positions_user_con_profiles,
+  team_members, user_con_profiles, users,
 };
 use sea_orm::{
-  ColumnTrait, EntityTrait, Linked, ModelTrait, QueryFilter, QuerySelect, RelationTrait,
+  sea_query::Expr, ColumnTrait, EntityTrait, JoinType, Linked, ModelTrait, Order, QueryFilter,
+  QueryOrder, QuerySelect, RelationTrait,
 };
 
 use super::{
@@ -149,6 +150,36 @@ impl ConventionType {
 
     if let Some(filters) = filters {
       scope = filters.apply_filters(ctx, &scope)?;
+    }
+
+    if let Some(sort) = sort {
+      for sort_column in sort {
+        let order = if sort_column.desc {
+          Order::Desc
+        } else {
+          Order::Asc
+        };
+
+        scope = match sort_column.field.as_str() {
+          "first_scheduled_run_start" => {
+            // TODO authorize that the user is able to see the schedule
+            scope
+              .left_join(runs::Entity)
+              .filter(Expr::cust(
+                "runs.starts_at = (
+                SELECT MIN(runs.starts_at) FROM runs WHERE runs.event_id = events.id
+              )",
+              ))
+              .order_by(runs::Column::StartsAt, order)
+          }
+          "created_at" => scope.order_by(events::Column::CreatedAt, order),
+          "owner" => scope
+            .join(JoinType::LeftJoin, events::Relation::Users1.def())
+            .order_by(users::Column::LastName, order.clone())
+            .order_by(users::Column::FirstName, order),
+          _ => scope,
+        }
+      }
     }
 
     Ok(EventsPaginationType::new(Some(scope), page, per_page))

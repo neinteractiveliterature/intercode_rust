@@ -19,23 +19,27 @@ pub struct EventFiltersInput {
   form_items: Option<JsonScalar>,
 }
 
+fn question_marks(count: usize) -> String {
+  std::iter::repeat("?")
+    .take(count)
+    .collect::<Vec<_>>()
+    .join(", ")
+}
+
 fn string_search<T: EntityTrait>(
   scope: Select<T>,
   search_string: &str,
   column: impl ColumnTrait,
 ) -> Select<T> {
-  let terms: Vec<String> = search_string
-    .split_whitespace()
-    .filter_map(|term| {
-      if term.len() > 0 {
-        Some(format!("%{}%", term.to_lowercase()))
-      } else {
-        None
-      }
-    })
-    .collect();
+  let terms = search_string.split_whitespace().filter_map(|term| {
+    if !term.is_empty() {
+      Some(format!("%{}%", term.to_lowercase()))
+    } else {
+      None
+    }
+  });
 
-  let condition = terms.into_iter().fold(Condition::any(), |cond, term| {
+  let condition = terms.fold(Condition::any(), |cond, term| {
     let lower_col = Expr::expr(Func::lower(Expr::col(column)));
     cond.add(lower_col.like(term))
   });
@@ -70,10 +74,7 @@ impl EventFiltersInput {
           .filter(Expr::cust_with_values(
             format!(
               "COALESCE(event_ratings.rating, 0) IN ({})",
-              std::iter::repeat("?")
-                .take(my_rating.len())
-                .collect::<Vec<_>>()
-                .join(", ")
+              question_marks(my_rating.len())
             )
             .as_str(),
             my_rating.to_owned(),
@@ -81,7 +82,24 @@ impl EventFiltersInput {
       }
     }
 
-    // TODO form_items
+    if let Some(form_items) = &self.form_items {
+      if let Some(form_items) = form_items.0.as_object() {
+        for (key, value) in form_items.iter() {
+          if let Some(values) = value.as_array() {
+            scope = scope.filter(Expr::cust_with_values(
+              format!(
+                "events.additional_info->>? IN ({})",
+                question_marks(values.len())
+              )
+              .as_str(),
+              std::iter::once(key.as_str())
+                .chain(values.iter().map(|v| v.as_str().unwrap_or_default()))
+                .collect::<Vec<_>>(),
+            ))
+          }
+        }
+      }
+    }
 
     Ok(scope)
   }
