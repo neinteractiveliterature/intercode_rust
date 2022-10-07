@@ -1,4 +1,5 @@
 use async_graphql::{async_trait::async_trait, EmptyMutation, EmptySubscription};
+use async_session::Session;
 use i18n_embed::fluent::FluentLanguageLoader;
 use intercode_entities::{cms_parent::CmsParent, conventions, user_con_profiles, users};
 use intercode_liquid::{
@@ -8,6 +9,7 @@ use intercode_liquid::{
 use liquid::partials::LazyCompiler;
 use sea_orm::DatabaseConnection;
 use std::{fmt::Debug, future::Future, sync::Arc};
+use tokio::sync::RwLock;
 
 pub mod api;
 pub mod cms_rendering_context;
@@ -36,6 +38,7 @@ pub struct QueryData {
   pub cms_parent: Arc<CmsParent>,
   pub current_user: Arc<Option<users::Model>>,
   pub convention: Arc<Option<conventions::Model>>,
+  pub session_handle: Arc<RwLock<Session>>,
   pub timezone: chrono_tz::Tz,
   pub user_con_profile: Arc<Option<user_con_profiles::Model>>,
 }
@@ -69,6 +72,7 @@ impl QueryData {
     cms_parent: Arc<CmsParent>,
     current_user: Arc<Option<users::Model>>,
     convention: Arc<Option<conventions::Model>>,
+    session_handle: Arc<RwLock<Session>>,
     timezone: chrono_tz::Tz,
     user_con_profile: Arc<Option<user_con_profiles::Model>>,
   ) -> QueryData {
@@ -76,6 +80,7 @@ impl QueryData {
       cms_parent,
       current_user,
       convention,
+      session_handle,
       timezone,
       user_con_profile,
     }

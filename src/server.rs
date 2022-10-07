@@ -8,6 +8,7 @@ use axum::extract::OriginalUri;
 use axum::response::{self, IntoResponse};
 use axum::routing::get;
 use axum::{Extension, Router};
+use axum_sessions::{async_session, SessionLayer};
 use futures_util::stream::StreamExt;
 use i18n_embed::fluent::fluent_language_loader;
 use i18n_embed::LanguageLoader;
@@ -149,6 +150,10 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
     .layer(Extension(schema_data))
     .layer(Extension(graphql_schema));
 
+  let store = async_session::MemoryStore::new();
+  let secret = env::var("SESSION_SECRET")?;
+  let session_layer = SessionLayer::new(store, secret.as_bytes());
+
   let service = tower::ServiceBuilder::new()
     .concurrency_limit(
       env::var("MAX_CONCURRENCY")
@@ -156,6 +161,7 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
         .parse()
         .unwrap_or(25),
     )
+    .layer(session_layer)
     .layer(CompressionLayer::new())
     .layer(
       TraceLayer::new_for_http()
