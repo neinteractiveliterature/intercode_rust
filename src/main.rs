@@ -5,6 +5,7 @@ extern crate tracing;
 
 // mod csrf;
 mod csrf;
+mod db_sessions;
 mod drops;
 mod liquid_renderer;
 mod middleware;

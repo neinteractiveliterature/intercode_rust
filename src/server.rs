@@ -1,4 +1,5 @@
 use crate::csrf::{csrf_middleware, CsrfConfig, CsrfData};
+use crate::db_sessions::DbSessionStore;
 use crate::liquid_renderer::IntercodeLiquidRenderer;
 use crate::middleware::QueryDataFromRequest;
 use crate::Localizations;
@@ -10,7 +11,7 @@ use axum::extract::OriginalUri;
 use axum::response::{self, IntoResponse};
 use axum::routing::{get, post};
 use axum::{Extension, Router};
-use axum_sessions::{async_session, SameSite, SessionLayer};
+use axum_sessions::{SameSite, SessionLayer};
 use csrf::ChaCha20Poly1305CsrfProtection;
 use futures_util::stream::StreamExt;
 use i18n_embed::fluent::fluent_language_loader;
@@ -192,7 +193,7 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
     .layer(Extension(schema_data))
     .layer(Extension(graphql_schema));
 
-  let store = async_session::CookieStore::new();
+  let store = DbSessionStore::new(db_arc.clone());
   let secret_bytes = hex::decode(env::var("SECRET_KEY_BASE")?)?;
   let secret: [u8; 64] = secret_bytes[0..64].try_into().unwrap_or_else(|_| {
     panic!(
