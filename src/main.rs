@@ -3,6 +3,8 @@ extern crate chrono_tz;
 extern crate dotenv;
 extern crate tracing;
 
+// mod csrf;
+mod csrf;
 mod drops;
 mod liquid_renderer;
 mod middleware;

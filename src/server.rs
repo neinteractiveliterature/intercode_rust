@@ -1,14 +1,17 @@
+use crate::csrf::{csrf_middleware, CsrfConfig, CsrfData};
 use crate::liquid_renderer::IntercodeLiquidRenderer;
 use crate::middleware::QueryDataFromRequest;
 use crate::Localizations;
+use ::http::StatusCode;
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql::*;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::extract::OriginalUri;
 use axum::response::{self, IntoResponse};
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::{Extension, Router};
-use axum_sessions::{async_session, SessionLayer};
+use axum_sessions::{async_session, SameSite, SessionLayer};
+use csrf::ChaCha20Poly1305CsrfProtection;
 use futures_util::stream::StreamExt;
 use i18n_embed::fluent::fluent_language_loader;
 use i18n_embed::LanguageLoader;
@@ -21,11 +24,14 @@ use liquid::object;
 use opentelemetry::global::shutdown_tracer_provider;
 use regex::Regex;
 use sea_orm::{ColumnTrait, DatabaseConnection, ModelTrait, QueryFilter};
+use std::borrow::Cow;
+use std::collections::HashMap;
 use std::env;
 use std::future::ready;
 use std::io::BufReader;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
+use std::time::Duration;
 use tls_listener::TlsListener;
 use tokio_rustls::TlsAcceptor;
 use tower_http::catch_panic::CatchPanicLayer;
@@ -125,6 +131,40 @@ async fn graphql_playground() -> impl IntoResponse {
   ))
 }
 
+async fn authenticity_tokens(token: CsrfData) -> impl IntoResponse {
+  let value = token.authenticity_token();
+  let response = vec![
+    "graphql",
+    "changePassword",
+    "denyAuthorization",
+    "grantAuthorization",
+    "railsDirectUploads",
+    "resetPassword",
+    "signIn",
+    "signOut",
+    "signUp",
+    "updateUser",
+  ]
+  .into_iter()
+  .map(|field| (field, value.clone()))
+  .collect::<HashMap<_, _>>();
+  response::Json(response)
+}
+
+fn enforce_csrf(token: CsrfData) -> Result<(), StatusCode> {
+  if token.verified {
+    Ok(())
+  } else {
+    Err(StatusCode::FORBIDDEN)
+  }
+}
+
+async fn sign_in(token: CsrfData) -> Result<impl IntoResponse, StatusCode> {
+  enforce_csrf(token)?;
+
+  Ok(response::Html("ok"))
+}
+
 pub async fn serve(db: DatabaseConnection) -> Result<()> {
   let db_arc = Arc::new(db);
 
@@ -146,13 +186,35 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
 
   let app = Router::new()
     .route("/graphql", get(graphql_playground).post(graphql_handler))
+    .route("/authenticity_tokens", get(authenticity_tokens))
+    .route("/users/sign_in", post(sign_in))
     .fallback(get(single_page_app_entry))
     .layer(Extension(schema_data))
     .layer(Extension(graphql_schema));
 
-  let store = async_session::MemoryStore::new();
-  let secret = env::var("SESSION_SECRET")?;
-  let session_layer = SessionLayer::new(store, secret.as_bytes());
+  let store = async_session::CookieStore::new();
+  let secret_bytes = hex::decode(env::var("SECRET_KEY_BASE")?)?;
+  let secret: [u8; 64] = secret_bytes[0..64].try_into().unwrap_or_else(|_| {
+    panic!(
+      "SECRET_KEY_BASE is {} chars long but must be at least 128",
+      secret_bytes.len() * 2
+    )
+  });
+  let mut csrf_secret: [u8; 32] = Default::default();
+  csrf_secret.clone_from_slice(&secret[0..32]);
+  let protect = ChaCha20Poly1305CsrfProtection::from_key(csrf_secret);
+  let session_layer = SessionLayer::new(store, &secret);
+  let csrf_config = CsrfConfig {
+    cookie_domain: None,
+    cookie_http_only: true,
+    cookie_len: 2048,
+    cookie_name: "csrf-token".to_string(),
+    cookie_path: Cow::from("/".to_string()),
+    cookie_same_site: SameSite::Lax,
+    cookie_secure: true,
+    lifespan: Duration::from_secs(300),
+    protect: Arc::new(protect),
+  };
 
   let service = tower::ServiceBuilder::new()
     .concurrency_limit(
@@ -161,6 +223,8 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
         .parse()
         .unwrap_or(25),
     )
+    .layer(Extension(csrf_config))
+    .layer(axum::middleware::from_fn(csrf_middleware))
     .layer(session_layer)
     .layer(CompressionLayer::new())
     .layer(
@@ -215,9 +279,10 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
         ready(true)
       }
     });
+    let shared = tower::make::Shared::new(service);
 
     hyper::Server::builder(hyper::server::accept::from_stream(incoming))
-      .serve(tower::make::Shared::new(service))
+      .serve(shared)
       .with_graceful_shutdown(signal)
       .await?;
   } else {
