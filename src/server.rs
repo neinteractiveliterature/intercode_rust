@@ -1,5 +1,6 @@
 use crate::csrf::{csrf_middleware, CsrfConfig, CsrfData};
 use crate::db_sessions::DbSessionStore;
+use crate::legacy_passwords::{verify_legacy_md5_password, verify_legacy_sha1_password};
 use crate::liquid_renderer::IntercodeLiquidRenderer;
 use crate::middleware::QueryDataFromRequest;
 use crate::Localizations;
@@ -7,24 +8,25 @@ use ::http::StatusCode;
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql::*;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
-use axum::extract::OriginalUri;
+use axum::extract::{Multipart, OriginalUri};
 use axum::response::{self, IntoResponse};
 use axum::routing::{get, post};
-use axum::{Extension, Router};
-use axum_sessions::{SameSite, SessionLayer};
+use axum::{Extension, Form, Router};
+use axum_sessions::{SameSite, SessionHandle, SessionLayer};
 use csrf::ChaCha20Poly1305CsrfProtection;
 use futures_util::stream::StreamExt;
 use i18n_embed::fluent::fluent_language_loader;
 use i18n_embed::LanguageLoader;
 use intercode_entities::cms_parent::CmsParentTrait;
-use intercode_entities::events;
+use intercode_entities::{events, users};
 use intercode_graphql::cms_rendering_context::CmsRenderingContext;
 use intercode_graphql::loaders::LoaderManager;
 use intercode_graphql::{api, LiquidRenderer, SchemaData};
 use liquid::object;
 use opentelemetry::global::shutdown_tracer_provider;
 use regex::Regex;
-use sea_orm::{ColumnTrait, DatabaseConnection, ModelTrait, QueryFilter};
+use sea_orm::{ActiveValue, ColumnTrait, DatabaseConnection, EntityTrait, ModelTrait, QueryFilter};
+use serde::Deserialize;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::env;
@@ -39,6 +41,8 @@ use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::log::*;
+
+const BCRYPT_COST: u32 = 10;
 
 #[derive(Debug)]
 struct FatalDatabaseError {
@@ -160,10 +164,89 @@ fn enforce_csrf(token: CsrfData) -> Result<(), StatusCode> {
   }
 }
 
-async fn sign_in(token: CsrfData) -> Result<impl IntoResponse, StatusCode> {
+#[derive(Deserialize, Debug)]
+struct SignInParams {
+  #[serde(rename(deserialize = "user[email]"))]
+  email: String,
+  #[serde(rename(deserialize = "user[password]"))]
+  password: String,
+}
+
+async fn sign_in(
+  token: CsrfData,
+  form: Option<Form<SignInParams>>,
+  multipart: Option<Multipart>,
+  schema_data: Extension<SchemaData>,
+  session: Extension<SessionHandle>,
+) -> Result<impl IntoResponse, StatusCode> {
   enforce_csrf(token)?;
 
-  Ok(response::Html("ok"))
+  let params = if let Some(form) = form {
+    form
+  } else {
+    let mut mp = multipart.unwrap();
+    let mut mp_params: HashMap<String, String> = Default::default();
+
+    while let Some(field) = mp.next_field().await.unwrap() {
+      let name = field.name().unwrap().to_string();
+      let value = field.text().await.unwrap();
+      mp_params.insert(name, value);
+    }
+
+    let mp_value = serde_json::to_value(mp_params).unwrap();
+    Form(serde_json::from_value::<SignInParams>(mp_value).unwrap())
+  };
+
+  let user = users::Entity::find()
+    .filter(users::Column::Email.eq(params.email.as_str()))
+    .one(schema_data.db.as_ref())
+    .await
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+    .ok_or(StatusCode::NOT_FOUND)?;
+
+  let password_matches = if !user.encrypted_password.is_empty() {
+    bcrypt::verify(&params.password, &user.encrypted_password)
+      .map_err(|_| StatusCode::NOT_ACCEPTABLE)?
+  } else if let (Some(legacy_password_sha1), Some(legacy_password_sha1_salt)) =
+    (user.legacy_password_sha1, user.legacy_password_sha1_salt)
+  {
+    verify_legacy_sha1_password(
+      &params.password,
+      &legacy_password_sha1,
+      &legacy_password_sha1_salt,
+    )
+  } else if let Some(legacy_password_md5) = user.legacy_password_md5 {
+    verify_legacy_md5_password(&params.password, &legacy_password_md5)
+  } else {
+    false
+  };
+
+  if !password_matches {
+    return Err(StatusCode::NOT_ACCEPTABLE);
+  }
+
+  if user.encrypted_password.is_empty() {
+    // upgrade the password while we have it in RAM
+    let upgrade = users::ActiveModel {
+      encrypted_password: ActiveValue::Set(bcrypt::hash(&params.password, BCRYPT_COST).unwrap()),
+      legacy_password_md5: ActiveValue::Set(None),
+      legacy_password_sha1: ActiveValue::Set(None),
+      legacy_password_sha1_salt: ActiveValue::Set(None),
+      ..Default::default()
+    };
+
+    users::Entity::update(upgrade)
+      .exec(schema_data.db.as_ref())
+      .await
+      .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+  }
+
+  let mut write_guard = session.write().await;
+  write_guard
+    .insert("current_user_id", user.id)
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+  Ok(response::Json(value!({ "status": "success" })))
 }
 
 pub async fn serve(db: DatabaseConnection) -> Result<()> {

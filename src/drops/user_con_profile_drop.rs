@@ -35,6 +35,10 @@ impl UserConProfileDrop {
     self.user_con_profile.first_name.as_str()
   }
 
+  fn ical_secret(&self) -> &str {
+    self.user_con_profile.ical_secret.as_str()
+  }
+
   fn last_name(&self) -> &str {
     self.user_con_profile.last_name.as_str()
   }

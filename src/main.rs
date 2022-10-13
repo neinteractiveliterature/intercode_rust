@@ -7,6 +7,7 @@ extern crate tracing;
 mod csrf;
 mod db_sessions;
 mod drops;
+mod legacy_passwords;
 mod liquid_renderer;
 mod middleware;
 mod server;
