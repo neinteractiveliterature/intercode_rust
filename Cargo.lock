@@ -173,15 +173,16 @@ dependencies = [
 
 [[package]]
 name = "async-graphql"
-version = "4.0.11"
+version = "4.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7b02e998ce53a096f604ba445c184c5c36e9b6b4481932ffe8ab957ee66fd8a"
+checksum = "12f25ef01a96d5180e8deadca87b041bed49edd1f932dd7d4b1eaa1db443a3a0"
 dependencies = [
  "async-graphql-derive",
  "async-graphql-parser",
  "async-graphql-value",
  "async-stream",
  "async-trait",
+ "base64",
  "bytes",
  "chrono",
  "fast_chemail",
@@ -200,6 +201,7 @@ dependencies = [
  "regex",
  "serde",
  "serde_json",
+ "serde_urlencoded",
  "static_assertions",
  "tempfile",
  "thiserror",
@@ -227,9 +229,9 @@ dependencies = [
 
 [[package]]
 name = "async-graphql-derive"
-version = "4.0.11"
+version = "4.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae1398cbdd9c9a6aeb9ccccf97403a8df4e8700e2277edea8492f85087216ec5"
+checksum = "798bcf08b169c7589cdaed2e297b6180657165a001efb4b5ba7a87f3a5406622"
 dependencies = [
  "Inflector",
  "async-graphql-parser",
@@ -243,23 +245,21 @@ dependencies = [
 
 [[package]]
 name = "async-graphql-parser"
-version = "4.0.11"
+version = "4.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "834e268ed45d8e339d0317b5befe322921aa8a3a086b2f4dde8cd4ccc8564b1d"
+checksum = "b599d684b30ed8ede2600507ceb2ba60214ffb2cfc55088c4c0dd33f7656acfd"
 dependencies = [
  "async-graphql-value",
  "pest",
- "pest_generator",
- "proc-macro2",
  "serde",
  "serde_json",
 ]
 
 [[package]]
 name = "async-graphql-value"
-version = "4.0.11"
+version = "4.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95f7138ffe88caeb752676bb462d15eedd772cbf9e02e0da2e2daae2fab11c9c"
+checksum = "a81662a313c523f2b55c3735e20a5162fe7f42c0d4b0b64f6d73568dfde316ee"
 dependencies = [
  "bytes",
  "indexmap",
@@ -571,6 +571,15 @@ name = "bumpalo"
 version = "3.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c1ad822118d20d2c234f427000d5acc36eabe1e29a348c89b63dd60b13f28e5d"
+
+[[package]]
+name = "bumpalo-herd"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c51ab7ee02d3459317cc16fec045966c9120733a10229541acaf3cc81b137c95"
+dependencies = [
+ "bumpalo",
+]
 
 [[package]]
 name = "byteorder"
@@ -1276,6 +1285,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "generational-arena"
+version = "0.2.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e1d3b771574f62d0548cee0ad9057857e9fc25d7a3335f140c84f6acd0bf601"
+dependencies = [
+ "cfg-if 0.1.10",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1739,6 +1757,7 @@ dependencies = [
  "axum-sessions",
  "base64",
  "bcrypt",
+ "bumpalo-herd",
  "chrono",
  "chrono-tz",
  "clap",
@@ -1747,6 +1766,7 @@ dependencies = [
  "dhat",
  "dotenv",
  "futures",
+ "generational-arena",
  "hex",
  "html-escape",
  "http",
@@ -1771,6 +1791,7 @@ dependencies = [
  "rust-embed",
  "rustls-pemfile",
  "sea-orm",
+ "seawater",
  "serde",
  "serde_json",
  "sha1",
@@ -1786,7 +1807,6 @@ dependencies = [
  "tracing-flame",
  "tracing-opentelemetry",
  "tracing-subscriber",
- "typed-arena",
  "unic-langid",
  "url",
 ]
@@ -1893,7 +1913,7 @@ checksum = "8371e4e5341c3a96db127eb2465ac681ced4c433e01dd0e938adbef26ba93ba5"
 [[package]]
 name = "liquid"
 version = "0.26.0"
-source = "git+https://github.com/nbudin/liquid-rust.git?branch=lax-nulls#82172b5ae8300b888d93f3ffcc29842adb799a48"
+source = "git+https://github.com/nbudin/liquid-rust.git?branch=lax-nulls#87dc8066756e16b2a3fe493c8153ef18005ac6d6"
 dependencies = [
  "doc-comment",
  "liquid-core",
@@ -1905,7 +1925,7 @@ dependencies = [
 [[package]]
 name = "liquid-core"
 version = "0.26.0"
-source = "git+https://github.com/nbudin/liquid-rust.git?branch=lax-nulls#82172b5ae8300b888d93f3ffcc29842adb799a48"
+source = "git+https://github.com/nbudin/liquid-rust.git?branch=lax-nulls#87dc8066756e16b2a3fe493c8153ef18005ac6d6"
 dependencies = [
  "anymap2",
  "itertools",
@@ -1922,7 +1942,7 @@ dependencies = [
 [[package]]
 name = "liquid-derive"
 version = "0.26.0"
-source = "git+https://github.com/nbudin/liquid-rust.git?branch=lax-nulls#82172b5ae8300b888d93f3ffcc29842adb799a48"
+source = "git+https://github.com/nbudin/liquid-rust.git?branch=lax-nulls#87dc8066756e16b2a3fe493c8153ef18005ac6d6"
 dependencies = [
  "proc-macro2",
  "proc-quote",
@@ -1932,7 +1952,7 @@ dependencies = [
 [[package]]
 name = "liquid-lib"
 version = "0.26.0"
-source = "git+https://github.com/nbudin/liquid-rust.git?branch=lax-nulls#82172b5ae8300b888d93f3ffcc29842adb799a48"
+source = "git+https://github.com/nbudin/liquid-rust.git?branch=lax-nulls#87dc8066756e16b2a3fe493c8153ef18005ac6d6"
 dependencies = [
  "itertools",
  "lazy_static",
@@ -2153,9 +2173,9 @@ dependencies = [
 
 [[package]]
 name = "once_cell"
-version = "1.13.1"
+version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "074864da206b4973b84eb91683020dbefd6a8c3f0f38e054d93954e891935e4e"
+checksum = "e82dad04139b71a90c080c8463fe0dc7902db5192d939bd0950f074d014339e1"
 
 [[package]]
 name = "opaque-debug"
@@ -2537,9 +2557,9 @@ checksum = "dbf0c48bc1d91375ae5c3cd81e3722dff1abcf81a30960240640d223f59fe0e5"
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.43"
+version = "1.0.47"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a2ca2c61bc9f3d74d2886294ab7b9853abd9c1ad903a3ac7815c58989bb7bab"
+checksum = "5ea3d908b0e36316caf9e9e2c4625cdde190a7e6f440d794667ed17a1855e725"
 dependencies = [
  "unicode-ident",
 ]
@@ -3005,6 +3025,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "seawater"
+version = "0.1.0"
+dependencies = [
+ "async-graphql",
+ "async-trait",
+ "intercode_graphql",
+ "lazy_liquid_value_view",
+ "liquid",
+ "liquid-core",
+ "once_cell",
+ "sea-orm",
+ "seawater_derive",
+ "tracing",
+]
+
+[[package]]
+name = "seawater_derive"
+version = "0.1.0"
+dependencies = [
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "security-framework"
 version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3323,9 +3367,9 @@ checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
 name = "syn"
-version = "1.0.99"
+version = "1.0.102"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58dbef6ec655055e20b86b15a8cc6d439cca19b667537ac6a1369572d151ab13"
+checksum = "3fcd952facd492f9be3ef0d0b7032a6e442ee9b361d4acc2b1d0c4aaa5f613a1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3693,9 +3737,9 @@ checksum = "b6bc1c9ce2b5135ac7f93c72918fc37feb872bdc6a5533a8b85eb4b86bfdae52"
 
 [[package]]
 name = "tracing"
-version = "0.1.36"
+version = "0.1.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fce9567bd60a67d08a16488756721ba392f24f29006402881e43b19aac64307"
+checksum = "8ce8c33a8d48bd45d624a6e523445fd21ec13d3653cd51f681abf67418f54eb8"
 dependencies = [
  "cfg-if 1.0.0",
  "log",
@@ -3706,9 +3750,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-attributes"
-version = "0.1.22"
+version = "0.1.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11c75893af559bc8e10716548bdef5cb2b983f8e637db9d0e15126b61b484ee2"
+checksum = "4017f8f45139870ca7e672686113917c71c7a6e02d4924eda67186083c03081a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3717,9 +3761,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-core"
-version = "0.1.29"
+version = "0.1.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5aeea4303076558a00714b823f9ad67d58a3bbda1df83d8827d21193156e22f7"
+checksum = "24eb03ba0eab1fd845050058ce5e616558e8f8d8fca633e6b163fe25c797213a"
 dependencies = [
  "once_cell",
  "valuable",
@@ -3824,12 +3868,6 @@ checksum = "b6d3364c5e96cb2ad1603037ab253ddd34d7fb72a58bdddf4b7350760fc69a46"
 dependencies = [
  "rustc-hash",
 ]
-
-[[package]]
-name = "typed-arena"
-version = "2.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0685c84d5d54d1c26f7d3eb96cd41550adb97baed141a761cf335d3d33bcd0ae"
 
 [[package]]
 name = "typenum"

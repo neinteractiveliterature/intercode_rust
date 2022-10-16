@@ -1,19 +1,20 @@
+use bumpalo_herd::Herd;
 use futures::join;
 use intercode_entities::events;
 use intercode_graphql::SchemaData;
 use lazy_liquid_value_view::DropResult;
 use liquid::{ObjectView, ValueView};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Select};
-use typed_arena::Arena;
+use seawater::{preloaders::Preloader, ModelBackedDrop};
 
 use crate::drops::UserConProfileDrop;
 
-use super::{preloaders::Preloader, EventDrop};
+use super::EventDrop;
 
 pub struct EventsCreatedSince {
   schema_data: SchemaData,
   convention_id: i64,
-  arena: Arena<Vec<EventDrop>>,
+  herd: Herd,
 }
 
 impl std::fmt::Debug for EventsCreatedSince {
@@ -30,7 +31,7 @@ impl Clone for EventsCreatedSince {
     Self {
       schema_data: self.schema_data.clone(),
       convention_id: self.convention_id,
-      arena: Default::default(),
+      herd: Default::default(),
     }
   }
 }
@@ -40,7 +41,7 @@ impl EventsCreatedSince {
     EventsCreatedSince {
       schema_data,
       convention_id,
-      arena: Default::default(),
+      herd: Default::default(),
     }
   }
 
@@ -78,7 +79,7 @@ impl EventsCreatedSince {
           .ok()
       },
       async {
-        let result = EventDrop::team_member_user_con_profiles_preloader(self.schema_data.clone())
+        let result = EventDrop::team_member_user_con_profiles_preloader()
           .preload(
             &self.schema_data.db,
             value.iter().collect::<Vec<_>>().as_slice(),
@@ -107,7 +108,8 @@ impl EventsCreatedSince {
       }
     ];
 
-    self.arena.alloc(value)
+    let bump = self.herd.get();
+    bump.alloc(value)
   }
 }
 

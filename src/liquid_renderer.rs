@@ -2,6 +2,7 @@ use async_graphql::async_trait::async_trait;
 use intercode_graphql::{LiquidRenderer, QueryData, SchemaData};
 use intercode_liquid::{build_liquid_parser, cms_parent_partial_source::PreloadPartialsStrategy};
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
+use seawater::ModelBackedDrop;
 use std::fmt::Debug;
 
 use crate::drops::{ConventionDrop, UserConProfileDrop};
@@ -27,13 +28,7 @@ impl IntercodeGlobals {
       .convention
       .as_ref()
       .as_ref()
-      .map(|convention| {
-        ConventionDrop::new(
-          self.schema_data.clone(),
-          convention.clone(),
-          self.schema_data.language_loader.clone(),
-        )
-      })
+      .map(|convention| ConventionDrop::new(convention.clone(), self.schema_data.clone()))
   }
 
   fn user_con_profile(&self) -> Option<UserConProfileDrop> {

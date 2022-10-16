@@ -2,16 +2,15 @@ use std::sync::Arc;
 
 use chrono::Utc;
 use i18n_embed::fluent::FluentLanguageLoader;
-use intercode_entities::{
-  conventions, event_categories, links::ConventionToStaffPositions, MaximumEventSignupsValue,
-};
+use intercode_entities::{conventions, MaximumEventSignupsValue};
 use intercode_graphql::SchemaData;
 use intercode_timespan::ScheduledValue;
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
-use sea_orm::{JsonValue, ModelTrait};
+use sea_orm::JsonValue;
+use seawater::{has_many_related, ModelBackedDrop};
 
 use super::{
-  utils::naive_date_time_to_liquid_date_time, DropError, EventCategoryDrop, EventsCreatedSince,
+  utils::naive_date_time_to_liquid_date_time, EventCategoryDrop, EventsCreatedSince,
   ScheduledValueDrop, StaffPositionDrop, StaffPositionsByName,
 };
 
@@ -23,19 +22,37 @@ pub struct ConventionDrop {
   language_loader: Arc<FluentLanguageLoader>,
 }
 
+impl ModelBackedDrop for ConventionDrop {
+  type Model = conventions::Model;
+
+  fn new(model: Self::Model, schema_data: SchemaData) -> Self {
+    let convention_id = model.id;
+
+    ConventionDrop {
+      schema_data: schema_data.clone(),
+      convention: model,
+      language_loader: schema_data.language_loader.clone(),
+      events_created_since: EventsCreatedSince::new(schema_data, convention_id),
+      drop_cache: Default::default(),
+    }
+  }
+
+  fn get_model(&self) -> &Self::Model {
+    &self.convention
+  }
+}
+
+#[has_many_related(event_categories, EventCategoryDrop)]
+#[has_many_related(staff_positions, StaffPositionDrop)]
 #[liquid_drop_impl]
 impl ConventionDrop {
-  pub fn new(
-    schema_data: SchemaData,
-    convention: conventions::Model,
-    language_loader: Arc<FluentLanguageLoader>,
-  ) -> Self {
+  pub fn new(convention: conventions::Model, schema_data: SchemaData) -> Self {
     let convention_id = convention.id;
 
     ConventionDrop {
       schema_data: schema_data.clone(),
       convention,
-      language_loader,
+      language_loader: schema_data.language_loader.clone(),
       events_created_since: EventsCreatedSince::new(schema_data, convention_id),
     }
   }
@@ -46,21 +63,6 @@ impl ConventionDrop {
 
   fn name(&self) -> Option<&str> {
     self.convention.name.as_deref()
-  }
-
-  async fn event_categories(&self) -> Result<Vec<EventCategoryDrop>, DropError> {
-    let models = self
-      .convention
-      .find_related(event_categories::Entity)
-      .all(self.schema_data.db.as_ref())
-      .await?;
-
-    Ok(
-      models
-        .into_iter()
-        .map(EventCategoryDrop::new)
-        .collect::<Vec<_>>(),
-    )
   }
 
   fn events_created_since(&self) -> &EventsCreatedSince {
@@ -82,26 +84,6 @@ impl ConventionDrop {
         ScheduledValueDrop::new(scheduled_value, self.language_loader.clone())
       })
       .unwrap_or_else(|| ScheduledValueDrop::new(Default::default(), self.language_loader.clone()))
-  }
-
-  async fn staff_positions(&self) -> Result<Vec<StaffPositionDrop>, DropError> {
-    let drops = self
-      .convention
-      .find_linked(ConventionToStaffPositions)
-      .all(self.schema_data.db.as_ref())
-      .await?
-      .into_iter()
-      .filter(|staff_position| staff_position.visible.unwrap_or(false))
-      .map(|staff_position| StaffPositionDrop::new(staff_position, self.schema_data.clone()))
-      .collect::<Vec<_>>();
-
-    StaffPositionDrop::preload_user_con_profiles(
-      self.schema_data.clone(),
-      &drops.iter().collect::<Vec<_>>(),
-    )
-    .await?;
-
-    Ok(drops)
   }
 
   fn show_schedule(&self) -> &str {

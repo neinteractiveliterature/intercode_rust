@@ -1,50 +1,41 @@
 use futures::try_join;
-use intercode_entities::{signups, user_con_profiles, users, UserNames};
-use intercode_graphql::{
-  loaders::{expect::ExpectModels, EntityRelationLoaderResult},
-  SchemaData,
-};
+use intercode_entities::{links::UserConProfileToStaffPositions, user_con_profiles, UserNames};
+use intercode_graphql::SchemaData;
 use intercode_inflector::IntercodeInflector;
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
-use sea_orm::PrimaryKeyToColumn;
+use seawater::{
+  belongs_to_related, has_many_linked, has_many_related, has_one_related, model_backed_drop,
+  preloaders::Preloader, DropError,
+};
 
-use crate::drops::preloaders::Preloader;
+use super::{SignupDrop, StaffPositionDrop, TicketDrop, UserDrop};
 
-use super::{preloaders::EntityRelationPreloader, DropError, SignupDrop, UserDrop};
+model_backed_drop!(UserConProfileDrop, user_con_profiles::Model);
 
-#[liquid_drop_struct]
-pub struct UserConProfileDrop {
-  user_con_profile: user_con_profiles::Model,
-  schema_data: SchemaData,
-}
-
+#[has_many_related(signups, SignupDrop)]
+#[has_many_linked(staff_positions, StaffPositionDrop, UserConProfileToStaffPositions)]
+#[has_one_related(ticket, TicketDrop)]
+#[belongs_to_related(user, UserDrop)]
 #[liquid_drop_impl]
 impl UserConProfileDrop {
-  pub fn new(user_con_profile: user_con_profiles::Model, schema_data: SchemaData) -> Self {
-    UserConProfileDrop {
-      user_con_profile,
-      schema_data,
-    }
-  }
-
   pub fn id(&self) -> i64 {
-    self.user_con_profile.id
+    self.model.id
   }
 
   fn first_name(&self) -> &str {
-    self.user_con_profile.first_name.as_str()
+    self.model.first_name.as_str()
   }
 
   fn ical_secret(&self) -> &str {
-    self.user_con_profile.ical_secret.as_str()
+    self.model.ical_secret.as_str()
   }
 
   fn last_name(&self) -> &str {
-    self.user_con_profile.last_name.as_str()
+    self.model.last_name.as_str()
   }
 
   fn name_without_nickname(&self) -> String {
-    self.user_con_profile.name_without_nickname()
+    self.model.name_without_nickname()
   }
 
   async fn privileges(&self) -> Result<Vec<String>, DropError> {
@@ -63,72 +54,19 @@ impl UserConProfileDrop {
     )
   }
 
-  async fn signups(&self) -> Result<Vec<SignupDrop>, DropError> {
-    UserConProfileDrop::signups_preloader()
-      .load_single(self.schema_data.db.as_ref(), self)
-      .await
-  }
-
-  async fn user(&self) -> Result<UserDrop, DropError> {
-    UserConProfileDrop::users_preloader()
-      .load_single(self.schema_data.db.as_ref(), self)
-      .await
-  }
-
-  pub fn signups_preloader() -> EntityRelationPreloader<
-    user_con_profiles::Entity,
-    signups::Entity,
-    user_con_profiles::PrimaryKey,
-    Self,
-    Vec<SignupDrop>,
-  > {
-    EntityRelationPreloader::new(
-      user_con_profiles::PrimaryKey::Id.into_column(),
-      |drop: &Self| drop.id(),
-      |result| {
-        let signups: &Vec<signups::Model> = result.expect_models()?;
-        Ok(
-          signups
-            .iter()
-            .map(|signup| SignupDrop::new(signup.clone()))
-            .collect(),
-        )
-      },
-      |cache| &cache.signups,
-    )
-  }
-
-  pub fn users_preloader() -> EntityRelationPreloader<
-    user_con_profiles::Entity,
-    users::Entity,
-    user_con_profiles::PrimaryKey,
-    Self,
-    UserDrop,
-  > {
-    EntityRelationPreloader::new(
-      user_con_profiles::PrimaryKey::Id.into_column(),
-      |drop: &Self| drop.id(),
-      |result: Option<&EntityRelationLoaderResult<user_con_profiles::Entity, users::Entity>>| {
-        let user = result.expect_one()?;
-        Ok(UserDrop::new(user.clone()))
-      },
-      |cache| &cache.user,
-    )
-  }
-
   pub async fn preload_users_and_signups(
     schema_data: SchemaData,
     drops: &[&UserConProfileDrop],
   ) -> Result<(), DropError> {
     try_join!(
       async {
-        UserConProfileDrop::users_preloader()
+        Self::user_preloader()
           .preload(schema_data.db.as_ref(), drops)
           .await?;
         Ok::<(), DropError>(())
       },
       async {
-        UserConProfileDrop::signups_preloader()
+        Self::signups_preloader()
           .preload(schema_data.db.as_ref(), drops)
           .await?;
         Ok::<(), DropError>(())

@@ -1,13 +1,24 @@
-use std::{fmt::Debug, sync::Arc};
+use std::{fmt::Debug, fmt::Display, sync::Arc};
 
-use sea_orm::strum::Display;
-
-#[derive(Debug, Display)]
+#[derive(Debug)]
 pub enum DropError {
   GraphQLError(async_graphql::Error),
   LiquidError(liquid::Error),
   DbErr(sea_orm::DbErr),
   ExpectedEntityNotFound(String),
+}
+
+impl Display for DropError {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    match self {
+      Self::GraphQLError(err) => f.write_fmt(format_args!("GraphQLError({})", err.message)),
+      Self::LiquidError(err) => f.write_fmt(format_args!("LiquidError({})", err)),
+      Self::DbErr(err) => f.write_fmt(format_args!("DbErr({})", err)),
+      Self::ExpectedEntityNotFound(err) => {
+        f.write_fmt(format_args!("ExpectedEntityNotFound({})", err))
+      }
+    }
+  }
 }
 
 impl From<async_graphql::Error> for DropError {

@@ -7,8 +7,9 @@ use liquid::{ObjectView, ValueView};
 use once_cell::race::OnceBox;
 use regex::Regex;
 use sea_orm::ModelTrait;
+use seawater::{DropError, ModelBackedDrop};
 
-use super::{DropError, StaffPositionDrop};
+use super::StaffPositionDrop;
 
 fn normalize_staff_position_name(name: &str) -> String {
   Regex::new("\\W")

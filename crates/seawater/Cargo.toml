@@ -1,0 +1,18 @@
+[package]
+edition = "2021"
+name = "seawater"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-graphql = "*"
+async-trait = "*"
+intercode_graphql = {path = "../intercode_graphql"}
+lazy_liquid_value_view = {path = "../lazy_liquid_value_view"}
+liquid = {workspace = true}
+liquid-core = {workspace = true}
+once_cell = "*"
+sea-orm = "*"
+seawater_derive = {path = "../seawater_derive"}
+tracing = "*"

@@ -1,0 +1,13 @@
+[package]
+edition = "2021"
+name = "seawater_derive"
+version = "0.1.0"
+
+[lib]
+proc-macro = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+quote = "1.0.21"
+syn = "1.0.102"

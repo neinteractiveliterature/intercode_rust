@@ -15,7 +15,16 @@ impl UserType {
     &self.model.email
   }
 
-  #[graphql(name = "name")]
+  #[graphql(name = "first_name")]
+  async fn first_name(&self) -> &str {
+    &self.model.first_name
+  }
+
+  #[graphql(name = "last_name")]
+  async fn last_name(&self) -> &str {
+    &self.model.last_name
+  }
+
   async fn name(&self) -> String {
     self.model.name_without_nickname()
   }

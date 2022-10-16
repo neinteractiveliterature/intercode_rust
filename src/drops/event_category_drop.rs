@@ -1,22 +1,16 @@
 use intercode_entities::event_categories;
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
+use seawater::model_backed_drop;
 
-#[liquid_drop_struct]
-pub struct EventCategoryDrop {
-  event_category: event_categories::Model,
-}
+model_backed_drop!(EventCategoryDrop, event_categories::Model);
 
 #[liquid_drop_impl]
 impl EventCategoryDrop {
-  pub fn new(event_category: event_categories::Model) -> Self {
-    EventCategoryDrop { event_category }
-  }
-
   fn id(&self) -> i64 {
-    self.event_category.id
+    self.model.id
   }
 
   fn name(&self) -> &str {
-    &self.event_category.name
+    &self.model.name
   }
 }

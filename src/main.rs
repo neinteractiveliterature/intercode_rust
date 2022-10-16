@@ -3,7 +3,6 @@ extern crate chrono_tz;
 extern crate dotenv;
 extern crate tracing;
 
-// mod csrf;
 mod csrf;
 mod db_sessions;
 mod drops;

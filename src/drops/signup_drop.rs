@@ -1,18 +1,17 @@
 use intercode_entities::signups;
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
+use seawater::model_backed_drop;
 
-#[liquid_drop_struct]
-pub struct SignupDrop {
-  signup: signups::Model,
-}
+model_backed_drop!(SignupDrop, signups::Model);
 
 #[liquid_drop_impl]
 impl SignupDrop {
-  pub fn new(signup: signups::Model) -> Self {
-    SignupDrop { signup }
+  fn id(&self) -> i64 {
+    self.model.id
   }
 
-  fn id(&self) -> i64 {
-    self.signup.id
+  fn team_member(&self) -> bool {
+    // TODO
+    false
   }
 }
