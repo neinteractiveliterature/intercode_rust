@@ -1,29 +1,25 @@
-use std::{fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 
 use chrono::{TimeZone, Utc};
-use i18n_embed::fluent::FluentLanguageLoader;
 use intercode_timespan::{ScheduledValue, TimespanWithValue};
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 use liquid::model::DateTime;
 use serde::Serialize;
 
-use super::{utils::date_time_to_liquid_date_time, TimespanWithValueDrop};
+use super::{utils::date_time_to_liquid_date_time, DropContext, TimespanWithValueDrop};
 
 #[liquid_drop_struct]
 pub struct ScheduledValueDrop<Tz: TimeZone + Debug, V: Serialize + Debug + Clone + Default> {
   scheduled_value: ScheduledValue<Tz, V>,
-  language_loader: Arc<FluentLanguageLoader>,
+  context: DropContext,
 }
 
 #[liquid_drop_impl]
 impl<Tz: TimeZone + Debug, V: Serialize + Debug + Clone + Default> ScheduledValueDrop<Tz, V> {
-  pub fn new(
-    scheduled_value: ScheduledValue<Tz, V>,
-    language_loader: Arc<FluentLanguageLoader>,
-  ) -> Self {
+  pub fn new(scheduled_value: ScheduledValue<Tz, V>, context: DropContext) -> Self {
     Self {
       scheduled_value,
-      language_loader,
+      context,
     }
   }
 
@@ -47,7 +43,7 @@ impl<Tz: TimeZone + Debug, V: Serialize + Debug + Clone + Default> ScheduledValu
     let filtered_timespans: Vec<TimespanWithValueDrop<Tz, Tz, V>> = self
       .scheduled_value
       .into_iter()
-      .map(|twv| TimespanWithValueDrop::new(twv, self.language_loader.clone()))
+      .map(|twv| TimespanWithValueDrop::new(twv, self.context.clone()))
       .filter_map(|twv_drop| twv_drop.into())
       .collect();
 
@@ -60,7 +56,7 @@ impl<Tz: TimeZone + Debug, V: Serialize + Debug + Clone + Default> ScheduledValu
             value: liquid::model::to_value(&twv_drop.timespan_with_value.value)
               .unwrap_or(liquid::model::Value::Nil),
           },
-          self.language_loader.clone(),
+          self.context.clone(),
         )
       })
       .collect()

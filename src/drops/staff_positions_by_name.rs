@@ -1,15 +1,13 @@
 use std::collections::HashMap;
 
+use super::{DropContext, StaffPositionDrop};
 use intercode_entities::{conventions, links::ConventionToStaffPositions};
-use intercode_graphql::SchemaData;
 use lazy_liquid_value_view::DropResult;
 use liquid::{ObjectView, ValueView};
 use once_cell::race::OnceBox;
 use regex::Regex;
 use sea_orm::ModelTrait;
-use seawater::{DropError, ModelBackedDrop};
-
-use super::StaffPositionDrop;
+use seawater::{Context, DropError, ModelBackedDrop};
 
 fn normalize_staff_position_name(name: &str) -> String {
   Regex::new("\\W")
@@ -20,15 +18,15 @@ fn normalize_staff_position_name(name: &str) -> String {
 
 #[derive(Debug)]
 pub struct StaffPositionsByName {
-  schema_data: SchemaData,
+  context: DropContext,
   convention: conventions::Model,
   staff_positions: OnceBox<HashMap<String, StaffPositionDrop>>,
 }
 
 impl StaffPositionsByName {
-  pub fn new(schema_data: SchemaData, convention: conventions::Model) -> Self {
+  pub fn new(convention: conventions::Model, context: DropContext) -> Self {
     StaffPositionsByName {
-      schema_data,
+      context,
       convention,
       staff_positions: Default::default(),
     }
@@ -39,13 +37,13 @@ impl StaffPositionsByName {
       self
         .convention
         .find_linked(ConventionToStaffPositions)
-        .all(self.schema_data.db.as_ref())
+        .all(self.context.db())
         .await?
         .into_iter()
         .map(|model| {
           (
             normalize_staff_position_name(model.name.as_deref().unwrap_or("")),
-            StaffPositionDrop::new(model, self.schema_data.clone()),
+            StaffPositionDrop::new(model, self.context.clone()),
           )
         })
         .collect(),

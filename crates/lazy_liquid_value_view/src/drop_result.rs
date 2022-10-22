@@ -202,6 +202,14 @@ impl From<&serde_json::Value> for DropResult<liquid::model::Value> {
   }
 }
 
+impl<V: liquid::ValueView> From<Arc<V>> for DropResult<V> {
+  fn from(arc: Arc<V>) -> Self {
+    DropResult {
+      value: Some(ArcValueView(arc)),
+    }
+  }
+}
+
 impl<V: liquid::ValueView, T: Into<DropResult<V>>> From<Option<T>> for DropResult<V> {
   fn from(option: Option<T>) -> Self {
     option.map(|value| value.into()).unwrap_or_default()

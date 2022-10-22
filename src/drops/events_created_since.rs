@@ -1,18 +1,17 @@
 use bumpalo_herd::Herd;
 use futures::join;
 use intercode_entities::events;
-use intercode_graphql::SchemaData;
 use lazy_liquid_value_view::DropResult;
 use liquid::{ObjectView, ValueView};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Select};
-use seawater::{preloaders::Preloader, ModelBackedDrop};
+use seawater::{preloaders::Preloader, Context, ModelBackedDrop};
 
 use crate::drops::UserConProfileDrop;
 
-use super::EventDrop;
+use super::{drop_context::DropContext, EventDrop};
 
 pub struct EventsCreatedSince {
-  schema_data: SchemaData,
+  context: DropContext,
   convention_id: i64,
   herd: Herd,
 }
@@ -20,7 +19,7 @@ pub struct EventsCreatedSince {
 impl std::fmt::Debug for EventsCreatedSince {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("EventsCreatedSince")
-      .field("schema_data", &self.schema_data)
+      .field("context", &self.context)
       .field("convention_id", &self.convention_id)
       .finish_non_exhaustive()
   }
@@ -29,7 +28,7 @@ impl std::fmt::Debug for EventsCreatedSince {
 impl Clone for EventsCreatedSince {
   fn clone(&self) -> Self {
     Self {
-      schema_data: self.schema_data.clone(),
+      context: self.context.clone(),
       convention_id: self.convention_id,
       herd: Default::default(),
     }
@@ -37,9 +36,9 @@ impl Clone for EventsCreatedSince {
 }
 
 impl EventsCreatedSince {
-  pub fn new(schema_data: SchemaData, convention_id: i64) -> Self {
+  pub fn new(convention_id: i64, context: DropContext) -> Self {
     EventsCreatedSince {
-      schema_data,
+      context,
       convention_id,
       herd: Default::default(),
     }
@@ -61,52 +60,58 @@ impl EventsCreatedSince {
   async fn query_and_store(&self, start_date: Option<liquid::model::DateTime>) -> &dyn ValueView {
     let value = self
       .select_for_start_date(start_date)
-      .all(self.schema_data.db.as_ref())
+      .all(self.context.db())
       .await
       .unwrap_or_else(|_| vec![])
       .into_iter()
-      .map(|event| EventDrop::new(event, self.schema_data.clone()))
+      .map(|event| EventDrop::new(event, self.context.clone()))
       .collect::<Vec<_>>();
 
-    join![
-      async {
-        EventDrop::runs_preloader()
-          .preload(
-            &self.schema_data.db,
-            value.iter().collect::<Vec<_>>().as_slice(),
-          )
-          .await
-          .ok()
-      },
-      async {
-        let result = EventDrop::team_member_user_con_profiles_preloader()
-          .preload(
-            &self.schema_data.db,
-            value.iter().collect::<Vec<_>>().as_slice(),
-          )
-          .await;
+    let runs_fut = async {
+      EventDrop::runs_preloader(self.context.clone())
+        .preload(
+          self.context.db(),
+          value.iter().collect::<Vec<_>>().as_slice(),
+        )
+        .await
+        .ok()
+    };
 
-        if let Ok(result) = result {
-          let values = result.all_values_flat_unwrapped();
+    let events_fut = async {
+      let result = EventDrop::team_member_user_con_profiles_preloader(self.context.clone())
+        .preload(
+          self.context.db(),
+          value.iter().collect::<Vec<_>>().as_slice(),
+        )
+        .await;
 
-          UserConProfileDrop::preload_users_and_signups(
-            self.schema_data.clone(),
-            values.iter().collect::<Vec<_>>().as_slice(),
-          )
-          .await
-          .ok();
-        }
-      },
-      async {
-        EventDrop::event_category_preloader()
-          .preload(
-            &self.schema_data.db,
-            value.iter().collect::<Vec<_>>().as_slice(),
-          )
-          .await
-          .ok()
+      if let Ok(result) = result {
+        let values = result.all_values_flat_unwrapped();
+
+        UserConProfileDrop::preload_users_and_signups(
+          &self.context,
+          values
+            .iter()
+            .map(|value| value.as_ref())
+            .collect::<Vec<_>>()
+            .as_slice(),
+        )
+        .await
+        .ok();
       }
-    ];
+    };
+
+    let event_categories_fut = async {
+      EventDrop::event_category_preloader(self.context.clone())
+        .preload(
+          self.context.db(),
+          value.iter().collect::<Vec<_>>().as_slice(),
+        )
+        .await
+        .ok()
+    };
+
+    join![runs_fut, events_fut, event_categories_fut];
 
     let bump = self.herd.get();
     bump.alloc(value)

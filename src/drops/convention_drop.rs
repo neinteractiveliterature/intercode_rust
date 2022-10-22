@@ -1,114 +1,73 @@
-use std::sync::Arc;
-
 use chrono::Utc;
-use i18n_embed::fluent::FluentLanguageLoader;
 use intercode_entities::{conventions, MaximumEventSignupsValue};
-use intercode_graphql::SchemaData;
 use intercode_timespan::ScheduledValue;
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 use sea_orm::JsonValue;
-use seawater::{has_many_related, ModelBackedDrop};
+use seawater::{has_many_related, model_backed_drop};
 
 use super::{
-  utils::naive_date_time_to_liquid_date_time, EventCategoryDrop, EventsCreatedSince,
-  ScheduledValueDrop, StaffPositionDrop, StaffPositionsByName,
+  drop_context::DropContext, utils::naive_date_time_to_liquid_date_time, EventCategoryDrop,
+  EventsCreatedSince, ScheduledValueDrop, StaffPositionDrop, StaffPositionsByName,
 };
 
-#[liquid_drop_struct]
-pub struct ConventionDrop {
-  schema_data: SchemaData,
-  convention: conventions::Model,
-  events_created_since: EventsCreatedSince,
-  language_loader: Arc<FluentLanguageLoader>,
-}
-
-impl ModelBackedDrop for ConventionDrop {
-  type Model = conventions::Model;
-
-  fn new(model: Self::Model, schema_data: SchemaData) -> Self {
-    let convention_id = model.id;
-
-    ConventionDrop {
-      schema_data: schema_data.clone(),
-      convention: model,
-      language_loader: schema_data.language_loader.clone(),
-      events_created_since: EventsCreatedSince::new(schema_data, convention_id),
-      drop_cache: Default::default(),
-    }
-  }
-
-  fn get_model(&self) -> &Self::Model {
-    &self.convention
-  }
-}
+model_backed_drop!(ConventionDrop, conventions::Model, DropContext);
 
 #[has_many_related(event_categories, EventCategoryDrop)]
 #[has_many_related(staff_positions, StaffPositionDrop)]
-#[liquid_drop_impl]
+#[liquid_drop_impl(i64)]
 impl ConventionDrop {
-  pub fn new(convention: conventions::Model, schema_data: SchemaData) -> Self {
-    let convention_id = convention.id;
-
-    ConventionDrop {
-      schema_data: schema_data.clone(),
-      convention,
-      language_loader: schema_data.language_loader.clone(),
-      events_created_since: EventsCreatedSince::new(schema_data, convention_id),
-    }
-  }
-
   fn id(&self) -> i64 {
-    self.convention.id
+    self.model.id
   }
 
   fn name(&self) -> Option<&str> {
-    self.convention.name.as_deref()
+    self.model.name.as_deref()
   }
 
-  fn events_created_since(&self) -> &EventsCreatedSince {
-    &self.events_created_since
+  fn events_created_since(&self) -> EventsCreatedSince {
+    EventsCreatedSince::new(self.model.id, self.context.clone())
   }
 
   fn location(&self) -> Option<&JsonValue> {
-    self.convention.location.as_ref()
+    self.model.location.as_ref()
   }
 
   fn maximum_event_signups(&self) -> ScheduledValueDrop<Utc, MaximumEventSignupsValue> {
     self
-      .convention
+      .model
       .maximum_event_signups
       .as_ref()
       .map(|maximum_event_signups| {
         let scheduled_value: ScheduledValue<Utc, MaximumEventSignupsValue> =
           serde_json::from_value(maximum_event_signups.clone()).unwrap_or_default();
-        ScheduledValueDrop::new(scheduled_value, self.language_loader.clone())
+        ScheduledValueDrop::new(scheduled_value, self.context.clone())
       })
-      .unwrap_or_else(|| ScheduledValueDrop::new(Default::default(), self.language_loader.clone()))
+      .unwrap_or_else(|| ScheduledValueDrop::new(Default::default(), self.context.clone()))
   }
 
   fn show_schedule(&self) -> &str {
-    &self.convention.show_schedule
+    &self.model.show_schedule
   }
 
   fn staff_positions_by_name(&self) -> StaffPositionsByName {
-    StaffPositionsByName::new(self.schema_data.clone(), self.convention.clone())
+    StaffPositionsByName::new(self.model.clone(), self.context.clone())
   }
 
   fn starts_at(&self) -> Option<liquid::model::DateTime> {
     self
-      .convention
+      .model
       .starts_at
       .and_then(naive_date_time_to_liquid_date_time)
   }
 
   fn ends_at(&self) -> Option<liquid::model::DateTime> {
     self
-      .convention
+      .model
       .ends_at
       .and_then(naive_date_time_to_liquid_date_time)
   }
 
   fn ticket_name(&self) -> &str {
-    self.convention.ticket_name.as_str()
+    self.model.ticket_name.as_str()
   }
 }

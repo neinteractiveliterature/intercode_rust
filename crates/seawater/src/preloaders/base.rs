@@ -1,19 +1,19 @@
 use std::{
-  collections::HashMap,
+  collections::{hash_map::IterMut, HashMap},
   error::Error,
   fmt::{Debug, Display},
   hash::Hash,
-  pin::Pin,
+  sync::Arc,
 };
 
 use async_trait::async_trait;
-use lazy_liquid_value_view::{DropResult, LiquidDrop};
+use lazy_liquid_value_view::{DropResult, LiquidDrop, LiquidDropWithID};
 use liquid::ValueView;
 use once_cell::race::OnceBox;
 use sea_orm::DatabaseConnection;
 use tracing::warn;
 
-use crate::DropError;
+use crate::{DropError, NormalizedDropCache};
 
 #[derive(Debug, Clone)]
 pub struct IncompleteBuilderError;
@@ -49,6 +49,10 @@ impl<Id: Eq + Hash, Value: ValueView + Clone> PreloaderResult<Id, Value> {
     self.values_by_id.values().cloned().collect::<Vec<_>>()
   }
 
+  pub fn iter_mut(&mut self) -> IterMut<Id, DropResult<Value>> {
+    self.values_by_id.iter_mut()
+  }
+
   #[allow(dead_code)]
   pub fn all_values_unwrapped(&self) -> Vec<Value> {
     self
@@ -56,6 +60,10 @@ impl<Id: Eq + Hash, Value: ValueView + Clone> PreloaderResult<Id, Value> {
       .into_iter()
       .map(|value| value.get_inner().unwrap().clone())
       .collect::<Vec<_>>()
+  }
+
+  pub fn extend(&mut self, items: &mut dyn Iterator<Item = (Id, DropResult<Value>)>) {
+    self.values_by_id.extend(items)
   }
 }
 
@@ -86,14 +94,27 @@ where
 
 impl<'a, ID, Drop: 'a, T> GetIdFn<'a, ID, Drop> for T where T: Fn(&'a Drop) -> ID + Send + Sync {}
 
-pub trait GetValueFn<'a, LoaderResult: 'a, Value, Drop: 'a>
+pub trait LoaderResultToDropsFn<'a, LoaderResult: 'a, FromDrop: 'a, ToDrop>
 where
-  Self: Fn(Option<&'a LoaderResult>, &'a Drop) -> Result<Option<Value>, DropError> + Send + Sync,
+  Self: Fn(Option<&'a LoaderResult>, &'a FromDrop) -> Result<Vec<ToDrop>, DropError> + Send + Sync,
 {
 }
 
-impl<'a, LoaderResult: 'a, Value, Drop: 'a, T> GetValueFn<'a, LoaderResult, Value, Drop> for T where
-  T: Fn(Option<&'a LoaderResult>, &'a Drop) -> Result<Option<Value>, DropError> + Send + Sync
+impl<'a, LoaderResult: 'a, FromDrop: 'a, ToDrop, T>
+  LoaderResultToDropsFn<'a, LoaderResult, FromDrop, ToDrop> for T
+where
+  T: Fn(Option<&'a LoaderResult>, &'a FromDrop) -> Result<Vec<ToDrop>, DropError> + Send + Sync,
+{
+}
+
+pub trait DropsToValueFn<Drop, Value: ValueView>
+where
+  Self: Fn(Vec<Arc<Drop>>) -> Result<DropResult<Value>, DropError> + Send + Sync,
+{
+}
+
+impl<Drop, Value: ValueView, T> DropsToValueFn<Drop, Value> for T where
+  T: Fn(Vec<Arc<Drop>>) -> Result<DropResult<Value>, DropError> + Send + Sync
 {
 }
 
@@ -134,18 +155,122 @@ pub trait PreloaderBuilder {
 }
 
 #[async_trait]
-pub trait Preloader<Drop: Send + Sync + Debug, Id: Eq + Hash, V: ValueView + Clone> {
-  fn get_id(&self, drop: &Drop) -> Id;
+pub trait Preloader<
+  FromDrop: Send + Sync + LiquidDrop + Clone + Into<DropResult<FromDrop>>,
+  ToDrop: Send + Sync + LiquidDrop + LiquidDropWithID + 'static,
+  Id: Eq + Hash + Copy + Send + Sync,
+  V: ValueView + Clone + Send + Sync,
+> where
+  i64: From<<ToDrop as LiquidDropWithID>::ID>,
+{
+  type LoaderResult;
+
+  fn get_id(&self, drop: &FromDrop) -> Id;
+  fn loader_result_to_drops(
+    &self,
+    result: Option<&Self::LoaderResult>,
+    drop: &FromDrop,
+  ) -> Result<Vec<ToDrop>, DropError>;
+  fn get_normalized_drop_cache(&self) -> Option<&NormalizedDropCache<i64>>;
+  fn drops_to_value(&self, drops: Vec<Arc<ToDrop>>) -> Result<DropResult<V>, DropError>;
+  fn get_once_cell<'a>(&'a self, cache: &'a FromDrop::Cache) -> &'a OnceBox<DropResult<V>>;
+  fn get_inverse_once_cell<'a>(
+    &'a self,
+    drop: &'a ToDrop,
+  ) -> Option<&'a OnceBox<DropResult<FromDrop>>>;
+  async fn load_model_lists(
+    &self,
+    db: &DatabaseConnection,
+    ids: &[Id],
+  ) -> Result<HashMap<Id, Self::LoaderResult>, DropError>;
+
   async fn preload(
     &self,
     db: &DatabaseConnection,
-    drops: &[&Drop],
-  ) -> Result<PreloaderResult<Id, V>, DropError>;
+    drops: &[&FromDrop],
+  ) -> Result<PreloaderResult<Id, V>, DropError> {
+    let drops_by_id = drops
+      .iter()
+      .map(|drop| (self.get_id(drop), *drop))
+      .collect::<HashMap<_, _>>();
+
+    let model_lists = self
+      .load_model_lists(
+        db,
+        drops_by_id.keys().copied().collect::<Vec<_>>().as_slice(),
+      )
+      .await?;
+
+    let drop_lists = drops_by_id
+      .iter()
+      .map(|(id, drop)| {
+        let result = model_lists.get(id);
+        let converted_drops = self.loader_result_to_drops(result, drop)?;
+        let normalized_drops: Vec<Arc<ToDrop>> =
+          if let Some(normalized_drop_cache) = self.get_normalized_drop_cache() {
+            converted_drops
+              .into_iter()
+              .map(|drop| {
+                let cached = normalized_drop_cache.get(i64::from(drop.id()))?;
+                if let Some(cached) = cached {
+                  Ok::<Arc<ToDrop>, DropError>(cached)
+                } else {
+                  Ok(normalized_drop_cache.put(drop)?)
+                }
+              })
+              .collect()
+          } else {
+            Ok(converted_drops.into_iter().map(Arc::new).collect())
+          }?;
+        Ok((*id, normalized_drops))
+      })
+      .collect::<Result<HashMap<_, _>, DropError>>()?;
+
+    for (id, drops) in drop_lists.iter() {
+      let from_drop = drops_by_id.get(id).unwrap();
+      self.populate_inverse_caches(*from_drop, drops)
+    }
+
+    let preloader_result = self.populate_db_preloader_results(drops_by_id, drop_lists)?;
+
+    Ok(preloader_result)
+  }
+
+  fn populate_db_preloader_results(
+    &self,
+    drops_by_id: HashMap<Id, &FromDrop>,
+    drop_lists: HashMap<Id, Vec<Arc<ToDrop>>>,
+  ) -> Result<PreloaderResult<Id, V>, DropError> {
+    let mut values_by_id: HashMap<Id, DropResult<V>> = HashMap::with_capacity(drop_lists.len());
+
+    for (id, drop_list) in drop_lists {
+      let value = (self.drops_to_value(drop_list) as Result<DropResult<V>, DropError>)?;
+
+      values_by_id.insert(id, value.clone());
+
+      let drop = drops_by_id.get(&id).unwrap();
+      let once_cell = self.get_once_cell(drop.get_cache());
+      once_cell.get_or_init(|| Box::new(value));
+    }
+
+    Ok(PreloaderResult { values_by_id })
+  }
+
+  fn populate_inverse_caches(&self, from_drop: &FromDrop, drops: &Vec<Arc<ToDrop>>) {
+    let from_drop_result: DropResult<FromDrop> = from_drop.into();
+
+    for to_drop in drops {
+      let inverse_once_cell = self.get_inverse_once_cell(to_drop.as_ref());
+      if let Some(inverse_once_cell) = inverse_once_cell {
+        inverse_once_cell.get_or_init(|| Box::new(from_drop_result.clone()));
+      }
+    }
+  }
 
   async fn load_single(
     &self,
     db: &DatabaseConnection,
-    drop: &Drop,
+    drop: &FromDrop,
   ) -> Result<Option<V>, DropError> {
     warn!(
       "N+1 query detected for {:?} -> {}",
@@ -163,59 +288,10 @@ pub trait Preloader<Drop: Send + Sync + Debug, Id: Eq + Hash, V: ValueView + Clo
     )
   }
 
-  async fn expect_single(&self, db: &DatabaseConnection, drop: &Drop) -> Result<V, DropError> {
+  async fn expect_single(&self, db: &DatabaseConnection, drop: &FromDrop) -> Result<V, DropError> {
     self
       .load_single(db, drop)
       .await?
       .ok_or_else(|| DropError::ExpectedEntityNotFound(std::any::type_name::<V>().to_string()))
-  }
-}
-
-pub async fn populate_db_preloader_results<
-  ID: Eq + std::hash::Hash + Clone + From<i64> + Send + Sync,
-  Drop: LiquidDrop + Send + Sync,
-  Value: ValueView + Into<DropResult<Value>> + Clone + Sync + Send,
-  LoaderResult,
->(
-  drops: &[&Drop],
-  model_lists: HashMap<ID, LoaderResult>,
-  get_id: &Pin<Box<dyn for<'a> GetIdFn<'a, ID, Drop>>>,
-  get_value: &Pin<Box<dyn for<'a> GetValueFn<'a, LoaderResult, Value, Drop>>>,
-  get_once_cell: &Pin<Box<dyn for<'a> GetOnceCellFn<'a, Drop, Value>>>,
-) -> Result<PreloaderResult<ID, Value>, DropError> {
-  let mut values_by_id: HashMap<ID, DropResult<Value>> = HashMap::with_capacity(model_lists.len());
-
-  for drop in drops {
-    let id = get_id(drop);
-    let result = model_lists.get(&id);
-    let value = (get_value)(result, *drop)?;
-    let drop_result: DropResult<Value> = value.into();
-
-    values_by_id.insert(id, drop_result.clone());
-
-    let once_cell = (get_once_cell)(drop.get_cache());
-    once_cell.get_or_init(|| Box::new(drop_result));
-  }
-
-  Ok(PreloaderResult { values_by_id })
-}
-
-pub fn populate_inverse_caches<
-  ID: Eq + std::hash::Hash + Clone + From<i64>,
-  FromDrop: LiquidDrop + Clone,
-  Value: ValueView + Into<DropResult<Value>> + Clone,
->(
-  from_drop: &FromDrop,
-  preloader_result: &PreloaderResult<ID, Value>,
-  get_inverse_once_cell: &Pin<Box<dyn for<'a> GetInverseOnceCellFn<'a, FromDrop, Value>>>,
-) {
-  let from_drop_result: DropResult<FromDrop> = from_drop.into();
-
-  for to_drop_result in preloader_result.values_by_id.values() {
-    let to_drop = to_drop_result.get_inner();
-    if let Some(to_drop) = to_drop {
-      let inverse_once_cell = (get_inverse_once_cell)(to_drop);
-      inverse_once_cell.get_or_init(|| Box::new(from_drop_result.clone()));
-    }
   }
 }

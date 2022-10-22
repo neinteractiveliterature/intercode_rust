@@ -1,14 +1,17 @@
 use quote::{quote, ToTokens};
 use syn::{
   parse::{Parse, Parser},
-  FieldValue, ImplItem,
+  FieldValue, ImplItem, Path,
 };
 
 use crate::helpers::build_generic_args;
 
 use super::LiquidDropImpl;
 
-pub fn implement_drop(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTokens> {
+pub fn implement_drop(
+  liquid_drop_impl: &LiquidDropImpl,
+  id_type: Option<&Path>,
+) -> Box<dyn ToTokens> {
   let mut constructors = liquid_drop_impl.constructors.clone();
   let generics = &liquid_drop_impl.generics;
   let methods = &liquid_drop_impl.methods;
@@ -29,10 +32,41 @@ pub fn implement_drop(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTokens> {
     )
   });
 
+  let id_methods = &liquid_drop_impl
+    .id_methods
+    .iter()
+    .map(|id_method| {
+      let getter = id_method.getter();
+      let caching_getter = id_method.caching_getter();
+
+      (getter, caching_getter)
+    })
+    .collect::<Vec<_>>();
+
+  let drop_with_id_impl = id_type.map(|id_type| {
+    let id_method_getters = id_methods
+      .iter()
+      .map(|(getter, _caching_getter)| getter)
+      .collect::<Vec<_>>();
+    quote!(
+      impl #generics ::lazy_liquid_value_view::LiquidDropWithID for #self_ty {
+        type ID = #id_type;
+
+        #(#id_method_getters)*
+      }
+    )
+  });
+
+  let id_caching_getters = id_methods
+    .iter()
+    .map(|(_getter, caching_getter)| caching_getter)
+    .collect::<Vec<_>>();
+
   Box::new(quote!(
     impl #generics #self_ty {
       #(#constructors)*
       #(#other_items)*
+      #(#id_caching_getters)*
       #(#method_getters)*
 
       pub fn extend(&self, extensions: liquid::model::Object) -> ::lazy_liquid_value_view::ExtendedDropResult<#self_ty> {
@@ -50,6 +84,8 @@ pub fn implement_drop(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTokens> {
         &self.drop_cache
       }
     }
+
+    #drop_with_id_impl
   ))
 }
 

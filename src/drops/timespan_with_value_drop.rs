@@ -1,13 +1,12 @@
-use std::{fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 
 use chrono::TimeZone;
-use i18n_embed::fluent::FluentLanguageLoader;
 use intercode_timespan::TimespanWithValue;
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 use liquid::model::DateTime;
 use serde::Serialize;
 
-use super::utils::date_time_to_liquid_date_time;
+use super::{utils::date_time_to_liquid_date_time, DropContext};
 
 #[liquid_drop_struct]
 pub struct TimespanWithValueDrop<
@@ -16,7 +15,7 @@ pub struct TimespanWithValueDrop<
   V: Clone + Serialize + Debug,
 > {
   pub timespan_with_value: TimespanWithValue<StartTz, FinishTz, V>,
-  language_loader: Arc<FluentLanguageLoader>,
+  context: DropContext,
 }
 
 #[liquid_drop_impl]
@@ -25,11 +24,11 @@ impl<StartTz: TimeZone + Debug, FinishTz: TimeZone + Debug, V: Clone + Serialize
 {
   pub fn new(
     timespan_with_value: TimespanWithValue<StartTz, FinishTz, V>,
-    language_loader: Arc<FluentLanguageLoader>,
+    context: DropContext,
   ) -> Self {
     TimespanWithValueDrop {
       timespan_with_value,
-      language_loader,
+      context,
     }
   }
 
@@ -87,7 +86,7 @@ impl<StartTz: TimeZone + Debug, FinishTz: TimeZone + Debug, V: Clone + Serialize
           value,
           timespan: drop.timespan_with_value.timespan,
         },
-        drop.language_loader.clone(),
+        drop.context.clone(),
       )),
       None => None,
     }

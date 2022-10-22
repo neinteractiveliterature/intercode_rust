@@ -2,11 +2,13 @@ use intercode_entities::users;
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 use seawater::model_backed_drop;
 
-model_backed_drop!(UserDrop, users::Model);
+use super::drop_context::DropContext;
 
-#[liquid_drop_impl]
+model_backed_drop!(UserDrop, users::Model, DropContext);
+
+#[liquid_drop_impl(i64)]
 impl UserDrop {
-  pub fn id(&self) -> i64 {
+  fn id(&self) -> i64 {
     self.model.id
   }
 

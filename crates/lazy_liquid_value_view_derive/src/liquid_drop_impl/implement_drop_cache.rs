@@ -4,7 +4,11 @@ use syn::{Ident, PathArguments};
 use super::LiquidDropImpl;
 
 pub fn implement_drop_cache(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTokens> {
-  let methods = &liquid_drop_impl.methods;
+  let methods = liquid_drop_impl
+    .methods
+    .iter()
+    .chain(liquid_drop_impl.id_methods.iter())
+    .collect::<Vec<_>>();
   let self_type_arguments = &liquid_drop_impl.self_type_arguments;
   let cache_struct_ident = &liquid_drop_impl.cache_struct_ident;
   let generics = &liquid_drop_impl.generics;

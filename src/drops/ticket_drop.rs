@@ -2,14 +2,14 @@ use intercode_entities::tickets;
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 use seawater::{belongs_to_related, model_backed_drop, DropError};
 
-use super::TicketTypeDrop;
+use super::{drop_context::DropContext, TicketTypeDrop};
 
-model_backed_drop!(TicketDrop, tickets::Model);
+model_backed_drop!(TicketDrop, tickets::Model, DropContext);
 
 #[belongs_to_related(ticket_type, TicketTypeDrop)]
-#[liquid_drop_impl]
+#[liquid_drop_impl(i64)]
 impl TicketDrop {
-  pub fn id(&self) -> i64 {
+  fn id(&self) -> i64 {
     self.model.id
   }
 

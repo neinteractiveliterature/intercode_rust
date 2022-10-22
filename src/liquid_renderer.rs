@@ -5,12 +5,13 @@ use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 use seawater::ModelBackedDrop;
 use std::fmt::Debug;
 
-use crate::drops::{ConventionDrop, UserConProfileDrop};
+use crate::drops::{ConventionDrop, DropContext, UserConProfileDrop};
 
 #[liquid_drop_struct]
 struct IntercodeGlobals {
   query_data: QueryData,
   schema_data: SchemaData,
+  drop_context: DropContext,
 }
 
 #[liquid_drop_impl]
@@ -18,7 +19,8 @@ impl IntercodeGlobals {
   pub fn new(query_data: QueryData, schema_data: SchemaData) -> Self {
     IntercodeGlobals {
       query_data,
-      schema_data,
+      schema_data: schema_data.clone(),
+      drop_context: DropContext::new(schema_data),
     }
   }
 
@@ -28,7 +30,7 @@ impl IntercodeGlobals {
       .convention
       .as_ref()
       .as_ref()
-      .map(|convention| ConventionDrop::new(convention.clone(), self.schema_data.clone()))
+      .map(|convention| ConventionDrop::new(convention.clone(), self.drop_context.clone()))
   }
 
   fn user_con_profile(&self) -> Option<UserConProfileDrop> {
@@ -38,7 +40,7 @@ impl IntercodeGlobals {
       .as_ref()
       .as_ref()
       .map(|user_con_profile| {
-        UserConProfileDrop::new(user_con_profile.clone(), self.schema_data.clone())
+        UserConProfileDrop::new(user_con_profile.clone(), self.drop_context.clone())
       })
   }
 }

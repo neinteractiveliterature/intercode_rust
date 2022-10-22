@@ -4,10 +4,11 @@ use liquid::model::DateTime;
 use seawater::{belongs_to_related, has_many_linked, has_many_related, model_backed_drop};
 
 use super::{
-  utils::naive_date_time_to_liquid_date_time, EventCategoryDrop, RunDrop, UserConProfileDrop,
+  drop_context::DropContext, utils::naive_date_time_to_liquid_date_time, EventCategoryDrop,
+  RunDrop, UserConProfileDrop,
 };
 
-model_backed_drop!(EventDrop, events::Model);
+model_backed_drop!(EventDrop, events::Model, DropContext);
 
 #[belongs_to_related(event_category, EventCategoryDrop)]
 #[has_many_related(runs, RunDrop)]
@@ -16,7 +17,7 @@ model_backed_drop!(EventDrop, events::Model);
   UserConProfileDrop,
   EventToTeamMemberUserConProfiles
 )]
-#[liquid_drop_impl]
+#[liquid_drop_impl(i64)]
 impl EventDrop {
   fn id(&self) -> i64 {
     self.model.id

@@ -2,14 +2,14 @@ use intercode_entities::{links::StaffPositionToUserConProfiles, staff_positions}
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 use seawater::{has_many_linked, model_backed_drop};
 
-use super::UserConProfileDrop;
+use super::{drop_context::DropContext, UserConProfileDrop};
 
-model_backed_drop!(StaffPositionDrop, staff_positions::Model);
+model_backed_drop!(StaffPositionDrop, staff_positions::Model, DropContext);
 
 #[has_many_linked(user_con_profiles, UserConProfileDrop, StaffPositionToUserConProfiles)]
-#[liquid_drop_impl]
+#[liquid_drop_impl(i64)]
 impl StaffPositionDrop {
-  pub fn id(&self) -> i64 {
+  fn id(&self) -> i64 {
     self.model.id
   }
 

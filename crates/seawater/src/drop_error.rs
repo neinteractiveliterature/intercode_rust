@@ -1,4 +1,8 @@
-use std::{fmt::Debug, fmt::Display, sync::Arc};
+use std::{
+  fmt::Debug,
+  fmt::Display,
+  sync::{Arc, PoisonError},
+};
 
 #[derive(Debug)]
 pub enum DropError {
@@ -6,6 +10,7 @@ pub enum DropError {
   LiquidError(liquid::Error),
   DbErr(sea_orm::DbErr),
   ExpectedEntityNotFound(String),
+  PoisonError(String),
 }
 
 impl Display for DropError {
@@ -17,6 +22,7 @@ impl Display for DropError {
       Self::ExpectedEntityNotFound(err) => {
         f.write_fmt(format_args!("ExpectedEntityNotFound({})", err))
       }
+      Self::PoisonError(err) => f.write_fmt(format_args!("PoisonError({})", err)),
     }
   }
 }
@@ -42,5 +48,11 @@ impl From<sea_orm::DbErr> for DropError {
 impl From<Arc<sea_orm::DbErr>> for DropError {
   fn from(err: Arc<sea_orm::DbErr>) -> Self {
     DropError::DbErr(err.as_ref().clone())
+  }
+}
+
+impl<Guard> From<PoisonError<Guard>> for DropError {
+  fn from(err: PoisonError<Guard>) -> Self {
+    DropError::PoisonError(err.to_string())
   }
 }

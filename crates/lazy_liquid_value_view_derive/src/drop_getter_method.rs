@@ -73,11 +73,13 @@ impl DropGetterMethod {
     match self {
       DropGetterMethod::Uncached(_) => Box::new(quote!(
         #caching_getter_sig {
+          use ::lazy_liquid_value_view::LiquidDropWithID;
           self.#ident().await.into()
         }
       )),
       DropGetterMethod::Async(_) => Box::new(quote!(
         #caching_getter_sig {
+          use ::lazy_liquid_value_view::LiquidDropWithID;
           self
             .drop_cache
             .#ident.
@@ -95,6 +97,7 @@ impl DropGetterMethod {
       )),
       _ => Box::new(quote!(
         #caching_getter_sig {
+          use ::lazy_liquid_value_view::LiquidDropWithID;
           self
             .drop_cache
             .#ident.

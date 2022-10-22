@@ -3,11 +3,11 @@ use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 use liquid::model::DateTime;
 use seawater::model_backed_drop;
 
-use super::utils::naive_date_time_to_liquid_date_time;
+use super::{drop_context::DropContext, utils::naive_date_time_to_liquid_date_time};
 
-model_backed_drop!(RunDrop, runs::Model);
+model_backed_drop!(RunDrop, runs::Model, DropContext);
 
-#[liquid_drop_impl]
+#[liquid_drop_impl(i64)]
 impl RunDrop {
   fn id(&self) -> i64 {
     self.model.id

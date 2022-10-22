@@ -1,4 +1,5 @@
 mod convention_drop;
+mod drop_context;
 mod event_category_drop;
 mod event_drop;
 mod events_created_since;
@@ -15,6 +16,7 @@ mod user_drop;
 mod utils;
 
 pub use convention_drop::ConventionDrop;
+pub use drop_context::*;
 pub use event_category_drop::EventCategoryDrop;
 pub use event_drop::EventDrop;
 pub use events_created_since::EventsCreatedSince;

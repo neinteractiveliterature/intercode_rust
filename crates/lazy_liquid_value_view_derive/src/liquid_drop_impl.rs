@@ -2,7 +2,9 @@ use crate::drop_getter_method::DropGetterMethod;
 use crate::helpers::get_type_path_and_name_and_arguments;
 use proc_macro::{Span, TokenStream};
 use quote::quote;
-use syn::{parse_macro_input, Ident, ImplItem, ItemImpl, PathArguments};
+use syn::parse::{self, Parse, ParseStream};
+use syn::punctuated::Punctuated;
+use syn::{parse_macro_input, Error, Ident, ImplItem, ItemImpl, Path, PathArguments, Token};
 use syn::{Generics, Type};
 
 use self::implement_drop::implement_drop;
@@ -20,6 +22,29 @@ mod implement_object_view;
 mod implement_serialize;
 mod implement_value_view;
 
+struct LiquidDropImplArgs {
+  pub id_type: Option<Path>,
+}
+
+impl Parse for LiquidDropImplArgs {
+  fn parse(input: ParseStream) -> parse::Result<Self> {
+    let vars = Punctuated::<Path, Token![,]>::parse_terminated(input)?;
+    let mut vars_iter = vars.iter();
+    let id_type = vars_iter.next();
+
+    if vars_iter.next().is_some() {
+      return Err(Error::new(
+        input.span(),
+        "Unexpected parameter for liquid_drop_impl macro",
+      ));
+    }
+
+    Ok(LiquidDropImplArgs {
+      id_type: id_type.map(|path| path.to_owned()),
+    })
+  }
+}
+
 pub struct LiquidDropImpl {
   self_ty: Type,
   self_type_arguments: Option<PathArguments>,
@@ -29,11 +54,12 @@ pub struct LiquidDropImpl {
   cache_struct_ident: Ident,
   constructors: Vec<ImplItem>,
   methods: Vec<DropGetterMethod>,
+  id_methods: Vec<DropGetterMethod>,
   other_items: Vec<ImplItem>,
 }
 
 impl LiquidDropImpl {
-  fn new(input: ItemImpl) -> Self {
+  fn new(input: ItemImpl, has_id_type: bool) -> Self {
     let (self_ty, self_name, self_type_arguments) =
       get_type_path_and_name_and_arguments(&input.self_ty).unwrap();
     let generics = input.generics.clone();
@@ -72,13 +98,14 @@ impl LiquidDropImpl {
         _ => false,
       });
 
-    let methods: Vec<DropGetterMethod> = methods
-      .into_iter()
-      .filter_map(|method| match method {
-        syn::ImplItem::Method(method) => Some(DropGetterMethod::from(method)),
-        _ => None,
-      })
-      .collect();
+    let getter_methods = methods.into_iter().filter_map(|method| match method {
+      syn::ImplItem::Method(method) => Some(DropGetterMethod::from(method)),
+      _ => None,
+    });
+    let (id_methods, other_methods): (Vec<DropGetterMethod>, Vec<DropGetterMethod>) =
+      getter_methods
+        .into_iter()
+        .partition(|method| has_id_type && method.ident() == "id");
 
     LiquidDropImpl {
       self_ty,
@@ -88,18 +115,20 @@ impl LiquidDropImpl {
       type_name,
       cache_struct_ident,
       constructors,
-      methods,
+      id_methods,
+      methods: other_methods,
       other_items,
     }
   }
 }
 
-pub fn eval_liquid_drop_impl_macro(_args: TokenStream, input: TokenStream) -> TokenStream {
+pub fn eval_liquid_drop_impl_macro(args: TokenStream, input: TokenStream) -> TokenStream {
+  let args = parse_macro_input!(args as LiquidDropImplArgs);
   let input = parse_macro_input!(input as ItemImpl);
-  let analyzed_impl = LiquidDropImpl::new(input);
+  let analyzed_impl = LiquidDropImpl::new(input, args.id_type.is_some());
 
   let drop_cache_struct = implement_drop_cache(&analyzed_impl);
-  let drop_impl = implement_drop(&analyzed_impl);
+  let drop_impl = implement_drop(&analyzed_impl, args.id_type.as_ref());
   let serialize_impl = implement_serialize(&analyzed_impl);
   let value_view_impl = implement_value_view(&analyzed_impl);
   let object_view_impl = implement_object_view(&analyzed_impl);
