@@ -12,9 +12,14 @@ use super::{drop_context::DropContext, SignupDrop, StaffPositionDrop, TicketDrop
 model_backed_drop!(UserConProfileDrop, user_con_profiles::Model, DropContext);
 
 #[has_many_related(signups, SignupDrop)]
-#[has_many_linked(staff_positions, StaffPositionDrop, UserConProfileToStaffPositions)]
-#[has_one_related(ticket, TicketDrop)]
-#[belongs_to_related(user, UserDrop)]
+#[has_many_linked(
+  staff_positions,
+  StaffPositionDrop,
+  UserConProfileToStaffPositions,
+  serialize = true
+)]
+#[has_one_related(ticket, TicketDrop, serialize = true)]
+#[belongs_to_related(user, UserDrop, serialize = true)]
 #[liquid_drop_impl(i64)]
 impl UserConProfileDrop {
   fn id(&self) -> i64 {

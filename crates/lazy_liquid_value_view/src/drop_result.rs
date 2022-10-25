@@ -165,6 +165,9 @@ macro_rules! drop_result_value_converter {
   };
 }
 
+drop_result_value_converter!(i32);
+drop_result_value_converter!(f32);
+drop_result_value_converter!(u32);
 drop_result_value_converter!(i64);
 drop_result_value_converter!(f64);
 drop_result_value_converter!(bool);

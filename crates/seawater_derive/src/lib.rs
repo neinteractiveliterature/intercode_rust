@@ -1,4 +1,5 @@
 mod associations;
+mod attrs;
 
 extern crate proc_macro;
 use associations::{eval_association_macro, AssociationType, TargetType};

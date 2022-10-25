@@ -1,4 +1,5 @@
 use crate::drop_getter_method::DropGetterMethod;
+use crate::drop_method_attribute::DropMethodAttribute;
 use crate::helpers::get_type_path_and_name_and_arguments;
 use proc_macro::{Span, TokenStream};
 use quote::quote;
@@ -99,7 +100,24 @@ impl LiquidDropImpl {
       });
 
     let getter_methods = methods.into_iter().filter_map(|method| match method {
-      syn::ImplItem::Method(method) => Some(DropGetterMethod::from(method)),
+      syn::ImplItem::Method(mut method) => {
+        let attrs = method
+          .attrs
+          .iter()
+          .map(DropMethodAttribute::try_from)
+          .filter_map(|attr| attr.ok())
+          .collect::<Vec<_>>();
+
+        let serialize = attrs
+          .iter()
+          .any(|attr| matches!(attr, DropMethodAttribute::SerializeValue));
+
+        method
+          .attrs
+          .retain(|attr| DropMethodAttribute::try_from(attr).is_err());
+
+        Some(DropGetterMethod::new(method, serialize))
+      }
       _ => None,
     });
     let (id_methods, other_methods): (Vec<DropGetterMethod>, Vec<DropGetterMethod>) =

@@ -1,9 +1,8 @@
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{
-  parse::Parse, parse_macro_input, parse_quote, punctuated::Punctuated, Error, Ident, ImplItem,
-  ItemImpl, Path, Token,
-};
+use syn::{parse_macro_input, parse_quote, Ident, ImplItem, ItemImpl, Path};
+
+use crate::attrs::{AssociationMacroArgs, LinkedAssociationMacroArgs, RelatedAssociationMacroArgs};
 
 pub enum AssociationType {
   Related,
@@ -14,134 +13,6 @@ pub enum TargetType {
   OneOptional,
   OneRequired,
   Many,
-}
-
-struct RelatedAssociationMacroArgs {
-  name: Ident,
-  to: Path,
-  inverse: Option<Ident>,
-}
-
-struct LinkedAssociationMacroArgs {
-  name: Ident,
-  to: Path,
-  link: Path,
-  inverse: Option<Ident>,
-}
-
-trait AssociationMacroArgs {
-  fn get_name(&self) -> &Ident;
-  fn get_to(&self) -> &Path;
-  fn get_inverse(&self) -> Option<&Ident>;
-  fn get_link(&self) -> Option<&Path>;
-}
-
-impl AssociationMacroArgs for RelatedAssociationMacroArgs {
-  fn get_name(&self) -> &Ident {
-    &self.name
-  }
-
-  fn get_to(&self) -> &Path {
-    &self.to
-  }
-
-  fn get_inverse(&self) -> Option<&Ident> {
-    self.inverse.as_ref()
-  }
-
-  fn get_link(&self) -> Option<&Path> {
-    None
-  }
-}
-
-impl AssociationMacroArgs for LinkedAssociationMacroArgs {
-  fn get_name(&self) -> &Ident {
-    &self.name
-  }
-
-  fn get_to(&self) -> &Path {
-    &self.to
-  }
-
-  fn get_inverse(&self) -> Option<&Ident> {
-    self.inverse.as_ref()
-  }
-
-  fn get_link(&self) -> Option<&Path> {
-    Some(&self.link)
-  }
-}
-
-fn start_parsing_args<'a>(
-  vars_iter: &mut syn::punctuated::Iter<'a, Path>,
-  input: &'a syn::parse::ParseBuffer,
-) -> Result<(&'a Ident, &'a Path), Error> {
-  let name = vars_iter
-    .next()
-    .ok_or_else(|| Error::new(input.span(), "Association name expected"))?
-    .get_ident()
-    .ok_or_else(|| Error::new(input.span(), "Not a valid identifier"))?;
-  let to = vars_iter
-    .next()
-    .ok_or_else(|| Error::new(input.span(), "Target drop expected"))?;
-  Ok((name, to))
-}
-
-fn finish_parsing_args<'a>(
-  vars_iter: &mut syn::punctuated::Iter<'a, Path>,
-  input: &'a syn::parse::ParseBuffer,
-) -> Result<Option<&'a Ident>, Error> {
-  let inverse = vars_iter
-    .next()
-    .map(|path| {
-      path
-        .get_ident()
-        .ok_or_else(|| Error::new(input.span(), "Not a valid identifier"))
-    })
-    .transpose()?;
-  if vars_iter.next().is_some() {
-    return Err(Error::new(
-      input.span(),
-      "Unexpected parameter for association macro",
-    ));
-  }
-  Ok(inverse)
-}
-
-impl Parse for RelatedAssociationMacroArgs {
-  fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-    let vars = Punctuated::<Path, Token![,]>::parse_terminated(input)?;
-    let mut vars_iter = vars.iter();
-
-    let (name, to) = start_parsing_args(&mut vars_iter, input)?;
-    let inverse = finish_parsing_args(&mut vars_iter, input)?;
-
-    Ok(RelatedAssociationMacroArgs {
-      name: name.to_owned(),
-      to: to.to_owned(),
-      inverse: inverse.map(|path| path.to_owned()),
-    })
-  }
-}
-
-impl Parse for LinkedAssociationMacroArgs {
-  fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
-    let vars = Punctuated::<Path, Token![,]>::parse_terminated(input)?;
-    let mut vars_iter = vars.iter();
-
-    let (name, to) = start_parsing_args(&mut vars_iter, input)?;
-    let link = vars_iter
-      .next()
-      .ok_or_else(|| Error::new(input.span(), "Link expected"))?;
-    let inverse = finish_parsing_args(&mut vars_iter, input)?;
-
-    Ok(LinkedAssociationMacroArgs {
-      name: name.to_owned(),
-      to: to.to_owned(),
-      link: link.to_owned(),
-      inverse: inverse.map(|path| path.to_owned()),
-    })
-  }
 }
 
 trait AssociationMacro {
@@ -195,11 +66,11 @@ trait AssociationMacro {
     )
   }
 
-  fn generate_items(&self) -> Vec<ImplItem> {
+  fn generate_items(&self, serialize: bool) -> Vec<ImplItem> {
     vec![
       self.once_cell_getter(),
       self.preloader_constructor(),
-      self.field_getter(),
+      self.field_getter(serialize),
       self.imperative_preloader(),
     ]
   }
@@ -223,12 +94,18 @@ trait AssociationMacro {
     })
   }
 
-  fn field_getter(&self) -> ImplItem {
+  fn field_getter(&self, serialize: bool) -> ImplItem {
     let preloader_ident = self.preloader_ident();
     let name = self.get_name();
     let target_path = self.target_path();
+    let serialize_attr = if serialize {
+      Some(quote!(#[liquid_drop(serialize_value = true)]))
+    } else {
+      None
+    };
 
     parse_quote!(
+      #serialize_attr
       pub async fn #name(&self) -> Result<#target_path, ::seawater::DropError> {
         use ::seawater::preloaders::Preloader;
         use ::seawater::Context;
@@ -465,7 +342,7 @@ pub fn eval_association_macro(
     }
   };
 
-  let mut items = association.generate_items();
+  let mut items = association.generate_items(args.should_serialize());
   input.items.append(&mut items);
 
   quote!(#input).into()

@@ -3,16 +3,19 @@ use syn::{AttrStyle, Attribute, Meta};
 #[derive(Debug, Clone)]
 pub enum DropMethodAttribute {
   SerializeValue,
-  Unknown(Attribute),
 }
 
-impl From<&Attribute> for DropMethodAttribute {
-  fn from(attr: &Attribute) -> Self {
+pub struct UnknownDropMethodAttribute;
+
+impl TryFrom<&Attribute> for DropMethodAttribute {
+  type Error = UnknownDropMethodAttribute;
+
+  fn try_from(attr: &Attribute) -> Result<Self, Self::Error> {
     if attr.style == AttrStyle::Outer
       && attr
         .path
         .get_ident()
-        .map(|ident| ident == "drop")
+        .map(|ident| ident == "liquid_drop")
         .unwrap_or(false)
     {
       let serialize_value_flag = attr
@@ -45,10 +48,10 @@ impl From<&Attribute> for DropMethodAttribute {
         .unwrap_or(false);
 
       if serialize_value_flag {
-        return DropMethodAttribute::SerializeValue;
+        return Ok(DropMethodAttribute::SerializeValue);
       }
     }
 
-    DropMethodAttribute::Unknown(attr.clone())
+    Err(UnknownDropMethodAttribute)
   }
 }

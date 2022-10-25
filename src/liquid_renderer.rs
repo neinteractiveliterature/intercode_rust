@@ -1,8 +1,10 @@
 use async_graphql::async_trait::async_trait;
+use intercode_entities::conventions;
 use intercode_graphql::{LiquidRenderer, QueryData, SchemaData};
 use intercode_liquid::{build_liquid_parser, cms_parent_partial_source::PreloadPartialsStrategy};
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
-use seawater::ModelBackedDrop;
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+use seawater::{Context, DropError, ModelBackedDrop};
 use std::fmt::Debug;
 
 use crate::drops::{ConventionDrop, DropContext, UserConProfileDrop};
@@ -10,7 +12,6 @@ use crate::drops::{ConventionDrop, DropContext, UserConProfileDrop};
 #[liquid_drop_struct]
 struct IntercodeGlobals {
   query_data: QueryData,
-  schema_data: SchemaData,
   drop_context: DropContext,
 }
 
@@ -19,7 +20,6 @@ impl IntercodeGlobals {
   pub fn new(query_data: QueryData, schema_data: SchemaData) -> Self {
     IntercodeGlobals {
       query_data,
-      schema_data: schema_data.clone(),
       drop_context: DropContext::new(schema_data),
     }
   }
@@ -31,6 +31,18 @@ impl IntercodeGlobals {
       .as_ref()
       .as_ref()
       .map(|convention| ConventionDrop::new(convention.clone(), self.drop_context.clone()))
+  }
+
+  async fn conventions(&self) -> Result<Vec<ConventionDrop>, DropError> {
+    Ok(
+      conventions::Entity::find()
+        .filter(conventions::Column::Hidden.eq(false))
+        .all(self.drop_context.db())
+        .await?
+        .iter()
+        .map(|convention| ConventionDrop::new(convention.clone(), self.drop_context.clone()))
+        .collect(),
+    )
   }
 
   fn user_con_profile(&self) -> Option<UserConProfileDrop> {

@@ -2,18 +2,24 @@ use std::fmt::Debug;
 
 use proc_macro::Span;
 use quote::{quote, ToTokens};
-use syn::{Ident, ImplItemMethod, LitStr, Signature, Type, TypeTuple};
+use syn::{GenericArgument, Ident, ImplItemMethod, LitStr, Path, Signature, Type, TypeTuple};
 
 use crate::helpers::get_drop_result_generic_arg;
 
-#[derive(Clone)]
-pub enum DropGetterMethod {
-  Base(Box<ImplItemMethod>),
-  Async(Box<DropGetterMethod>),
-  Uncached(Box<DropGetterMethod>),
+#[derive(Clone, Debug)]
+pub struct DropGetterMethod {
+  impl_item: DropGetterMethodImplItem,
+  serialize: bool,
 }
 
-impl Debug for DropGetterMethod {
+#[derive(Clone)]
+pub enum DropGetterMethodImplItem {
+  Base(Box<ImplItemMethod>),
+  Async(Box<DropGetterMethodImplItem>),
+  Uncached(Box<DropGetterMethodImplItem>),
+}
+
+impl Debug for DropGetterMethodImplItem {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {
       Self::Base(_) => f.debug_tuple("Base").finish(),
@@ -23,9 +29,82 @@ impl Debug for DropGetterMethod {
   }
 }
 
+impl DropGetterMethodImplItem {
+  pub fn sig(&self) -> Signature {
+    match self {
+      DropGetterMethodImplItem::Base(method) => method.sig.clone(),
+      DropGetterMethodImplItem::Uncached(inner_method)
+      | DropGetterMethodImplItem::Async(inner_method) => inner_method.sig(),
+    }
+  }
+
+  pub fn getter<'a>(&'a self) -> Box<dyn ToTokens + 'a> {
+    match self {
+      DropGetterMethodImplItem::Base(method) => Box::new(method),
+      DropGetterMethodImplItem::Uncached(inner_method)
+      | DropGetterMethodImplItem::Async(inner_method) => inner_method.getter(),
+    }
+  }
+}
+
+pub fn is_path_to_serializable(path: &Path) -> bool {
+  if path.segments.len() != 1 {
+    return false;
+  }
+
+  let last_segment = path.segments.last().unwrap();
+
+  match last_segment.ident.to_string().as_str() {
+    "i64" | "u64" | "usize" | "str" | "String" | "bool" | "DateTime" => true,
+    "Vec" | "Option" | "HashMap" => match &last_segment.arguments {
+      syn::PathArguments::None => true,
+      syn::PathArguments::AngleBracketed(angle_bracketed) => {
+        angle_bracketed.args.iter().all(is_serializable_generic_arg)
+      }
+      syn::PathArguments::Parenthesized(parenthesized) => {
+        parenthesized.inputs.iter().all(is_serializable_type)
+      }
+    },
+    "Result" => {
+      let output_type = match &last_segment.arguments {
+        syn::PathArguments::AngleBracketed(angle_bracketed) => angle_bracketed.args.first(),
+        _ => None,
+      };
+
+      output_type
+        .map(is_serializable_generic_arg)
+        .unwrap_or(false)
+    }
+    _ => false,
+  }
+}
+
+pub fn is_serializable_generic_arg(arg: &GenericArgument) -> bool {
+  match arg {
+    GenericArgument::Type(ty) => is_serializable_type(ty),
+    _ => false,
+  }
+}
+
+pub fn is_serializable_type(ty: &Type) -> bool {
+  match ty {
+    Type::Path(path) => is_path_to_serializable(&path.path),
+    Type::Paren(inner_ty) => is_serializable_type(&inner_ty.elem),
+    Type::Reference(reference) => is_serializable_type(reference.elem.as_ref()),
+    _ => false,
+  }
+}
+
 impl DropGetterMethod {
+  pub fn new(method: ImplItemMethod, serialize: bool) -> Self {
+    DropGetterMethod {
+      impl_item: method.into(),
+      serialize,
+    }
+  }
+
   pub fn ident(&self) -> Ident {
-    self.sig().ident
+    self.impl_item.sig().ident
   }
 
   pub fn caching_getter_ident(&self) -> Ident {
@@ -35,22 +114,22 @@ impl DropGetterMethod {
     )
   }
 
+  pub fn should_serialize(&self) -> bool {
+    let return_type = self.return_type();
+    if self.serialize {
+      return true;
+    }
+
+    is_serializable_type(return_type.as_ref())
+  }
+
   pub fn name_str(&self) -> LitStr {
     let ident = self.ident();
     LitStr::new(ident.to_string().as_str(), ident.span())
   }
 
-  pub fn sig(&self) -> Signature {
-    match self {
-      DropGetterMethod::Base(method) => method.sig.clone(),
-      DropGetterMethod::Uncached(inner_method) | DropGetterMethod::Async(inner_method) => {
-        inner_method.sig()
-      }
-    }
-  }
-
   pub fn return_type(&self) -> Box<Type> {
-    match self.sig().output {
+    match self.impl_item.sig().output {
       syn::ReturnType::Default => Box::new(Type::Tuple(TypeTuple {
         paren_token: Default::default(),
         elems: Default::default(),
@@ -70,14 +149,14 @@ impl DropGetterMethod {
 
     let caching_getter_sig = quote!(async fn #caching_getter_ident(&self) -> &::lazy_liquid_value_view::DropResult<#return_type>);
 
-    match self {
-      DropGetterMethod::Uncached(_) => Box::new(quote!(
+    match self.impl_item {
+      DropGetterMethodImplItem::Uncached(_) => Box::new(quote!(
         #caching_getter_sig {
           use ::lazy_liquid_value_view::LiquidDropWithID;
           self.#ident().await.into()
         }
       )),
-      DropGetterMethod::Async(_) => Box::new(quote!(
+      DropGetterMethodImplItem::Async(_) => Box::new(quote!(
         #caching_getter_sig {
           use ::lazy_liquid_value_view::LiquidDropWithID;
           self
@@ -110,16 +189,11 @@ impl DropGetterMethod {
   }
 
   pub fn getter<'a>(&'a self) -> Box<dyn ToTokens + 'a> {
-    match self {
-      DropGetterMethod::Base(method) => Box::new(method),
-      DropGetterMethod::Uncached(inner_method) | DropGetterMethod::Async(inner_method) => {
-        inner_method.getter()
-      }
-    }
+    self.impl_item.getter()
   }
 }
 
-impl From<ImplItemMethod> for DropGetterMethod {
+impl From<ImplItemMethod> for DropGetterMethodImplItem {
   fn from(method: ImplItemMethod) -> Self {
     if let Some(uncached_attr) = method.attrs.iter().find(|attr| {
       attr
@@ -129,13 +203,15 @@ impl From<ImplItemMethod> for DropGetterMethod {
       let mut inner_method = method.clone();
       inner_method.attrs.retain(|attr| attr != uncached_attr);
 
-      return DropGetterMethod::Uncached(Box::new(DropGetterMethod::Base(Box::new(inner_method))));
+      return DropGetterMethodImplItem::Uncached(Box::new(DropGetterMethodImplItem::Base(
+        Box::new(inner_method),
+      )));
     }
 
     if method.sig.asyncness.is_some() {
-      DropGetterMethod::Async(Box::new(DropGetterMethod::Base(Box::new(method))))
+      DropGetterMethodImplItem::Async(Box::new(DropGetterMethodImplItem::Base(Box::new(method))))
     } else {
-      DropGetterMethod::Base(Box::new(method))
+      DropGetterMethodImplItem::Base(Box::new(method))
     }
   }
 }

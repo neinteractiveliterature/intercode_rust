@@ -30,6 +30,10 @@ impl EventDrop {
       .and_then(naive_date_time_to_liquid_date_time)
   }
 
+  pub fn length_seconds(&self) -> i32 {
+    self.model.length_seconds
+  }
+
   fn title(&self) -> &str {
     self.model.title.as_str()
   }
