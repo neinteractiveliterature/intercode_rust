@@ -1,5 +1,4 @@
 use quote::{quote, ToTokens};
-use syn::LitStr;
 
 use super::LiquidDropImpl;
 
@@ -9,14 +8,10 @@ pub fn implement_value_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
   let self_ty = &liquid_drop_impl.self_ty;
 
   let serializable_keys = liquid_drop_impl
-    .id_methods
+    .methods
     .iter()
-    .chain(liquid_drop_impl.methods.iter())
     .filter(|method| method.should_serialize())
-    .map(|method| {
-      let ident = method.ident();
-      LitStr::new(&ident.to_string(), method.ident().span())
-    })
+    .map(|method| method.name_str())
     .collect::<Vec<_>>();
 
   let serializable_key_filter = if serializable_keys.is_empty() {
@@ -62,16 +57,13 @@ pub fn implement_value_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
       }
 
       fn to_value(&self) -> liquid_core::Value {
-         let val = liquid::model::Value::Object(
+        liquid::model::Value::Object(
           liquid::model::Object::from_iter(
             self.as_object().unwrap().iter()
               .filter(#serializable_key_filter)
               .map(|(key, value)| (key.into(), value.to_value()))
           )
-        );
-
-        eprintln!("{:?}", val);
-        val
+        )
       }
 
       fn as_object(&self) -> Option<&dyn ::liquid::model::ObjectView> {

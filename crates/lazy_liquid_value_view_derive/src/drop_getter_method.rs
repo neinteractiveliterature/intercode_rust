@@ -9,7 +9,8 @@ use crate::helpers::get_drop_result_generic_arg;
 #[derive(Clone, Debug)]
 pub struct DropGetterMethod {
   impl_item: DropGetterMethodImplItem,
-  serialize: bool,
+  pub serialize: bool,
+  pub is_id: bool,
 }
 
 #[derive(Clone)]
@@ -38,9 +39,9 @@ impl DropGetterMethodImplItem {
     }
   }
 
-  pub fn getter<'a>(&'a self) -> Box<dyn ToTokens + 'a> {
+  pub fn getter<'a>(&'a self) -> &'a ImplItemMethod {
     match self {
-      DropGetterMethodImplItem::Base(method) => Box::new(method),
+      DropGetterMethodImplItem::Base(method) => method,
       DropGetterMethodImplItem::Uncached(inner_method)
       | DropGetterMethodImplItem::Async(inner_method) => inner_method.getter(),
     }
@@ -96,22 +97,53 @@ pub fn is_serializable_type(ty: &Type) -> bool {
 }
 
 impl DropGetterMethod {
-  pub fn new(method: ImplItemMethod, serialize: bool) -> Self {
+  pub fn new(method: ImplItemMethod, serialize: bool, is_id: bool) -> Self {
     DropGetterMethod {
       impl_item: method.into(),
       serialize,
+      is_id,
     }
   }
 
-  pub fn ident(&self) -> Ident {
+  fn ident(&self) -> Ident {
     self.impl_item.sig().ident
   }
 
+  pub fn cache_field_ident(&self) -> Ident {
+    self.ident()
+  }
+
+  // For most fields, we rename the original method name to uncached_* and put a caching method at the
+  // original name.
+  //
+  // For the ID field, this is reversed: we keep the original method name the same and put a caching_*
+  // method alongside it.  ID methods are expected to conform with LiquidDropWithID's id method.
   pub fn caching_getter_ident(&self) -> Ident {
+    if !self.is_id {
+      return self.ident();
+    }
+
     Ident::new(
       format!("caching_{}", self.ident()).as_str(),
-      Span::call_site().into(),
+      self.ident().span(),
     )
+  }
+
+  pub fn uncached_getter_ident(&self) -> Ident {
+    if self.is_id {
+      return self.ident();
+    }
+
+    Ident::new(
+      format!("uncached_{}", self.ident()).as_str(),
+      self.ident().span(),
+    )
+  }
+
+  pub fn uncached_getter<'a>(&'a self) -> Box<dyn ToTokens + 'a> {
+    let mut method = self.impl_item.getter().clone();
+    method.sig.ident = self.uncached_getter_ident();
+    Box::new(method)
   }
 
   pub fn should_serialize(&self) -> bool {
@@ -143,17 +175,18 @@ impl DropGetterMethod {
   }
 
   pub fn caching_getter(&self) -> Box<dyn ToTokens> {
-    let ident = self.ident();
+    let cache_field_ident = self.cache_field_ident();
     let caching_getter_ident = self.caching_getter_ident();
+    let uncached_getter_ident = self.uncached_getter_ident();
     let return_type = self.cache_type();
 
-    let caching_getter_sig = quote!(async fn #caching_getter_ident(&self) -> &::lazy_liquid_value_view::DropResult<#return_type>);
+    let caching_getter_sig = quote!(pub async fn #caching_getter_ident(&self) -> &::lazy_liquid_value_view::DropResult<#return_type>);
 
     match self.impl_item {
       DropGetterMethodImplItem::Uncached(_) => Box::new(quote!(
         #caching_getter_sig {
           use ::lazy_liquid_value_view::LiquidDropWithID;
-          self.#ident().await.into()
+          self.#uncached_getter_ident().await.into()
         }
       )),
       DropGetterMethodImplItem::Async(_) => Box::new(quote!(
@@ -161,13 +194,13 @@ impl DropGetterMethod {
           use ::lazy_liquid_value_view::LiquidDropWithID;
           self
             .drop_cache
-            .#ident.
+            .#cache_field_ident.
             get_or_init(
               || Box::<::lazy_liquid_value_view::DropResult<#return_type>>::new(
                 ::tokio::task::block_in_place(|| {
                   ::tokio::runtime::Handle::current()
                     .block_on(async move {
-                      self.#ident().await.into()
+                      self.#uncached_getter_ident().await.into()
                     })
                   })
                 )
@@ -179,17 +212,13 @@ impl DropGetterMethod {
           use ::lazy_liquid_value_view::LiquidDropWithID;
           self
             .drop_cache
-            .#ident.
+            .#cache_field_ident.
             get_or_init(|| {
-              Box::new(self.#ident().into())
+              Box::new(self.#uncached_getter_ident().into())
             })
         }
       )),
     }
-  }
-
-  pub fn getter<'a>(&'a self) -> Box<dyn ToTokens + 'a> {
-    self.impl_item.getter()
   }
 }
 

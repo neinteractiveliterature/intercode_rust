@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 extern crate chrono;
 extern crate chrono_tz;
 extern crate dotenv;

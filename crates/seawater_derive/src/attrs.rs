@@ -10,6 +10,7 @@ pub struct RelatedAssociationMacroArgs {
   to: Path,
   inverse: Option<Ident>,
   serialize: bool,
+  eager_load_associations: Vec<Ident>,
 }
 
 pub struct LinkedAssociationMacroArgs {
@@ -18,6 +19,7 @@ pub struct LinkedAssociationMacroArgs {
   link: Path,
   inverse: Option<Ident>,
   serialize: bool,
+  eager_load_associations: Vec<Ident>,
 }
 
 struct ArgsByType {
@@ -32,6 +34,7 @@ pub trait AssociationMacroArgs {
   fn get_inverse(&self) -> Option<&Ident>;
   fn get_link(&self) -> Option<&Path>;
   fn should_serialize(&self) -> bool;
+  fn get_eager_load_associations(&self) -> &[Ident];
 }
 
 impl AssociationMacroArgs for RelatedAssociationMacroArgs {
@@ -54,6 +57,10 @@ impl AssociationMacroArgs for RelatedAssociationMacroArgs {
   fn should_serialize(&self) -> bool {
     self.serialize
   }
+
+  fn get_eager_load_associations(&self) -> &[Ident] {
+    &self.eager_load_associations
+  }
 }
 
 impl AssociationMacroArgs for LinkedAssociationMacroArgs {
@@ -75,6 +82,10 @@ impl AssociationMacroArgs for LinkedAssociationMacroArgs {
 
   fn should_serialize(&self) -> bool {
     self.serialize
+  }
+
+  fn get_eager_load_associations(&self) -> &[Ident] {
+    &self.eager_load_associations
   }
 }
 
@@ -162,13 +173,14 @@ impl Parse for RelatedAssociationMacroArgs {
       ));
     }
 
-    let (inverse, serialize) = parse_optional_args(&args_by_type)?;
+    let (inverse, serialize, eager_load_associations) = parse_optional_args(&args_by_type)?;
 
     Ok(RelatedAssociationMacroArgs {
       name: name.to_owned(),
       to: to.to_owned(),
       inverse,
       serialize,
+      eager_load_associations,
     })
   }
 }
@@ -191,7 +203,7 @@ impl Parse for LinkedAssociationMacroArgs {
       ));
     }
 
-    let (inverse, serialize) = parse_optional_args(&args_by_type)?;
+    let (inverse, serialize, eager_load_associations) = parse_optional_args(&args_by_type)?;
 
     Ok(LinkedAssociationMacroArgs {
       name: name.to_owned(),
@@ -199,11 +211,14 @@ impl Parse for LinkedAssociationMacroArgs {
       link: link.to_owned(),
       inverse,
       serialize,
+      eager_load_associations,
     })
   }
 }
 
-fn parse_optional_args(args_by_type: &ArgsByType) -> Result<(Option<Ident>, bool), Error> {
+fn parse_optional_args(
+  args_by_type: &ArgsByType,
+) -> Result<(Option<Ident>, bool, Vec<Ident>), Error> {
   let inverse = args_by_type
     .list_args
     .get("inverse")
@@ -232,6 +247,24 @@ fn parse_optional_args(args_by_type: &ArgsByType) -> Result<(Option<Ident>, bool
     .transpose()?
     .flatten();
 
+  let eager_load_associations = args_by_type
+    .list_args
+    .get("eager_load")
+    .map(|nested| {
+      let nested_iter = nested.iter();
+      nested_iter
+        .map(|meta| match meta {
+          NestedMeta::Meta(Meta::Path(path)) => path
+            .get_ident()
+            .cloned()
+            .ok_or_else(|| Error::new(path.span(), "Not a valid identifier")),
+          _ => Err(Error::new(meta.span(), "Identifier expected")),
+        })
+        .collect::<Result<Vec<Ident>, _>>()
+    })
+    .transpose()?
+    .unwrap_or_default();
+
   let serialize = args_by_type
     .name_value_args
     .get("serialize")
@@ -244,5 +277,6 @@ fn parse_optional_args(args_by_type: &ArgsByType) -> Result<(Option<Ident>, bool
     })
     .transpose()?
     .unwrap_or(false);
-  Ok((inverse, serialize))
+
+  Ok((inverse, serialize, eager_load_associations))
 }

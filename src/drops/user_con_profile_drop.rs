@@ -11,14 +11,14 @@ use super::{drop_context::DropContext, SignupDrop, StaffPositionDrop, TicketDrop
 
 model_backed_drop!(UserConProfileDrop, user_con_profiles::Model, DropContext);
 
-#[has_many_related(signups, SignupDrop)]
+#[has_many_related(signups, SignupDrop, eager_load(event, run))]
 #[has_many_linked(
   staff_positions,
   StaffPositionDrop,
   UserConProfileToStaffPositions,
   serialize = true
 )]
-#[has_one_related(ticket, TicketDrop, serialize = true)]
+#[has_one_related(ticket, TicketDrop, serialize = true, eager_load(ticket_type))]
 #[belongs_to_related(user, UserDrop, serialize = true)]
 #[liquid_drop_impl(i64)]
 impl UserConProfileDrop {
@@ -47,36 +47,15 @@ impl UserConProfileDrop {
 
     Ok(
       self
-        .caching_user()
+        .user()
         .await
-        .get_inner()
-        .unwrap()
+        .expect_inner()
         .privileges()
+        .await
+        .expect_inner()
         .iter()
         .map(|priv_name| inflector.humanize(priv_name))
         .collect::<Vec<_>>(),
     )
-  }
-
-  pub async fn preload_users_and_signups(
-    context: &DropContext,
-    drops: &[&UserConProfileDrop],
-  ) -> Result<(), DropError> {
-    try_join!(
-      async {
-        Self::user_preloader(context.clone())
-          .preload(context.db(), drops)
-          .await?;
-        Ok::<(), DropError>(())
-      },
-      async {
-        Self::signups_preloader(context.clone())
-          .preload(context.db(), drops)
-          .await?;
-        Ok::<(), DropError>(())
-      }
-    )?;
-
-    Ok(())
   }
 }

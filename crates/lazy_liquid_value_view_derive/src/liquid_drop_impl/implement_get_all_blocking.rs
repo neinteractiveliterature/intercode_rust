@@ -2,14 +2,14 @@ use quote::{quote, ToTokens};
 
 use crate::drop_getter_method::DropGetterMethod;
 
-pub fn implement_get_all_blocking(methods: &[DropGetterMethod]) -> Box<dyn ToTokens> {
+pub fn implement_get_all_blocking(methods: &[&DropGetterMethod]) -> Box<dyn ToTokens> {
   let getter_invocations = methods.iter().map(|method| {
     let caching_getter_ident = method.caching_getter_ident();
 
     quote!(self.#caching_getter_ident())
   });
 
-  let getter_idents = methods.iter().map(|method| method.ident());
+  let getter_idents = methods.iter().map(|method| method.caching_getter_ident());
 
   let destructure_var_names = getter_idents.clone();
 

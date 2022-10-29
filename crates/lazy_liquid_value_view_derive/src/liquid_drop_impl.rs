@@ -55,7 +55,6 @@ pub struct LiquidDropImpl {
   cache_struct_ident: Ident,
   constructors: Vec<ImplItem>,
   methods: Vec<DropGetterMethod>,
-  id_methods: Vec<DropGetterMethod>,
   other_items: Vec<ImplItem>,
 }
 
@@ -99,31 +98,31 @@ impl LiquidDropImpl {
         _ => false,
       });
 
-    let getter_methods = methods.into_iter().filter_map(|method| match method {
-      syn::ImplItem::Method(mut method) => {
-        let attrs = method
-          .attrs
-          .iter()
-          .map(DropMethodAttribute::try_from)
-          .filter_map(|attr| attr.ok())
-          .collect::<Vec<_>>();
+    let getter_methods = methods
+      .into_iter()
+      .filter_map(|method| match method {
+        syn::ImplItem::Method(mut method) => {
+          let attrs = method
+            .attrs
+            .iter()
+            .map(DropMethodAttribute::try_from)
+            .filter_map(|attr| attr.ok())
+            .collect::<Vec<_>>();
 
-        let serialize = attrs
-          .iter()
-          .any(|attr| matches!(attr, DropMethodAttribute::SerializeValue));
+          let serialize = attrs
+            .iter()
+            .any(|attr| matches!(attr, DropMethodAttribute::SerializeValue));
 
-        method
-          .attrs
-          .retain(|attr| DropMethodAttribute::try_from(attr).is_err());
+          method
+            .attrs
+            .retain(|attr| DropMethodAttribute::try_from(attr).is_err());
 
-        Some(DropGetterMethod::new(method, serialize))
-      }
-      _ => None,
-    });
-    let (id_methods, other_methods): (Vec<DropGetterMethod>, Vec<DropGetterMethod>) =
-      getter_methods
-        .into_iter()
-        .partition(|method| has_id_type && method.ident() == "id");
+          let is_id = has_id_type && method.sig.ident == "id";
+          Some(DropGetterMethod::new(method, serialize, is_id))
+        }
+        _ => None,
+      })
+      .collect::<Vec<_>>();
 
     LiquidDropImpl {
       self_ty,
@@ -133,8 +132,7 @@ impl LiquidDropImpl {
       type_name,
       cache_struct_ident,
       constructors,
-      id_methods,
-      methods: other_methods,
+      methods: getter_methods,
       other_items,
     }
   }

@@ -125,9 +125,6 @@ where
       .and_then(|header_value| base64::decode(header_value.as_bytes()).ok());
     let token = header.and_then(|value| config.protect.parse_token(&value).ok());
 
-    eprintln!("token: {:?}", token);
-    eprintln!("cookie: {:?}", cookie);
-
     let verified = match (token.as_ref(), cookie.as_ref()) {
       (Some(token), Some(cookie)) => config.protect.verify_token_pair(token, cookie),
       _ => false,

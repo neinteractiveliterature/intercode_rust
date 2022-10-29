@@ -1,8 +1,8 @@
-use std::{collections::HashMap, marker::PhantomData, pin::Pin, sync::Arc};
+use std::{collections::HashMap, marker::PhantomData, pin::Pin};
 
 use async_trait::async_trait;
 use intercode_graphql::loaders::{load_all_related, EntityRelationLoaderResult};
-use lazy_liquid_value_view::{DropResult, LiquidDrop, LiquidDropWithID};
+use lazy_liquid_value_view::{ArcValueView, DropResult, LiquidDrop, LiquidDropWithID};
 use liquid::ValueView;
 use once_cell::race::OnceBox;
 use sea_orm::{DatabaseConnection, EntityTrait, PrimaryKeyToColumn, PrimaryKeyTrait, Related};
@@ -47,7 +47,7 @@ impl<
     From: EntityTrait<PrimaryKey = PK> + Related<To>,
     To: EntityTrait,
     PK: PrimaryKeyTrait + PrimaryKeyToColumn<Column = From::Column>,
-    FromDrop: LiquidDrop + Send + Sync + Clone,
+    FromDrop: LiquidDrop + LiquidDropWithID + Send + Sync + Clone,
     ToDrop: LiquidDrop + Send + Sync + Clone + LiquidDropWithID + 'static,
     Value: ValueView + Into<DropResult<Value>> + Clone + Send + Sync,
     Context: crate::Context,
@@ -76,7 +76,10 @@ where
     Some(self.context.drop_cache())
   }
 
-  fn drops_to_value(&self, drops: Vec<Arc<ToDrop>>) -> Result<DropResult<Value>, DropError> {
+  fn drops_to_value(
+    &self,
+    drops: Vec<ArcValueView<ToDrop>>,
+  ) -> Result<DropResult<Value>, DropError> {
     (self.drops_to_value)(drops)
   }
 

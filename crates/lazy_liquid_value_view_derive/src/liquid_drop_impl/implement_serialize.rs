@@ -7,11 +7,12 @@ pub fn implement_serialize(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToken
   let self_ty = &liquid_drop_impl.self_ty;
   let type_name = &liquid_drop_impl.type_name;
   let method_count = liquid_drop_impl.methods.len();
+  let methods = liquid_drop_impl.methods.iter().collect::<Vec<_>>();
 
-  let get_all_blocking = implement_get_all_blocking(&liquid_drop_impl.methods);
+  let get_all_blocking = implement_get_all_blocking(&methods);
 
-  let method_serializers = liquid_drop_impl.methods.iter().map(|method| {
-    let ident = method.ident();
+  let method_serializers = methods.iter().map(|method| {
+    let ident = method.caching_getter_ident();
     let name_str = method.name_str();
 
     quote!(
@@ -27,6 +28,7 @@ pub fn implement_serialize(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToken
       {
         use ::serde::ser::SerializeStruct;
         use ::liquid_core::ValueView;
+        use ::lazy_liquid_value_view::LiquidDropWithID;
 
         let mut struct_serializer = serializer.serialize_struct(#type_name, #method_count)?;
         #get_all_blocking

@@ -1,12 +1,10 @@
 use bumpalo_herd::Herd;
-use futures::join;
+use futures::try_join;
 use intercode_entities::events;
 use lazy_liquid_value_view::DropResult;
 use liquid::{ObjectView, ValueView};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Select};
-use seawater::{preloaders::Preloader, Context, ModelBackedDrop};
-
-use crate::drops::UserConProfileDrop;
+use seawater::{Context, ModelBackedDrop};
 
 use super::{drop_context::DropContext, EventDrop};
 
@@ -67,51 +65,14 @@ impl EventsCreatedSince {
       .map(|event| EventDrop::new(event, self.context.clone()))
       .collect::<Vec<_>>();
 
-    let runs_fut = async {
-      EventDrop::runs_preloader(self.context.clone())
-        .preload(
-          self.context.db(),
-          value.iter().collect::<Vec<_>>().as_slice(),
-        )
-        .await
-        .ok()
-    };
+    let drops = value.iter().collect::<Vec<_>>();
 
-    let events_fut = async {
-      let result = EventDrop::team_member_user_con_profiles_preloader(self.context.clone())
-        .preload(
-          self.context.db(),
-          value.iter().collect::<Vec<_>>().as_slice(),
-        )
-        .await;
-
-      if let Ok(result) = result {
-        let values = result.all_values_flat_unwrapped();
-
-        UserConProfileDrop::preload_users_and_signups(
-          &self.context,
-          values
-            .iter()
-            .map(|value| value.as_ref())
-            .collect::<Vec<_>>()
-            .as_slice(),
-        )
-        .await
-        .ok();
-      }
-    };
-
-    let event_categories_fut = async {
-      EventDrop::event_category_preloader(self.context.clone())
-        .preload(
-          self.context.db(),
-          value.iter().collect::<Vec<_>>().as_slice(),
-        )
-        .await
-        .ok()
-    };
-
-    join![runs_fut, events_fut, event_categories_fut];
+    try_join![
+      EventDrop::preload_runs(self.context.clone(), &drops),
+      EventDrop::preload_team_member_user_con_profiles(self.context.clone(), &drops),
+      EventDrop::preload_event_category(self.context.clone(), &drops)
+    ]
+    .ok();
 
     let bump = self.herd.get();
     bump.alloc(value)

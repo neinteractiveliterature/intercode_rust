@@ -1,8 +1,9 @@
 use async_graphql::async_trait::async_trait;
+use futures::try_join;
 use intercode_entities::conventions;
 use intercode_graphql::{LiquidRenderer, QueryData, SchemaData};
 use intercode_liquid::{build_liquid_parser, cms_parent_partial_source::PreloadPartialsStrategy};
-use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
+use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct, ArcValueView};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use seawater::{Context, DropError, ModelBackedDrop};
 use std::fmt::Debug;
@@ -45,15 +46,29 @@ impl IntercodeGlobals {
     )
   }
 
-  fn user_con_profile(&self) -> Option<UserConProfileDrop> {
-    self
+  async fn user_con_profile(&self) -> Result<Option<ArcValueView<UserConProfileDrop>>, DropError> {
+    let ucp = self
       .query_data
       .user_con_profile
       .as_ref()
       .as_ref()
       .map(|user_con_profile| {
         UserConProfileDrop::new(user_con_profile.clone(), self.drop_context.clone())
-      })
+      });
+
+    if let Some(ucp) = ucp {
+      let ucp = self.drop_context.drop_cache().put(ucp)?;
+      let drops = vec![ucp.as_ref()];
+      try_join!(
+        UserConProfileDrop::preload_signups(self.drop_context.clone(), &drops),
+        UserConProfileDrop::preload_staff_positions(self.drop_context.clone(), &drops),
+        UserConProfileDrop::preload_ticket(self.drop_context.clone(), &drops),
+        UserConProfileDrop::preload_user(self.drop_context.clone(), &drops),
+      )?;
+      Ok(Some(ucp))
+    } else {
+      Ok(None)
+    }
   }
 }
 

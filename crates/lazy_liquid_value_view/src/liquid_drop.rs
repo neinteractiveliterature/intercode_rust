@@ -1,6 +1,6 @@
 use crate::DropResult;
 use liquid::{ObjectView, ValueView};
-use std::hash::Hash;
+use std::{fmt::Display, hash::Hash};
 
 pub trait LiquidDrop: ValueView + ObjectView + Into<DropResult<Self>> {
   type Cache;
@@ -9,7 +9,7 @@ pub trait LiquidDrop: ValueView + ObjectView + Into<DropResult<Self>> {
 }
 
 pub trait LiquidDropWithID {
-  type ID: Eq + Hash + Copy;
+  type ID: Eq + Hash + Copy + Display;
 
   fn id(&self) -> Self::ID;
 }

@@ -1,5 +1,5 @@
 use std::{
-  collections::{hash_map::IterMut, HashMap},
+  collections::HashMap,
   error::Error,
   fmt::{Debug, Display},
   hash::Hash,
@@ -7,13 +7,15 @@ use std::{
 };
 
 use async_trait::async_trait;
-use lazy_liquid_value_view::{DropResult, LiquidDrop, LiquidDropWithID};
+use lazy_liquid_value_view::{ArcValueView, DropResult, LiquidDrop, LiquidDropWithID};
 use liquid::ValueView;
 use once_cell::race::OnceBox;
 use sea_orm::DatabaseConnection;
 use tracing::warn;
 
 use crate::{DropError, NormalizedDropCache};
+
+use super::PreloaderResult;
 
 #[derive(Debug, Clone)]
 pub struct IncompleteBuilderError;
@@ -25,66 +27,6 @@ impl Display for IncompleteBuilderError {
 }
 
 impl Error for IncompleteBuilderError {}
-
-#[derive(Debug)]
-pub struct PreloaderResult<Id: Eq + Hash, Value: ValueView + Clone> {
-  values_by_id: HashMap<Id, DropResult<Value>>,
-}
-
-impl<Id: Eq + Hash, Value: ValueView + Clone> PreloaderResult<Id, Value> {
-  pub fn get(&self, id: &Id) -> DropResult<Value> {
-    self.values_by_id.get(id).cloned().unwrap_or_default()
-  }
-
-  #[allow(dead_code)]
-  pub fn expect_value(&self, id: &Id) -> Result<Value, DropError> {
-    self
-      .get(id)
-      .get_inner()
-      .cloned()
-      .ok_or_else(|| DropError::ExpectedEntityNotFound(std::any::type_name::<Value>().to_string()))
-  }
-
-  pub fn all_values(&self) -> Vec<DropResult<Value>> {
-    self.values_by_id.values().cloned().collect::<Vec<_>>()
-  }
-
-  pub fn iter_mut(&mut self) -> IterMut<Id, DropResult<Value>> {
-    self.values_by_id.iter_mut()
-  }
-
-  #[allow(dead_code)]
-  pub fn all_values_unwrapped(&self) -> Vec<Value> {
-    self
-      .all_values()
-      .into_iter()
-      .map(|value| value.get_inner().unwrap().clone())
-      .collect::<Vec<_>>()
-  }
-
-  pub fn extend(&mut self, items: &mut dyn Iterator<Item = (Id, DropResult<Value>)>) {
-    self.values_by_id.extend(items)
-  }
-}
-
-impl<Id: Eq + Hash, Value: ValueView + Clone> PreloaderResult<Id, Vec<Value>> {
-  pub fn all_values_flat(&self) -> Vec<DropResult<Value>> {
-    self
-      .all_values()
-      .iter()
-      .flat_map(|drop_result| drop_result.get_inner().unwrap())
-      .map(|value| value.into())
-      .collect::<Vec<_>>()
-  }
-
-  pub fn all_values_flat_unwrapped(&self) -> Vec<Value> {
-    self
-      .all_values_flat()
-      .into_iter()
-      .map(|value| value.get_inner().unwrap().clone())
-      .collect::<Vec<_>>()
-  }
-}
 
 pub trait GetIdFn<'a, ID, Drop: 'a>
 where
@@ -107,14 +49,14 @@ where
 {
 }
 
-pub trait DropsToValueFn<Drop, Value: ValueView>
+pub trait DropsToValueFn<Drop: ValueView, Value: ValueView>
 where
-  Self: Fn(Vec<Arc<Drop>>) -> Result<DropResult<Value>, DropError> + Send + Sync,
+  Self: Fn(Vec<ArcValueView<Drop>>) -> Result<DropResult<Value>, DropError> + Send + Sync,
 {
 }
 
-impl<Drop, Value: ValueView, T> DropsToValueFn<Drop, Value> for T where
-  T: Fn(Vec<Arc<Drop>>) -> Result<DropResult<Value>, DropError> + Send + Sync
+impl<Drop: ValueView, Value: ValueView, T> DropsToValueFn<Drop, Value> for T where
+  T: Fn(Vec<ArcValueView<Drop>>) -> Result<DropResult<Value>, DropError> + Send + Sync
 {
 }
 
@@ -156,7 +98,7 @@ pub trait PreloaderBuilder {
 
 #[async_trait]
 pub trait Preloader<
-  FromDrop: Send + Sync + LiquidDrop + Clone + Into<DropResult<FromDrop>>,
+  FromDrop: Send + Sync + LiquidDrop + Clone + LiquidDropWithID + Into<DropResult<FromDrop>>,
   ToDrop: Send + Sync + LiquidDrop + LiquidDropWithID + 'static,
   Id: Eq + Hash + Copy + Send + Sync,
   V: ValueView + Clone + Send + Sync,
@@ -172,7 +114,7 @@ pub trait Preloader<
     drop: &FromDrop,
   ) -> Result<Vec<ToDrop>, DropError>;
   fn get_normalized_drop_cache(&self) -> Option<&NormalizedDropCache<i64>>;
-  fn drops_to_value(&self, drops: Vec<Arc<ToDrop>>) -> Result<DropResult<V>, DropError>;
+  fn drops_to_value(&self, drops: Vec<ArcValueView<ToDrop>>) -> Result<DropResult<V>, DropError>;
   fn get_once_cell<'a>(&'a self, cache: &'a FromDrop::Cache) -> &'a OnceBox<DropResult<V>>;
   fn get_inverse_once_cell<'a>(
     &'a self,
@@ -206,21 +148,26 @@ pub trait Preloader<
       .map(|(id, drop)| {
         let result = model_lists.get(id);
         let converted_drops = self.loader_result_to_drops(result, drop)?;
-        let normalized_drops: Vec<Arc<ToDrop>> =
+        let normalized_drops: Vec<ArcValueView<ToDrop>> =
           if let Some(normalized_drop_cache) = self.get_normalized_drop_cache() {
             converted_drops
               .into_iter()
               .map(|drop| {
                 let cached = normalized_drop_cache.get(i64::from(drop.id()))?;
                 if let Some(cached) = cached {
-                  Ok::<Arc<ToDrop>, DropError>(cached)
+                  Ok::<ArcValueView<ToDrop>, DropError>(cached)
                 } else {
                   Ok(normalized_drop_cache.put(drop)?)
                 }
               })
               .collect()
           } else {
-            Ok(converted_drops.into_iter().map(Arc::new).collect())
+            Ok(
+              converted_drops
+                .into_iter()
+                .map(|drop| ArcValueView(Arc::new(drop)))
+                .collect(),
+            )
           }?;
         Ok((*id, normalized_drops))
       })
@@ -239,7 +186,7 @@ pub trait Preloader<
   fn populate_db_preloader_results(
     &self,
     drops_by_id: HashMap<Id, &FromDrop>,
-    drop_lists: HashMap<Id, Vec<Arc<ToDrop>>>,
+    drop_lists: HashMap<Id, Vec<ArcValueView<ToDrop>>>,
   ) -> Result<PreloaderResult<Id, V>, DropError> {
     let mut values_by_id: HashMap<Id, DropResult<V>> = HashMap::with_capacity(drop_lists.len());
 
@@ -253,10 +200,10 @@ pub trait Preloader<
       once_cell.get_or_init(|| Box::new(value));
     }
 
-    Ok(PreloaderResult { values_by_id })
+    Ok(PreloaderResult::new(values_by_id))
   }
 
-  fn populate_inverse_caches(&self, from_drop: &FromDrop, drops: &Vec<Arc<ToDrop>>) {
+  fn populate_inverse_caches(&self, from_drop: &FromDrop, drops: &Vec<ArcValueView<ToDrop>>) {
     let from_drop_result: DropResult<FromDrop> = from_drop.into();
 
     for to_drop in drops {
@@ -273,8 +220,9 @@ pub trait Preloader<
     drop: &FromDrop,
   ) -> Result<Option<V>, DropError> {
     warn!(
-      "N+1 query detected for {:?} -> {}",
-      drop,
+      "N+1 query detected for {} {} -> {}",
+      std::any::type_name::<FromDrop>(),
+      drop.id(),
       std::any::type_name::<V>()
     );
 

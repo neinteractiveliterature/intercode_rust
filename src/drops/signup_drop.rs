@@ -20,19 +20,25 @@ impl SignupDrop {
     false
   }
 
-  async fn ends_at(&self) -> Result<Option<DateTime>, DropError> {
-    let run = self.run().await?;
-    eprintln!("{:?}", run);
-    let ends_at = run.ends_at().await;
-    eprintln!("{:?}", ends_at);
-    ends_at
+  async fn ends_at(&self) -> Result<Option<&DateTime>, DropError> {
+    let run = self.run().await.get_inner().unwrap();
+    Ok(run.ends_at().await.get_inner())
   }
 
   fn state(&self) -> &str {
     &self.model.state
   }
 
-  async fn starts_at(&self) -> Result<Option<DateTime>, DropError> {
-    Ok(self.run().await?.starts_at())
+  async fn starts_at(&self) -> Result<Option<&DateTime>, DropError> {
+    Ok(
+      self
+        .run()
+        .await
+        .get_inner()
+        .unwrap()
+        .starts_at()
+        .await
+        .get_inner(),
+    )
   }
 }

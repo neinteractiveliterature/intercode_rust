@@ -23,6 +23,18 @@ impl<T: liquid::model::ValueView> Deref for ArcValueView<T> {
   }
 }
 
+impl<T: liquid::model::ValueView> From<T> for ArcValueView<T> {
+  fn from(view: T) -> Self {
+    ArcValueView(Arc::new(view))
+  }
+}
+
+impl<T: liquid::model::ValueView> From<ArcValueView<ArcValueView<T>>> for ArcValueView<T> {
+  fn from(wrapped_view: ArcValueView<ArcValueView<T>>) -> Self {
+    ArcValueView(wrapped_view.0 .0.clone())
+  }
+}
+
 impl<T: liquid::model::ValueView> liquid::model::ValueView for ArcValueView<T> {
   fn as_scalar(&self) -> Option<liquid::model::ScalarCow<'_>> {
     self.0.as_scalar()

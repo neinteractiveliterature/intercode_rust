@@ -23,50 +23,40 @@ pub fn implement_drop(
   let generic_args = build_generic_args(generics.params.iter());
 
   let method_getters = methods.iter().map(|method| {
-    let getter = method.getter();
     let caching_getter = method.caching_getter();
 
-    quote!(
-      #getter
-      #caching_getter
-    )
+    if method.is_id {
+      quote!(#caching_getter)
+    } else {
+      let getter = method.uncached_getter();
+      quote!(
+        #getter
+        #caching_getter
+      )
+    }
   });
 
   let id_methods = &liquid_drop_impl
-    .id_methods
+    .methods
     .iter()
-    .map(|id_method| {
-      let getter = id_method.getter();
-      let caching_getter = id_method.caching_getter();
-
-      (getter, caching_getter)
-    })
+    .filter(|method| method.is_id)
+    .map(|method| method.uncached_getter())
     .collect::<Vec<_>>();
 
   let drop_with_id_impl = id_type.map(|id_type| {
-    let id_method_getters = id_methods
-      .iter()
-      .map(|(getter, _caching_getter)| getter)
-      .collect::<Vec<_>>();
     quote!(
       impl #generics ::lazy_liquid_value_view::LiquidDropWithID for #self_ty {
         type ID = #id_type;
 
-        #(#id_method_getters)*
+        #(#id_methods)*
       }
     )
   });
-
-  let id_caching_getters = id_methods
-    .iter()
-    .map(|(_getter, caching_getter)| caching_getter)
-    .collect::<Vec<_>>();
 
   Box::new(quote!(
     impl #generics #self_ty {
       #(#constructors)*
       #(#other_items)*
-      #(#id_caching_getters)*
       #(#method_getters)*
 
       pub fn extend(&self, extensions: liquid::model::Object) -> ::lazy_liquid_value_view::ExtendedDropResult<#self_ty> {

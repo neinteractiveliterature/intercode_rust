@@ -3,22 +3,25 @@ use quote::{quote, ToTokens};
 use super::{implement_get_all_blocking::implement_get_all_blocking, LiquidDropImpl};
 
 pub fn implement_object_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTokens> {
-  let methods = &liquid_drop_impl.methods;
+  let methods = liquid_drop_impl.methods.iter().collect::<Vec<_>>();
   let generics = &liquid_drop_impl.generics;
   let self_ty = &liquid_drop_impl.self_ty;
   let method_count = methods.len();
 
-  let getter_idents = methods.iter().map(|method| method.ident());
+  let getter_values = methods.iter().map(|method| {
+    let ident = method.caching_getter_ident();
+    quote!(#ident)
+  });
 
   let method_name_strings: Vec<syn::LitStr> = methods
     .iter()
     .map(|getter_method| getter_method.name_str())
     .collect();
 
-  let get_all_blocking = implement_get_all_blocking(methods);
+  let get_all_blocking = implement_get_all_blocking(methods.as_slice());
 
   let object_pairs = methods.iter().map(|method| {
-    let ident = method.ident();
+    let ident = method.caching_getter_ident();
     let name_str = method.name_str();
 
     quote!(
@@ -56,9 +59,10 @@ pub fn implement_object_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTok
       }
 
       fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn liquid::ValueView> + 'k> {
+        use ::lazy_liquid_value_view::LiquidDropWithID;
         #get_all_blocking
         let values: Vec<&dyn liquid::ValueView> = vec![
-          #(#getter_idents),*
+          #(#getter_values),*
         ];
 
         Box::new(values.into_iter().map(|drop_result| drop_result as &dyn ::liquid::ValueView))
@@ -67,6 +71,7 @@ pub fn implement_object_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTok
       fn iter<'k>(
         &'k self,
       ) -> Box<dyn Iterator<Item = (liquid::model::KStringCow<'k>, &'k dyn liquid::ValueView)> + 'k> {
+        use ::lazy_liquid_value_view::LiquidDropWithID;
         #get_all_blocking
         let pairs: Vec<(&str, &dyn liquid::ValueView)> = vec![
           #(#object_pairs ,)*
@@ -87,6 +92,7 @@ pub fn implement_object_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTok
       }
 
       fn get<'s>(&'s self, index: &str) -> Option<&'s dyn liquid::ValueView> {
+        use ::lazy_liquid_value_view::LiquidDropWithID;
         tokio::task::block_in_place(move || {
           tokio::runtime::Handle::current().block_on(async move {
             match index {

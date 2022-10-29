@@ -10,12 +10,14 @@ use super::{
 
 model_backed_drop!(EventDrop, events::Model, DropContext);
 
-#[belongs_to_related(event_category, EventCategoryDrop)]
+#[belongs_to_related(event_category, EventCategoryDrop, serialize = true)]
 #[has_many_related(runs, RunDrop)]
 #[has_many_linked(
   team_member_user_con_profiles,
   UserConProfileDrop,
-  EventToTeamMemberUserConProfiles
+  EventToTeamMemberUserConProfiles,
+  serialize = true,
+  eager_load(staff_positions, ticket)
 )]
 #[liquid_drop_impl(i64)]
 impl EventDrop {

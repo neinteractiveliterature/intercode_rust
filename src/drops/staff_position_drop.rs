@@ -17,9 +17,11 @@ impl StaffPositionDrop {
     self.model.email.as_deref()
   }
 
-  fn email_link(&self) -> Option<String> {
+  async fn email_link(&self) -> Option<String> {
     self
       .email()
+      .await
+      .get_inner()
       .map(|email| format!("<a href=\"mailto:{}\">{}</a>", email, email))
   }
 

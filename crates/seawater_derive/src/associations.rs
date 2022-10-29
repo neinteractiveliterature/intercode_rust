@@ -21,13 +21,17 @@ trait AssociationMacro {
   fn get_to(&self) -> &Path;
   fn get_target_type(&self) -> &TargetType;
   fn get_inverse(&self) -> Option<&Ident>;
+  fn get_eager_load_associations(&self) -> &[Ident];
+  fn should_serialize(&self) -> bool;
   fn loader_result_type(&self) -> Path;
 
   fn target_path(&self) -> Path {
     let to_drop = self.get_to();
 
     match self.get_target_type() {
-      TargetType::OneOptional | TargetType::OneRequired => to_drop.clone(),
+      TargetType::OneOptional | TargetType::OneRequired => {
+        parse_quote!(::lazy_liquid_value_view::ArcValueView<#to_drop>)
+      }
       TargetType::Many => parse_quote!(Vec<::lazy_liquid_value_view::ArcValueView<#to_drop>>),
     }
   }
@@ -39,6 +43,7 @@ trait AssociationMacro {
     );
     let preloader_ident = self.preloader_ident();
     let target_path = self.target_path();
+    let eager_load_action = self.eager_load_action();
 
     parse_quote!(
       pub async fn #ident(
@@ -49,7 +54,9 @@ trait AssociationMacro {
         use ::seawater::Context;
 
         let preloader = Self::#preloader_ident(context.clone());
-        preloader.preload(context.db(), drops).await
+        let preloader_result = preloader.preload(context.db(), drops).await?;
+        #eager_load_action
+        Ok(preloader_result)
       }
     )
   }
@@ -66,11 +73,11 @@ trait AssociationMacro {
     )
   }
 
-  fn generate_items(&self, serialize: bool) -> Vec<ImplItem> {
+  fn generate_items(&self) -> Vec<ImplItem> {
     vec![
       self.once_cell_getter(),
       self.preloader_constructor(),
-      self.field_getter(serialize),
+      self.field_getter(),
       self.imperative_preloader(),
     ]
   }
@@ -94,16 +101,17 @@ trait AssociationMacro {
     })
   }
 
-  fn field_getter(&self, serialize: bool) -> ImplItem {
+  fn field_getter(&self) -> ImplItem {
     let preloader_ident = self.preloader_ident();
     let name = self.get_name();
     let target_path = self.target_path();
-    let serialize_attr = if serialize {
+    let serialize_attr = if self.should_serialize() {
       Some(quote!(#[liquid_drop(serialize_value = true)]))
     } else {
       None
     };
 
+    // TODO think about if it's possible to do eager loading here
     parse_quote!(
       #serialize_attr
       pub async fn #name(&self) -> Result<#target_path, ::seawater::DropError> {
@@ -115,6 +123,43 @@ trait AssociationMacro {
           .await
       }
     )
+  }
+
+  fn eager_load_action<'a>(&'a self) -> Box<dyn ToTokens + 'a> {
+    let eager_load_associations = self.get_eager_load_associations();
+    if eager_load_associations.is_empty() {
+      return Box::new(quote!());
+    }
+
+    let to_drop = self.get_to();
+    let get_preloaded_drops = if let TargetType::Many = self.get_target_type() {
+      Box::new(quote!(
+        let preloaded_drops = preloader_result.all_values_flat_unwrapped().collect::<Vec<_>>();
+      ))
+    } else {
+      Box::new(quote!(
+        let preloaded_drops = preloader_result.all_values_unwrapped().map(|v| v.as_ref()).collect::<Vec<_>>();
+      ))
+    };
+    let eager_loads = self
+      .get_eager_load_associations()
+      .iter()
+      .map(|association_name| {
+        let imperative_preload_ident = Ident::new(
+          format!("preload_{}", association_name).as_str(),
+          association_name.span(),
+        );
+        quote!(
+          #to_drop::#imperative_preload_ident(context.clone(), &preloaded_drops)
+        )
+      });
+
+    Box::new(quote!(
+      #get_preloaded_drops
+      ::futures::try_join!(
+        #(#eager_loads,)*
+      )?;
+    ))
   }
 
   fn loader_result_to_drops<'a>(&'a self) -> Box<dyn ToTokens + 'a> {
@@ -134,26 +179,32 @@ trait AssociationMacro {
     let to_drop = self.get_to();
 
     match self.get_target_type() {
-      TargetType::OneOptional => Box::new(quote!(|drops: Vec<::std::sync::Arc<#to_drop>>| {
-        if drops.len() == 1 {
-          Ok(drops[0].clone().into())
-        } else {
-          Ok(None::<#to_drop>.into())
-        }
-      })),
-      TargetType::OneRequired => Box::new(quote!(|drops: Vec<::std::sync::Arc<#to_drop>>| {
-        if drops.len() == 1 {
-          Ok(drops[0].clone().into())
-        } else {
-          Err(::seawater::DropError::ExpectedEntityNotFound(format!(
-            "Expected one model, but there are {}",
-            drops.len()
-          )))
-        }
-      })),
-      TargetType::Many => Box::new(quote!(|drops: Vec<::std::sync::Arc<#to_drop>>| {
-        Ok(drops.into_iter().map(|drop| ::lazy_liquid_value_view::ArcValueView(drop)).collect::<Vec<_>>().into())
-      })),
+      TargetType::OneOptional => Box::new(
+        quote!(|drops: Vec<::lazy_liquid_value_view::ArcValueView<#to_drop>>| {
+          if drops.len() == 1 {
+            Ok(drops[0].clone().into())
+          } else {
+            Ok(None::<::lazy_liquid_value_view::ArcValueView<#to_drop>>.into())
+          }
+        }),
+      ),
+      TargetType::OneRequired => Box::new(
+        quote!(|drops: Vec<::lazy_liquid_value_view::ArcValueView<#to_drop>>| {
+          if drops.len() == 1 {
+            Ok(drops[0].clone().into())
+          } else {
+            Err(::seawater::DropError::ExpectedEntityNotFound(format!(
+              "Expected one model, but there are {}",
+              drops.len()
+            )))
+          }
+        }),
+      ),
+      TargetType::Many => Box::new(
+        quote!(|drops: Vec<::lazy_liquid_value_view::ArcValueView<#to_drop>>| {
+          Ok(drops.into_iter().map(|drop| ::lazy_liquid_value_view::ArcValueView(::std::sync::Arc::new(drop))).collect::<Vec<_>>().into())
+        }),
+      ),
     }
   }
 }
@@ -163,6 +214,8 @@ struct RelatedAssociationMacro {
   to: Path,
   target_type: TargetType,
   inverse: Option<Ident>,
+  eager_load_associations: Vec<Ident>,
+  serialize: bool,
 }
 
 impl AssociationMacro for RelatedAssociationMacro {
@@ -180,6 +233,14 @@ impl AssociationMacro for RelatedAssociationMacro {
 
   fn get_inverse(&self) -> Option<&Ident> {
     self.inverse.as_ref()
+  }
+
+  fn get_eager_load_associations(&self) -> &[Ident] {
+    &self.eager_load_associations
+  }
+
+  fn should_serialize(&self) -> bool {
+    self.serialize
   }
 
   fn loader_result_type(&self) -> Path {
@@ -237,6 +298,8 @@ struct LinkedAssociationMacro {
   link: Path,
   target_type: TargetType,
   inverse: Option<Ident>,
+  eager_load_associations: Vec<Ident>,
+  serialize: bool,
 }
 
 impl AssociationMacro for LinkedAssociationMacro {
@@ -254,6 +317,14 @@ impl AssociationMacro for LinkedAssociationMacro {
 
   fn get_inverse(&self) -> Option<&Ident> {
     self.inverse.as_ref()
+  }
+
+  fn get_eager_load_associations(&self) -> &[Ident] {
+    &self.eager_load_associations
+  }
+
+  fn should_serialize(&self) -> bool {
+    self.serialize
   }
 
   fn loader_result_type(&self) -> Path {
@@ -326,6 +397,8 @@ pub fn eval_association_macro(
       to: args.get_to().to_owned(),
       target_type,
       inverse: args.get_inverse().map(|inverse| inverse.to_owned()),
+      eager_load_associations: args.get_eager_load_associations().to_vec(),
+      serialize: args.should_serialize(),
     }),
     AssociationType::Linked => {
       if let Some(link) = args.get_link() {
@@ -335,6 +408,8 @@ pub fn eval_association_macro(
           target_type,
           to: args.get_to().to_owned(),
           inverse: args.get_inverse().map(|inverse| inverse.to_owned()),
+          eager_load_associations: args.get_eager_load_associations().to_vec(),
+          serialize: args.should_serialize(),
         })
       } else {
         panic!("Linked associations require a link");
@@ -342,7 +417,7 @@ pub fn eval_association_macro(
     }
   };
 
-  let mut items = association.generate_items(args.should_serialize());
+  let mut items = association.generate_items();
   input.items.append(&mut items);
 
   quote!(#input).into()

@@ -1,6 +1,6 @@
 use crate::{ArcValueView, ExtendedDropResult};
-use liquid::ObjectView;
-use std::sync::Arc;
+use liquid::{ObjectView, ValueView};
+use std::{sync::Arc, vec::IntoIter};
 
 #[derive(Debug)]
 pub struct DropResult<T: liquid::ValueView> {
@@ -35,6 +35,12 @@ impl<T: liquid::model::ValueView> DropResult<T> {
 
   pub fn get_inner(&self) -> Option<&T> {
     self.value.as_deref()
+  }
+
+  pub fn expect_inner(&self) -> &T {
+    self
+      .get_inner()
+      .expect("Inner value expected in DropResult")
   }
 
   pub fn get_shared(&self) -> Option<ArcValueView<T>> {
@@ -250,5 +256,15 @@ impl<V: liquid::ValueView, T: Into<V>> From<Vec<T>> for DropResult<Vec<V>> {
 impl<'a, T: liquid::ValueView + Clone> From<&'a DropResult<T>> for DropResult<T> {
   fn from(result: &'a DropResult<T>) -> Self {
     result.to_owned()
+  }
+}
+
+impl<T: ValueView + Clone> IntoIterator for DropResult<Vec<T>> {
+  type Item = T;
+  type IntoIter = IntoIter<T>;
+
+  fn into_iter(self) -> Self::IntoIter {
+    let vec: Vec<T> = self.get_inner().unwrap().to_vec();
+    vec.into_iter()
   }
 }
