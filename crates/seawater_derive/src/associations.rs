@@ -132,14 +132,16 @@ trait AssociationMacro {
     }
 
     let to_drop = self.get_to();
-    let get_preloaded_drops = if let TargetType::Many = self.get_target_type() {
-      Box::new(quote!(
+    let get_preloaded_drops = match self.get_target_type() {
+      TargetType::Many => Box::new(quote!(
         let preloaded_drops = preloader_result.all_values_flat_unwrapped().collect::<Vec<_>>();
-      ))
-    } else {
-      Box::new(quote!(
+      )),
+      TargetType::OneRequired => Box::new(quote!(
         let preloaded_drops = preloader_result.all_values_unwrapped().map(|v| v.as_ref()).collect::<Vec<_>>();
-      ))
+      )),
+      TargetType::OneOptional => Box::new(quote!(
+        let preloaded_drops = preloader_result.all_values().filter_map(|v| v.get_inner()).map(|v| v.as_ref()).collect::<Vec<_>>();
+      )),
     };
     let eager_loads = self
       .get_eager_load_associations()
