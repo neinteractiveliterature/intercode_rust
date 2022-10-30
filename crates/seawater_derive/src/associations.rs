@@ -75,11 +75,15 @@ trait AssociationMacro {
 
   fn generate_items(&self) -> Vec<ImplItem> {
     vec![
-      self.once_cell_getter(),
-      self.preloader_constructor(),
-      self.field_getter(),
-      self.imperative_preloader(),
+      Some(self.once_cell_getter()),
+      self.inverse_once_cell_getter(),
+      Some(self.preloader_constructor()),
+      Some(self.field_getter()),
+      Some(self.imperative_preloader()),
     ]
+    .into_iter()
+    .flatten()
+    .collect()
   }
 
   fn preloader_ident(&self) -> Ident {
@@ -97,6 +101,18 @@ trait AssociationMacro {
       Ident::new(
         format!("get_{}_inverse_once_cell", name).as_str(),
         name.span(),
+      )
+    })
+  }
+
+  fn inverse_once_cell_getter(&self) -> Option<ImplItem> {
+    self.get_inverse().map(|name| {
+      let ident = self.inverse_once_cell_getter_ident().unwrap();
+      let to_drop_ident = self.get_to();
+      parse_quote!(
+        fn #ident(drop: &#to_drop_ident) -> &::once_cell::race::OnceBox<::lazy_liquid_value_view::DropResult<::lazy_liquid_value_view::ArcValueView<Self>>> {
+          &drop.drop_cache.#name
+        }
       )
     })
   }

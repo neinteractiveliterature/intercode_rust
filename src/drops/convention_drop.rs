@@ -13,7 +13,12 @@ use super::{
 model_backed_drop!(ConventionDrop, conventions::Model, DropContext);
 
 #[has_many_related(event_categories, EventCategoryDrop, serialize = true)]
-#[has_many_related(staff_positions, StaffPositionDrop, serialize = true)]
+#[has_many_related(
+  staff_positions,
+  StaffPositionDrop,
+  serialize = true,
+  eager_load(user_con_profiles)
+)]
 #[liquid_drop_impl(i64)]
 impl ConventionDrop {
   fn id(&self) -> i64 {

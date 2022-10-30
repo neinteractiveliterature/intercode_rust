@@ -18,7 +18,7 @@ pub fn implement_drop_cache(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
     let cache_type = method.cache_type();
 
     quote!(
-      #ident: once_cell::race::OnceBox<::lazy_liquid_value_view::DropResult<#cache_type>>
+      pub #ident: once_cell::race::OnceBox<::lazy_liquid_value_view::DropResult<#cache_type>>
     )
   });
 

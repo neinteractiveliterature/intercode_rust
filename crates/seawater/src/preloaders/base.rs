@@ -76,7 +76,7 @@ where
 
 pub trait GetInverseOnceCellFn<'a, FromDrop: LiquidDrop, Value: ValueView + 'a>
 where
-  Self: Fn(&'a Value) -> &'a OnceBox<DropResult<FromDrop>> + Send + Sync,
+  Self: Fn(&'a Value) -> &'a OnceBox<DropResult<ArcValueView<FromDrop>>> + Send + Sync,
   FromDrop: 'a,
 {
 }
@@ -84,7 +84,7 @@ where
 impl<'a, FromDrop: LiquidDrop, Value: ValueView + 'a, T> GetInverseOnceCellFn<'a, FromDrop, Value>
   for T
 where
-  T: Fn(&'a Value) -> &'a OnceBox<DropResult<FromDrop>> + Send + Sync,
+  T: Fn(&'a Value) -> &'a OnceBox<DropResult<ArcValueView<FromDrop>>> + Send + Sync,
   FromDrop: 'a,
 {
 }
@@ -119,7 +119,7 @@ pub trait Preloader<
   fn get_inverse_once_cell<'a>(
     &'a self,
     drop: &'a ToDrop,
-  ) -> Option<&'a OnceBox<DropResult<FromDrop>>>;
+  ) -> Option<&'a OnceBox<DropResult<ArcValueView<FromDrop>>>>;
   async fn load_model_lists(
     &self,
     db: &DatabaseConnection,
@@ -204,7 +204,7 @@ pub trait Preloader<
   }
 
   fn populate_inverse_caches(&self, from_drop: &FromDrop, drops: &Vec<ArcValueView<ToDrop>>) {
-    let from_drop_result: DropResult<FromDrop> = from_drop.into();
+    let from_drop_result: DropResult<ArcValueView<FromDrop>> = Arc::new(from_drop.clone()).into();
 
     for to_drop in drops {
       let inverse_once_cell = self.get_inverse_once_cell(to_drop.as_ref());

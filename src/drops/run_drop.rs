@@ -34,7 +34,7 @@ impl RunDrop {
 
   pub async fn ends_at(&self) -> Result<Option<DateTime>, DropError> {
     if let Some(starts_at) = self.starts_at().await.get_inner() {
-      let mut starts_at = starts_at.clone();
+      let mut starts_at = *starts_at;
       let event_length = self
         .event()
         .await

@@ -5,7 +5,9 @@ use proc_macro::{Span, TokenStream};
 use quote::quote;
 use syn::parse::{self, Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::{parse_macro_input, Error, Ident, ImplItem, ItemImpl, Path, PathArguments, Token};
+use syn::{
+  parse_macro_input, Error, Ident, ImplItem, ImplItemMethod, ItemImpl, Path, PathArguments, Token,
+};
 use syn::{Generics, Type};
 
 use self::implement_drop::implement_drop;
@@ -98,6 +100,8 @@ impl LiquidDropImpl {
         _ => false,
       });
 
+    let mut ignored_methods: Vec<ImplItem> = vec![];
+
     let getter_methods = methods
       .into_iter()
       .filter_map(|method| match method {
@@ -109,6 +113,10 @@ impl LiquidDropImpl {
             .filter_map(|attr| attr.ok())
             .collect::<Vec<_>>();
 
+          let ignore = attrs
+            .iter()
+            .any(|attr| matches!(attr, DropMethodAttribute::Ignore));
+
           let serialize = attrs
             .iter()
             .any(|attr| matches!(attr, DropMethodAttribute::SerializeValue));
@@ -116,6 +124,11 @@ impl LiquidDropImpl {
           method
             .attrs
             .retain(|attr| DropMethodAttribute::try_from(attr).is_err());
+
+          if ignore {
+            ignored_methods.push(syn::ImplItem::Method(method));
+            return None;
+          }
 
           let is_id = has_id_type && method.sig.ident == "id";
           Some(DropGetterMethod::new(method, serialize, is_id))
@@ -133,7 +146,10 @@ impl LiquidDropImpl {
       cache_struct_ident,
       constructors,
       methods: getter_methods,
-      other_items,
+      other_items: other_items
+        .into_iter()
+        .chain(ignored_methods.into_iter())
+        .collect(),
     }
   }
 }

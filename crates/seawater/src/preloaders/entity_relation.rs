@@ -90,7 +90,7 @@ where
   fn get_inverse_once_cell<'a>(
     &'a self,
     drop: &'a ToDrop,
-  ) -> Option<&'a OnceBox<DropResult<FromDrop>>> {
+  ) -> Option<&'a OnceBox<DropResult<ArcValueView<FromDrop>>>> {
     self
       .get_inverse_once_cell
       .as_ref()
