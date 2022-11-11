@@ -8,7 +8,7 @@ use std::{
 pub enum DropError {
   GraphQLError(async_graphql::Error),
   LiquidError(liquid::Error),
-  DbErr(sea_orm::DbErr),
+  DbErr(Arc<sea_orm::DbErr>),
   ExpectedEntityNotFound(String),
   PoisonError(String),
 }
@@ -41,13 +41,13 @@ impl From<liquid::Error> for DropError {
 
 impl From<sea_orm::DbErr> for DropError {
   fn from(err: sea_orm::DbErr) -> Self {
-    DropError::DbErr(err)
+    DropError::DbErr(Arc::new(err))
   }
 }
 
 impl From<Arc<sea_orm::DbErr>> for DropError {
   fn from(err: Arc<sea_orm::DbErr>) -> Self {
-    DropError::DbErr(err.as_ref().clone())
+    DropError::DbErr(err)
   }
 }
 

@@ -1,4 +1,8 @@
 use async_graphql::*;
+use intercode_entities::rooms;
+use intercode_policies::{policies::RoomPolicy, AuthorizationInfo, Policy, ReadManageAction};
+
+use crate::QueryData;
 
 pub struct AbilityType;
 
@@ -71,8 +75,27 @@ impl AbilityType {
     false
   }
   #[graphql(name = "can_manage_rooms")]
-  async fn can_manage_rooms(&self) -> bool {
-    false
+  async fn can_manage_rooms(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let query_data = ctx.data::<QueryData>()?;
+
+    RoomPolicy::action_permitted(
+      authorization_info,
+      ReadManageAction::Manage,
+      &rooms::Model {
+        id: 0,
+        name: None,
+        convention_id: query_data
+          .convention
+          .as_ref()
+          .as_ref()
+          .map(|convention| convention.id),
+        created_at: Default::default(),
+        updated_at: Default::default(),
+      },
+    )
+    .await
+    .map_err(|e| e.into())
   }
   #[graphql(name = "can_manage_signups")]
   async fn can_manage_signups(&self) -> bool {

@@ -83,7 +83,7 @@ impl QueryRoot {
     before: Option<String>,
     first: Option<i32>,
     last: Option<i32>,
-  ) -> Result<Connection<usize, EventType>> {
+  ) -> Result<Connection<u64, EventType>> {
     query(
       after,
       before,

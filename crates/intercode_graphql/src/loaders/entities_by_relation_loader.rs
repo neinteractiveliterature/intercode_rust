@@ -21,7 +21,7 @@ pub async fn load_all_related<
   pk_column: PK::Column,
   keys: &[PK::ValueType],
   db: &DatabaseConnection,
-) -> Result<HashMap<PK::ValueType, EntityRelationLoaderResult<From, To>>, DbErr>
+) -> Result<HashMap<PK::ValueType, EntityRelationLoaderResult<From, To>>, Arc<DbErr>>
 where
   PK::ValueType: Eq + std::hash::Hash + Clone + std::convert::From<i64>,
 {
@@ -96,7 +96,7 @@ where
   type EntityRelationLoaderType: Loader<
     <<Self as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType,
     Value = EntityRelationLoaderResult<Self, To>,
-    Error = sea_orm::DbErr,
+    Error = Arc<sea_orm::DbErr>,
   >;
 
   fn to_entity_relation_loader(
@@ -271,7 +271,7 @@ where
   PK::ValueType: Sync + Clone + Eq + std::hash::Hash + IntoValueTuple + std::convert::From<i64>,
 {
   type Value = EntityRelationLoaderResult<From, To>;
-  type Error = sea_orm::DbErr;
+  type Error = Arc<sea_orm::DbErr>;
 
   async fn load(
     &self,

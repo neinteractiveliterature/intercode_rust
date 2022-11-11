@@ -2,7 +2,7 @@ use crate::csrf::{csrf_middleware, CsrfConfig, CsrfData};
 use crate::db_sessions::DbSessionStore;
 use crate::legacy_passwords::{verify_legacy_md5_password, verify_legacy_sha1_password};
 use crate::liquid_renderer::IntercodeLiquidRenderer;
-use crate::middleware::QueryDataFromRequest;
+use crate::middleware::{AuthorizationInfoFromRequest, QueryDataFromRequest};
 use crate::Localizations;
 use ::http::StatusCode;
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
@@ -120,12 +120,14 @@ async fn graphql_handler(
   schema_data: Extension<SchemaData>,
   QueryDataFromRequest(query_data): QueryDataFromRequest,
   req: GraphQLRequest,
+  AuthorizationInfoFromRequest(authorization_info): AuthorizationInfoFromRequest,
 ) -> GraphQLResponse {
   let liquid_renderer = IntercodeLiquidRenderer::new(&query_data, &schema_data);
   let req = req
     .into_inner()
     .data(query_data)
-    .data::<Arc<dyn LiquidRenderer>>(Arc::new(liquid_renderer));
+    .data::<Arc<dyn LiquidRenderer>>(Arc::new(liquid_renderer))
+    .data(authorization_info);
 
   schema.execute(req).await.into()
 }

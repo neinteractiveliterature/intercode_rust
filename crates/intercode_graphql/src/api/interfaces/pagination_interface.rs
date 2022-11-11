@@ -8,25 +8,25 @@ use crate::{api::objects::EventsPaginationType, SchemaData};
   field(
     name = "total_entries",
     method = "total_entries",
-    type = "usize",
+    type = "u64",
     desc = "The total number of items in the paginated list (across all pages)"
   ),
   field(
     name = "total_pages",
     method = "total_pages",
-    type = "usize",
+    type = "u64",
     desc = "The total number of pages in the paginated list"
   ),
   field(
     name = "current_page",
     method = "current_page",
-    type = "usize",
+    type = "u64",
     desc = "The number of the page currently being returned in this query"
   ),
   field(
     name = "per_page",
     method = "per_page",
-    type = "usize",
+    type = "u64",
     desc = "The number of items per page currently being returned in this query"
   )
 )]
@@ -52,24 +52,24 @@ pub trait PaginationImplementation<Item: SelectorTrait + Send + Sync> {
   fn paginator_and_page_size<'s>(
     &'s self,
     db: &'s DatabaseConnection,
-  ) -> (Paginator<'s, DatabaseConnection, Item>, usize);
+  ) -> (Paginator<'s, DatabaseConnection, Item>, u64);
 
-  async fn total_entries(&self, ctx: &Context) -> Result<usize, Error> {
+  async fn total_entries(&self, ctx: &Context) -> Result<u64, Error> {
     let db = ctx.data::<SchemaData>()?.db.as_ref();
     Ok(self.paginator_and_page_size(db).0.num_items().await?)
   }
 
-  async fn total_pages(&self, ctx: &Context) -> Result<usize, Error> {
+  async fn total_pages(&self, ctx: &Context) -> Result<u64, Error> {
     let db = ctx.data::<SchemaData>()?.db.as_ref();
     Ok(self.paginator_and_page_size(db).0.num_pages().await?)
   }
 
-  async fn current_page(&self, ctx: &Context) -> Result<usize, Error> {
+  async fn current_page(&self, ctx: &Context) -> Result<u64, Error> {
     let db = ctx.data::<SchemaData>()?.db.as_ref();
     Ok(self.paginator_and_page_size(db).0.cur_page())
   }
 
-  async fn per_page(&self, ctx: &Context) -> Result<usize, Error> {
+  async fn per_page(&self, ctx: &Context) -> Result<u64, Error> {
     let db = ctx.data::<SchemaData>()?.db.as_ref();
     Ok(self.paginator_and_page_size(db).1)
   }

@@ -8,15 +8,15 @@ use super::{EventType, ModelBackedType};
 
 pub struct EventsPaginationType {
   scope: Select<events::Entity>,
-  page: usize,
-  per_page: usize,
+  page: u64,
+  per_page: u64,
 }
 
 impl EventsPaginationType {
   pub fn new(
     scope: Option<Select<events::Entity>>,
-    page: Option<usize>,
-    per_page: Option<usize>,
+    page: Option<u64>,
+    per_page: Option<u64>,
   ) -> Self {
     EventsPaginationType {
       scope: scope.unwrap_or_else(intercode_entities::events::Entity::find),
@@ -48,7 +48,7 @@ impl PaginationImplementation<SelectModel<events::Model>> for EventsPaginationTy
     db: &'s DatabaseConnection,
   ) -> (
     sea_orm::Paginator<'s, DatabaseConnection, SelectModel<events::Model>>,
-    usize,
+    u64,
   ) {
     (
       self.scope.clone().into_model().paginate(db, self.per_page),

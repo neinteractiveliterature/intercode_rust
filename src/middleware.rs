@@ -1,5 +1,6 @@
 use axum::{
   async_trait,
+  body::HttpBody,
   extract::{FromRequest, RequestParts},
 };
 use axum_sessions::SessionHandle;
@@ -7,6 +8,7 @@ use intercode_entities::{
   cms_parent::CmsParent, conventions, root_sites, user_con_profiles, users,
 };
 use intercode_graphql::{QueryData, SchemaData};
+use intercode_policies::AuthorizationInfo;
 use regex::Regex;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use std::{convert::Infallible, sync::Arc};
@@ -150,5 +152,29 @@ where
     );
 
     Ok(Self(query_data))
+  }
+}
+
+pub struct AuthorizationInfoFromRequest(pub AuthorizationInfo);
+
+#[async_trait]
+impl<B: HttpBody + Send> FromRequest<B> for AuthorizationInfoFromRequest {
+  type Rejection = http::StatusCode;
+
+  async fn from_request(req: &mut axum::extract::RequestParts<B>) -> Result<Self, Self::Rejection> {
+    let query_data = QueryDataFromRequest::from_request(req).await?.0;
+    let schema_data = req
+      .extensions()
+      .get::<SchemaData>()
+      .expect("SchemaData not found in request extensions");
+
+    Ok(AuthorizationInfoFromRequest(AuthorizationInfo::new(
+      schema_data.db.clone(),
+      query_data.current_user,
+      // TODO figure out how to get oauth scopes
+      Default::default(),
+      // TODO figure out how to do assumed identity stuff
+      Arc::new(None),
+    )))
   }
 }

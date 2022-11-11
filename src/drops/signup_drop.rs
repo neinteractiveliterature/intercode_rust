@@ -7,8 +7,8 @@ use super::{drop_context::DropContext, EventDrop, RunDrop};
 
 model_backed_drop!(SignupDrop, signups::Model, DropContext);
 
-#[belongs_to_related(run, RunDrop, serialize = true)]
-#[belongs_to_linked(event, EventDrop, SignupToEvent, serialize = true)]
+#[belongs_to_related(run, RunDrop, serialize = true, eager_load(event))]
+#[belongs_to_linked(event, EventDrop, SignupToEvent, serialize = true, eager_load(runs))]
 #[liquid_drop_impl(i64)]
 impl SignupDrop {
   fn id(&self) -> i64 {

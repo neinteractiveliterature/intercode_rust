@@ -11,12 +11,14 @@ use async_graphql::*;
 use chrono::{DateTime, Utc};
 use intercode_entities::{
   cms_parent::{CmsParent, CmsParentTrait},
-  conventions, events, pages, runs, staff_positions, staff_positions_user_con_profiles,
-  team_members, user_con_profiles, users,
+  conventions, events,
+  links::ConventionToStaffPositions,
+  pages, runs, staff_positions, staff_positions_user_con_profiles, team_members, user_con_profiles,
+  users,
 };
 use sea_orm::{
-  sea_query::Expr, ColumnTrait, EntityTrait, JoinType, Linked, ModelTrait, Order, QueryFilter,
-  QueryOrder, QuerySelect, RelationTrait,
+  sea_query::Expr, ColumnTrait, EntityTrait, JoinType, ModelTrait, Order, QueryFilter, QueryOrder,
+  QuerySelect, RelationTrait,
 };
 
 use super::{
@@ -26,17 +28,6 @@ use super::{
 
 use crate::model_backed_type;
 model_backed_type!(ConventionType, conventions::Model);
-
-pub struct ConventionToStaffPositions;
-
-impl Linked for ConventionToStaffPositions {
-  type FromEntity = conventions::Entity;
-  type ToEntity = staff_positions::Entity;
-
-  fn link(&self) -> Vec<sea_orm::LinkDef> {
-    vec![staff_positions::Relation::Conventions.def().rev()]
-  }
-}
 
 #[Object]
 impl ConventionType {
@@ -138,8 +129,8 @@ impl ConventionType {
   async fn events_paginated(
     &self,
     ctx: &Context<'_>,
-    page: Option<usize>,
-    per_page: Option<usize>,
+    page: Option<u64>,
+    per_page: Option<u64>,
     filters: Option<EventFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<EventsPaginationType, Error> {

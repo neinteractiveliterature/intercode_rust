@@ -5,9 +5,7 @@ use proc_macro::{Span, TokenStream};
 use quote::quote;
 use syn::parse::{self, Parse, ParseStream};
 use syn::punctuated::Punctuated;
-use syn::{
-  parse_macro_input, Error, Ident, ImplItem, ImplItemMethod, ItemImpl, Path, PathArguments, Token,
-};
+use syn::{parse_macro_input, Error, Ident, ImplItem, ItemImpl, Path, PathArguments, Token};
 use syn::{Generics, Type};
 
 use self::implement_drop::implement_drop;

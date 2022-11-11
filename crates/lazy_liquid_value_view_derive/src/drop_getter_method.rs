@@ -39,7 +39,7 @@ impl DropGetterMethodImplItem {
     }
   }
 
-  pub fn getter<'a>(&'a self) -> &'a ImplItemMethod {
+  pub fn getter(&self) -> &ImplItemMethod {
     match self {
       DropGetterMethodImplItem::Base(method) => method,
       DropGetterMethodImplItem::Uncached(inner_method)

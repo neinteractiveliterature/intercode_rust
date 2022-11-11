@@ -1,8 +1,8 @@
 use async_graphql::{connection::Edge, OutputType};
 use sea_orm::{ConnectionTrait, EntityTrait, FromQueryResult, PaginatorTrait, QuerySelect, Select};
 
-pub const DEFAULT_PER_PAGE: usize = 10;
-pub const MAX_PAGE_SIZE: usize = 100;
+pub const DEFAULT_PER_PAGE: u64 = 10;
+pub const MAX_PAGE_SIZE: u64 = 100;
 
 pub trait RelayConnectable<
   'db,
@@ -16,8 +16,8 @@ pub trait RelayConnectable<
     self,
     db: &'db C,
     to_graphql_representation: F,
-    after: Option<usize>,
-    before: Option<usize>,
+    after: Option<u64>,
+    before: Option<u64>,
     first: Option<usize>,
     last: Option<usize>,
   ) -> RelayConnectionWrapper<'db, C, M, E, G, F>;
@@ -35,8 +35,8 @@ impl<
     self,
     db: &'db C,
     to_graphql_representation: F,
-    after: Option<usize>,
-    before: Option<usize>,
+    after: Option<u64>,
+    before: Option<u64>,
     first: Option<usize>,
     last: Option<usize>,
   ) -> RelayConnectionWrapper<'db, C, M, E, G, F> {
@@ -46,8 +46,8 @@ impl<
       to_graphql_representation,
       after,
       before,
-      first,
-      last,
+      first: first.map(|v| v.try_into().unwrap()),
+      last: last.map(|v| v.try_into().unwrap()),
     }
   }
 }
@@ -62,10 +62,10 @@ where
   select: Select<E>,
   db: &'db C,
   to_graphql_representation: F,
-  after: Option<usize>,
-  before: Option<usize>,
-  first: Option<usize>,
-  last: Option<usize>,
+  after: Option<u64>,
+  before: Option<u64>,
+  first: Option<u64>,
+  last: Option<u64>,
 }
 
 impl<'db, C, M, E, G, F> RelayConnectionWrapper<'db, C, M, E, G, F>
@@ -76,7 +76,7 @@ where
   F: Fn(M) -> G + Copy,
   G: OutputType,
 {
-  pub async fn total_count(&self) -> Result<usize, sea_orm::DbErr> {
+  pub async fn total_count(&self) -> Result<u64, sea_orm::DbErr> {
     self
       .select
       .clone()
@@ -88,7 +88,7 @@ where
 
   pub async fn to_connection(
     &self,
-  ) -> Result<async_graphql::connection::Connection<usize, G>, sea_orm::DbErr> {
+  ) -> Result<async_graphql::connection::Connection<u64, G>, sea_orm::DbErr> {
     let iter = self.to_graphql_representation;
     let db = self.db;
 
@@ -107,7 +107,7 @@ where
     }
 
     let mut connection =
-      async_graphql::connection::Connection::<usize, G>::new(start > 0, end < total);
+      async_graphql::connection::Connection::<u64, G>::new(start > 0, end < total);
     let scope = self
       .select
       .clone()
@@ -120,7 +120,7 @@ where
         .await?
         .into_iter()
         .enumerate()
-        .map(|(index, model)| Edge::new(start + index, (iter)(model))),
+        .map(|(index, model)| Edge::new(start + u64::try_from(index).unwrap(), (iter)(model))),
     );
 
     Ok(connection)

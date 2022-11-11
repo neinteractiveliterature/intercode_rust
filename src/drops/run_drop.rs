@@ -10,7 +10,7 @@ use super::{
 
 model_backed_drop!(RunDrop, runs::Model, DropContext);
 
-#[belongs_to_related(event, EventDrop)]
+#[belongs_to_related(event, EventDrop, eager_load(event_category))]
 #[has_many_linked(rooms, RoomDrop, RunToRooms, serialize = true)]
 #[liquid_drop_impl(i64)]
 impl RunDrop {
