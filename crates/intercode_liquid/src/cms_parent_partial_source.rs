@@ -4,11 +4,13 @@ use intercode_entities::{
   cms_partials, cms_partials_pages, pages,
 };
 use sea_orm::{
-  ColumnTrait, DatabaseConnection, FromQueryResult, Linked, ModelTrait, QueryFilter, QuerySelect,
+  ColumnTrait, ConnectionTrait, FromQueryResult, Linked, ModelTrait, QueryFilter, QuerySelect,
   RelationTrait,
 };
+use seawater::ConnectionWrapper;
 use std::{
   collections::HashMap,
+  fmt::Debug,
   sync::{Arc, Mutex},
 };
 
@@ -71,9 +73,9 @@ impl LazyCmsPartialCacheCell {
     }
   }
 
-  fn try_get(
+  fn try_get<C: ConnectionTrait>(
     &mut self,
-    db: &DatabaseConnection,
+    db: &C,
     cms_parent: &CmsParent,
   ) -> Option<&PartialNameAndContent> {
     if self.partial.is_some() {
@@ -109,12 +111,12 @@ impl LazyCmsPartialCacheCell {
 #[derive(Debug)]
 struct LazyCmsPartialCache {
   cached_partials: Arc<Mutex<HashMap<String, LazyCmsPartialCacheCell>>>,
-  db: Arc<DatabaseConnection>,
+  db: ConnectionWrapper,
   cms_parent: Arc<CmsParent>,
 }
 
 impl LazyCmsPartialCache {
-  pub fn new(cms_parent: Arc<CmsParent>, db: Arc<DatabaseConnection>) -> LazyCmsPartialCache {
+  pub fn new(cms_parent: Arc<CmsParent>, db: ConnectionWrapper) -> LazyCmsPartialCache {
     let cached_partials = HashMap::<String, LazyCmsPartialCacheCell>::new();
 
     LazyCmsPartialCache {
@@ -146,7 +148,7 @@ impl LazyCmsPartialCache {
 
   async fn preload_by_name(
     &self,
-    db: &DatabaseConnection,
+    db: &ConnectionWrapper,
     cms_parent: &CmsParent,
     names: Vec<&str>,
   ) -> Result<(), sea_orm::DbErr> {
@@ -172,7 +174,7 @@ impl LazyCmsPartialCache {
 
   async fn preload_by_layout(
     &self,
-    db: &DatabaseConnection,
+    db: &ConnectionWrapper,
     layout: &cms_layouts::Model,
   ) -> Result<(), sea_orm::DbErr> {
     let loaded_partials = layout
@@ -196,7 +198,7 @@ impl LazyCmsPartialCache {
 
   async fn preload_by_page(
     &self,
-    db: &DatabaseConnection,
+    db: &ConnectionWrapper,
     page: &pages::Model,
   ) -> Result<(), sea_orm::DbErr> {
     let loaded_partials = page
@@ -225,7 +227,7 @@ pub struct LazyCmsPartialSource {
 }
 
 impl LazyCmsPartialSource {
-  pub fn new(cms_parent: Arc<CmsParent>, db: Arc<DatabaseConnection>) -> LazyCmsPartialSource {
+  pub fn new(cms_parent: Arc<CmsParent>, db: ConnectionWrapper) -> LazyCmsPartialSource {
     let cache = LazyCmsPartialCache::new(cms_parent, db);
 
     LazyCmsPartialSource { cache }
@@ -233,7 +235,7 @@ impl LazyCmsPartialSource {
 
   pub async fn preload<'a>(
     &self,
-    db: &DatabaseConnection,
+    db: &ConnectionWrapper,
     cms_parent: &CmsParent,
     strategy: PreloadPartialsStrategy<'a>,
   ) -> Result<(), sea_orm::DbErr> {

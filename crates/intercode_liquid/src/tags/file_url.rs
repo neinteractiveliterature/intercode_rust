@@ -7,17 +7,18 @@ use liquid_core::{
   Expression, Language, ParseTag, Renderable, Result, Runtime, TagReflection, TagTokenIter,
   ValueView,
 };
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, ModelTrait, QueryFilter, QuerySelect};
+use sea_orm::{ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QuerySelect};
+use seawater::ConnectionWrapper;
 use tokio::runtime::Handle;
 
 #[derive(Clone, Debug)]
 pub struct FileUrlTag {
   cms_parent: Arc<CmsParent>,
-  db: Arc<DatabaseConnection>,
+  db: ConnectionWrapper,
 }
 
 impl FileUrlTag {
-  pub fn new(cms_parent: Arc<CmsParent>, db: Arc<DatabaseConnection>) -> Self {
+  pub fn new(cms_parent: Arc<CmsParent>, db: ConnectionWrapper) -> Self {
     FileUrlTag { cms_parent, db }
   }
 }
@@ -59,7 +60,7 @@ impl ParseTag for FileUrlTag {
 struct FileUrl {
   filename: Expression,
   cms_parent: Arc<CmsParent>,
-  db: Arc<DatabaseConnection>,
+  db: ConnectionWrapper,
 }
 
 impl Renderable for FileUrl {

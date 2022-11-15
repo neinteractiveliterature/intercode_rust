@@ -1,30 +1,26 @@
+use super::{
+  CmsLayoutType, CmsNavigationItemType, EventsPaginationType, ModelBackedType, PageType,
+  StaffPositionType, TicketTypeType, UserConProfileType,
+};
 use crate::{
   api::{
     enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
     inputs::{EventFiltersInput, SortInput},
     interfaces::CmsParentImplementation,
   },
-  loaders::expect::ExpectModels,
-  QueryData, SchemaData,
+  QueryData,
 };
 use async_graphql::*;
 use chrono::{DateTime, Utc};
 use intercode_entities::{
-  cms_parent::{CmsParent, CmsParentTrait},
-  conventions, events,
-  links::ConventionToStaffPositions,
-  pages, runs, staff_positions, staff_positions_user_con_profiles, team_members, user_con_profiles,
-  users,
+  conventions, events, links::ConventionToStaffPositions, runs, staff_positions,
+  staff_positions_user_con_profiles, team_members, user_con_profiles, users,
 };
 use sea_orm::{
   sea_query::Expr, ColumnTrait, EntityTrait, JoinType, ModelTrait, Order, QueryFilter, QueryOrder,
   QuerySelect, RelationTrait,
 };
-
-use super::{
-  EventsPaginationType, ModelBackedType, PageType, StaffPositionType, TicketTypeType,
-  UserConProfileType,
-};
+use seawater::loaders::ExpectModels;
 
 use crate::model_backed_type;
 model_backed_type!(ConventionType, conventions::Model);
@@ -49,7 +45,7 @@ impl ConventionType {
     &self,
     ctx: &Context<'_>,
   ) -> Result<Vec<UserConProfileType>, Error> {
-    let db = &ctx.data::<SchemaData>()?.db;
+    let db = &ctx.data::<QueryData>()?.db;
 
     let profiles: Vec<UserConProfileType> = self
       .model
@@ -78,39 +74,6 @@ impl ConventionType {
   #[graphql(name = "clickwrap_agreement")]
   async fn clickwrap_agreement(&self) -> Option<&str> {
     self.model.clickwrap_agreement.as_deref()
-  }
-
-  async fn cms_page(
-    &self,
-    ctx: &Context<'_>,
-    id: Option<ID>,
-    slug: Option<String>,
-    root_page: Option<bool>,
-  ) -> Result<PageType, Error> {
-    let db = &ctx.data::<SchemaData>()?.db;
-    let cms_parent: CmsParent = self.model.clone().into();
-
-    let scope = if let Some(id) = id {
-      cms_parent
-        .pages()
-        .filter(pages::Column::Id.eq(id.parse::<i64>()?))
-    } else if let Some(slug) = slug {
-      cms_parent.pages().filter(pages::Column::Slug.eq(slug))
-    } else if let Some(root_page) = root_page {
-      if root_page {
-        cms_parent.root_page()
-      } else {
-        return Err(Error::new("If rootPage is specified, it must be true"));
-      }
-    } else {
-      return Err(Error::new("One of id, slug, or rootPage must be specified"));
-    };
-
-    scope
-      .one(db.as_ref())
-      .await?
-      .ok_or_else(|| Error::new("Page not found"))
-      .map(PageType::new)
   }
 
   async fn domain(&self) -> &str {
@@ -194,7 +157,7 @@ impl ConventionType {
           .map(|ucp| UserConProfileType::new(ucp.to_owned())),
       )
     } else if let Some(user) = query_data.current_user.as_ref() {
-      let schema_data = ctx.data::<SchemaData>()?;
+      let query_data = ctx.data::<QueryData>()?;
 
       user_con_profiles::Entity::find()
         .filter(
@@ -202,7 +165,7 @@ impl ConventionType {
             .eq(self.model.id)
             .and(user_con_profiles::Column::UserId.eq(user.id)),
         )
-        .one(schema_data.db.as_ref())
+        .one(query_data.db.as_ref())
         .await
         .map(|result| result.map(UserConProfileType::new))
         .map_err(|e| async_graphql::Error::new(e.to_string()))
@@ -223,7 +186,7 @@ impl ConventionType {
 
   #[graphql(name = "staff_position")]
   async fn staff_position(&self, ctx: &Context<'_>, id: ID) -> Result<StaffPositionType, Error> {
-    let db = &ctx.data::<SchemaData>()?.db;
+    let db = &ctx.data::<QueryData>()?.db;
 
     self
       .model
@@ -274,10 +237,10 @@ impl ConventionType {
 
   #[graphql(name = "ticket_types")]
   async fn ticket_types(&self, ctx: &Context<'_>) -> Result<Vec<TicketTypeType>, Error> {
-    let schema_data = ctx.data::<SchemaData>()?;
+    let query_data = ctx.data::<QueryData>()?;
 
     Ok(
-      schema_data
+      query_data
         .loaders
         .convention_ticket_types
         .load_one(self.model.id)
@@ -306,7 +269,7 @@ impl ConventionType {
 
   #[graphql(name = "user_con_profile")]
   async fn user_con_profile(&self, ctx: &Context<'_>, id: ID) -> Result<UserConProfileType, Error> {
-    let db = &ctx.data::<SchemaData>()?.db;
+    let db = &ctx.data::<QueryData>()?.db;
 
     self
       .model
@@ -321,6 +284,37 @@ impl ConventionType {
         ))
       })
       .map(UserConProfileType::new)
+  }
+
+  async fn cms_page(
+    &self,
+    ctx: &Context<'_>,
+    id: Option<ID>,
+    slug: Option<String>,
+    root_page: Option<bool>,
+  ) -> Result<PageType, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::cms_page(self, ctx, id, slug, root_page)
+      .await
+  }
+
+  async fn cms_navigation_items(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<CmsNavigationItemType>, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::cms_navigation_items(self, ctx).await
+  }
+
+  async fn default_layout(&self, ctx: &Context<'_>) -> Result<CmsLayoutType, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::default_layout(self, ctx).await
+  }
+
+  async fn effective_cms_layout(
+    &self,
+    ctx: &Context<'_>,
+    path: String,
+  ) -> Result<CmsLayoutType, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::effective_cms_layout(self, ctx, path)
+      .await
   }
 }
 

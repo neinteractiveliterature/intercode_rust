@@ -1,19 +1,21 @@
 use std::fmt::Debug;
 
 use i18n_embed::fluent::FluentLanguageLoader;
-use intercode_graphql::SchemaData;
-use seawater::NormalizedDropCache;
+use intercode_graphql::{QueryData, SchemaData};
+use seawater::{ConnectionWrapper, NormalizedDropCache};
 
 #[derive(Clone)]
 pub struct DropContext {
   schema_data: SchemaData,
+  query_data: QueryData,
   cache: NormalizedDropCache<i64>,
 }
 
 impl DropContext {
-  pub fn new(schema_data: SchemaData) -> Self {
+  pub fn new(schema_data: SchemaData, query_data: QueryData) -> Self {
     DropContext {
       schema_data,
+      query_data,
       cache: Default::default(),
     }
   }
@@ -36,7 +38,7 @@ impl seawater::Context for DropContext {
     &self.cache
   }
 
-  fn db(&self) -> &sea_orm::DatabaseConnection {
-    self.schema_data.db.as_ref()
+  fn db(&self) -> &ConnectionWrapper {
+    self.query_data.db.as_ref()
   }
 }

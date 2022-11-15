@@ -108,11 +108,7 @@ where
 
     let mut connection =
       async_graphql::connection::Connection::<u64, G>::new(start > 0, end < total);
-    let scope = self
-      .select
-      .clone()
-      .limit((end - start).try_into().unwrap())
-      .offset(start.try_into().unwrap());
+    let scope = self.select.clone().limit(end - start).offset(start);
 
     connection.edges.extend(
       scope

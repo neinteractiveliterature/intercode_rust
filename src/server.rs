@@ -2,7 +2,7 @@ use crate::csrf::{csrf_middleware, CsrfConfig, CsrfData};
 use crate::db_sessions::DbSessionStore;
 use crate::legacy_passwords::{verify_legacy_md5_password, verify_legacy_sha1_password};
 use crate::liquid_renderer::IntercodeLiquidRenderer;
-use crate::middleware::{AuthorizationInfoFromRequest, QueryDataFromRequest};
+use crate::middleware::{AuthorizationInfoAndQueryDataFromRequest, QueryDataFromRequest};
 use crate::Localizations;
 use ::http::StatusCode;
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
@@ -20,12 +20,12 @@ use i18n_embed::LanguageLoader;
 use intercode_entities::cms_parent::CmsParentTrait;
 use intercode_entities::{events, users};
 use intercode_graphql::cms_rendering_context::CmsRenderingContext;
-use intercode_graphql::loaders::LoaderManager;
-use intercode_graphql::{api, LiquidRenderer, SchemaData};
+use intercode_graphql::{api, build_intercode_graphql_schema, LiquidRenderer, SchemaData};
 use liquid::object;
 use opentelemetry::global::shutdown_tracer_provider;
 use regex::Regex;
 use sea_orm::{ActiveValue, ColumnTrait, DatabaseConnection, EntityTrait, ModelTrait, QueryFilter};
+use seawater::ConnectionWrapper;
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -59,7 +59,7 @@ async fn single_page_app_entry(
 ) -> Result<impl IntoResponse, ::http::StatusCode> {
   let event_path_regex: regex::Regex =
     Regex::new("^/events/(\\d+)").map_err(|_| ::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-  let db = &schema_data.db;
+  let db = &query_data.db;
   let path = url.path();
   let page_scope = query_data.cms_parent.cms_page_for_path(path);
 
@@ -100,12 +100,8 @@ async fn single_page_app_entry(
 
   let liquid_renderer = IntercodeLiquidRenderer::new(&query_data, &schema_data);
 
-  let cms_rendering_context = CmsRenderingContext::new(
-    object!({}),
-    &schema_data,
-    &query_data,
-    Arc::new(liquid_renderer),
-  );
+  let cms_rendering_context =
+    CmsRenderingContext::new(object!({}), &query_data, Arc::new(liquid_renderer));
   let page_title = "TODO";
 
   Ok(response::Html(
@@ -118,9 +114,8 @@ async fn single_page_app_entry(
 async fn graphql_handler(
   schema: Extension<IntercodeSchema>,
   schema_data: Extension<SchemaData>,
-  QueryDataFromRequest(query_data): QueryDataFromRequest,
   req: GraphQLRequest,
-  AuthorizationInfoFromRequest(authorization_info): AuthorizationInfoFromRequest,
+  AuthorizationInfoAndQueryDataFromRequest(authorization_info, query_data): AuthorizationInfoAndQueryDataFromRequest,
 ) -> GraphQLResponse {
   let liquid_renderer = IntercodeLiquidRenderer::new(&query_data, &schema_data);
   let req = req
@@ -178,7 +173,7 @@ async fn sign_in(
   token: CsrfData,
   form: Option<Form<SignInParams>>,
   multipart: Option<Multipart>,
-  schema_data: Extension<SchemaData>,
+  QueryDataFromRequest(query_data): QueryDataFromRequest,
   session: Extension<SessionHandle>,
 ) -> Result<impl IntoResponse, StatusCode> {
   enforce_csrf(token)?;
@@ -201,7 +196,7 @@ async fn sign_in(
 
   let user = users::Entity::find()
     .filter(users::Column::Email.eq(params.email.as_str()))
-    .one(schema_data.db.as_ref())
+    .one(query_data.db.as_ref())
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
     .ok_or(StatusCode::NOT_FOUND)?;
@@ -238,7 +233,7 @@ async fn sign_in(
     };
 
     users::Entity::update(upgrade)
-      .exec(schema_data.db.as_ref())
+      .exec(query_data.db.as_ref())
       .await
       .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
   }
@@ -252,33 +247,31 @@ async fn sign_in(
 }
 
 pub async fn serve(db: DatabaseConnection) -> Result<()> {
-  let db_arc = Arc::new(db);
+  let db_conn = Arc::new(db);
 
   let language_loader = fluent_language_loader!();
   language_loader.load_languages(&Localizations, &[language_loader.fallback_language()])?;
   let language_loader_arc = Arc::new(language_loader);
 
   let schema_data = SchemaData {
-    db: Arc::clone(&db_arc),
+    db_conn: db_conn.clone(),
     language_loader: Arc::clone(&language_loader_arc),
-    loaders: LoaderManager::new(&db_arc),
   };
 
-  let graphql_schema =
-    async_graphql::Schema::build(api::QueryRoot, EmptyMutation, EmptySubscription)
-      .extension(async_graphql::extensions::Tracing)
-      .data(schema_data.clone())
-      .finish();
+  let graphql_schema = build_intercode_graphql_schema(schema_data.clone());
 
   let app = Router::new()
     .route("/graphql", get(graphql_playground).post(graphql_handler))
     .route("/authenticity_tokens", get(authenticity_tokens))
     .route("/users/sign_in", post(sign_in))
     .fallback(get(single_page_app_entry))
+    .layer(axum_sea_orm_tx::Layer::new(ConnectionWrapper::from(
+      schema_data.db_conn.clone(),
+    )))
     .layer(Extension(schema_data))
     .layer(Extension(graphql_schema));
 
-  let store = DbSessionStore::new(db_arc.clone());
+  let store = DbSessionStore::new(db_conn.into());
   let secret_bytes = hex::decode(env::var("SECRET_KEY_BASE")?)?;
   let secret: [u8; 64] = secret_bytes[0..64].try_into().unwrap_or_else(|_| {
     panic!(
@@ -309,10 +302,10 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
         .parse()
         .unwrap_or(25),
     )
+    .layer(CompressionLayer::new())
     .layer(Extension(csrf_config))
     .layer(axum::middleware::from_fn(csrf_middleware))
     .layer(session_layer)
-    .layer(CompressionLayer::new())
     .layer(
       TraceLayer::new_for_http()
         .make_span_with(DefaultMakeSpan::new().level(tracing::Level::INFO))

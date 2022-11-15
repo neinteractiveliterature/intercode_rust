@@ -1,8 +1,8 @@
 use async_graphql::{Context, Error, Object};
 use intercode_entities::events;
-use sea_orm::{DatabaseConnection, EntityTrait, PaginatorTrait, Select, SelectModel};
+use sea_orm::{ConnectionTrait, EntityTrait, PaginatorTrait, Select, SelectModel};
 
-use crate::{api::interfaces::PaginationImplementation, SchemaData};
+use crate::{api::interfaces::PaginationImplementation, QueryData};
 
 use super::{EventType, ModelBackedType};
 
@@ -29,7 +29,7 @@ impl EventsPaginationType {
 #[Object]
 impl EventsPaginationType {
   async fn entries(&self, ctx: &Context<'_>) -> Result<Vec<EventType>, Error> {
-    let db = ctx.data::<SchemaData>()?.db.as_ref();
+    let db = ctx.data::<QueryData>()?.db.as_ref();
     let (paginator, _) = self.paginator_and_page_size(db);
     Ok(
       paginator
@@ -43,13 +43,10 @@ impl EventsPaginationType {
 }
 
 impl PaginationImplementation<SelectModel<events::Model>> for EventsPaginationType {
-  fn paginator_and_page_size<'s>(
+  fn paginator_and_page_size<'s, C: ConnectionTrait>(
     &'s self,
-    db: &'s DatabaseConnection,
-  ) -> (
-    sea_orm::Paginator<'s, DatabaseConnection, SelectModel<events::Model>>,
-    u64,
-  ) {
+    db: &'s C,
+  ) -> (sea_orm::Paginator<'s, C, SelectModel<events::Model>>, u64) {
     (
       self.scope.clone().into_model().paginate(db, self.per_page),
       self.per_page,

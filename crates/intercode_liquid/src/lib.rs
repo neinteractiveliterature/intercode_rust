@@ -6,13 +6,13 @@ mod react_component_tag;
 pub mod tags;
 
 pub use react_component_tag::react_component_tag;
+use seawater::ConnectionWrapper;
 
-use std::{fmt::Debug, future::Future, pin::Pin, sync::Arc};
-
+pub use dig::liquid_datetime_to_chrono_datetime;
 use i18n_embed::fluent::FluentLanguageLoader;
 use intercode_entities::{cms_parent::CmsParent, conventions};
 use liquid::{partials::PartialCompiler, Error, Parser, ParserBuilder};
-use sea_orm::DatabaseConnection;
+use std::{fmt::Debug, future::Future, pin::Pin, sync::Arc};
 
 pub trait GraphQLExecutor: Debug + Clone + Send + Sync {
   fn execute(
@@ -41,7 +41,7 @@ pub fn build_liquid_parser<'a>(
   convention: &'a Arc<Option<conventions::Model>>,
   language_loader: &'a Arc<FluentLanguageLoader>,
   cms_parent: &'a Arc<CmsParent>,
-  db: &'a Arc<DatabaseConnection>,
+  db: &ConnectionWrapper,
   user_signed_in: bool,
   graphql_executor: impl GraphQLExecutor + 'static,
   partial_compiler: impl PartialCompiler,

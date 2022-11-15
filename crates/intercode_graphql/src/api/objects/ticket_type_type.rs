@@ -1,7 +1,8 @@
 use async_graphql::*;
 use intercode_entities::ticket_types;
+use seawater::loaders::ExpectModels;
 
-use crate::{loaders::expect::ExpectModels, model_backed_type, SchemaData};
+use crate::{model_backed_type, QueryData};
 
 use super::{ModelBackedType, ProductType};
 model_backed_type!(TicketTypeType, ticket_types::Model);
@@ -18,10 +19,10 @@ impl TicketTypeType {
 
   #[graphql(name = "providing_products")]
   async fn providing_products(&self, ctx: &Context<'_>) -> Result<Vec<ProductType>, Error> {
-    let schema_data = ctx.data::<SchemaData>()?;
+    let query_data = ctx.data::<QueryData>()?;
 
     Ok(
-      schema_data
+      query_data
         .loaders
         .ticket_type_providing_products
         .load_one(self.model.id)

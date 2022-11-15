@@ -27,14 +27,17 @@ liquid-core = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-
 [features]
 dhat-heap = ["dep:dhat"] # if you are doing heap profiling
 flamegraph = ["dep:tracing-flame"]
+tokio-console = ["dep:console-subscriber", "tokio/full", "tokio/tracing"]
 
 [dependencies]
 anyhow = "1.0.66"
 async-graphql = {version = "~4.0.5", features = ["tracing", "dataloader", "chrono"]}
 async-graphql-axum = "4.0.10"
 async-graphql-value = "~4.0.5"
-axum = {version = "0.5.13", features = ["multipart"]}
+axum = {version = "0.5.16", features = ["multipart"]}
 axum-extra = {version = "0.3.7", features = ["cookie"]}
+axum-sea-orm-tx = {path = "../axum-sea-orm-tx"}
+# axum-sea-orm-tx = {version = "0.1.0", git = "https://github.com/nbudin/axum-sea-orm-tx.git"}
 axum-sessions = "0.3.1"
 base64 = "0.13.0"
 bcrypt = "0.13.0"
@@ -42,6 +45,7 @@ bumpalo-herd = "0.1.2"
 chrono = "0.4"
 chrono-tz = "0.8"
 clap = {version = "3.2.17", features = ["derive", "cargo"]}
+console-subscriber = {version = "0.1.8", optional = true}
 csrf = "0.4.1"
 ctrlc = "3.2.2"
 dhat = {version = "0.3.0", optional = true}
@@ -66,8 +70,8 @@ liquid-core = {workspace = true}
 md5 = "*"
 memo-map = "0.3.1"
 once_cell = "1.13.0"
-opentelemetry = {version = "0.17.0", features = ["rt-tokio"]}
-opentelemetry-otlp = {version = "0.10.0", features = ["tls-roots"]}
+opentelemetry = {version = "0.18.0", features = ["rt-tokio"]}
+opentelemetry-otlp = {version = "0.11.0", features = ["tls-roots"]}
 oxide-auth = "0.5.3"
 oxide-auth-axum = "0.2.0"
 parking_lot = "0.12.1"
@@ -84,14 +88,14 @@ sha1 = "0.10.5"
 syn = "1.0.98"
 time = "0.3.15"
 tls-listener = {version = "0.5.1", features = ["rustls", "tokio-net"]}
-tokio = {version = "~1.20.1", features = ["rt-multi-thread", "macros", "signal", "tracing"]}
+tokio = {version = "~1.21", features = ["rt-multi-thread", "macros", "signal", "tracing"]}
 tokio-rustls = "0.23.4"
-tonic = "0.6.2"
+tonic = "0.8.2"
 tower = {version = "0.4.13", features = ["limit", "make"]}
 tower-http = {version = "0.3.4", features = ["catch-panic", "compression-br", "compression-deflate", "compression-gzip", "trace"]}
 tracing = "0.1.36"
 tracing-flame = {version = "0.2.0", optional = true}
-tracing-opentelemetry = "0.17.4"
+tracing-opentelemetry = "0.18.0"
 tracing-subscriber = {version = "0.3", features = ["env-filter"]}
 unic-langid = "0.9"
 url = "*"

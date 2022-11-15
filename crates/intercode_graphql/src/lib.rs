@@ -1,5 +1,5 @@
-use async_graphql::{async_trait::async_trait, EmptyMutation, EmptySubscription};
-use async_session::Session;
+use api::QueryRoot;
+use async_graphql::{async_trait::async_trait, EmptyMutation, EmptySubscription, Schema};
 use i18n_embed::fluent::FluentLanguageLoader;
 use intercode_entities::{cms_parent::CmsParent, conventions, user_con_profiles, users};
 use intercode_liquid::{
@@ -7,20 +7,20 @@ use intercode_liquid::{
   GraphQLExecutor,
 };
 use liquid::partials::LazyCompiler;
+use loaders::LoaderManager;
 use sea_orm::DatabaseConnection;
+use seawater::ConnectionWrapper;
 use std::{fmt::Debug, future::Future, sync::Arc};
-use tokio::sync::RwLock;
 
 pub mod api;
 pub mod cms_rendering_context;
 pub mod entity_relay_connection;
 pub mod loaders;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Debug)]
 pub struct SchemaData {
-  pub db: Arc<DatabaseConnection>,
+  pub db_conn: Arc<DatabaseConnection>,
   pub language_loader: Arc<FluentLanguageLoader>,
-  pub loaders: loaders::LoaderManager,
 }
 
 #[async_trait]
@@ -38,7 +38,9 @@ pub struct QueryData {
   pub cms_parent: Arc<CmsParent>,
   pub current_user: Arc<Option<users::Model>>,
   pub convention: Arc<Option<conventions::Model>>,
-  pub session_handle: Arc<RwLock<Session>>,
+  pub db: ConnectionWrapper,
+  pub loaders: LoaderManager,
+  // pub session_handle: Arc<RwLock<Session>>,
   pub timezone: chrono_tz::Tz,
   pub user_con_profile: Arc<Option<user_con_profiles::Model>>,
 }
@@ -49,15 +51,21 @@ pub struct EmbeddedGraphQLExecutor {
   query_data: QueryData,
 }
 
+pub fn build_intercode_graphql_schema(
+  schema_data: SchemaData,
+) -> Schema<QueryRoot, EmptyMutation, EmptySubscription> {
+  async_graphql::Schema::build(api::QueryRoot, EmptyMutation, EmptySubscription)
+    .extension(async_graphql::extensions::Tracing)
+    .data(schema_data)
+    .finish()
+}
+
 impl GraphQLExecutor for EmbeddedGraphQLExecutor {
   fn execute(
     &self,
     request: impl Into<async_graphql::Request>,
   ) -> std::pin::Pin<Box<dyn Future<Output = async_graphql::Response> + Send + '_>> {
-    let schema = async_graphql::Schema::build(api::QueryRoot, EmptyMutation, EmptySubscription)
-      .extension(async_graphql::extensions::Tracing)
-      .data(self.schema_data.clone())
-      .finish();
+    let schema = build_intercode_graphql_schema(self.schema_data.clone());
 
     let request: async_graphql::Request = request.into();
     let request = request.data(self.query_data.clone());
@@ -68,34 +76,16 @@ impl GraphQLExecutor for EmbeddedGraphQLExecutor {
 }
 
 impl QueryData {
-  pub fn new(
-    cms_parent: Arc<CmsParent>,
-    current_user: Arc<Option<users::Model>>,
-    convention: Arc<Option<conventions::Model>>,
-    session_handle: Arc<RwLock<Session>>,
-    timezone: chrono_tz::Tz,
-    user_con_profile: Arc<Option<user_con_profiles::Model>>,
-  ) -> QueryData {
-    QueryData {
-      cms_parent,
-      current_user,
-      convention,
-      session_handle,
-      timezone,
-      user_con_profile,
-    }
-  }
-
   pub async fn build_partial_compiler<'a>(
     &self,
-    schema_data: &SchemaData,
+    db: ConnectionWrapper,
     preload_partials_strategy: Option<PreloadPartialsStrategy<'a>>,
   ) -> Result<LazyCompiler<LazyCmsPartialSource>, liquid_core::Error> {
-    let source = LazyCmsPartialSource::new(self.cms_parent.clone(), schema_data.db.clone());
+    let source = LazyCmsPartialSource::new(self.cms_parent.clone(), db.clone());
 
     if let Some(strategy) = preload_partials_strategy {
       source
-        .preload(schema_data.db.as_ref(), self.cms_parent.as_ref(), strategy)
+        .preload(db.as_ref(), self.cms_parent.as_ref(), strategy)
         .await
         .map_err(|db_err| {
           liquid_core::Error::with_msg(format!("Error preloading partials: {}", db_err))

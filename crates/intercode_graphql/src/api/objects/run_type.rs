@@ -1,8 +1,9 @@
 use async_graphql::{Context, Error, Object};
 use chrono::{Duration, NaiveDateTime};
 use intercode_entities::runs;
+use seawater::loaders::ExpectModels;
 
-use crate::{loaders::expect::ExpectModels, model_backed_type, SchemaData};
+use crate::{model_backed_type, QueryData};
 
 use super::{ModelBackedType, RoomType};
 
@@ -19,8 +20,8 @@ impl RunType {
     let starts_at = self.model.starts_at;
 
     if let Some(starts_at) = starts_at {
-      let schema_data = ctx.data::<SchemaData>()?;
-      let length_seconds = schema_data
+      let query_data = ctx.data::<QueryData>()?;
+      let length_seconds = query_data
         .loaders
         .run_event
         .load_one(self.model.id)
@@ -35,10 +36,10 @@ impl RunType {
   }
 
   async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<RoomType>, Error> {
-    let schema_data = ctx.data::<SchemaData>()?;
+    let query_data = ctx.data::<QueryData>()?;
 
     Ok(
-      schema_data
+      query_data
         .loaders
         .run_rooms
         .load_one(self.model.id)

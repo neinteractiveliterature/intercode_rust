@@ -3,7 +3,7 @@ use crate::{
   conventions, pages, root_sites,
 };
 use async_trait::async_trait;
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter, Select};
+use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, Select};
 
 #[derive(Clone, Debug)]
 pub enum CmsParent {
@@ -47,10 +47,10 @@ pub trait CmsParentTrait {
     }
   }
 
-  async fn effective_cms_layout(
+  async fn effective_cms_layout<C: ConnectionTrait>(
     &self,
     path: &str,
-    db: &DatabaseConnection,
+    db: &C,
   ) -> Result<cms_layouts::Model, sea_orm::DbErr> {
     let page_scope = self.cms_page_for_path(path);
 

@@ -1,13 +1,14 @@
 use std::{collections::HashMap, fmt::Debug, marker::PhantomData, pin::Pin, sync::Arc};
 
+use crate::{
+  loaders::{load_all_linked, EntityLinkLoaderResult},
+  ConnectionWrapper,
+};
 use async_trait::async_trait;
-use intercode_graphql::loaders::{load_all_linked, EntityLinkLoaderResult};
 use lazy_liquid_value_view::{ArcValueView, DropResult, LiquidDrop, LiquidDropWithID};
 use liquid::ValueView;
 use once_cell::race::OnceBox;
-use sea_orm::{
-  DatabaseConnection, EntityTrait, Linked, ModelTrait, PrimaryKeyToColumn, PrimaryKeyTrait,
-};
+use sea_orm::{EntityTrait, Linked, ModelTrait, PrimaryKeyToColumn, PrimaryKeyTrait};
 
 use crate::{
   DropEntity, DropError, DropPrimaryKey, DropPrimaryKeyValue, ModelBackedDrop, NormalizedDropCache,
@@ -126,7 +127,7 @@ where
 
   async fn load_model_lists(
     &self,
-    db: &DatabaseConnection,
+    db: &ConnectionWrapper,
     ids: &[PK::ValueType],
   ) -> Result<HashMap<PK::ValueType, Self::LoaderResult>, DropError> {
     load_all_linked(self.pk_column, ids, &self.link, db)

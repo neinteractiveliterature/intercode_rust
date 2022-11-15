@@ -1,11 +1,9 @@
-use crate::{
-  loaders::{expect::ExpectModel, expect::ExpectModels},
-  SchemaData,
-};
+use crate::QueryData;
 use async_graphql::*;
 use intercode_entities::{order_entries, orders, user_con_profiles, UserNames};
 use pulldown_cmark::{html, Options, Parser};
 use sea_orm::{sea_query::Expr, ColumnTrait, EntityTrait, QueryFilter};
+use seawater::loaders::{ExpectModel, ExpectModels};
 
 use super::{
   ConventionType, ModelBackedType, OrderType, StaffPositionType, TeamMemberType, TicketType,
@@ -48,7 +46,7 @@ impl UserConProfileType {
   }
 
   async fn convention(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {
-    let loader = &ctx.data::<SchemaData>()?.loaders.conventions_by_id;
+    let loader = &ctx.data::<QueryData>()?.loaders.conventions_by_id;
 
     let model = loader
       .load_one(self.model.convention_id)
@@ -60,15 +58,14 @@ impl UserConProfileType {
 
   #[graphql(name = "current_pending_order")]
   async fn current_pending_order(&self, ctx: &Context<'_>) -> Result<Option<OrderType>, Error> {
-    // pending_orders = orders.pending.to_a
-    let schema_data = ctx.data::<SchemaData>()?;
+    let query_data = ctx.data::<QueryData>()?;
     let pending_orders = orders::Entity::find()
       .filter(
         orders::Column::UserConProfileId
           .eq(self.model.id)
           .and(orders::Column::Status.eq("pending")),
       )
-      .all(schema_data.db.as_ref())
+      .all(query_data.db.as_ref())
       .await?;
 
     if pending_orders.is_empty() {
@@ -85,7 +82,7 @@ impl UserConProfileType {
           order_entries::Column::OrderId
             .is_in(rest.iter().map(|order| order.id).collect::<Vec<i64>>()),
         )
-        .exec(schema_data.db.as_ref())
+        .exec(query_data.db.as_ref())
         .await?;
 
       Ok(Some(OrderType::new(first[0].to_owned())))
@@ -95,7 +92,7 @@ impl UserConProfileType {
   }
 
   async fn email(&self, ctx: &Context<'_>) -> Result<String, Error> {
-    let loader = &ctx.data::<SchemaData>()?.loaders.user_con_profile_user;
+    let loader = &ctx.data::<QueryData>()?.loaders.user_con_profile_user;
 
     Ok(
       loader
@@ -120,7 +117,7 @@ impl UserConProfileType {
   #[graphql(name = "gravatar_url")]
   async fn gravatar_url(&self, ctx: &Context<'_>) -> Result<String, Error> {
     if self.model.gravatar_enabled {
-      let loader = &ctx.data::<SchemaData>()?.loaders.users_by_id;
+      let loader = &ctx.data::<QueryData>()?.loaders.users_by_id;
 
       let model = loader.load_one(self.model.user_id).await?.expect_model()?;
       Ok(format!(
@@ -162,7 +159,7 @@ impl UserConProfileType {
   #[graphql(name = "staff_positions")]
   async fn staff_positions(&self, ctx: &Context<'_>) -> Result<Vec<StaffPositionType>, Error> {
     let loader = &ctx
-      .data::<SchemaData>()?
+      .data::<QueryData>()?
       .loaders
       .user_con_profile_staff_positions;
 
@@ -180,7 +177,7 @@ impl UserConProfileType {
   #[graphql(name = "team_members")]
   async fn team_members(&self, ctx: &Context<'_>) -> Result<Vec<TeamMemberType>, Error> {
     let loader = &ctx
-      .data::<SchemaData>()?
+      .data::<QueryData>()?
       .loaders
       .user_con_profile_team_members;
 
@@ -196,7 +193,7 @@ impl UserConProfileType {
   }
 
   async fn ticket(&self, ctx: &Context<'_>) -> Result<Option<TicketType>, Error> {
-    let loader = &ctx.data::<SchemaData>()?.loaders.user_con_profile_ticket;
+    let loader = &ctx.data::<QueryData>()?.loaders.user_con_profile_ticket;
 
     Ok(
       loader

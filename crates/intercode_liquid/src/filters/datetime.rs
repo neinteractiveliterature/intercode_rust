@@ -219,7 +219,7 @@ impl Filter for TimespanWithLocalTimeFilter {
       .unwrap_or(Ok(None))?;
     let parsed_timespan = Timespan { start, finish };
 
-    if parsed_timespan.start == None && parsed_timespan.finish == None {
+    if parsed_timespan.start.is_none() && parsed_timespan.finish.is_none() {
       return Ok(Value::scalar(fl!(
         self.language_loader,
         "start_and_finish_unbounded"
@@ -258,7 +258,7 @@ impl Filter for TimespanWithLocalTimeFilter {
       };
     }
 
-    if parsed_timespan.finish == None {
+    if parsed_timespan.finish.is_none() {
       Ok(Value::scalar(fl!(
         self.language_loader,
         "timespan_with_unbounded_finish",

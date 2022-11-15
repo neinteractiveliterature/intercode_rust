@@ -1,6 +1,7 @@
-use crate::{loaders::expect::ExpectModels, SchemaData};
+use crate::QueryData;
 use async_graphql::*;
 use intercode_entities::team_members;
+use seawater::loaders::ExpectModels;
 
 use crate::model_backed_type;
 
@@ -19,7 +20,7 @@ impl TeamMemberType {
   }
 
   async fn event(&self, ctx: &Context<'_>) -> Result<EventType, Error> {
-    let loader = &ctx.data::<SchemaData>()?.loaders.team_member_event;
+    let loader = &ctx.data::<QueryData>()?.loaders.team_member_event;
 
     let result = loader.load_one(self.model.id).await?;
     let event = result.expect_one()?;
@@ -30,7 +31,7 @@ impl TeamMemberType {
   #[graphql(name = "user_con_profile")]
   async fn user_con_profile(&self, ctx: &Context<'_>) -> Result<UserConProfileType, Error> {
     let loader = &ctx
-      .data::<SchemaData>()?
+      .data::<QueryData>()?
       .loaders
       .team_member_user_con_profile;
 

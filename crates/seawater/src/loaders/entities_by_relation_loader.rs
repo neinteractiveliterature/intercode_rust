@@ -1,10 +1,12 @@
 use async_graphql::{async_trait, dataloader::Loader};
 use sea_orm::{
   sea_query::{IntoValueTuple, ValueTuple},
-  DatabaseConnection, DbErr, EntityTrait, FromQueryResult, PrimaryKeyToColumn, PrimaryKeyTrait,
-  QuerySelect, Related, RelationDef,
+  DbErr, EntityTrait, FromQueryResult, PrimaryKeyToColumn, PrimaryKeyTrait, QuerySelect, Related,
+  RelationDef,
 };
 use std::{collections::HashMap, marker::PhantomData, sync::Arc};
+
+use crate::ConnectionWrapper;
 
 use super::expect::ExpectModels;
 
@@ -20,7 +22,7 @@ pub async fn load_all_related<
 >(
   pk_column: PK::Column,
   keys: &[PK::ValueType],
-  db: &DatabaseConnection,
+  db: &ConnectionWrapper,
 ) -> Result<HashMap<PK::ValueType, EntityRelationLoaderResult<From, To>>, Arc<DbErr>>
 where
   PK::ValueType: Eq + std::hash::Hash + Clone + std::convert::From<i64>,
@@ -85,50 +87,6 @@ where
   }
 
   Ok(results)
-}
-
-pub trait ToEntityRelationLoader<To: EntityTrait, PK: PrimaryKeyTrait + PrimaryKeyToColumn>
-where
-  Self: EntityTrait<PrimaryKey = PK> + Related<To>,
-  <<Self as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType:
-    Eq + Clone + std::hash::Hash + Sync,
-{
-  type EntityRelationLoaderType: Loader<
-    <<Self as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType,
-    Value = EntityRelationLoaderResult<Self, To>,
-    Error = Arc<sea_orm::DbErr>,
-  >;
-
-  fn to_entity_relation_loader(
-    &self,
-    db: Arc<sea_orm::DatabaseConnection>,
-  ) -> Self::EntityRelationLoaderType;
-}
-
-#[macro_export]
-macro_rules! impl_to_entity_relation_loader {
-  ($from: ty, $to: ty, $pk: path) => {
-    impl $crate::loaders::ToEntityRelationLoader<$to, <$from as sea_orm::EntityTrait>::PrimaryKey>
-      for $from
-    {
-      type EntityRelationLoaderType = $crate::loaders::EntityRelationLoader<
-        $from,
-        $to,
-        <$from as sea_orm::EntityTrait>::PrimaryKey,
-      >;
-
-      fn to_entity_relation_loader(
-        self: &Self,
-        db: std::sync::Arc<sea_orm::DatabaseConnection>,
-      ) -> Self::EntityRelationLoaderType {
-        $crate::loaders::EntityRelationLoader::<
-          $from,
-          $to,
-          <$from as sea_orm::EntityTrait>::PrimaryKey,
-        >::new(db, $pk)
-      }
-    }
-  };
 }
 
 #[derive(Debug, Clone)]
@@ -234,7 +192,7 @@ pub struct EntityRelationLoader<
   To: EntityTrait,
   PK: PrimaryKeyTrait + PrimaryKeyToColumn,
 > {
-  pub db: Arc<sea_orm::DatabaseConnection>,
+  pub db: ConnectionWrapper,
   pub primary_key: PK,
   _from: PhantomData<From>,
   _to: PhantomData<To>,
@@ -246,10 +204,7 @@ impl<
     PK: PrimaryKeyTrait + PrimaryKeyToColumn,
   > EntityRelationLoader<From, To, PK>
 {
-  pub fn new(
-    db: Arc<sea_orm::DatabaseConnection>,
-    primary_key: PK,
-  ) -> EntityRelationLoader<From, To, PK> {
+  pub fn new(db: ConnectionWrapper, primary_key: PK) -> EntityRelationLoader<From, To, PK> {
     EntityRelationLoader::<From, To, PK> {
       db,
       primary_key,

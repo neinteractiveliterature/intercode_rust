@@ -1,3 +1,4 @@
+use chrono::Duration;
 use liquid::{
   model::{ArrayView, ScalarCow},
   Error, ObjectView,
@@ -48,15 +49,19 @@ pub fn liquid_datetime_to_chrono_datetime(
 ) -> chrono::DateTime<chrono::FixedOffset> {
   use chrono::TimeZone;
 
-  let offset = chrono::FixedOffset::east(input.offset().whole_seconds());
+  let offset =
+    chrono::FixedOffset::east_opt(input.offset().whole_seconds()).expect("Invalid offset");
   offset
-    .ymd(input.year(), input.month().into(), input.day().into())
-    .and_hms_nano(
+    .with_ymd_and_hms(
+      input.year(),
+      input.month().into(),
+      input.day().into(),
       input.hour().into(),
       input.minute().into(),
       input.second().into(),
-      input.nanosecond(),
     )
+    .unwrap()
+    + Duration::nanoseconds(input.nanosecond().into())
 }
 
 pub fn get_scalar_from_value<'a>(

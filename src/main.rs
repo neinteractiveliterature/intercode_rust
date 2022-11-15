@@ -113,7 +113,7 @@ fn setup_otlp<S: Subscriber + for<'span> tracing_subscriber::registry::LookupSpa
   if let Ok(value) = env::var("HONEYCOMB_API_KEY") {
     map.insert(
       "x-honeycomb-team",
-      AsciiMetadataValue::try_from_bytes(value.as_bytes())?,
+      AsciiMetadataValue::try_from(value.as_bytes())?,
     );
   }
 
@@ -156,6 +156,9 @@ async fn run() -> Result<()> {
     .ok();
   let subscriber = subscriber.with(otlp_layer);
 
+  #[cfg(feature = "tokio-console")]
+  let subscriber = subscriber.with(console_subscriber::spawn());
+
   subscriber.init();
 
   let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
@@ -189,6 +192,7 @@ fn main() -> Result<()> {
 
   match derived_subcommands {
     Subcommands::ExportSchema => {
+      // just build the schema without any data or extras
       let schema =
         async_graphql::Schema::build(api::QueryRoot, EmptyMutation, EmptySubscription).finish();
 

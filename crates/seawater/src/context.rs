@@ -1,10 +1,8 @@
-use sea_orm::DatabaseConnection;
+use crate::{ConnectionWrapper, NormalizedDropCache};
 use std::fmt::Debug;
 
-use crate::NormalizedDropCache;
-
 pub trait Context: Send + Sync + Clone + Debug {
-  fn db(&self) -> &DatabaseConnection;
+  fn db(&self) -> &ConnectionWrapper;
   fn drop_cache(&self) -> &NormalizedDropCache<i64>;
 }
 

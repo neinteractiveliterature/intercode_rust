@@ -12,7 +12,8 @@ use liquid_core::{
   Expression, Language, ParseTag, Renderable, Result, Runtime, TagReflection, TagTokenIter,
   ValueCow,
 };
-use sea_orm::{ColumnTrait, DatabaseConnection, QueryFilter};
+use sea_orm::{ColumnTrait, QueryFilter};
+use seawater::ConnectionWrapper;
 use tokio::runtime::Handle;
 
 use crate::GraphQLExecutor;
@@ -32,14 +33,14 @@ fn graphql_const_to_liquid_value(
 #[derive(Clone, Debug)]
 pub struct AssignGraphQLResultTag<E: GraphQLExecutor> {
   cms_parent: Arc<CmsParent>,
-  db: Arc<DatabaseConnection>,
+  db: ConnectionWrapper,
   graphql_executor: E,
 }
 
 impl<E: GraphQLExecutor> AssignGraphQLResultTag<E> {
   pub fn new(
     cms_parent: Arc<CmsParent>,
-    db: Arc<DatabaseConnection>,
+    db: ConnectionWrapper,
     graphql_executor: E,
   ) -> AssignGraphQLResultTag<E> {
     AssignGraphQLResultTag {
@@ -131,7 +132,7 @@ impl<E: 'static + GraphQLExecutor> ParseTag for AssignGraphQLResultTag<E> {
 #[derive(Debug)]
 struct AssignGraphQLResult<E: GraphQLExecutor> {
   cms_parent: Arc<CmsParent>,
-  db: Arc<DatabaseConnection>,
+  db: ConnectionWrapper,
   graphql_executor: E,
   arg_mapping: HashMap<String, Expression>,
   destination: String,

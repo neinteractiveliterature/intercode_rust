@@ -48,3 +48,56 @@ impl EntityPolicy<AuthorizationInfo, ReadManageAction, rooms::Model> for RoomPol
     rooms::Entity::find()
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use intercode_entities::conventions;
+  use sea_orm::{ActiveModelTrait, ActiveValue};
+
+  use super::*;
+  use crate::test_helpers::with_test_db;
+
+  fn mock_room() -> rooms::Model {
+    rooms::Model {
+      convention_id: None,
+      created_at: Default::default(),
+      updated_at: Default::default(),
+      id: 0,
+      name: Some("A room".to_string()),
+    }
+  }
+
+  #[tokio::test]
+  async fn test_lets_anyone_read_any_room() {
+    with_test_db(|db| {
+      Box::pin(async move {
+        assert!(RoomPolicy::action_permitted(
+          &AuthorizationInfo::for_test(db, None, None, None).await,
+          ReadManageAction::Read,
+          &mock_room()
+        )
+        .await
+        .unwrap())
+      })
+    })
+    .await
+  }
+
+  #[tokio::test]
+  async fn test_lets_user_with_update_rooms_manage_rooms() {
+    with_test_db(|db| {
+      Box::pin(async move {
+        let convention = conventions::ActiveModel {
+          domain: ActiveValue::Set("intercode.test".to_string()),
+          email_from: ActiveValue::Set("noreply@intercode.test".to_string()),
+          language: ActiveValue::Set("en".to_string()),
+          timezone_mode: ActiveValue::Set("user_local".to_string()),
+          ticket_mode: ActiveValue::Set("disabled".to_string()),
+          ..Default::default()
+        };
+        convention.insert(db.as_ref()).await.unwrap();
+      })
+    })
+    .await
+  }
+}

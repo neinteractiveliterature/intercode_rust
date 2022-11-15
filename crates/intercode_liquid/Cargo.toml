@@ -21,6 +21,7 @@ liquid-core = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-
 md5 = "*"
 regex = "*"
 sea-orm = "*"
+seawater = {path = "../seawater"}
 serde = "*"
 serde_json = "*"
 tokio = "*"

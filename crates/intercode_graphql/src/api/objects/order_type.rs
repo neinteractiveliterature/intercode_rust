@@ -1,7 +1,8 @@
 use async_graphql::*;
 use intercode_entities::orders;
+use seawater::loaders::ExpectModels;
 
-use crate::{loaders::expect::ExpectModels, model_backed_type, SchemaData};
+use crate::{model_backed_type, QueryData};
 
 use super::{ModelBackedType, OrderEntryType};
 model_backed_type!(OrderType, orders::Model);
@@ -14,7 +15,7 @@ impl OrderType {
 
   #[graphql(name = "order_entries")]
   async fn order_entries(&self, ctx: &Context<'_>) -> Result<Vec<OrderEntryType>, Error> {
-    let loader = &ctx.data::<SchemaData>()?.loaders.order_order_entries;
+    let loader = &ctx.data::<QueryData>()?.loaders.order_order_entries;
 
     Ok(
       loader

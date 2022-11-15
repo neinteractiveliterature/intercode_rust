@@ -11,7 +11,7 @@ impl Linked for RunToRooms {
   fn link(&self) -> Vec<RelationDef> {
     vec![
       runs::Relation::RoomsRuns.def(),
-      rooms_runs::Relation::Runs.def(),
+      rooms_runs::Relation::Rooms.def(),
     ]
   }
 }

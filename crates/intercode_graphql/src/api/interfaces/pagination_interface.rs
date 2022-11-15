@@ -1,7 +1,7 @@
 use async_graphql::{async_trait::async_trait, Context, Error, Interface};
-use sea_orm::{DatabaseConnection, Paginator, SelectorTrait};
+use sea_orm::{ConnectionTrait, Paginator, SelectorTrait};
 
-use crate::{api::objects::EventsPaginationType, SchemaData};
+use crate::{api::objects::EventsPaginationType, QueryData};
 
 #[derive(Interface)]
 #[graphql(
@@ -49,28 +49,28 @@ pub enum PaginationInterface {
 
 #[async_trait]
 pub trait PaginationImplementation<Item: SelectorTrait + Send + Sync> {
-  fn paginator_and_page_size<'s>(
+  fn paginator_and_page_size<'s, C: ConnectionTrait>(
     &'s self,
-    db: &'s DatabaseConnection,
-  ) -> (Paginator<'s, DatabaseConnection, Item>, u64);
+    db: &'s C,
+  ) -> (Paginator<'s, C, Item>, u64);
 
   async fn total_entries(&self, ctx: &Context) -> Result<u64, Error> {
-    let db = ctx.data::<SchemaData>()?.db.as_ref();
+    let db = ctx.data::<QueryData>()?.db.as_ref();
     Ok(self.paginator_and_page_size(db).0.num_items().await?)
   }
 
   async fn total_pages(&self, ctx: &Context) -> Result<u64, Error> {
-    let db = ctx.data::<SchemaData>()?.db.as_ref();
+    let db = ctx.data::<QueryData>()?.db.as_ref();
     Ok(self.paginator_and_page_size(db).0.num_pages().await?)
   }
 
   async fn current_page(&self, ctx: &Context) -> Result<u64, Error> {
-    let db = ctx.data::<SchemaData>()?.db.as_ref();
+    let db = ctx.data::<QueryData>()?.db.as_ref();
     Ok(self.paginator_and_page_size(db).0.cur_page())
   }
 
   async fn per_page(&self, ctx: &Context) -> Result<u64, Error> {
-    let db = ctx.data::<SchemaData>()?.db.as_ref();
+    let db = ctx.data::<QueryData>()?.db.as_ref();
     Ok(self.paginator_and_page_size(db).1)
   }
 }

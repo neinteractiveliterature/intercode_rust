@@ -10,10 +10,9 @@ use async_trait::async_trait;
 use lazy_liquid_value_view::{ArcValueView, DropResult, LiquidDrop, LiquidDropWithID};
 use liquid::ValueView;
 use once_cell::race::OnceBox;
-use sea_orm::DatabaseConnection;
 use tracing::warn;
 
-use crate::{DropError, NormalizedDropCache};
+use crate::{ConnectionWrapper, DropError, NormalizedDropCache};
 
 use super::PreloaderResult;
 
@@ -122,13 +121,13 @@ pub trait Preloader<
   ) -> Option<&'a OnceBox<DropResult<ArcValueView<FromDrop>>>>;
   async fn load_model_lists(
     &self,
-    db: &DatabaseConnection,
+    db: &ConnectionWrapper,
     ids: &[Id],
   ) -> Result<HashMap<Id, Self::LoaderResult>, DropError>;
 
   async fn preload(
     &self,
-    db: &DatabaseConnection,
+    db: &ConnectionWrapper,
     drops: &[&FromDrop],
   ) -> Result<PreloaderResult<Id, V>, DropError> {
     let drops_by_id = drops
@@ -216,7 +215,7 @@ pub trait Preloader<
 
   async fn load_single(
     &self,
-    db: &DatabaseConnection,
+    db: &ConnectionWrapper,
     drop: &FromDrop,
   ) -> Result<Option<V>, DropError> {
     warn!(
@@ -236,7 +235,7 @@ pub trait Preloader<
     )
   }
 
-  async fn expect_single(&self, db: &DatabaseConnection, drop: &FromDrop) -> Result<V, DropError> {
+  async fn expect_single(&self, db: &ConnectionWrapper, drop: &FromDrop) -> Result<V, DropError> {
     self
       .load_single(db, drop)
       .await?

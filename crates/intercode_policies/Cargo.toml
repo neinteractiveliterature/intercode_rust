@@ -5,12 +5,17 @@ version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[dev-dependencies]
+sea-orm = {version = "*", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"]}
+
 [dependencies]
 async-trait = "*"
 axum = "*"
+futures = "*"
 intercode_entities = {path = "../intercode_entities"}
 memo-map = "*"
 oxide-auth = "*"
 oxide-auth-axum = "*"
 sea-orm = "*"
-tokio = "*"
+seawater = {path = "../seawater"}
+tokio = {version = "*", features = ["rt-multi-thread", "macros"]}

@@ -36,7 +36,6 @@ impl CmsLayoutType {
         })),
         "content_for_layout": react_component_tag("AppRouter", json!({}))
       }),
-      schema_data,
       query_data,
       liquid_renderer.clone(),
     );

@@ -6,7 +6,7 @@ use super::objects::{
 };
 use crate::api::objects::ModelBackedType;
 use crate::entity_relay_connection::RelayConnectable;
-use crate::{LiquidRenderer, QueryData, SchemaData};
+use crate::{LiquidRenderer, QueryData};
 use async_graphql::connection::{query, Connection};
 use async_graphql::*;
 use intercode_entities::cms_parent::CmsParent;
@@ -90,7 +90,7 @@ impl QueryRoot {
       first,
       last,
       |after, before, first, last| async move {
-        let db = ctx.data::<SchemaData>()?.db.as_ref();
+        let db = ctx.data::<QueryData>()?.db.as_ref();
 
         let connection = events::Entity::find()
           .relay_connection(db, EventType::new, after, before, first, last)
@@ -104,10 +104,10 @@ impl QueryRoot {
   }
 
   async fn has_oauth_applications(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    let schema_data = ctx.data::<SchemaData>()?;
+    let query_data = ctx.data::<QueryData>()?;
 
     let count = oauth_applications::Entity::find()
-      .count(schema_data.db.as_ref())
+      .count(query_data.db.as_ref())
       .await?;
     Ok(count > 0)
   }
@@ -120,10 +120,10 @@ impl QueryRoot {
   }
 
   async fn root_site(&self, ctx: &Context<'_>) -> Result<RootSiteType, Error> {
-    let schema_data = ctx.data::<SchemaData>()?;
+    let query_data = ctx.data::<QueryData>()?;
 
     let root_site = root_sites::Entity::find()
-      .one(schema_data.db.as_ref())
+      .one(query_data.db.as_ref())
       .await?;
 
     if let Some(root_site) = root_site {

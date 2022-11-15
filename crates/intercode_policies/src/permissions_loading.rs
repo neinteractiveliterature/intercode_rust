@@ -6,9 +6,10 @@ use intercode_entities::{
 };
 use sea_orm::{
   sea_query::{Alias, Expr},
-  ColumnTrait, Condition, DatabaseConnection, DbErr, EntityTrait, FromQueryResult, JoinType,
-  QueryFilter, QuerySelect, RelationTrait, Select,
+  ColumnTrait, Condition, DbErr, EntityTrait, FromQueryResult, JoinType, QueryFilter, QuerySelect,
+  RelationTrait, Select,
 };
+use seawater::ConnectionWrapper;
 
 pub fn user_permission_scope(user_id: Option<i64>) -> Select<permissions::Entity> {
   match user_id {
@@ -171,7 +172,7 @@ impl UserPermissionsMap {
 }
 
 pub async fn load_all_permissions_in_convention_with_model_type_and_id(
-  db: &DatabaseConnection,
+  db: &ConnectionWrapper,
   convention_id: i64,
   user_id: Option<i64>,
 ) -> Result<UserPermissionsMap, DbErr> {

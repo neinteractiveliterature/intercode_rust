@@ -20,8 +20,8 @@ struct IntercodeGlobals {
 impl IntercodeGlobals {
   pub fn new(query_data: QueryData, schema_data: SchemaData) -> Self {
     IntercodeGlobals {
-      query_data,
-      drop_context: DropContext::new(schema_data),
+      query_data: query_data.clone(),
+      drop_context: DropContext::new(schema_data, query_data),
     }
   }
 
@@ -99,12 +99,12 @@ impl LiquidRenderer for IntercodeLiquidRenderer {
     let query_data: QueryData = self.query_data.clone();
 
     let partial_compiler = query_data
-      .build_partial_compiler(&schema_data, preload_partials_strategy)
+      .build_partial_compiler(query_data.db.clone(), preload_partials_strategy)
       .await?;
     let convention = query_data.convention.clone();
     let language_loader = schema_data.language_loader.clone();
     let cms_parent = query_data.cms_parent.clone();
-    let db = schema_data.db.clone();
+    let db = query_data.db.clone();
     let user_signed_in = query_data.current_user.is_some();
     let executor = query_data.build_embedded_graphql_executor(&schema_data);
 

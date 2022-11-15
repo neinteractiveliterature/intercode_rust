@@ -1,10 +1,11 @@
 use bumpalo_herd::Herd;
 use futures::try_join;
 use intercode_entities::events;
+use intercode_liquid::liquid_datetime_to_chrono_datetime;
 use lazy_liquid_value_view::DropResult;
 use liquid::{ObjectView, ValueView};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Select};
-use seawater::{Context, ModelBackedDrop};
+use seawater::{Context, DropError, ModelBackedDrop};
 
 use super::{drop_context::DropContext, EventDrop};
 
@@ -49,18 +50,20 @@ impl EventsCreatedSince {
     let scope = events::Entity::find().filter(events::Column::ConventionId.eq(self.convention_id));
 
     if let Some(start_date) = start_date {
-      scope.filter(events::Column::CreatedAt.gte(start_date.to_rfc2822()))
+      scope.filter(events::Column::CreatedAt.gte(liquid_datetime_to_chrono_datetime(&start_date)))
     } else {
       scope
     }
   }
 
-  async fn query_and_store(&self, start_date: Option<liquid::model::DateTime>) -> &dyn ValueView {
+  async fn query_and_store(
+    &self,
+    start_date: Option<liquid::model::DateTime>,
+  ) -> Result<&dyn ValueView, DropError> {
     let value = self
       .select_for_start_date(start_date)
       .all(self.context.db())
-      .await
-      .unwrap_or_else(|_| vec![])
+      .await?
       .into_iter()
       .map(|event| EventDrop::new(event, self.context.clone()))
       .collect::<Vec<_>>();
@@ -71,11 +74,10 @@ impl EventsCreatedSince {
       EventDrop::preload_runs(self.context.clone(), &drops),
       EventDrop::preload_team_member_user_con_profiles(self.context.clone(), &drops),
       EventDrop::preload_event_category(self.context.clone(), &drops)
-    ]
-    .ok();
+    ]?;
 
     let bump = self.herd.get();
-    bump.alloc(value)
+    Ok(bump.alloc(value))
   }
 }
 
@@ -151,7 +153,8 @@ impl ObjectView for EventsCreatedSince {
     let result = tokio::task::block_in_place(|| {
       tokio::runtime::Handle::current()
         .block_on(async move { self.query_and_store(start_date).await })
-    });
+    })
+    .unwrap();
 
     Some(result)
   }

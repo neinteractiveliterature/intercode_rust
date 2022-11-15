@@ -265,7 +265,7 @@ impl AssociationMacro for RelatedAssociationMacro {
     let to_drop = self.get_to();
 
     parse_quote!(
-      ::intercode_graphql::loaders::EntityRelationLoaderResult<
+      ::seawater::loaders::EntityRelationLoaderResult<
         <<Self as ::seawater::ModelBackedDrop>::Model as ::sea_orm::ModelTrait>::Entity,
         <<#to_drop as ::seawater::ModelBackedDrop>::Model as ::sea_orm::ModelTrait>::Entity,
       >
@@ -349,7 +349,7 @@ impl AssociationMacro for LinkedAssociationMacro {
     let to_drop = self.get_to();
 
     parse_quote!(
-      ::intercode_graphql::loaders::EntityLinkLoaderResult<
+      ::seawater::loaders::EntityLinkLoaderResult<
         <<Self as ::seawater::ModelBackedDrop>::Model as ::sea_orm::ModelTrait>::Entity,
         <<#to_drop as ::seawater::ModelBackedDrop>::Model as ::sea_orm::ModelTrait>::Entity,
       >

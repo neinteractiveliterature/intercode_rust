@@ -1,4 +1,4 @@
-use intercode_entities::{cms_navigation_items, pages};
+use crate::cms_navigation_items;
 use sea_orm::{Linked, RelationDef, RelationTrait};
 
 #[derive(Debug, Clone)]
@@ -12,16 +12,3 @@ impl Linked for CmsNavigationItemToCmsNavigationSection {
     vec![cms_navigation_items::Relation::SelfRef.def()]
   }
 }
-
-impl_to_entity_link_loader!(
-  cms_navigation_items::Entity,
-  CmsNavigationItemToCmsNavigationSection,
-  cms_navigation_items::Entity,
-  cms_navigation_items::PrimaryKey::Id
-);
-
-impl_to_entity_relation_loader!(
-  cms_navigation_items::Entity,
-  pages::Entity,
-  cms_navigation_items::PrimaryKey::Id
-);

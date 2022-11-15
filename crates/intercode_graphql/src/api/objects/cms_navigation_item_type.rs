@@ -1,7 +1,8 @@
 use async_graphql::*;
 use intercode_entities::cms_navigation_items;
+use seawater::loaders::ExpectModels;
 
-use crate::{loaders::expect::ExpectModels, model_backed_type, SchemaData};
+use crate::{model_backed_type, QueryData};
 
 use super::{ModelBackedType, PageType};
 model_backed_type!(CmsNavigationItemType, cms_navigation_items::Model);
@@ -17,10 +18,10 @@ impl CmsNavigationItemType {
     &self,
     ctx: &Context<'_>,
   ) -> Result<Option<CmsNavigationItemType>, Error> {
-    let schema_data = ctx.data::<SchemaData>()?;
+    let query_data = ctx.data::<QueryData>()?;
 
     Ok(
-      schema_data
+      query_data
         .loaders
         .cms_navigation_item_section
         .load_one(self.model.id)
@@ -31,10 +32,10 @@ impl CmsNavigationItemType {
   }
 
   async fn page(&self, ctx: &Context<'_>) -> Result<Option<PageType>, Error> {
-    let schema_data = ctx.data::<SchemaData>()?;
+    let query_data = ctx.data::<QueryData>()?;
 
     Ok(
-      schema_data
+      query_data
         .loaders
         .cms_navigation_item_page
         .load_one(self.model.id)

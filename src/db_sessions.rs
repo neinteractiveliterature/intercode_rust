@@ -2,16 +2,16 @@ use axum::async_trait;
 use axum_sessions::async_session::{Session, SessionStore};
 use chrono::Utc;
 use intercode_entities::sessions;
-use sea_orm::{sea_query::OnConflict, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
-use std::sync::Arc;
+use sea_orm::{sea_query::OnConflict, ColumnTrait, EntityTrait, QueryFilter};
+use seawater::ConnectionWrapper;
 
 #[derive(Clone, Debug)]
 pub struct DbSessionStore {
-  db: Arc<DatabaseConnection>,
+  db: ConnectionWrapper,
 }
 
 impl DbSessionStore {
-  pub fn new(db: Arc<DatabaseConnection>) -> Self {
+  pub fn new(db: ConnectionWrapper) -> Self {
     DbSessionStore { db }
   }
 }

@@ -1,6 +1,6 @@
 use std::{env, sync::Arc};
 
-use crate::{LiquidRenderer, QueryData, SchemaData};
+use crate::{LiquidRenderer, QueryData};
 use html_escape::encode_double_quoted_attribute;
 use http::Uri;
 use intercode_entities::{
@@ -8,7 +8,8 @@ use intercode_entities::{
   events, pages,
 };
 use intercode_liquid::{cms_parent_partial_source::PreloadPartialsStrategy, react_component_tag};
-use sea_orm::{ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter};
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+use seawater::ConnectionWrapper;
 use serde_json::json;
 
 const NOSCRIPT_WARNING: &str = r#"
@@ -81,7 +82,7 @@ fn active_storage_blob_url(blob: &active_storage_blobs::Model) -> &str {
 }
 
 async fn find_blob_by_attached_model(
-  db: Arc<DatabaseConnection>,
+  db: ConnectionWrapper,
   record_type: &str,
   record_id: i64,
 ) -> Result<Option<active_storage_blobs::Model>, sea_orm::DbErr> {
@@ -103,7 +104,7 @@ async fn find_blob_by_attached_model(
 }
 
 async fn open_graph_image_tag(
-  db: Arc<DatabaseConnection>,
+  db: ConnectionWrapper,
   convention: Option<&conventions::Model>,
 ) -> String {
   if let Some(convention) = convention {
@@ -140,7 +141,7 @@ fn cms_page_title<'a>(
 }
 
 async fn open_graph_meta_tags(
-  db: Arc<DatabaseConnection>,
+  db: ConnectionWrapper,
   convention: Option<&conventions::Model>,
   page: Option<&pages::Model>,
   event: Option<&events::Model>,
@@ -197,7 +198,7 @@ async fn open_graph_meta_tags(
 }
 
 async fn convention_favicon_tag(
-  db: Arc<DatabaseConnection>,
+  db: ConnectionWrapper,
   convention: Option<&conventions::Model>,
 ) -> String {
   if let Some(convention) = convention {
@@ -221,7 +222,7 @@ async fn convention_favicon_tag(
 
 async fn content_for_head(
   request_url: &Uri,
-  db: Arc<DatabaseConnection>,
+  db: ConnectionWrapper,
   convention: Option<&conventions::Model>,
   page: Option<&pages::Model>,
   event: Option<&events::Model>,
@@ -259,21 +260,18 @@ async fn content_for_head(
 pub struct CmsRenderingContext<'a> {
   globals: liquid::Object,
   query_data: &'a QueryData,
-  schema_data: &'a SchemaData,
   liquid_renderer: Arc<dyn LiquidRenderer>,
 }
 
 impl<'a> CmsRenderingContext<'a> {
   pub fn new(
     globals: liquid::Object,
-    schema_data: &'a SchemaData,
     query_data: &'a QueryData,
     liquid_renderer: Arc<dyn LiquidRenderer>,
   ) -> Self {
     CmsRenderingContext {
       globals,
       query_data,
-      schema_data,
       liquid_renderer,
     }
   }
@@ -283,7 +281,7 @@ impl<'a> CmsRenderingContext<'a> {
       .query_data
       .cms_parent
       .cms_variables()
-      .all(self.schema_data.db.as_ref())
+      .all(self.query_data.db.as_ref())
       .await
       .unwrap_or_else(|_err| vec![]);
 
@@ -326,7 +324,7 @@ impl<'a> CmsRenderingContext<'a> {
   ) -> String {
     let content_for_head = content_for_head(
       request_url,
-      self.schema_data.db.clone(),
+      self.query_data.db.clone(),
       self.query_data.convention.as_ref().as_ref(),
       page,
       event,

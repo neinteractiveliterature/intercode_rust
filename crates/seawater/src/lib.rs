@@ -1,10 +1,13 @@
 mod any_map;
+mod connection_wrapper;
 mod context;
 mod drop_error;
+pub mod loaders;
 mod model_backed_drop;
 mod normalized_drop_cache;
 pub mod preloaders;
 
+pub use connection_wrapper::*;
 pub use context::*;
 pub use drop_error::*;
 pub use model_backed_drop::*;

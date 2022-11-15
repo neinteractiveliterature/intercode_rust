@@ -6,7 +6,7 @@ use crate::{
   api::objects::{
     CmsLayoutType, CmsNavigationItemType, ConventionType, ModelBackedType, PageType, RootSiteType,
   },
-  SchemaData,
+  QueryData,
 };
 
 #[derive(Interface)]
@@ -52,7 +52,7 @@ where
     slug: Option<String>,
     root_page: Option<bool>,
   ) -> Result<PageType, Error> {
-    let schema_data = ctx.data::<SchemaData>()?;
+    let query_data = ctx.data::<QueryData>()?;
     let pages = if let Some(id) = id {
       self
         .get_model()
@@ -72,7 +72,7 @@ where
     };
 
     pages
-      .one(schema_data.db.as_ref())
+      .one(query_data.db.as_ref())
       .await?
       .ok_or_else(|| Error::new("Page not found"))
       .map(PageType::new)
@@ -82,12 +82,12 @@ where
     &self,
     ctx: &Context<'_>,
   ) -> Result<Vec<CmsNavigationItemType>, Error> {
-    let schema_data = ctx.data::<SchemaData>()?;
+    let query_data = ctx.data::<QueryData>()?;
     Ok(
       self
         .get_model()
         .cms_navigation_items()
-        .all(schema_data.db.as_ref())
+        .all(query_data.db.as_ref())
         .await?
         .iter()
         .map(|item| CmsNavigationItemType::new(item.to_owned()))
@@ -96,12 +96,12 @@ where
   }
 
   async fn default_layout(&self, ctx: &Context<'_>) -> Result<CmsLayoutType, Error> {
-    let schema_data = ctx.data::<SchemaData>()?;
+    let query_data = ctx.data::<QueryData>()?;
 
     self
       .get_model()
       .default_layout()
-      .one(schema_data.db.as_ref())
+      .one(query_data.db.as_ref())
       .await?
       .ok_or_else(|| Error::new("Default layout not found for root site"))
       .map(CmsLayoutType::new)
@@ -112,10 +112,10 @@ where
     ctx: &Context<'_>,
     path: String,
   ) -> Result<CmsLayoutType, Error> {
-    let schema_data = ctx.data::<SchemaData>()?;
+    let query_data = ctx.data::<QueryData>()?;
     self
       .get_model()
-      .effective_cms_layout(path.as_str(), schema_data.db.as_ref())
+      .effective_cms_layout(path.as_str(), query_data.db.as_ref())
       .await
       .map(CmsLayoutType::new)
       .map_err(|db_err| Error::new(db_err.to_string()))

@@ -9,4 +9,5 @@ version = "0.1.0"
 async-trait = "*"
 chrono = "*"
 sea-orm = {version = "^0", features = ["macros"]}
+seawater = {path = "../seawater"}
 serde = "*"
