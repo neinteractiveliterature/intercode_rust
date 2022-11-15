@@ -421,6 +421,7 @@ dependencies = [
 [[package]]
 name = "axum-sea-orm-tx"
 version = "0.1.0"
+source = "git+https://github.com/nbudin/axum-sea-orm-tx.git#c5ddaefa2776a3a4a13040c92f3fe999299f8d46"
 dependencies = [
  "axum-core",
  "bytes",
@@ -3316,7 +3317,6 @@ dependencies = [
  "async-graphql",
  "async-trait",
  "axum-sea-orm-tx",
- "futures",
  "lazy_liquid_value_view",
  "liquid",
  "liquid-core",

@@ -1,17 +1,15 @@
 use async_trait::async_trait;
 use axum_sea_orm_tx::Tx;
-use futures::lock::Mutex;
 use sea_orm::{
-  ConnectionTrait, DatabaseBackend, DatabaseConnection, DatabaseTransaction, TransactionError,
-  TransactionTrait,
+  ConnectionTrait, DatabaseConnection, DatabaseTransaction, TransactionError, TransactionTrait,
 };
 use std::{fmt::Debug, future::Future, pin::Pin, sync::Arc};
 
 #[derive(Clone, Debug)]
 pub enum ConnectionWrapper {
   DatabaseConnection(Arc<DatabaseConnection>),
-  DatabaseTransaction(Arc<Mutex<DatabaseTransaction>>, DatabaseBackend),
-  Tx(Arc<Mutex<Tx<ConnectionWrapper>>>, DatabaseBackend),
+  DatabaseTransaction(Arc<DatabaseTransaction>),
+  Tx(Arc<Tx<ConnectionWrapper>>),
 }
 
 impl AsRef<Self> for ConnectionWrapper {
@@ -28,15 +26,13 @@ impl From<DatabaseConnection> for ConnectionWrapper {
 
 impl From<DatabaseTransaction> for ConnectionWrapper {
   fn from(tx: DatabaseTransaction) -> Self {
-    let backend = tx.get_database_backend();
-    Self::DatabaseTransaction(Arc::new(Mutex::new(tx)), backend)
+    Self::DatabaseTransaction(Arc::new(tx))
   }
 }
 
 impl From<Tx<ConnectionWrapper>> for ConnectionWrapper {
   fn from(tx: Tx<ConnectionWrapper>) -> Self {
-    let backend = tx.get_database_backend();
-    Self::Tx(Arc::new(Mutex::new(tx)), backend)
+    Self::Tx(Arc::new(tx))
   }
 }
 
@@ -46,17 +42,15 @@ impl From<Arc<DatabaseConnection>> for ConnectionWrapper {
   }
 }
 
-impl From<Arc<Mutex<DatabaseTransaction>>> for ConnectionWrapper {
-  fn from(arc: Arc<Mutex<DatabaseTransaction>>) -> Self {
-    let backend = arc.try_lock().unwrap().get_database_backend();
-    Self::DatabaseTransaction(arc, backend)
+impl From<Arc<DatabaseTransaction>> for ConnectionWrapper {
+  fn from(arc: Arc<DatabaseTransaction>) -> Self {
+    Self::DatabaseTransaction(arc)
   }
 }
 
-impl From<Arc<Mutex<Tx<ConnectionWrapper>>>> for ConnectionWrapper {
-  fn from(arc: Arc<Mutex<Tx<ConnectionWrapper>>>) -> Self {
-    let backend = arc.try_lock().unwrap().get_database_backend();
-    Self::Tx(arc, backend)
+impl From<Arc<Tx<ConnectionWrapper>>> for ConnectionWrapper {
+  fn from(arc: Arc<Tx<ConnectionWrapper>>) -> Self {
+    Self::Tx(arc)
   }
 }
 
@@ -71,16 +65,16 @@ impl ConnectionTrait for ConnectionWrapper {
   fn get_database_backend(&self) -> sea_orm::DbBackend {
     match self {
       Self::DatabaseConnection(conn) => conn.get_database_backend(),
-      Self::DatabaseTransaction(_tx, backend) => *backend,
-      Self::Tx(_tx, backend) => *backend,
+      Self::DatabaseTransaction(tx) => tx.get_database_backend(),
+      Self::Tx(tx) => tx.get_database_backend(),
     }
   }
 
   async fn execute(&self, stmt: sea_orm::Statement) -> Result<sea_orm::ExecResult, sea_orm::DbErr> {
     match self {
       Self::DatabaseConnection(conn) => conn.execute(stmt).await,
-      Self::DatabaseTransaction(tx, _backend) => tx.lock().await.execute(stmt).await,
-      Self::Tx(tx, _backend) => tx.lock().await.execute(stmt).await,
+      Self::DatabaseTransaction(tx) => tx.execute(stmt).await,
+      Self::Tx(tx) => tx.execute(stmt).await,
     }
   }
 
@@ -90,8 +84,8 @@ impl ConnectionTrait for ConnectionWrapper {
   ) -> Result<Option<sea_orm::QueryResult>, sea_orm::DbErr> {
     match self {
       Self::DatabaseConnection(conn) => conn.query_one(stmt).await,
-      Self::DatabaseTransaction(tx, _backend) => tx.lock().await.query_one(stmt).await,
-      Self::Tx(tx, _backend) => tx.lock().await.query_one(stmt).await,
+      Self::DatabaseTransaction(tx) => tx.query_one(stmt).await,
+      Self::Tx(tx) => tx.query_one(stmt).await,
     }
   }
 
@@ -101,8 +95,8 @@ impl ConnectionTrait for ConnectionWrapper {
   ) -> Result<Vec<sea_orm::QueryResult>, sea_orm::DbErr> {
     match self {
       Self::DatabaseConnection(conn) => conn.query_all(stmt).await,
-      Self::DatabaseTransaction(tx, _backend) => tx.lock().await.query_all(stmt).await,
-      Self::Tx(tx, _backend) => tx.lock().await.query_all(stmt).await,
+      Self::DatabaseTransaction(tx) => tx.query_all(stmt).await,
+      Self::Tx(tx) => tx.query_all(stmt).await,
     }
   }
 }
@@ -112,8 +106,8 @@ impl TransactionTrait for ConnectionWrapper {
   async fn begin(&self) -> Result<DatabaseTransaction, sea_orm::DbErr> {
     match self {
       Self::DatabaseConnection(conn) => conn.begin().await,
-      Self::DatabaseTransaction(tx, _backend) => tx.lock().await.begin().await,
-      Self::Tx(tx, _backend) => tx.lock().await.begin().await,
+      Self::DatabaseTransaction(tx) => tx.begin().await,
+      Self::Tx(tx) => tx.begin().await,
     }
   }
 
@@ -128,8 +122,8 @@ impl TransactionTrait for ConnectionWrapper {
   {
     match self {
       Self::DatabaseConnection(conn) => conn.transaction(callback).await,
-      Self::DatabaseTransaction(tx, _backend) => tx.lock().await.transaction(callback).await,
-      Self::Tx(tx, _backend) => tx.lock().await.transaction(callback).await,
+      Self::DatabaseTransaction(tx) => tx.transaction(callback).await,
+      Self::Tx(tx) => tx.transaction(callback).await,
     }
   }
 }
