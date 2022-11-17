@@ -7,7 +7,7 @@ use super::{ConventionType, EventCategoryType, ModelBackedType, RunType, TeamMem
 use crate::model_backed_type;
 model_backed_type!(EventType, events::Model);
 
-#[Object]
+#[Object(name = "Event")]
 impl EventType {
   async fn id(&self) -> ID {
     self.model.id.into()

@@ -10,7 +10,7 @@ use crate::{
 };
 model_backed_type!(PageType, pages::Model);
 
-#[Object]
+#[Object(name = "Page")]
 impl PageType {
   async fn id(&self) -> ID {
     self.model.id.into()

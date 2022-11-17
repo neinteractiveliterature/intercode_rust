@@ -7,7 +7,7 @@ use crate::{model_backed_type, QueryData};
 use super::{ModelBackedType, PageType};
 model_backed_type!(CmsNavigationItemType, cms_navigation_items::Model);
 
-#[Object]
+#[Object(name = "CmsNavigationItem")]
 impl CmsNavigationItemType {
   async fn id(&self) -> ID {
     self.model.id.into()

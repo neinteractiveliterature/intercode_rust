@@ -7,7 +7,7 @@ use crate::{model_backed_type, QueryData};
 use super::{ModelBackedType, OrderEntryType};
 model_backed_type!(OrderType, orders::Model);
 
-#[Object]
+#[Object(name = "Order")]
 impl OrderType {
   async fn id(&self) -> ID {
     self.model.id.into()

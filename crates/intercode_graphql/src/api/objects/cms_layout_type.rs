@@ -15,7 +15,7 @@ model_backed_type!(CmsLayoutType, cms_layouts::Model);
 const DEFAULT_NAVBAR_CLASSES: &str =
   "navbar-fixed-top navbar-expand-md mb-4 navbar-dark bg-intercode-blue";
 
-#[Object]
+#[Object(name = "CmsLayout")]
 impl CmsLayoutType {
   async fn id(&self) -> ID {
     self.model.id.into()

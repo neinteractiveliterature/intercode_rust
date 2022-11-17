@@ -11,7 +11,7 @@ use super::{
 use crate::model_backed_type;
 model_backed_type!(UserConProfileType, user_con_profiles::Model);
 
-#[Object]
+#[Object(name = "UserConProfile")]
 impl UserConProfileType {
   async fn id(&self) -> ID {
     self.model.id.into()

@@ -7,7 +7,7 @@ use crate::QueryData;
 pub struct AbilityType;
 
 // TODO just about everything here
-#[Object]
+#[Object(name = "Ability")]
 impl AbilityType {
   #[graphql(name = "can_manage_conventions")]
   async fn can_manage_conventions(&self) -> bool {

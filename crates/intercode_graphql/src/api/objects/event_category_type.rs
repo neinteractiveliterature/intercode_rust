@@ -5,7 +5,7 @@ use crate::model_backed_type;
 
 model_backed_type!(EventCategoryType, event_categories::Model);
 
-#[Object]
+#[Object(name = "EventCategory")]
 impl EventCategoryType {
   async fn id(&self) -> i64 {
     self.model.id

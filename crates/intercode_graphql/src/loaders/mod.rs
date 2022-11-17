@@ -4,7 +4,7 @@ use std::time::Duration;
 use async_graphql::dataloader::DataLoader;
 
 use intercode_entities::links::{
-  CmsNavigationItemToCmsNavigationSection, ConventionToStaffPositions, RunToRooms,
+  CmsNavigationItemToCmsNavigationSection, ConventionToStaffPositions, RoomToRuns, RunToRooms,
   StaffPositionToUserConProfiles, UserConProfileToStaffPositions,
 };
 use intercode_entities::*;
@@ -13,13 +13,8 @@ use seawater::ConnectionWrapper;
 
 pub struct LoaderManager {
   db: ConnectionWrapper,
-  pub cms_navigation_item_page: DataLoader<
-    EntityRelationLoader<
-      cms_navigation_items::Entity,
-      pages::Entity,
-      cms_navigation_items::PrimaryKey,
-    >,
-  >,
+  pub cms_navigation_item_page:
+    DataLoader<EntityRelationLoader<cms_navigation_items::Entity, pages::Entity>>,
   pub cms_navigation_item_section: DataLoader<
     EntityLinkLoader<
       cms_navigation_items::Entity,
@@ -27,26 +22,23 @@ pub struct LoaderManager {
       cms_navigation_items::Entity,
     >,
   >,
-  pub convention_event_categories: DataLoader<
-    EntityRelationLoader<conventions::Entity, event_categories::Entity, conventions::PrimaryKey>,
-  >,
+  pub convention_event_categories:
+    DataLoader<EntityRelationLoader<conventions::Entity, event_categories::Entity>>,
+  pub convention_rooms: DataLoader<EntityRelationLoader<conventions::Entity, rooms::Entity>>,
   pub convention_staff_positions: DataLoader<
     EntityLinkLoader<conventions::Entity, ConventionToStaffPositions, staff_positions::Entity>,
   >,
-  pub convention_ticket_types: DataLoader<
-    EntityRelationLoader<conventions::Entity, ticket_types::Entity, conventions::PrimaryKey>,
-  >,
+  pub convention_ticket_types:
+    DataLoader<EntityRelationLoader<conventions::Entity, ticket_types::Entity>>,
   pub conventions_by_id: DataLoader<EntityIdLoader<conventions::Entity>>,
   pub event_event_category:
-    DataLoader<EntityRelationLoader<events::Entity, event_categories::Entity, events::PrimaryKey>>,
-  pub event_runs:
-    DataLoader<EntityRelationLoader<events::Entity, runs::Entity, events::PrimaryKey>>,
-  pub event_team_members:
-    DataLoader<EntityRelationLoader<events::Entity, team_members::Entity, events::PrimaryKey>>,
+    DataLoader<EntityRelationLoader<events::Entity, event_categories::Entity>>,
+  pub event_runs: DataLoader<EntityRelationLoader<events::Entity, runs::Entity>>,
+  pub event_team_members: DataLoader<EntityRelationLoader<events::Entity, team_members::Entity>>,
   pub events_by_id: DataLoader<EntityIdLoader<events::Entity>>,
-  pub order_order_entries:
-    DataLoader<EntityRelationLoader<orders::Entity, order_entries::Entity, orders::PrimaryKey>>,
-  pub run_event: DataLoader<EntityRelationLoader<runs::Entity, events::Entity, runs::PrimaryKey>>,
+  pub order_order_entries: DataLoader<EntityRelationLoader<orders::Entity, order_entries::Entity>>,
+  pub room_runs: DataLoader<EntityLinkLoader<rooms::Entity, RoomToRuns, runs::Entity>>,
+  pub run_event: DataLoader<EntityRelationLoader<runs::Entity, events::Entity>>,
   pub run_rooms: DataLoader<EntityLinkLoader<runs::Entity, RunToRooms, rooms::Entity>>,
   pub staff_position_user_con_profiles: DataLoader<
     EntityLinkLoader<
@@ -56,19 +48,14 @@ pub struct LoaderManager {
     >,
   >,
   pub staff_positions_by_id: DataLoader<EntityIdLoader<staff_positions::Entity>>,
-  pub team_member_event: DataLoader<
-    EntityRelationLoader<team_members::Entity, events::Entity, team_members::PrimaryKey>,
-  >,
-  pub team_member_user_con_profile: DataLoader<
-    EntityRelationLoader<team_members::Entity, user_con_profiles::Entity, team_members::PrimaryKey>,
-  >,
+  pub team_member_event: DataLoader<EntityRelationLoader<team_members::Entity, events::Entity>>,
+  pub team_member_user_con_profile:
+    DataLoader<EntityRelationLoader<team_members::Entity, user_con_profiles::Entity>>,
   pub team_members_by_id: DataLoader<EntityIdLoader<team_members::Entity>>,
-  pub ticket_type_providing_products: DataLoader<
-    EntityRelationLoader<ticket_types::Entity, products::Entity, ticket_types::PrimaryKey>,
-  >,
-  pub user_con_profile_signups: DataLoader<
-    EntityRelationLoader<user_con_profiles::Entity, signups::Entity, user_con_profiles::PrimaryKey>,
-  >,
+  pub ticket_type_providing_products:
+    DataLoader<EntityRelationLoader<ticket_types::Entity, products::Entity>>,
+  pub user_con_profile_signups:
+    DataLoader<EntityRelationLoader<user_con_profiles::Entity, signups::Entity>>,
   pub user_con_profile_staff_positions: DataLoader<
     EntityLinkLoader<
       user_con_profiles::Entity,
@@ -76,19 +63,12 @@ pub struct LoaderManager {
       staff_positions::Entity,
     >,
   >,
-  pub user_con_profile_ticket: DataLoader<
-    EntityRelationLoader<user_con_profiles::Entity, tickets::Entity, user_con_profiles::PrimaryKey>,
-  >,
-  pub user_con_profile_user: DataLoader<
-    EntityRelationLoader<user_con_profiles::Entity, users::Entity, user_con_profiles::PrimaryKey>,
-  >,
-  pub user_con_profile_team_members: DataLoader<
-    EntityRelationLoader<
-      user_con_profiles::Entity,
-      team_members::Entity,
-      user_con_profiles::PrimaryKey,
-    >,
-  >,
+  pub user_con_profile_ticket:
+    DataLoader<EntityRelationLoader<user_con_profiles::Entity, tickets::Entity>>,
+  pub user_con_profile_user:
+    DataLoader<EntityRelationLoader<user_con_profiles::Entity, users::Entity>>,
+  pub user_con_profile_team_members:
+    DataLoader<EntityRelationLoader<user_con_profiles::Entity, team_members::Entity>>,
   pub users_by_id: DataLoader<EntityIdLoader<users::Entity>>,
 }
 
@@ -131,6 +111,11 @@ impl LoaderManager {
         tokio::spawn,
       )
       .delay(delay_millis),
+      convention_rooms: DataLoader::new(
+        EntityRelationLoader::new(db.clone(), conventions::PrimaryKey::Id),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
       convention_ticket_types: DataLoader::new(
         EntityRelationLoader::new(db.clone(), conventions::PrimaryKey::Id),
         tokio::spawn,
@@ -163,6 +148,11 @@ impl LoaderManager {
       .delay(delay_millis),
       order_order_entries: DataLoader::new(
         EntityRelationLoader::new(db.clone(), orders::PrimaryKey::Id),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
+      room_runs: DataLoader::new(
+        EntityLinkLoader::new(db.clone(), RoomToRuns, rooms::PrimaryKey::Id),
         tokio::spawn,
       )
       .delay(delay_millis),

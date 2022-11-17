@@ -26,7 +26,7 @@ impl EventsPaginationType {
   }
 }
 
-#[Object]
+#[Object(name = "EventsPagination")]
 impl EventsPaginationType {
   async fn entries(&self, ctx: &Context<'_>) -> Result<Vec<EventType>, Error> {
     let db = ctx.data::<QueryData>()?.db.as_ref();

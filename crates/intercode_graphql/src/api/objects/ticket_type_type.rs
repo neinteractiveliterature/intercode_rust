@@ -7,7 +7,7 @@ use crate::{model_backed_type, QueryData};
 use super::{ModelBackedType, ProductType};
 model_backed_type!(TicketTypeType, ticket_types::Model);
 
-#[Object]
+#[Object(name = "TicketType")]
 impl TicketTypeType {
   async fn id(&self) -> ID {
     self.model.id.into()

@@ -15,17 +15,17 @@ struct ParentModelIdOnly {
   pub parent_model_id: i64,
 }
 
-pub async fn load_all_related<
-  From: EntityTrait<PrimaryKey = PK> + Related<To>,
-  To: EntityTrait,
-  PK: PrimaryKeyTrait + PrimaryKeyToColumn<Column = From::Column>,
->(
-  pk_column: PK::Column,
-  keys: &[PK::ValueType],
+pub async fn load_all_related<From: EntityTrait + Related<To>, To: EntityTrait>(
+  pk_column: <From::PrimaryKey as PrimaryKeyToColumn>::Column,
+  keys: &[<From::PrimaryKey as PrimaryKeyTrait>::ValueType],
   db: &ConnectionWrapper,
-) -> Result<HashMap<PK::ValueType, EntityRelationLoaderResult<From, To>>, Arc<DbErr>>
+) -> Result<
+  HashMap<<From::PrimaryKey as PrimaryKeyTrait>::ValueType, EntityRelationLoaderResult<From, To>>,
+  Arc<DbErr>,
+>
 where
-  PK::ValueType: Eq + std::hash::Hash + Clone + std::convert::From<i64>,
+  <From::PrimaryKey as PrimaryKeyTrait>::ValueType:
+    Eq + std::hash::Hash + Clone + std::convert::From<i64>,
 {
   use sea_orm::{ColumnTrait, QueryFilter};
 
@@ -50,29 +50,36 @@ where
     .all(db)
     .await?;
 
-  let mut results = query_results.into_iter().fold(
-    HashMap::<PK::ValueType, EntityRelationLoaderResult<From, To>>::new(),
-    |mut acc: HashMap<PK::ValueType, EntityRelationLoaderResult<From, To>>,
-     (from_model, to_model): (ParentModelIdOnly, Option<To::Model>)| {
-      if let Some(to_model) = to_model {
-        let id = from_model.parent_model_id;
-        let result = acc.get_mut(&id.into());
-        if let Some(result) = result {
-          result.models.push(to_model);
-        } else {
-          acc.insert(
-            id.into(),
-            EntityRelationLoaderResult::<From, To> {
-              from_id: id.into(),
-              models: vec![to_model],
-            },
-          );
+  let mut results =
+    query_results.into_iter().fold(
+      HashMap::<
+        <From::PrimaryKey as PrimaryKeyTrait>::ValueType,
+        EntityRelationLoaderResult<From, To>,
+      >::new(),
+      |mut acc: HashMap<
+        <From::PrimaryKey as PrimaryKeyTrait>::ValueType,
+        EntityRelationLoaderResult<From, To>,
+      >,
+       (from_model, to_model): (ParentModelIdOnly, Option<To::Model>)| {
+        if let Some(to_model) = to_model {
+          let id = from_model.parent_model_id;
+          let result = acc.get_mut(&id.into());
+          if let Some(result) = result {
+            result.models.push(to_model);
+          } else {
+            acc.insert(
+              id.into(),
+              EntityRelationLoaderResult::<From, To> {
+                from_id: id.into(),
+                models: vec![to_model],
+              },
+            );
+          }
         }
-      }
 
-      acc
-    },
-  );
+        acc
+      },
+    );
 
   for id in keys.iter() {
     if !results.contains_key(id) {
@@ -187,25 +194,19 @@ where
 }
 
 #[derive(Debug)]
-pub struct EntityRelationLoader<
-  From: EntityTrait<PrimaryKey = PK> + Related<To>,
-  To: EntityTrait,
-  PK: PrimaryKeyTrait + PrimaryKeyToColumn,
-> {
+pub struct EntityRelationLoader<From: EntityTrait + Related<To>, To: EntityTrait> {
   pub db: ConnectionWrapper,
-  pub primary_key: PK,
+  pub primary_key: From::PrimaryKey,
   _from: PhantomData<From>,
   _to: PhantomData<To>,
 }
 
-impl<
-    From: EntityTrait<PrimaryKey = PK> + Related<To>,
-    To: EntityTrait,
-    PK: PrimaryKeyTrait + PrimaryKeyToColumn,
-  > EntityRelationLoader<From, To, PK>
-{
-  pub fn new(db: ConnectionWrapper, primary_key: PK) -> EntityRelationLoader<From, To, PK> {
-    EntityRelationLoader::<From, To, PK> {
+impl<From: EntityTrait + Related<To>, To: EntityTrait> EntityRelationLoader<From, To> {
+  pub fn new(
+    db: ConnectionWrapper,
+    primary_key: From::PrimaryKey,
+  ) -> EntityRelationLoader<From, To> {
+    EntityRelationLoader::<From, To> {
       db,
       primary_key,
       _from: PhantomData::<From>,
@@ -215,25 +216,26 @@ impl<
 }
 
 #[async_trait::async_trait]
-impl<
-    From: EntityTrait<PrimaryKey = PK> + Related<To>,
-    To: EntityTrait,
-    PK: PrimaryKeyTrait + PrimaryKeyToColumn<Column = From::Column>,
-  > Loader<PK::ValueType> for EntityRelationLoader<From, To, PK>
+impl<From: EntityTrait + Related<To>, To: EntityTrait>
+  Loader<<From::PrimaryKey as PrimaryKeyTrait>::ValueType> for EntityRelationLoader<From, To>
 where
   <From as sea_orm::EntityTrait>::Model: Sync,
   <To as sea_orm::EntityTrait>::Model: Sync,
-  PK::ValueType: Sync + Clone + Eq + std::hash::Hash + IntoValueTuple + std::convert::From<i64>,
+  <From::PrimaryKey as PrimaryKeyTrait>::ValueType:
+    Sync + Clone + Eq + std::hash::Hash + IntoValueTuple + std::convert::From<i64>,
 {
   type Value = EntityRelationLoaderResult<From, To>;
   type Error = Arc<sea_orm::DbErr>;
 
   async fn load(
     &self,
-    keys: &[PK::ValueType],
-  ) -> Result<HashMap<PK::ValueType, EntityRelationLoaderResult<From, To>>, Self::Error> {
+    keys: &[<From::PrimaryKey as PrimaryKeyTrait>::ValueType],
+  ) -> Result<
+    HashMap<<From::PrimaryKey as PrimaryKeyTrait>::ValueType, EntityRelationLoaderResult<From, To>>,
+    Self::Error,
+  > {
     let pk_column = self.primary_key.into_column();
 
-    load_all_related::<From, To, PK>(pk_column, keys, self.db.as_ref()).await
+    load_all_related::<From, To>(pk_column, keys, self.db.as_ref()).await
   }
 }

@@ -106,7 +106,7 @@ where
     db: &ConnectionWrapper,
     ids: &[PK::ValueType],
   ) -> Result<HashMap<PK::ValueType, Self::LoaderResult>, DropError> {
-    load_all_related::<From, To, PK>(self.pk_column, ids, db)
+    load_all_related::<From, To>(self.pk_column, ids, db)
       .await
       .map_err(|err| err.into())
   }

@@ -9,7 +9,7 @@ use super::{ModelBackedType, RoomType};
 
 model_backed_type!(RunType, runs::Model);
 
-#[Object]
+#[Object(name = "Run")]
 impl RunType {
   async fn id(&self) -> i64 {
     self.model.id

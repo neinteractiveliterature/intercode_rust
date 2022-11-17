@@ -5,7 +5,7 @@ use intercode_entities::UserNames;
 use crate::model_backed_type;
 model_backed_type!(UserType, users::Model);
 
-#[Object]
+#[Object(name = "User")]
 impl UserType {
   async fn id(&self) -> ID {
     self.model.id.into()

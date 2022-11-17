@@ -5,7 +5,7 @@ use intercode_entities::root_sites;
 
 model_backed_type!(RootSiteType, root_sites::Model);
 
-#[Object]
+#[Object(name = "RootSite")]
 impl RootSiteType {
   pub async fn id(&self) -> ID {
     self.model.id.into()

@@ -8,7 +8,7 @@ use crate::model_backed_type;
 use super::{EventType, ModelBackedType, UserConProfileType};
 model_backed_type!(TeamMemberType, team_members::Model);
 
-#[Object]
+#[Object(name = "TeamMember")]
 impl TeamMemberType {
   async fn id(&self) -> ID {
     self.model.id.into()

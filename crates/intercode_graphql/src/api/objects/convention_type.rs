@@ -1,5 +1,5 @@
 use super::{
-  CmsLayoutType, CmsNavigationItemType, EventsPaginationType, ModelBackedType, PageType,
+  CmsLayoutType, CmsNavigationItemType, EventsPaginationType, ModelBackedType, PageType, RoomType,
   StaffPositionType, TicketTypeType, UserConProfileType,
 };
 use crate::{
@@ -25,7 +25,7 @@ use seawater::loaders::ExpectModels;
 use crate::model_backed_type;
 model_backed_type!(ConventionType, conventions::Model);
 
-#[Object]
+#[Object(name = "Convention")]
 impl ConventionType {
   pub async fn id(&self) -> ID {
     ID(self.model.id.to_string())
@@ -172,6 +172,21 @@ impl ConventionType {
     } else {
       Ok(None)
     }
+  }
+
+  async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<RoomType>, Error> {
+    Ok(
+      ctx
+        .data::<QueryData>()?
+        .loaders
+        .convention_rooms
+        .load_one(self.model.id)
+        .await?
+        .expect_models()?
+        .iter()
+        .map(|room| RoomType::new(room.clone()))
+        .collect(),
+    )
   }
 
   #[graphql(name = "signup_mode")]

@@ -4,7 +4,7 @@ use intercode_entities::products;
 use crate::model_backed_type;
 model_backed_type!(ProductType, products::Model);
 
-#[Object]
+#[Object(name = "Product")]
 impl ProductType {
   async fn id(&self) -> ID {
     self.model.id.into()
