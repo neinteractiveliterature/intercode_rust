@@ -1,5 +1,5 @@
+use cached::{async_sync::Mutex, CachedAsync, UnboundCache};
 use intercode_entities::{user_con_profiles, users};
-use memo_map::MemoMap;
 use oxide_auth::endpoint::Scope;
 use sea_orm::DbErr;
 use seawater::ConnectionWrapper;
@@ -15,7 +15,7 @@ pub struct AuthorizationInfo {
   pub user: Arc<Option<users::Model>>,
   pub oauth_scope: Option<Scope>,
   pub assumed_identity_from_profile: Arc<Option<user_con_profiles::Model>>,
-  all_model_permissions_by_convention: MemoMap<i64, UserPermissionsMap>,
+  all_model_permissions_by_convention: Arc<Mutex<UnboundCache<i64, UserPermissionsMap>>>,
 }
 
 impl AuthorizationInfo {
@@ -30,7 +30,7 @@ impl AuthorizationInfo {
       user,
       oauth_scope,
       assumed_identity_from_profile,
-      all_model_permissions_by_convention: Default::default(),
+      all_model_permissions_by_convention: Arc::new(Mutex::new(UnboundCache::new())),
     }
   }
 
@@ -38,23 +38,16 @@ impl AuthorizationInfo {
     &self,
     convention_id: i64,
   ) -> Result<UserPermissionsMap, DbErr> {
-    let user_id = self.user.as_ref().as_ref().map(|user| user.id);
-    load_all_permissions_in_convention_with_model_type_and_id(&self.db, convention_id, user_id)
-      .await
-    // self
-    //   .all_model_permissions_by_convention
-    //   .get_or_try_insert(&convention_id, || {
-    //     let user_id = self.user.as_ref().as_ref().map(|user| user.id);
-    //     ::tokio::task::block_in_place(move || {
-    //       ::tokio::runtime::Handle::current().block_on(
-    //         load_all_permissions_in_convention_with_model_type_and_id(
-    //           &self.db,
-    //           convention_id,
-    //           user_id,
-    //         ),
-    //       )
-    //     })
-    //   })
+    let mut lock = self.all_model_permissions_by_convention.lock().await;
+
+    let permissions_map = lock
+      .try_get_or_set_with(convention_id, || {
+        let user_id = self.user.as_ref().as_ref().map(|user| user.id);
+        load_all_permissions_in_convention_with_model_type_and_id(&self.db, convention_id, user_id)
+      })
+      .await?;
+
+    Ok(permissions_map.clone())
   }
 
   pub fn has_scope(&self, scope: &str) -> bool {
