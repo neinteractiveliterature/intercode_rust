@@ -1,3 +1,4 @@
+#![allow(clippy::type_complexity)]
 use std::{collections::HashMap, fmt::Debug, marker::PhantomData, pin::Pin, sync::Arc};
 
 use crate::{

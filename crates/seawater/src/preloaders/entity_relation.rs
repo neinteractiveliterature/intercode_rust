@@ -1,3 +1,4 @@
+#![allow(clippy::type_complexity)]
 use std::{collections::HashMap, marker::PhantomData, pin::Pin};
 
 use crate::{
