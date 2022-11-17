@@ -24,7 +24,7 @@ jobs:
       postgres:
         image: postgres:14.6
         env:
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_PASSWORD: ''
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -34,8 +34,8 @@ jobs:
           - 5432:5432
     steps:
       - uses: actions/checkout@v3
-      - run: createdb -U postgres intercode_test
-      - run: psql -U postgres intercode_test <./structure.sql
+      - run: createdb -U postgres -h localhost -p 5432  intercode_test
+      - run: psql -U postgres -h localhost -p 5432 intercode_test <./structure.sql
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
