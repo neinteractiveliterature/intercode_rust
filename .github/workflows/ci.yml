@@ -20,8 +20,22 @@ jobs:
   test:
     name: Test Suite
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14.6
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - uses: actions/checkout@v3
+      - run: createdb -U postgres intercode_test
+      - run: psql -U postgres intercode_test <./structure.sql
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
