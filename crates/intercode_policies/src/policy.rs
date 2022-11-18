@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use axum::async_trait;
 use sea_orm::{ModelTrait, Select};
 
@@ -23,26 +25,27 @@ impl From<CRUDAction> for ReadManageAction {
 }
 
 #[async_trait]
-pub trait Policy<Principal: Send + Sync, Action: Send, Resource: Send + Sync> {
-  type Error;
+pub trait Policy<Principal: Send + Sync, Resource: Send + Sync> {
+  type Action: Send + Sync;
+  type Error: Send + Sync + Display;
 
   async fn action_permitted(
     principal: &Principal,
-    action: Action,
+    action: &Self::Action,
     resource: &Resource,
   ) -> Result<bool, Self::Error>;
 
-  async fn permitted<A: Into<Action> + Send>(
+  async fn permitted<A: Into<Self::Action> + Send>(
     principal: &Principal,
     action: A,
     resource: &Resource,
   ) -> Result<bool, Self::Error> {
-    Self::action_permitted(principal, action.into(), resource).await
+    Self::action_permitted(principal, &action.into(), resource).await
   }
 }
 
-pub trait EntityPolicy<Principal: Send + Sync, Action: Send, Resource: ModelTrait + Sync>:
-  Policy<Principal, Action, Resource>
+pub trait EntityPolicy<Principal: Send + Sync, Resource: ModelTrait + Sync>:
+  Policy<Principal, Resource>
 {
   fn accessible_to(principal: &Principal) -> Select<Resource::Entity>;
 }

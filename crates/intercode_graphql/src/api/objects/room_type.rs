@@ -1,5 +1,6 @@
 use async_graphql::*;
 use intercode_entities::rooms;
+use intercode_policies::{policies::RoomPolicy, ReadManageAction};
 use seawater::loaders::ExpectModels;
 
 use crate::{model_backed_type, QueryData};
@@ -7,7 +8,10 @@ use crate::{model_backed_type, QueryData};
 use super::{ModelBackedType, RunType};
 model_backed_type!(RoomType, rooms::Model);
 
-#[Object(name = "Room")]
+#[Object(
+  name = "Room",
+  guard = "self.policy_guard::<RoomPolicy>(ReadManageAction::Read)"
+)]
 impl RoomType {
   async fn id(&self) -> ID {
     self.model.id.into()

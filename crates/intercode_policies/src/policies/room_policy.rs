@@ -10,12 +10,13 @@ use crate::{
 pub struct RoomPolicy;
 
 #[async_trait]
-impl Policy<AuthorizationInfo, ReadManageAction, rooms::Model> for RoomPolicy {
+impl Policy<AuthorizationInfo, rooms::Model> for RoomPolicy {
+  type Action = ReadManageAction;
   type Error = DbErr;
 
   async fn action_permitted(
     principal: &AuthorizationInfo,
-    action: ReadManageAction,
+    action: &ReadManageAction,
     resource: &rooms::Model,
   ) -> Result<bool, Self::Error> {
     match action {
@@ -41,7 +42,7 @@ impl Policy<AuthorizationInfo, ReadManageAction, rooms::Model> for RoomPolicy {
   }
 }
 
-impl EntityPolicy<AuthorizationInfo, ReadManageAction, rooms::Model> for RoomPolicy {
+impl EntityPolicy<AuthorizationInfo, rooms::Model> for RoomPolicy {
   fn accessible_to(
     _principal: &AuthorizationInfo,
   ) -> sea_orm::Select<<rooms::Model as sea_orm::ModelTrait>::Entity> {
@@ -73,7 +74,7 @@ mod tests {
       Box::pin(async move {
         assert!(RoomPolicy::action_permitted(
           &AuthorizationInfo::for_test(db, None, None, None).await,
-          ReadManageAction::Read,
+          &ReadManageAction::Read,
           &mock_room()
         )
         .await

@@ -42,7 +42,7 @@ pub enum CmsParentInterface {
 #[async_trait]
 pub trait CmsParentImplementation<M>
 where
-  Self: ModelBackedType<M>,
+  Self: ModelBackedType<Model = M>,
   M: CmsParentTrait + sea_orm::ModelTrait + Sync,
 {
   async fn cms_page(

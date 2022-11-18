@@ -81,7 +81,7 @@ impl AbilityType {
 
     RoomPolicy::action_permitted(
       authorization_info,
-      ReadManageAction::Manage,
+      &ReadManageAction::Manage,
       &rooms::Model {
         id: 0,
         name: None,
