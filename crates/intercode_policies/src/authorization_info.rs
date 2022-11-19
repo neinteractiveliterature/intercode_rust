@@ -59,6 +59,23 @@ impl AuthorizationInfo {
     }
   }
 
+  pub async fn has_scope_and_convention_permission(
+    &self,
+    scope: &str,
+    permission: &str,
+    convention_id: i64,
+  ) -> Result<bool, DbErr> {
+    if self.has_scope(scope) {
+      let perms = self
+        .all_model_permissions_in_convention(convention_id)
+        .await?;
+
+      Ok(perms.has_convention_permission(convention_id, permission))
+    } else {
+      Ok(false)
+    }
+  }
+
   pub fn site_admin(&self) -> bool {
     self
       .user

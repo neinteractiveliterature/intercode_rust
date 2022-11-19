@@ -80,12 +80,27 @@ impl ConventionType {
     self.model.domain.as_str()
   }
 
+  #[graphql(name = "email_from")]
+  async fn email_from(&self) -> &str {
+    self.model.email_from.as_str()
+  }
+
+  #[graphql(name = "email_mode")]
+  async fn email_mode(&self) -> &str {
+    self.model.email_mode.as_str()
+  }
+
   #[graphql(name = "ends_at")]
   async fn ends_at(&self) -> Option<DateTime<Utc>> {
     self
       .model
       .ends_at
       .map(|t| DateTime::<Utc>::from_utc(t, Utc))
+  }
+
+  #[graphql(name = "event_mailing_list_domain")]
+  async fn event_mailing_list_domain(&self) -> Option<&str> {
+    self.model.event_mailing_list_domain.as_deref()
   }
 
   #[graphql(name = "events_paginated")]
@@ -139,8 +154,17 @@ impl ConventionType {
     Ok(EventsPaginationType::new(Some(scope), page, per_page))
   }
 
+  async fn hidden(&self) -> bool {
+    self.model.hidden
+  }
+
   async fn language(&self) -> &str {
     self.model.language.as_str()
+  }
+
+  #[graphql(name = "maximum_tickets")]
+  async fn maximum_tickets(&self) -> Option<i32> {
+    self.model.maximum_tickets
   }
 
   #[graphql(name = "my_profile")]
@@ -192,6 +216,21 @@ impl ConventionType {
   #[graphql(name = "signup_mode")]
   async fn signup_mode(&self) -> Result<SignupMode, Error> {
     self.model.signup_mode.as_str().try_into()
+  }
+
+  #[graphql(name = "signup_requests_open")]
+  async fn signup_requests_open(&self) -> bool {
+    self.model.signup_requests_open
+  }
+
+  #[graphql(name = "show_event_list")]
+  async fn show_event_list(&self) -> &str {
+    self.model.show_event_list.as_str()
+  }
+
+  #[graphql(name = "show_schedule")]
+  async fn show_schedule(&self) -> &str {
+    self.model.show_schedule.as_str()
   }
 
   #[graphql(name = "site_mode")]
@@ -300,6 +339,8 @@ impl ConventionType {
       })
       .map(UserConProfileType::new)
   }
+
+  // STUFF FOR IMPLEMENTING CMS_PARENT
 
   async fn cms_page(
     &self,

@@ -1,6 +1,9 @@
 use async_graphql::*;
-use intercode_entities::rooms;
-use intercode_policies::{policies::RoomPolicy, AuthorizationInfo, Policy, ReadManageAction};
+use intercode_entities::{conventions, rooms};
+use intercode_policies::{
+  policies::{ConventionAction, ConventionPolicy, RoomPolicy},
+  AuthorizationInfo, Policy, ReadManageAction,
+};
 
 use crate::QueryData;
 
@@ -10,8 +13,17 @@ pub struct AbilityType;
 #[Object(name = "Ability")]
 impl AbilityType {
   #[graphql(name = "can_manage_conventions")]
-  async fn can_manage_conventions(&self) -> bool {
-    false
+  async fn can_manage_conventions(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+
+    Ok(
+      ConventionPolicy::action_permitted(
+        authorization_info,
+        &ConventionAction::Update,
+        &conventions::Model::default(),
+      )
+      .await?,
+    )
   }
 
   #[graphql(name = "can_read_schedule")]
@@ -27,12 +39,40 @@ impl AbilityType {
     false
   }
   #[graphql(name = "can_read_user_con_profiles")]
-  async fn can_read_user_con_profiles(&self) -> bool {
-    false
+  async fn can_read_user_con_profiles(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let query_data = ctx.data::<QueryData>()?;
+    let convention = query_data.convention.as_ref().as_ref();
+
+    match convention {
+      Some(convention) => Ok(
+        ConventionPolicy::action_permitted(
+          authorization_info,
+          &ConventionAction::ViewAttendees,
+          convention,
+        )
+        .await?,
+      ),
+      None => Ok(false),
+    }
   }
   #[graphql(name = "can_update_convention")]
-  async fn can_update_convention(&self) -> bool {
-    false
+  async fn can_update_convention(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let query_data = ctx.data::<QueryData>()?;
+    let convention = query_data.convention.as_ref().as_ref();
+
+    match convention {
+      Some(convention) => Ok(
+        ConventionPolicy::action_permitted(
+          authorization_info,
+          &ConventionAction::Update,
+          convention,
+        )
+        .await?,
+      ),
+      None => Ok(false),
+    }
   }
   #[graphql(name = "can_update_departments")]
   async fn can_update_departments(&self) -> bool {
@@ -71,8 +111,22 @@ impl AbilityType {
     false
   }
   #[graphql(name = "can_read_reports")]
-  async fn can_read_reports(&self) -> bool {
-    false
+  async fn can_read_reports(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let query_data = ctx.data::<QueryData>()?;
+    let convention = query_data.convention.as_ref().as_ref();
+
+    match convention {
+      Some(convention) => Ok(
+        ConventionPolicy::action_permitted(
+          authorization_info,
+          &ConventionAction::ViewReports,
+          convention,
+        )
+        .await?,
+      ),
+      None => Ok(false),
+    }
   }
   #[graphql(name = "can_manage_rooms")]
   async fn can_manage_rooms(&self, ctx: &Context<'_>) -> Result<bool, Error> {
@@ -83,15 +137,8 @@ impl AbilityType {
       authorization_info,
       &ReadManageAction::Manage,
       &rooms::Model {
-        id: 0,
-        name: None,
-        convention_id: query_data
-          .convention
-          .as_ref()
-          .as_ref()
-          .map(|convention| convention.id),
-        created_at: Default::default(),
-        updated_at: Default::default(),
+        convention_id: query_data.convention.as_ref().as_ref().map(|con| con.id),
+        ..Default::default()
       },
     )
     .await

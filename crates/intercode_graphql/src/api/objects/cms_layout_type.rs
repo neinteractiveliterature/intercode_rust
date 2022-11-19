@@ -47,4 +47,8 @@ impl CmsLayoutType {
       )
       .await
   }
+
+  async fn name(&self) -> Option<&str> {
+    self.model.name.as_deref()
+  }
 }
