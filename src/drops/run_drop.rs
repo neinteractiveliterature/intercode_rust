@@ -1,7 +1,7 @@
-use intercode_entities::{links::RunToRooms, runs};
+use intercode_entities::runs;
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 use liquid::model::DateTime;
-use seawater::{belongs_to_related, has_many_linked, model_backed_drop, DropError};
+use seawater::{belongs_to_related, has_many_related, model_backed_drop, DropError};
 use time::Duration;
 
 use super::{
@@ -11,7 +11,7 @@ use super::{
 model_backed_drop!(RunDrop, runs::Model, DropContext);
 
 #[belongs_to_related(event, EventDrop, eager_load(event_category))]
-#[has_many_linked(rooms, RoomDrop, RunToRooms, serialize = true)]
+#[has_many_related(rooms, RoomDrop, serialize = true)]
 #[liquid_drop_impl(i64)]
 impl RunDrop {
   fn id(&self) -> i64 {

@@ -13,8 +13,8 @@ use crate::{
 use async_graphql::*;
 use chrono::{DateTime, Utc};
 use intercode_entities::{
-  conventions, events, links::ConventionToStaffPositions, runs, staff_positions,
-  staff_positions_user_con_profiles, team_members, user_con_profiles, users,
+  conventions, events, links::ConventionToStaffPositions, runs, staff_positions, team_members,
+  user_con_profiles, users,
 };
 use sea_orm::{
   sea_query::Expr, ColumnTrait, EntityTrait, JoinType, ModelTrait, Order, QueryFilter, QueryOrder,
@@ -50,10 +50,10 @@ impl ConventionType {
     let profiles: Vec<UserConProfileType> = self
       .model
       .find_related(user_con_profiles::Entity)
-      .left_join(staff_positions_user_con_profiles::Entity)
+      .left_join(staff_positions::Entity)
       .left_join(team_members::Entity)
       .filter(
-        staff_positions_user_con_profiles::Column::StaffPositionId
+        staff_positions::Column::Id
           .is_not_null()
           .or(team_members::Column::Id.is_not_null()),
       )
@@ -160,6 +160,10 @@ impl ConventionType {
 
   async fn language(&self) -> &str {
     self.model.language.as_str()
+  }
+
+  async fn location(&self) -> Option<&serde_json::Value> {
+    self.model.location.as_ref()
   }
 
   #[graphql(name = "maximum_tickets")]

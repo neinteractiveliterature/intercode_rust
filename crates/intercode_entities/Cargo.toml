@@ -8,6 +8,6 @@ version = "0.1.0"
 [dependencies]
 async-trait = "*"
 chrono = "*"
-sea-orm = {version = "^0", features = ["macros"]}
+sea-orm = {version = "^0", features = ["macros", "postgres-array"]}
 seawater = {path = "../seawater"}
 serde = "*"

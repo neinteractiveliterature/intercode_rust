@@ -4,7 +4,7 @@ use std::time::Duration;
 use async_graphql::dataloader::DataLoader;
 
 use intercode_entities::links::{
-  CmsNavigationItemToCmsNavigationSection, ConventionToStaffPositions, RoomToRuns, RunToRooms,
+  CmsNavigationItemToCmsNavigationSection, ConventionToStaffPositions,
   StaffPositionToUserConProfiles, UserConProfileToStaffPositions,
 };
 use intercode_entities::*;
@@ -37,9 +37,9 @@ pub struct LoaderManager {
   pub event_team_members: DataLoader<EntityRelationLoader<events::Entity, team_members::Entity>>,
   pub events_by_id: DataLoader<EntityIdLoader<events::Entity>>,
   pub order_order_entries: DataLoader<EntityRelationLoader<orders::Entity, order_entries::Entity>>,
-  pub room_runs: DataLoader<EntityLinkLoader<rooms::Entity, RoomToRuns, runs::Entity>>,
+  pub room_runs: DataLoader<EntityRelationLoader<rooms::Entity, runs::Entity>>,
   pub run_event: DataLoader<EntityRelationLoader<runs::Entity, events::Entity>>,
-  pub run_rooms: DataLoader<EntityLinkLoader<runs::Entity, RunToRooms, rooms::Entity>>,
+  pub run_rooms: DataLoader<EntityRelationLoader<runs::Entity, rooms::Entity>>,
   pub staff_position_user_con_profiles: DataLoader<
     EntityLinkLoader<
       staff_positions::Entity,
@@ -152,7 +152,7 @@ impl LoaderManager {
       )
       .delay(delay_millis),
       room_runs: DataLoader::new(
-        EntityLinkLoader::new(db.clone(), RoomToRuns, rooms::PrimaryKey::Id),
+        EntityRelationLoader::new(db.clone(), rooms::PrimaryKey::Id),
         tokio::spawn,
       )
       .delay(delay_millis),
@@ -162,7 +162,7 @@ impl LoaderManager {
       )
       .delay(delay_millis),
       run_rooms: DataLoader::new(
-        EntityLinkLoader::new(db.clone(), RunToRooms, runs::PrimaryKey::Id),
+        EntityRelationLoader::new(db.clone(), runs::PrimaryKey::Id),
         tokio::spawn,
       )
       .delay(delay_millis),

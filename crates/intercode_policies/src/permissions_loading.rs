@@ -21,7 +21,9 @@ pub fn user_permission_scope(user_id: Option<i64>) -> Select<permissions::Entity
               &mut staff_positions::Entity::find()
                 .join(
                   JoinType::InnerJoin,
-                  staff_positions::Relation::StaffPositionsUserConProfiles.def(),
+                  staff_positions_user_con_profiles::Relation::StaffPositions
+                    .def()
+                    .rev(),
                 )
                 .join_as(
                   JoinType::InnerJoin,
