@@ -1,8 +1,15 @@
-use async_graphql::{async_trait::async_trait, Context, Error, Interface, ID};
+use std::sync::Arc;
+
+use async_graphql::{
+  async_trait::async_trait,
+  futures_util::{try_join, TryFutureExt},
+  Context, Error, Interface, ID,
+};
 use intercode_entities::{
   cms_content_groups, cms_files, cms_graphql_queries, cms_layouts, cms_parent::CmsParentTrait,
   pages,
 };
+use intercode_liquid::render_markdown;
 use sea_orm::{ColumnTrait, QueryFilter};
 
 use crate::{
@@ -11,7 +18,8 @@ use crate::{
     CmsNavigationItemType, CmsPartialType, CmsVariableType, ConventionType, LiquidAssignType,
     ModelBackedType, PageType, RootSiteType, SearchResultType,
   },
-  QueryData,
+  cms_rendering_context::CmsRenderingContext,
+  LiquidRenderer, QueryData,
 };
 
 #[derive(Interface)]
@@ -55,6 +63,11 @@ use crate::{
     arg(name = "markdown", type = "String"),
     arg(name = "event_id", type = "Option<ID>"),
     arg(name = "event_proposal_id", type = "Option<ID>")
+  ),
+  field(
+    name = "preview_liquid",
+    type = "String",
+    arg(name = "content", type = "String"),
   ),
   field(name = "root_page", type = "PageType"),
   field(
@@ -233,27 +246,57 @@ where
 
   async fn full_text_search(
     &self,
-    ctx: &Context<'_>,
-    query: String,
+    _ctx: &Context<'_>,
+    _query: String,
   ) -> Result<SearchResultType, Error> {
     // TODO
     Ok(SearchResultType)
   }
 
   async fn liquid_assigns(&self, ctx: &Context<'_>) -> Result<Vec<LiquidAssignType>, Error> {
-    // TODO
-    Ok(vec![])
+    let query_data = ctx.data::<QueryData>()?;
+    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
+    let cms_rendering_context =
+      CmsRenderingContext::new(liquid::object!({}), query_data, liquid_renderer.clone());
+
+    let (builtins, cms_variables) = try_join!(
+      liquid_renderer.builtin_globals(),
+      cms_rendering_context
+        .cms_variables()
+        .map_err(|err| Error::new(err.to_string()))
+    )?;
+
+    Ok(
+      builtins
+        .iter()
+        .map(|(key, value)| LiquidAssignType::from_value_view(key.to_string(), value))
+        .chain(
+          cms_variables
+            .iter()
+            .map(LiquidAssignType::from_cms_variable),
+        )
+        .collect(),
+    )
+  }
+
+  async fn preview_liquid(&self, ctx: &Context<'_>, content: String) -> Result<String, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
+    let cms_rendering_context =
+      CmsRenderingContext::new(liquid::object!({}), query_data, liquid_renderer.clone());
+
+    cms_rendering_context.render_liquid(&content, None).await
   }
 
   async fn preview_markdown(
     &self,
-    ctx: &Context<'_>,
+    _ctx: &Context<'_>,
     markdown: String,
-    event_id: Option<ID>,
-    event_proposal_id: Option<ID>,
+    _event_id: Option<ID>,
+    _event_proposal_id: Option<ID>,
   ) -> Result<String, Error> {
-    // TODO
-    Ok("TODO".to_string())
+    // TODO find images for event or event proposal
+    Ok(render_markdown(&markdown))
   }
 
   async fn root_page(&self, ctx: &Context<'_>) -> Result<PageType, Error> {
@@ -269,8 +312,8 @@ where
 
   async fn typeahead_search_cms_content(
     &self,
-    ctx: &Context<'_>,
-    name: Option<String>,
+    _ctx: &Context<'_>,
+    _name: Option<String>,
   ) -> Result<Vec<CmsContentType>, Error> {
     // TODO
     Ok(vec![])

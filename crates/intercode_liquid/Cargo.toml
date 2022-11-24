@@ -19,6 +19,7 @@ intercode_timespan = {path = "../intercode_timespan"}
 liquid = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
 liquid-core = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
 md5 = "*"
+pulldown-cmark = "0.9.2"
 regex = "*"
 sea-orm = "*"
 seawater = {path = "../seawater"}

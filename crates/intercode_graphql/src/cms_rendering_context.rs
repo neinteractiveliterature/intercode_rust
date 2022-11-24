@@ -4,11 +4,11 @@ use crate::{LiquidRenderer, QueryData};
 use html_escape::encode_double_quoted_attribute;
 use http::Uri;
 use intercode_entities::{
-  active_storage_attachments, active_storage_blobs, cms_parent::CmsParentTrait, conventions,
-  events, pages,
+  active_storage_attachments, active_storage_blobs, cms_parent::CmsParentTrait, cms_variables,
+  conventions, events, pages,
 };
 use intercode_liquid::{cms_parent_partial_source::PreloadPartialsStrategy, react_component_tag};
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter};
 use seawater::ConnectionWrapper;
 use serde_json::json;
 
@@ -276,14 +276,17 @@ impl<'a> CmsRenderingContext<'a> {
     }
   }
 
-  pub async fn merged_globals(&self) -> liquid::Object {
-    let cms_variables = self
+  pub async fn cms_variables(&self) -> Result<Vec<cms_variables::Model>, DbErr> {
+    self
       .query_data
       .cms_parent
       .cms_variables()
       .all(self.query_data.db.as_ref())
       .await
-      .unwrap_or_else(|_err| vec![]);
+  }
+
+  pub async fn merged_globals(&self) -> liquid::Object {
+    let cms_variables = self.cms_variables().await.unwrap_or_else(|_err| vec![]);
 
     let mut merged_globals = liquid::Object::from_iter(cms_variables.iter().map(|var| {
       (

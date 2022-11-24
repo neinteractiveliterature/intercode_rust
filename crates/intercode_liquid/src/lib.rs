@@ -5,6 +5,7 @@ pub mod filters;
 mod react_component_tag;
 pub mod tags;
 
+use pulldown_cmark::{html, Options};
 pub use react_component_tag::react_component_tag;
 use seawater::ConnectionWrapper;
 
@@ -89,4 +90,17 @@ pub fn build_liquid_parser<'a>(
     .partials(partial_compiler);
 
   builder.build()
+}
+
+pub fn render_markdown(markdown: &str) -> String {
+  let mut options = Options::empty();
+  options.insert(Options::ENABLE_STRIKETHROUGH);
+  options.insert(Options::ENABLE_FOOTNOTES);
+  options.insert(Options::ENABLE_SMART_PUNCTUATION);
+  options.insert(Options::ENABLE_TABLES);
+  let parser = pulldown_cmark::Parser::new_ext(markdown, options);
+
+  let mut html_output = String::new();
+  html::push_html(&mut html_output, parser);
+  html_output
 }

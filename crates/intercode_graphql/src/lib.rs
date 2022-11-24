@@ -32,6 +32,10 @@ pub trait LiquidRenderer: Send + Sync + Debug {
     globals: liquid::Object,
     preload_partials_strategy: Option<PreloadPartialsStrategy<'_>>,
   ) -> Result<String, async_graphql::Error>;
+
+  async fn builtin_globals(
+    &self,
+  ) -> Result<Box<dyn liquid::ObjectView + Send>, async_graphql::Error>;
 }
 
 #[derive(Debug, Clone)]

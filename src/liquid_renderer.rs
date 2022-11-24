@@ -89,6 +89,14 @@ impl IntercodeLiquidRenderer {
 
 #[async_trait]
 impl LiquidRenderer for IntercodeLiquidRenderer {
+  async fn builtin_globals(
+    &self,
+  ) -> Result<Box<dyn liquid::ObjectView + Send>, async_graphql::Error> {
+    let schema_data: SchemaData = self.schema_data.clone();
+    let query_data: QueryData = self.query_data.clone();
+    Ok(Box::new(IntercodeGlobals::new(query_data, schema_data)))
+  }
+
   async fn render_liquid(
     &self,
     content: &str,
