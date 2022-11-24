@@ -1,6 +1,7 @@
 use super::{
-  CmsLayoutType, CmsNavigationItemType, EventsPaginationType, ModelBackedType, PageType, RoomType,
-  StaffPositionType, TicketTypeType, UserConProfileType,
+  CmsContentGroupType, CmsContentType, CmsFileType, CmsGraphqlQueryType, CmsLayoutType,
+  CmsNavigationItemType, CmsPartialType, CmsVariableType, EventsPaginationType, ModelBackedType,
+  PageType, RoomType, StaffPositionType, TicketTypeType, UserConProfileType,
 };
 use crate::{
   api::{
@@ -261,6 +262,23 @@ impl ConventionType {
       .map(StaffPositionType::new)
   }
 
+  #[graphql(name = "staff_positions")]
+  async fn staff_positions(&self, ctx: &Context<'_>) -> Result<Vec<StaffPositionType>, Error> {
+    let query_data = &ctx.data::<QueryData>()?;
+
+    Ok(
+      query_data
+        .loaders
+        .convention_staff_positions
+        .load_one(self.model.id)
+        .await?
+        .expect_models()?
+        .iter()
+        .map(|model| StaffPositionType::new(model.clone()))
+        .collect(),
+    )
+  }
+
   #[graphql(name = "starts_at")]
   async fn starts_at(&self) -> Option<DateTime<Utc>> {
     self
@@ -346,6 +364,60 @@ impl ConventionType {
 
   // STUFF FOR IMPLEMENTING CMS_PARENT
 
+  async fn cms_content_groups(&self, ctx: &Context<'_>) -> Result<Vec<CmsContentGroupType>, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::cms_content_groups(self, ctx).await
+  }
+
+  async fn cms_content_group(
+    &self,
+    ctx: &Context<'_>,
+    id: ID,
+  ) -> Result<CmsContentGroupType, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::cms_content_group(self, ctx, id).await
+  }
+
+  async fn cms_files(&self, ctx: &Context<'_>) -> Result<Vec<CmsFileType>, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::cms_files(self, ctx).await
+  }
+
+  async fn cms_file(&self, ctx: &Context<'_>, id: ID) -> Result<CmsFileType, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::cms_file(self, ctx, id).await
+  }
+
+  async fn cms_graphql_queries(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<CmsGraphqlQueryType>, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::cms_graphql_queries(self, ctx).await
+  }
+
+  async fn cms_graphql_query(
+    &self,
+    ctx: &Context<'_>,
+    id: ID,
+  ) -> Result<CmsGraphqlQueryType, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::cms_graphql_query(self, ctx, id).await
+  }
+
+  async fn cms_layouts(&self, ctx: &Context<'_>) -> Result<Vec<CmsLayoutType>, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::cms_layouts(self, ctx).await
+  }
+
+  async fn cms_layout(&self, ctx: &Context<'_>, id: ID) -> Result<CmsLayoutType, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::cms_layout(self, ctx, id).await
+  }
+
+  async fn cms_navigation_items(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<CmsNavigationItemType>, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::cms_navigation_items(self, ctx).await
+  }
+
+  async fn cms_pages(&self, ctx: &Context<'_>) -> Result<Vec<PageType>, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::cms_pages(self, ctx).await
+  }
+
   async fn cms_page(
     &self,
     ctx: &Context<'_>,
@@ -357,11 +429,12 @@ impl ConventionType {
       .await
   }
 
-  async fn cms_navigation_items(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<Vec<CmsNavigationItemType>, Error> {
-    <Self as CmsParentImplementation<conventions::Model>>::cms_navigation_items(self, ctx).await
+  async fn cms_partials(&self, ctx: &Context<'_>) -> Result<Vec<CmsPartialType>, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::cms_partials(self, ctx).await
+  }
+
+  async fn cms_variables(&self, ctx: &Context<'_>) -> Result<Vec<CmsVariableType>, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::cms_variables(self, ctx).await
   }
 
   async fn default_layout(&self, ctx: &Context<'_>) -> Result<CmsLayoutType, Error> {
@@ -375,6 +448,21 @@ impl ConventionType {
   ) -> Result<CmsLayoutType, Error> {
     <Self as CmsParentImplementation<conventions::Model>>::effective_cms_layout(self, ctx, path)
       .await
+  }
+
+  async fn root_page(&self, ctx: &Context<'_>) -> Result<PageType, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::root_page(self, ctx).await
+  }
+
+  async fn typeahead_search_cms_content(
+    &self,
+    ctx: &Context<'_>,
+    name: Option<String>,
+  ) -> Result<Vec<CmsContentType>, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::typeahead_search_cms_content(
+      self, ctx, name,
+    )
+    .await
   }
 }
 

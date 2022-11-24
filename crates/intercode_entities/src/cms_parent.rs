@@ -1,6 +1,6 @@
 use crate::{
-  cms_files, cms_graphql_queries, cms_layouts, cms_navigation_items, cms_partials, cms_variables,
-  conventions, pages, root_sites,
+  cms_content_groups, cms_files, cms_graphql_queries, cms_layouts, cms_navigation_items,
+  cms_partials, cms_variables, conventions, pages, root_sites,
 };
 use async_trait::async_trait;
 use sea_orm::{ColumnTrait, ConnectionTrait, EntityTrait, QueryFilter, Select};
@@ -25,6 +25,7 @@ impl From<root_sites::Model> for CmsParent {
 
 #[async_trait]
 pub trait CmsParentTrait {
+  fn cms_content_groups(&self) -> Select<cms_content_groups::Entity>;
   fn cms_files(&self) -> Select<cms_files::Entity>;
   fn cms_graphql_queries(&self) -> Select<cms_graphql_queries::Entity>;
   fn cms_layouts(&self) -> Select<cms_layouts::Entity>;
@@ -86,6 +87,7 @@ macro_rules! enum_assoc {
 }
 
 impl CmsParentTrait for CmsParent {
+  enum_assoc!(cms_content_groups);
   enum_assoc!(cms_files);
   enum_assoc!(cms_graphql_queries);
   enum_assoc!(cms_layouts);
@@ -120,6 +122,7 @@ macro_rules! convention_assoc {
 }
 
 impl CmsParentTrait for conventions::Model {
+  convention_assoc!(cms_content_groups);
   convention_assoc!(cms_files);
   convention_assoc!(cms_graphql_queries);
   convention_assoc!(cms_layouts);
@@ -148,6 +151,7 @@ macro_rules! root_site_assoc {
 }
 
 impl CmsParentTrait for root_sites::Model {
+  root_site_assoc!(cms_content_groups);
   root_site_assoc!(cms_files);
   root_site_assoc!(cms_graphql_queries);
   root_site_assoc!(cms_layouts);
