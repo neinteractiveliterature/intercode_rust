@@ -69,7 +69,7 @@ liquid = {workspace = true}
 liquid-core = {workspace = true}
 md5 = "*"
 memo-map = "0.3.1"
-once_cell = "1.13.0"
+once_cell = "1.16.0"
 opentelemetry = {version = "0.18.0", features = ["rt-tokio"]}
 opentelemetry-otlp = {version = "0.11.0", features = ["tls-roots"]}
 oxide-auth = "0.5.3"
