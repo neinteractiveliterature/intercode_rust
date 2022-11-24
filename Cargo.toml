@@ -55,7 +55,7 @@ generational-arena = "0.2.8"
 hex = "0.4.3"
 html-escape = "0.2.11"
 http = "0.2.8"
-hyper = "0.14.20"
+hyper = "0.14.23"
 i18n-embed = {version = "0.13", features = ["fluent-system"]}
 i18n-embed-fl = "0.6"
 intercode_entities = {path = "./crates/intercode_entities"}
