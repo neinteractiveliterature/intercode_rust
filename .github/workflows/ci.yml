@@ -35,7 +35,15 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test --workspace
+      - uses: taiki-e/install-action@nextest
+      - run: cargo nextest --workspace --profile ci
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v3
+        if: always() # always run even if the previous step fails
+        with:
+          check_name: 'Test Report'
+          report_paths: 'target/nextest/ci/junit.xml'
+
 
   fmt:
     name: Rustfmt
