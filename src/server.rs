@@ -8,7 +8,7 @@ use ::http::StatusCode;
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql::*;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
-use axum::extract::{Multipart, OriginalUri};
+use axum::extract::{FromRef, Multipart, OriginalUri, State};
 use axum::response::{self, IntoResponse};
 use axum::routing::{get, post};
 use axum::{Extension, Form, Router};
@@ -20,7 +20,10 @@ use i18n_embed::LanguageLoader;
 use intercode_entities::cms_parent::CmsParentTrait;
 use intercode_entities::{events, users};
 use intercode_graphql::cms_rendering_context::CmsRenderingContext;
-use intercode_graphql::{api, build_intercode_graphql_schema, LiquidRenderer, SchemaData};
+use intercode_graphql::{
+  api, build_intercode_graphql_schema, LiquidRenderer, QueryData, SchemaData,
+};
+use intercode_policies::AuthorizationInfo;
 use liquid::object;
 use opentelemetry::global::shutdown_tracer_provider;
 use regex::Regex;
@@ -51,6 +54,12 @@ struct FatalDatabaseError {
 }
 
 type IntercodeSchema = Schema<api::QueryRoot, EmptyMutation, EmptySubscription>;
+
+#[derive(Clone, FromRef)]
+pub struct IntercodeAppState {
+  graphql_schema: Arc<IntercodeSchema>,
+  schema_data: SchemaData,
+}
 
 async fn single_page_app_entry(
   OriginalUri(url): OriginalUri,
@@ -113,21 +122,20 @@ async fn single_page_app_entry(
 }
 
 async fn graphql_handler(
-  schema: Extension<IntercodeSchema>,
-  schema_data: Extension<SchemaData>,
+  State(state): State<IntercodeAppState>,
   req: GraphQLRequest,
   AuthorizationInfoAndQueryDataFromRequest(authorization_info, query_data): AuthorizationInfoAndQueryDataFromRequest,
 ) -> GraphQLResponse {
   let authorization_info = Arc::new(authorization_info);
   let liquid_renderer =
-    IntercodeLiquidRenderer::new(&query_data, &schema_data, authorization_info.clone());
+    IntercodeLiquidRenderer::new(&query_data, &state.schema_data, authorization_info.clone());
   let req = req
     .into_inner()
     .data(query_data)
     .data::<Arc<dyn LiquidRenderer>>(Arc::new(liquid_renderer))
     .data(authorization_info);
 
-  schema.execute(req).await.into()
+  state.graphql_schema.execute(req).await.into()
 }
 
 async fn graphql_playground() -> impl IntoResponse {
@@ -263,6 +271,11 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
 
   let graphql_schema = build_intercode_graphql_schema(schema_data.clone());
 
+  let app_state = IntercodeAppState {
+    schema_data,
+    graphql_schema: Arc::new(graphql_schema),
+  };
+
   let app = Router::new()
     .route("/graphql", get(graphql_playground).post(graphql_handler))
     .route("/authenticity_tokens", get(authenticity_tokens))
@@ -271,8 +284,7 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
     .layer(axum_sea_orm_tx::Layer::new(ConnectionWrapper::from(
       schema_data.db_conn.clone(),
     )))
-    .layer(Extension(schema_data))
-    .layer(Extension(graphql_schema));
+    .with_state(app_state);
 
   let store = DbSessionStore::new(db_conn.into());
   let secret_bytes = hex::decode(env::var("SECRET_KEY_BASE")?)?;

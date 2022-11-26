@@ -32,13 +32,13 @@ tokio-console = ["dep:console-subscriber", "tokio/full", "tokio/tracing"]
 [dependencies]
 anyhow = "1.0.66"
 async-graphql = {version = "~4.0.16", features = ["tracing", "dataloader", "chrono"]}
-async-graphql-axum = "4.0.16"
+async-graphql-axum = {git = "https://github.com/async-graphql/async-graphql.git"}
 async-graphql-value = "~4.0.16"
 async-stripe = {version = "0.15.0", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
 axum = {version = "0.6.0", features = ["multipart"]}
-axum-extra = {version = "0.3.7", features = ["cookie"]}
+axum-extra = {version = "0.4.0", features = ["cookie"]}
 axum-sea-orm-tx = {version = "0.1.0", git = "https://github.com/nbudin/axum-sea-orm-tx.git"}
-axum-sessions = "0.3.2"
+axum-sessions = "0.4.0"
 base64 = "0.13.1"
 bcrypt = "0.13.0"
 bumpalo-herd = "0.1.2"

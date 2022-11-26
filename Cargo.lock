@@ -179,9 +179,9 @@ version = "4.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d9ed522678d412d77effe47b3c82314ac36952a35e6e852093dd48287c421f80"
 dependencies = [
- "async-graphql-derive",
- "async-graphql-parser",
- "async-graphql-value",
+ "async-graphql-derive 4.0.16",
+ "async-graphql-parser 4.0.16",
+ "async-graphql-value 4.0.16",
  "async-stream",
  "async-trait",
  "base64",
@@ -212,14 +212,42 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-graphql-axum"
-version = "4.0.16"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c91ac174c05670edffb720bc376b9d4c274c3d127ac08ed3d38144c9415502cd"
+name = "async-graphql"
+version = "5.0.0-alpha.5"
+source = "git+https://github.com/async-graphql/async-graphql.git#317bcc23c90cf2cc4db1bfee7f191a99c28c6be6"
 dependencies = [
- "async-graphql",
+ "async-graphql-derive 5.0.0-alpha.5",
+ "async-graphql-parser 5.0.0-alpha.5",
+ "async-graphql-value 5.0.0-alpha.5",
+ "async-stream",
  "async-trait",
- "axum 0.5.17",
+ "base64",
+ "bytes",
+ "fnv",
+ "futures-util",
+ "http",
+ "indexmap",
+ "mime",
+ "multer",
+ "num-traits",
+ "once_cell",
+ "pin-project-lite",
+ "regex",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "static_assertions",
+ "thiserror",
+]
+
+[[package]]
+name = "async-graphql-axum"
+version = "5.0.0-alpha.5"
+source = "git+https://github.com/async-graphql/async-graphql.git#317bcc23c90cf2cc4db1bfee7f191a99c28c6be6"
+dependencies = [
+ "async-graphql 5.0.0-alpha.5",
+ "async-trait",
+ "axum 0.6.0",
  "bytes",
  "futures-util",
  "http-body",
@@ -235,7 +263,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c121a894495d7d3fc3d4e15e0a9843e422e4d1d9e3c514d8062a1c94b35b005d"
 dependencies = [
  "Inflector",
- "async-graphql-parser",
+ "async-graphql-parser 4.0.16",
+ "darling 0.14.2",
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn",
+ "thiserror",
+]
+
+[[package]]
+name = "async-graphql-derive"
+version = "5.0.0-alpha.5"
+source = "git+https://github.com/async-graphql/async-graphql.git#317bcc23c90cf2cc4db1bfee7f191a99c28c6be6"
+dependencies = [
+ "Inflector",
+ "async-graphql-parser 5.0.0-alpha.5",
  "darling 0.14.2",
  "proc-macro-crate",
  "proc-macro2",
@@ -250,7 +293,18 @@ version = "4.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b6c386f398145c6180206c1869c2279f5a3d45db5be4e0266148c6ac5c6ad68"
 dependencies = [
- "async-graphql-value",
+ "async-graphql-value 4.0.16",
+ "pest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "async-graphql-parser"
+version = "5.0.0-alpha.5"
+source = "git+https://github.com/async-graphql/async-graphql.git#317bcc23c90cf2cc4db1bfee7f191a99c28c6be6"
+dependencies = [
+ "async-graphql-value 5.0.0-alpha.5",
  "pest",
  "serde",
  "serde_json",
@@ -261,6 +315,17 @@ name = "async-graphql-value"
 version = "4.0.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a941b499fead4a3fb5392cabf42446566d18c86313f69f2deab69560394d65f"
+dependencies = [
+ "bytes",
+ "indexmap",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "async-graphql-value"
+version = "5.0.0-alpha.5"
+source = "git+https://github.com/async-graphql/async-graphql.git#317bcc23c90cf2cc4db1bfee7f191a99c28c6be6"
 dependencies = [
  "bytes",
  "indexmap",
@@ -383,11 +448,9 @@ checksum = "acee9fd5073ab6b045a275b3e709c163dd36c90685219cb21804a147b58dba43"
 dependencies = [
  "async-trait",
  "axum-core 0.2.9",
- "base64",
  "bitflags",
  "bytes",
  "futures-util",
- "headers",
  "http",
  "http-body",
  "hyper",
@@ -400,10 +463,8 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded",
- "sha-1",
  "sync_wrapper",
  "tokio",
- "tokio-tungstenite",
  "tower",
  "tower-http",
  "tower-layer",
@@ -418,9 +479,11 @@ checksum = "744864363a200a5e724a7e61bc8c11b6628cf2e3ec519c8a1a48e609a8156b40"
 dependencies = [
  "async-trait",
  "axum-core 0.3.0",
+ "base64",
  "bitflags",
  "bytes",
  "futures-util",
+ "headers",
  "http",
  "http-body",
  "hyper",
@@ -436,8 +499,10 @@ dependencies = [
  "serde_json",
  "serde_path_to_error",
  "serde_urlencoded",
+ "sha-1",
  "sync_wrapper",
  "tokio",
+ "tokio-tungstenite",
  "tower",
  "tower-http",
  "tower-layer",
@@ -479,11 +544,11 @@ dependencies = [
 
 [[package]]
 name = "axum-extra"
-version = "0.3.7"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "69034b3b0fd97923eee2ce8a47540edb21e07f48f87f67d44bb4271cec622bdb"
+checksum = "d1933e5206aa0a213ae64bbd53b3006f4dc171f02314fb5efaf4d2212d2705b8"
 dependencies = [
- "axum 0.5.17",
+ "axum 0.6.0",
  "bytes",
  "cookie",
  "futures-util",
@@ -516,12 +581,12 @@ dependencies = [
 
 [[package]]
 name = "axum-sessions"
-version = "0.3.2"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0439981de4c1e72fa9e4e762e79f5c7efd9a9b3c2a6db62082bcd53781c557e7"
+checksum = "2eb201ee35b541ff31dbb69457fc7c5a3678cdeff488aa156fe194cd6da37b9c"
 dependencies = [
  "async-session",
- "axum 0.5.17",
+ "axum 0.6.0",
  "axum-extra",
  "futures",
  "http-body",
@@ -2104,7 +2169,7 @@ dependencies = [
 name = "intercode_graphql"
 version = "0.1.0"
 dependencies = [
- "async-graphql",
+ "async-graphql 4.0.16",
  "async-session",
  "chrono",
  "chrono-tz",
@@ -2141,8 +2206,8 @@ dependencies = [
 name = "intercode_liquid"
 version = "0.1.0"
 dependencies = [
- "async-graphql",
- "async-graphql-value",
+ "async-graphql 4.0.16",
+ "async-graphql-value 4.0.16",
  "chrono",
  "chrono-tz",
  "html-escape",
@@ -2170,7 +2235,7 @@ name = "intercode_policies"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "axum 0.5.17",
+ "axum 0.6.0",
  "cached",
  "futures",
  "intercode_entities",
@@ -2186,9 +2251,9 @@ name = "intercode_rust"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "async-graphql",
+ "async-graphql 4.0.16",
  "async-graphql-axum",
- "async-graphql-value",
+ "async-graphql-value 4.0.16",
  "async-stripe",
  "axum 0.6.0",
  "axum-extra",
@@ -3698,7 +3763,7 @@ dependencies = [
 name = "seawater"
 version = "0.1.0"
 dependencies = [
- "async-graphql",
+ "async-graphql 4.0.16",
  "async-trait",
  "axum-sea-orm-tx",
  "lazy_liquid_value_view",
