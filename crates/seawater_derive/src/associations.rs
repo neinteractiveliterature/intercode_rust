@@ -212,7 +212,8 @@ trait AssociationMacro {
             Ok(drops[0].clone().into())
           } else {
             Err(::seawater::DropError::ExpectedEntityNotFound(format!(
-              "Expected one model, but there are {}",
+              "Expected one {}, but there are {}",
+              ::std::any::type_name::<#to_drop>(),
               drops.len()
             )))
           }

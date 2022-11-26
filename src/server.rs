@@ -55,7 +55,7 @@ type IntercodeSchema = Schema<api::QueryRoot, EmptyMutation, EmptySubscription>;
 async fn single_page_app_entry(
   OriginalUri(url): OriginalUri,
   schema_data: Extension<SchemaData>,
-  QueryDataFromRequest(query_data): QueryDataFromRequest,
+  AuthorizationInfoAndQueryDataFromRequest(authorization_info, query_data): AuthorizationInfoAndQueryDataFromRequest,
 ) -> Result<impl IntoResponse, ::http::StatusCode> {
   let event_path_regex: regex::Regex =
     Regex::new("^/events/(\\d+)").map_err(|_| ::http::StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -98,7 +98,8 @@ async fn single_page_app_entry(
     None
   };
 
-  let liquid_renderer = IntercodeLiquidRenderer::new(&query_data, &schema_data);
+  let liquid_renderer =
+    IntercodeLiquidRenderer::new(&query_data, &schema_data, Arc::new(authorization_info));
 
   let cms_rendering_context =
     CmsRenderingContext::new(object!({}), &query_data, Arc::new(liquid_renderer));
@@ -117,7 +118,9 @@ async fn graphql_handler(
   req: GraphQLRequest,
   AuthorizationInfoAndQueryDataFromRequest(authorization_info, query_data): AuthorizationInfoAndQueryDataFromRequest,
 ) -> GraphQLResponse {
-  let liquid_renderer = IntercodeLiquidRenderer::new(&query_data, &schema_data);
+  let authorization_info = Arc::new(authorization_info);
+  let liquid_renderer =
+    IntercodeLiquidRenderer::new(&query_data, &schema_data, authorization_info.clone());
   let req = req
     .into_inner()
     .data(query_data)

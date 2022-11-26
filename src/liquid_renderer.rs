@@ -3,10 +3,11 @@ use futures::try_join;
 use intercode_entities::conventions;
 use intercode_graphql::{LiquidRenderer, QueryData, SchemaData};
 use intercode_liquid::{build_liquid_parser, cms_parent_partial_source::PreloadPartialsStrategy};
+use intercode_policies::AuthorizationInfo;
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct, ArcValueView};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use seawater::{Context, DropError, ModelBackedDrop};
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::Arc};
 
 use crate::drops::{ConventionDrop, DropContext, UserConProfileDrop};
 
@@ -76,13 +77,19 @@ impl IntercodeGlobals {
 pub struct IntercodeLiquidRenderer {
   query_data: QueryData,
   schema_data: SchemaData,
+  authorization_info: Arc<AuthorizationInfo>,
 }
 
 impl IntercodeLiquidRenderer {
-  pub fn new(query_data: &QueryData, schema_data: &SchemaData) -> Self {
+  pub fn new(
+    query_data: &QueryData,
+    schema_data: &SchemaData,
+    authorization_info: Arc<AuthorizationInfo>,
+  ) -> Self {
     IntercodeLiquidRenderer {
       query_data: query_data.clone(),
       schema_data: schema_data.clone(),
+      authorization_info,
     }
   }
 }
@@ -114,7 +121,8 @@ impl LiquidRenderer for IntercodeLiquidRenderer {
     let cms_parent = query_data.cms_parent.clone();
     let db = query_data.db.clone();
     let user_signed_in = query_data.current_user.is_some();
-    let executor = query_data.build_embedded_graphql_executor(&schema_data);
+    let executor =
+      query_data.build_embedded_graphql_executor(&schema_data, self.authorization_info.clone());
 
     let parser = build_liquid_parser(
       &convention,

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_graphql::*;
 use intercode_entities::{conventions, rooms};
 use intercode_policies::{
@@ -14,7 +16,7 @@ pub struct AbilityType;
 impl AbilityType {
   #[graphql(name = "can_manage_conventions")]
   async fn can_manage_conventions(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let authorization_info = ctx.data::<Arc<AuthorizationInfo>>()?;
 
     Ok(
       ConventionPolicy::action_permitted(
@@ -40,7 +42,7 @@ impl AbilityType {
   }
   #[graphql(name = "can_read_user_con_profiles")]
   async fn can_read_user_con_profiles(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let authorization_info = ctx.data::<Arc<AuthorizationInfo>>()?;
     let query_data = ctx.data::<QueryData>()?;
     let convention = query_data.convention.as_ref().as_ref();
 
@@ -58,7 +60,7 @@ impl AbilityType {
   }
   #[graphql(name = "can_update_convention")]
   async fn can_update_convention(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let authorization_info = ctx.data::<Arc<AuthorizationInfo>>()?;
     let query_data = ctx.data::<QueryData>()?;
     let convention = query_data.convention.as_ref().as_ref();
 
@@ -112,7 +114,7 @@ impl AbilityType {
   }
   #[graphql(name = "can_read_reports")]
   async fn can_read_reports(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let authorization_info = ctx.data::<Arc<AuthorizationInfo>>()?;
     let query_data = ctx.data::<QueryData>()?;
     let convention = query_data.convention.as_ref().as_ref();
 
@@ -130,7 +132,7 @@ impl AbilityType {
   }
   #[graphql(name = "can_manage_rooms")]
   async fn can_manage_rooms(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let authorization_info = ctx.data::<Arc<AuthorizationInfo>>()?;
     let query_data = ctx.data::<QueryData>()?;
 
     RoomPolicy::action_permitted(

@@ -6,6 +6,7 @@ use intercode_liquid::{
   cms_parent_partial_source::{LazyCmsPartialSource, PreloadPartialsStrategy},
   GraphQLExecutor,
 };
+use intercode_policies::AuthorizationInfo;
 use liquid::partials::LazyCompiler;
 use loaders::LoaderManager;
 use sea_orm::DatabaseConnection;
@@ -54,6 +55,7 @@ pub struct QueryData {
 pub struct EmbeddedGraphQLExecutor {
   schema_data: SchemaData,
   query_data: QueryData,
+  authorization_info: Arc<AuthorizationInfo>,
 }
 
 pub fn build_intercode_graphql_schema(
@@ -73,7 +75,9 @@ impl GraphQLExecutor for EmbeddedGraphQLExecutor {
     let schema = build_intercode_graphql_schema(self.schema_data.clone());
 
     let request: async_graphql::Request = request.into();
-    let request = request.data(self.query_data.clone());
+    let request = request
+      .data(self.query_data.clone())
+      .data(self.authorization_info.clone());
     let response_future = async move { schema.execute(request).await };
 
     Box::pin(response_future)
@@ -103,10 +107,12 @@ impl QueryData {
   pub fn build_embedded_graphql_executor(
     &self,
     schema_data: &SchemaData,
+    authorization_info: Arc<AuthorizationInfo>,
   ) -> EmbeddedGraphQLExecutor {
     EmbeddedGraphQLExecutor {
       query_data: self.clone(),
       schema_data: schema_data.clone(),
+      authorization_info,
     }
   }
 }
