@@ -38,7 +38,7 @@ async-stripe = {version = "0.15.0", default-features = false, features = ["runti
 axum = {version = "0.5.17", features = ["multipart"]}
 axum-extra = {version = "0.3.7", features = ["cookie"]}
 axum-sea-orm-tx = {version = "0.1.0", git = "https://github.com/nbudin/axum-sea-orm-tx.git"}
-axum-sessions = "0.3.2"
+axum-sessions = "0.4.1"
 base64 = "0.13.1"
 bcrypt = "0.13.0"
 bumpalo-herd = "0.1.2"
