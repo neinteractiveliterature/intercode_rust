@@ -44,7 +44,7 @@ bcrypt = "0.13.0"
 bumpalo-herd = "0.1.2"
 chrono = "0.4"
 chrono-tz = "0.8"
-clap = {version = "4.0.27", features = ["derive", "cargo"]}
+clap = {version = "4.0.29", features = ["derive", "cargo"]}
 console-subscriber = {version = "0.1.8", optional = true}
 csrf = "0.4.1"
 ctrlc = "3.2.3"
