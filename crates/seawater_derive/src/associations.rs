@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{parse_macro_input, parse_quote, Ident, ImplItem, ItemImpl, Path};
+use syn::{parse_macro_input, parse_quote, Ident, ImplItem, ItemImpl, LitStr, Path};
 
 use crate::attrs::{AssociationMacroArgs, LinkedAssociationMacroArgs, RelatedAssociationMacroArgs};
 
