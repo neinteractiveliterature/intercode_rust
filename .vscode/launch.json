@@ -16,10 +16,7 @@
         }
       },
       "args": ["serve"],
-      "cwd": "${workspaceFolder}",
-      "env": {
-        "RUST_LOG": "info"
-      }
+      "cwd": "${workspaceFolder}"
     },
     {
       "type": "lldb",

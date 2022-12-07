@@ -10,7 +10,12 @@ use super::{drop_context::DropContext, SignupDrop, StaffPositionDrop, TicketDrop
 
 model_backed_drop!(UserConProfileDrop, user_con_profiles::Model, DropContext);
 
-#[has_many_related(signups, SignupDrop, eager_load(event, run))]
+#[has_many_related(
+  signups,
+  SignupDrop,
+  eager_load(event, run),
+  inverse = "user_con_profile"
+)]
 #[has_many_linked(
   staff_positions,
   StaffPositionDrop,

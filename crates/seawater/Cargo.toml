@@ -13,6 +13,7 @@ lazy_liquid_value_view = {path = "../lazy_liquid_value_view"}
 liquid = {workspace = true}
 liquid-core = {workspace = true}
 once_cell = "*"
+regex = "*"
 sea-orm = "*"
 seawater_derive = {path = "../seawater_derive"}
 tracing = "*"

@@ -44,19 +44,45 @@ trait AssociationMacro {
     let preloader_ident = self.preloader_ident();
     let target_path = self.target_path();
     let eager_load_action = self.eager_load_action();
+    let ident_str = LitStr::new(ident.to_string().as_str(), ident.span());
+    let get_preloaded_drops = match self.get_target_type() {
+      TargetType::Many => Box::new(quote!(
+        let preloaded_drops = preloader_result.all_values_flat_unwrapped().collect::<Vec<_>>();
+      )),
+      TargetType::OneRequired => Box::new(quote!(
+        let preloaded_drops = preloader_result.all_values_unwrapped().map(|v| v.as_ref()).collect::<Vec<_>>();
+      )),
+      TargetType::OneOptional => Box::new(quote!(
+        let preloaded_drops = preloader_result.all_values().filter_map(|v| v.get_inner()).map(|v| v.as_ref()).collect::<Vec<_>>();
+      )),
+    };
 
     parse_quote!(
-      pub async fn #ident(
+      pub fn #ident<'a>(
         context: <Self as seawater::ContextContainer>::Context,
-        drops: &[&Self],
-      ) -> Result<::seawater::preloaders::PreloaderResult<<<<<Self as ::seawater::ModelBackedDrop>::Model as ::sea_orm::ModelTrait>::Entity as ::sea_orm::EntityTrait>::PrimaryKey as sea_orm::PrimaryKeyTrait>::ValueType, #target_path>, ::seawater::DropError> {
-        use ::seawater::preloaders::Preloader;
-        use ::seawater::Context;
+        drops: &'a [&'a Self],
+      ) -> ::futures::future::BoxFuture<'a, Result<::seawater::preloaders::PreloaderResult<<<<<Self as ::seawater::ModelBackedDrop>::Model as ::sea_orm::ModelTrait>::Entity as ::sea_orm::EntityTrait>::PrimaryKey as sea_orm::PrimaryKeyTrait>::ValueType, #target_path>, ::seawater::DropError>> {
+        use ::futures::FutureExt;
 
-        let preloader = Self::#preloader_ident(context.clone());
-        let preloader_result = preloader.preload(context.db(), drops).await?;
-        #eager_load_action
-        Ok(preloader_result)
+        async move {
+          use ::seawater::preloaders::Preloader;
+          use ::seawater::Context;
+          use ::tracing::log::info;
+
+          info!(
+            "{}.{}: eager-loading {} {}",
+            ::seawater::pretty_type_name::<Self>(),
+            #ident_str,
+            drops.len(),
+            ::seawater::pretty_type_name::<#target_path>()
+          );
+
+          let preloader = Self::#preloader_ident(context.clone());
+          let preloader_result = preloader.preload(context.db(), drops).await?;
+          #get_preloaded_drops
+          #eager_load_action
+          Ok(preloader_result)
+        }.boxed()
       }
     )
   }
@@ -126,17 +152,38 @@ trait AssociationMacro {
     } else {
       None
     };
+    let ident_str = LitStr::new(name.to_string().as_str(), name.span());
+    let get_preloaded_drops = match self.get_target_type() {
+      TargetType::Many => Box::new(quote!(
+        let preloaded_drops = drop.iter().map(|d| d.as_ref()).collect::<Vec<_>>();
+      )),
+      TargetType::OneRequired | &TargetType::OneOptional => Box::new(quote!(
+        let preloaded_drops = vec![drop.as_ref()];
+      )),
+    };
+    let eager_load_action = self.eager_load_action();
 
-    // TODO think about if it's possible to do eager loading here
     parse_quote!(
       #serialize_attr
       pub async fn #name(&self) -> Result<#target_path, ::seawater::DropError> {
         use ::seawater::preloaders::Preloader;
         use ::seawater::Context;
+        use ::tracing::log::info;
 
-        Self::#preloader_ident(self.context.clone())
+        info!(
+          "{}.{}: lazy-loading 1 {}",
+          ::seawater::pretty_type_name::<Self>(),
+          #ident_str,
+          ::seawater::pretty_type_name::<#target_path>()
+        );
+
+        let drop = Self::#preloader_ident(self.context.clone())
           .expect_single(self.context.db(), self)
-          .await
+          .await?;
+        let context = self.context.clone();
+        #get_preloaded_drops
+        #eager_load_action
+        Ok(drop)
       }
     )
   }
@@ -148,17 +195,7 @@ trait AssociationMacro {
     }
 
     let to_drop = self.get_to();
-    let get_preloaded_drops = match self.get_target_type() {
-      TargetType::Many => Box::new(quote!(
-        let preloaded_drops = preloader_result.all_values_flat_unwrapped().collect::<Vec<_>>();
-      )),
-      TargetType::OneRequired => Box::new(quote!(
-        let preloaded_drops = preloader_result.all_values_unwrapped().map(|v| v.as_ref()).collect::<Vec<_>>();
-      )),
-      TargetType::OneOptional => Box::new(quote!(
-        let preloaded_drops = preloader_result.all_values().filter_map(|v| v.get_inner()).map(|v| v.as_ref()).collect::<Vec<_>>();
-      )),
-    };
+
     let eager_loads = self
       .get_eager_load_associations()
       .iter()
@@ -173,7 +210,6 @@ trait AssociationMacro {
       });
 
     Box::new(quote!(
-      #get_preloaded_drops
       ::futures::try_join!(
         #(#eager_loads,)*
       )?;
@@ -213,7 +249,7 @@ trait AssociationMacro {
           } else {
             Err(::seawater::DropError::ExpectedEntityNotFound(format!(
               "Expected one {}, but there are {}",
-              ::std::any::type_name::<#to_drop>(),
+              ::seawater::pretty_type_name::<#to_drop>(),
               drops.len()
             )))
           }

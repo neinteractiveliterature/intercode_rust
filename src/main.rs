@@ -143,9 +143,10 @@ fn setup_otlp<S: Subscriber + for<'span> tracing_subscriber::registry::LookupSpa
 }
 
 async fn run() -> Result<()> {
+  let env_filter = EnvFilter::from_default_env();
   let fmt_layer = tracing_subscriber::fmt::layer()
     .with_test_writer()
-    .with_filter(EnvFilter::from_default_env());
+    .with_filter(env_filter);
   let subscriber = tracing_subscriber::registry().with(fmt_layer);
 
   let (subscriber, _guard) = setup_flamegraph_subscriber(subscriber);
@@ -176,6 +177,8 @@ enum Subcommands {
 }
 
 fn main() -> Result<()> {
+  dotenv().ok();
+
   #[cfg(feature = "dhat-heap")]
   let _profiler = dhat::Profiler::new_heap();
 
@@ -199,8 +202,6 @@ fn main() -> Result<()> {
       println!("{}", schema.sdl());
     }
     Subcommands::Serve => {
-      dotenv().ok();
-
       let mut builder = tokio::runtime::Builder::new_multi_thread();
       builder.enable_all();
 

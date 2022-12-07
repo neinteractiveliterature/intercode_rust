@@ -3649,6 +3649,7 @@ dependencies = [
  "liquid",
  "liquid-core",
  "once_cell",
+ "regex",
  "sea-orm",
  "seawater_derive",
  "tracing",

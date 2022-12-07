@@ -10,7 +10,7 @@ use async_trait::async_trait;
 use lazy_liquid_value_view::{ArcValueView, DropResult, LiquidDrop, LiquidDropWithID};
 use liquid::ValueView;
 use once_cell::race::OnceBox;
-use tracing::warn;
+use tracing::{info_span, warn, warn_span};
 
 use crate::{ConnectionWrapper, DropError, NormalizedDropCache};
 
@@ -99,7 +99,7 @@ pub trait PreloaderBuilder {
 pub trait Preloader<
   FromDrop: Send + Sync + LiquidDrop + Clone + LiquidDropWithID + Into<DropResult<FromDrop>>,
   ToDrop: Send + Sync + LiquidDrop + LiquidDropWithID + 'static,
-  Id: Eq + Hash + Copy + Send + Sync,
+  Id: Eq + Hash + Copy + Send + Sync + Debug,
   V: ValueView + Clone + Send + Sync,
 > where
   i64: From<<ToDrop as LiquidDropWithID>::ID>,
@@ -130,19 +130,67 @@ pub trait Preloader<
     db: &ConnectionWrapper,
     drops: &[&FromDrop],
   ) -> Result<PreloaderResult<Id, V>, DropError> {
-    let drops_by_id = drops
+    let span = info_span!(
+      "preload",
+      from_drop = std::any::type_name::<FromDrop>(),
+      to_drop = std::any::type_name::<ToDrop>(),
+    );
+
+    let _enter = span.enter();
+
+    let loaded_values_by_drop_id: HashMap<Id, &DropResult<V>> = drops
       .iter()
+      .filter_map(|drop| {
+        let once_cell = self.get_once_cell(drop.get_cache());
+        once_cell.get().map(|value| (self.get_id(drop), value))
+      })
+      .collect();
+
+    let unloaded_drops = drops
+      .iter()
+      .filter(|drop| !loaded_values_by_drop_id.contains_key(&self.get_id(drop)));
+
+    let unloaded_drops_by_id = unloaded_drops
       .map(|drop| (self.get_id(drop), *drop))
       .collect::<HashMap<_, _>>();
+
+    let newly_loaded_drop_lists = self.load_drop_lists(&unloaded_drops_by_id, db).await?;
+
+    let preloader_result = self.populate_db_preloader_results(
+      unloaded_drops_by_id,
+      newly_loaded_drop_lists,
+      loaded_values_by_drop_id,
+    )?;
+
+    Ok(preloader_result)
+  }
+
+  async fn load_drop_lists(
+    &self,
+    unloaded_drops_by_id: &HashMap<Id, &FromDrop>,
+    db: &ConnectionWrapper,
+  ) -> Result<HashMap<Id, Vec<ArcValueView<ToDrop>>>, DropError> {
+    let span = info_span!(
+      "load_drop_lists",
+      from_drop = std::any::type_name::<FromDrop>(),
+      to_drop = std::any::type_name::<ToDrop>(),
+      ids = format!("{:?}", unloaded_drops_by_id.keys().collect::<Vec<_>>())
+    );
+
+    let _enter = span.enter();
 
     let model_lists = self
       .load_model_lists(
         db,
-        drops_by_id.keys().copied().collect::<Vec<_>>().as_slice(),
+        unloaded_drops_by_id
+          .keys()
+          .copied()
+          .collect::<Vec<_>>()
+          .as_slice(),
       )
       .await?;
 
-    let drop_lists = drops_by_id
+    let newly_loaded_drop_lists = unloaded_drops_by_id
       .iter()
       .map(|(id, drop)| {
         let result = model_lists.get(id);
@@ -172,24 +220,24 @@ pub trait Preloader<
       })
       .collect::<Result<HashMap<_, _>, DropError>>()?;
 
-    for (id, drops) in drop_lists.iter() {
-      let from_drop = drops_by_id.get(id).unwrap();
+    for (id, drops) in newly_loaded_drop_lists.iter() {
+      let from_drop = unloaded_drops_by_id.get(id).unwrap();
       self.populate_inverse_caches(*from_drop, drops)
     }
 
-    let preloader_result = self.populate_db_preloader_results(drops_by_id, drop_lists)?;
-
-    Ok(preloader_result)
+    Ok(newly_loaded_drop_lists)
   }
 
   fn populate_db_preloader_results(
     &self,
     drops_by_id: HashMap<Id, &FromDrop>,
-    drop_lists: HashMap<Id, Vec<ArcValueView<ToDrop>>>,
+    newly_loaded_drop_lists: HashMap<Id, Vec<ArcValueView<ToDrop>>>,
+    loaded_values_by_drop_id: HashMap<Id, &DropResult<V>>,
   ) -> Result<PreloaderResult<Id, V>, DropError> {
-    let mut values_by_id: HashMap<Id, DropResult<V>> = HashMap::with_capacity(drop_lists.len());
+    let mut values_by_id: HashMap<Id, DropResult<V>> =
+      HashMap::with_capacity(newly_loaded_drop_lists.len() + loaded_values_by_drop_id.len());
 
-    for (id, drop_list) in drop_lists {
+    for (id, drop_list) in newly_loaded_drop_lists {
       let value = (self.drops_to_value(drop_list) as Result<DropResult<V>, DropError>)?;
 
       values_by_id.insert(id, value.clone());
@@ -197,6 +245,10 @@ pub trait Preloader<
       let drop = drops_by_id.get(&id).unwrap();
       let once_cell = self.get_once_cell(drop.get_cache());
       once_cell.get_or_init(|| Box::new(value));
+    }
+
+    for (id, value) in loaded_values_by_drop_id {
+      values_by_id.insert(id, value.clone());
     }
 
     Ok(PreloaderResult::new(values_by_id))
@@ -218,6 +270,15 @@ pub trait Preloader<
     db: &ConnectionWrapper,
     drop: &FromDrop,
   ) -> Result<Option<V>, DropError> {
+    let span = warn_span!(
+      "load_single",
+      from_drop = std::any::type_name::<FromDrop>(),
+      to_drop = std::any::type_name::<ToDrop>(),
+      id = format!("{}", drop.id())
+    );
+
+    let _enter = span.enter();
+
     warn!(
       "N+1 query detected for {} {} -> {}",
       std::any::type_name::<FromDrop>(),
