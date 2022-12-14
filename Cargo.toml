@@ -47,7 +47,7 @@ chrono-tz = "0.8"
 clap = {version = "4.0.29", features = ["derive", "cargo"]}
 console-subscriber = {version = "0.1.8", optional = true}
 csrf = "0.4.1"
-ctrlc = "3.2.3"
+ctrlc = "3.2.4"
 dhat = {version = "0.3.2", optional = true}
 dotenv = "0.15.0"
 futures = "0.3.25"
