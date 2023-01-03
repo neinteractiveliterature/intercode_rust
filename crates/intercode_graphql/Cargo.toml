@@ -6,7 +6,7 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-async-graphql = {version = "~4.0.16", features = ["dataloader", "tracing", "chrono"]}
+async-graphql = {version = "~5.0.5", features = ["dataloader", "tracing", "chrono"]}
 async-session = "3.0.0"
 chrono = "*"
 chrono-tz = "*"
