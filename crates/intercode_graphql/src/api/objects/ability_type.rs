@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{borrow::Borrow, sync::Arc};
 
 use async_graphql::*;
 use intercode_entities::{conventions, rooms};
@@ -6,75 +6,91 @@ use intercode_policies::{
   policies::{ConventionAction, ConventionPolicy, RoomPolicy},
   AuthorizationInfo, Policy, ReadManageAction,
 };
+use sea_orm::ModelTrait;
 
 use crate::QueryData;
 
 pub struct AbilityType;
 
-// TODO just about everything here
+async fn model_action_permitted<
+  'a,
+  P: Policy<AuthorizationInfo, M>,
+  M: ModelTrait + Sync + 'a,
+  R: Borrow<M>,
+>(
+  _policy: P,
+  ctx: &'a Context<'_>,
+  action: &P::Action,
+  get_model: impl FnOnce(&'a Context<'_>) -> Result<Option<R>, Error>,
+) -> Result<bool, Error> {
+  let authorization_info = ctx.data::<Arc<AuthorizationInfo>>()?;
+  let model_ref = get_model(ctx)?;
+
+  if let Some(model_ref) = model_ref {
+    Ok(P::action_permitted(authorization_info, action, model_ref.borrow()).await?)
+  } else {
+    Ok(false)
+  }
+}
+
+// TODO all the methods stubbed out with just "false"
 #[Object(name = "Ability")]
 impl AbilityType {
   #[graphql(name = "can_manage_conventions")]
   async fn can_manage_conventions(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    let authorization_info = ctx.data::<Arc<AuthorizationInfo>>()?;
-
-    Ok(
-      ConventionPolicy::action_permitted(
-        authorization_info,
-        &ConventionAction::Update,
-        &conventions::Model::default(),
-      )
-      .await?,
-    )
+    model_action_permitted(ConventionPolicy, ctx, &ConventionAction::Update, |_ctx| {
+      Ok(Some(conventions::Model::default()))
+    })
+    .await
   }
 
   #[graphql(name = "can_read_schedule")]
-  async fn can_read_schedule(&self) -> bool {
-    false
+  async fn can_read_schedule(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    model_action_permitted(ConventionPolicy, ctx, &ConventionAction::Schedule, |ctx| {
+      Ok(ctx.data::<QueryData>()?.convention.as_ref().as_ref())
+    })
+    .await
   }
+
   #[graphql(name = "can_read_schedule_with_counts")]
-  async fn can_read_schedule_with_counts(&self) -> bool {
-    false
+  async fn can_read_schedule_with_counts(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    model_action_permitted(
+      ConventionPolicy,
+      ctx,
+      &ConventionAction::ScheduleWithCounts,
+      |ctx| Ok(ctx.data::<QueryData>()?.convention.as_ref().as_ref()),
+    )
+    .await
   }
+
   #[graphql(name = "can_list_events")]
-  async fn can_list_events(&self) -> bool {
-    false
+  async fn can_list_events(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    model_action_permitted(
+      ConventionPolicy,
+      ctx,
+      &ConventionAction::ListEvents,
+      |ctx| Ok(ctx.data::<QueryData>()?.convention.as_ref().as_ref()),
+    )
+    .await
   }
+
   #[graphql(name = "can_read_user_con_profiles")]
   async fn can_read_user_con_profiles(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    let authorization_info = ctx.data::<Arc<AuthorizationInfo>>()?;
-    let query_data = ctx.data::<QueryData>()?;
-    let convention = query_data.convention.as_ref().as_ref();
-
-    match convention {
-      Some(convention) => Ok(
-        ConventionPolicy::action_permitted(
-          authorization_info,
-          &ConventionAction::ViewAttendees,
-          convention,
-        )
-        .await?,
-      ),
-      None => Ok(false),
-    }
+    model_action_permitted(
+      ConventionPolicy,
+      ctx,
+      &ConventionAction::ViewAttendees,
+      |ctx| Ok(ctx.data::<QueryData>()?.convention.as_ref().as_ref()),
+    )
+    .await
   }
+
   #[graphql(name = "can_update_convention")]
   async fn can_update_convention(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    let authorization_info = ctx.data::<Arc<AuthorizationInfo>>()?;
-    let query_data = ctx.data::<QueryData>()?;
-    let convention = query_data.convention.as_ref().as_ref();
-
-    match convention {
-      Some(convention) => Ok(
-        ConventionPolicy::action_permitted(
-          authorization_info,
-          &ConventionAction::Update,
-          convention,
-        )
-        .await?,
-      ),
-      None => Ok(false),
-    }
+    model_action_permitted(ConventionPolicy, ctx, &ConventionAction::Update, |ctx| {
+      Ok(ctx.data::<QueryData>()?.convention.as_ref().as_ref())
+    })
+    .await
   }
   #[graphql(name = "can_update_departments")]
   async fn can_update_departments(&self) -> bool {
@@ -88,10 +104,18 @@ impl AbilityType {
   async fn can_update_event_categories(&self) -> bool {
     false
   }
+
   #[graphql(name = "can_read_event_proposals")]
-  async fn can_read_event_proposals(&self) -> bool {
-    false
+  async fn can_read_event_proposals(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    model_action_permitted(
+      ConventionPolicy,
+      ctx,
+      &ConventionAction::ViewEventProposals,
+      |ctx| Ok(ctx.data::<QueryData>()?.convention.as_ref().as_ref()),
+    )
+    .await
   }
+
   #[graphql(name = "can_manage_runs")]
   async fn can_manage_runs(&self) -> bool {
     false
@@ -112,40 +136,34 @@ impl AbilityType {
   async fn can_manage_oauth_applications(&self) -> bool {
     false
   }
+
   #[graphql(name = "can_read_reports")]
   async fn can_read_reports(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    let authorization_info = ctx.data::<Arc<AuthorizationInfo>>()?;
-    let query_data = ctx.data::<QueryData>()?;
-    let convention = query_data.convention.as_ref().as_ref();
-
-    match convention {
-      Some(convention) => Ok(
-        ConventionPolicy::action_permitted(
-          authorization_info,
-          &ConventionAction::ViewReports,
-          convention,
-        )
-        .await?,
-      ),
-      None => Ok(false),
-    }
-  }
-  #[graphql(name = "can_manage_rooms")]
-  async fn can_manage_rooms(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    let authorization_info = ctx.data::<Arc<AuthorizationInfo>>()?;
-    let query_data = ctx.data::<QueryData>()?;
-
-    RoomPolicy::action_permitted(
-      authorization_info,
-      &ReadManageAction::Manage,
-      &rooms::Model {
-        convention_id: query_data.convention.as_ref().as_ref().map(|con| con.id),
-        ..Default::default()
-      },
+    model_action_permitted(
+      ConventionPolicy,
+      ctx,
+      &ConventionAction::ViewReports,
+      |ctx| Ok(ctx.data::<QueryData>()?.convention.as_ref().as_ref()),
     )
     .await
-    .map_err(|e| e.into())
   }
+
+  #[graphql(name = "can_manage_rooms")]
+  async fn can_manage_rooms(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    model_action_permitted(RoomPolicy, ctx, &ReadManageAction::Manage, |ctx| {
+      Ok(Some(rooms::Model {
+        convention_id: ctx
+          .data::<QueryData>()?
+          .convention
+          .as_ref()
+          .as_ref()
+          .map(|con| con.id),
+        ..Default::default()
+      }))
+    })
+    .await
+  }
+
   #[graphql(name = "can_manage_signups")]
   async fn can_manage_signups(&self) -> bool {
     false

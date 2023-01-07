@@ -19,3 +19,4 @@ oxide-auth-axum = "*"
 sea-orm = "*"
 seawater = {path = "../seawater"}
 tokio = {version = "*", features = ["rt-multi-thread", "macros"]}
+tuple-conv = "1.0.1"

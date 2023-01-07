@@ -1,5 +1,6 @@
 mod cms_navigation_item_links;
 mod convention_links;
+mod event_category_links;
 mod event_links;
 mod signup_links;
 mod staff_position_links;
@@ -7,6 +8,7 @@ mod user_con_profile_links;
 
 pub use cms_navigation_item_links::*;
 pub use convention_links::*;
+pub use event_category_links::*;
 pub use event_links::*;
 pub use signup_links::*;
 pub use staff_position_links::*;

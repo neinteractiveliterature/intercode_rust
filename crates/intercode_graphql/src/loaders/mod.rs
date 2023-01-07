@@ -4,8 +4,8 @@ use std::time::Duration;
 use async_graphql::dataloader::DataLoader;
 
 use intercode_entities::links::{
-  CmsNavigationItemToCmsNavigationSection, ConventionToStaffPositions,
-  StaffPositionToUserConProfiles, UserConProfileToStaffPositions,
+  CmsNavigationItemToCmsNavigationSection, ConventionToStaffPositions, EventCategoryToEventForm,
+  EventCategoryToEventProposalForm, StaffPositionToUserConProfiles, UserConProfileToStaffPositions,
 };
 use intercode_entities::*;
 use seawater::loaders::{EntityIdLoader, EntityLinkLoader, EntityRelationLoader};
@@ -36,6 +36,14 @@ pub struct LoaderManager {
   pub event_runs: DataLoader<EntityRelationLoader<events::Entity, runs::Entity>>,
   pub event_team_members: DataLoader<EntityRelationLoader<events::Entity, team_members::Entity>>,
   pub events_by_id: DataLoader<EntityIdLoader<events::Entity>>,
+  pub event_category_event_form:
+    DataLoader<EntityLinkLoader<event_categories::Entity, EventCategoryToEventForm, forms::Entity>>,
+  pub event_category_event_proposal_form: DataLoader<
+    EntityLinkLoader<event_categories::Entity, EventCategoryToEventProposalForm, forms::Entity>,
+  >,
+  pub form_form_sections: DataLoader<EntityRelationLoader<forms::Entity, form_sections::Entity>>,
+  pub form_section_form_items:
+    DataLoader<EntityRelationLoader<form_sections::Entity, form_items::Entity>>,
   pub order_order_entries: DataLoader<EntityRelationLoader<orders::Entity, order_entries::Entity>>,
   pub room_runs: DataLoader<EntityRelationLoader<rooms::Entity, runs::Entity>>,
   pub run_event: DataLoader<EntityRelationLoader<runs::Entity, events::Entity>>,
@@ -143,6 +151,34 @@ impl LoaderManager {
       .delay(delay_millis),
       events_by_id: DataLoader::new(
         EntityIdLoader::new(db.clone(), events::PrimaryKey::Id),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
+      event_category_event_form: DataLoader::new(
+        EntityLinkLoader::new(
+          db.clone(),
+          EventCategoryToEventForm,
+          event_categories::PrimaryKey::Id,
+        ),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
+      event_category_event_proposal_form: DataLoader::new(
+        EntityLinkLoader::new(
+          db.clone(),
+          EventCategoryToEventProposalForm,
+          event_categories::PrimaryKey::Id,
+        ),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
+      form_form_sections: DataLoader::new(
+        EntityRelationLoader::new(db.clone(), forms::PrimaryKey::Id),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
+      form_section_form_items: DataLoader::new(
+        EntityRelationLoader::new(db.clone(), form_sections::PrimaryKey::Id),
         tokio::spawn,
       )
       .delay(delay_millis),

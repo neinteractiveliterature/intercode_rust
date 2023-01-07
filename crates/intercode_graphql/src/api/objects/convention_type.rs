@@ -1,7 +1,9 @@
+use std::sync::Arc;
+
 use super::{
   CmsContentGroupType, CmsContentType, CmsFileType, CmsGraphqlQueryType, CmsLayoutType,
-  CmsNavigationItemType, CmsPartialType, CmsVariableType, EventsPaginationType, ModelBackedType,
-  PageType, RoomType, StaffPositionType, TicketTypeType, UserConProfileType,
+  CmsNavigationItemType, CmsPartialType, CmsVariableType, EventCategoryType, EventsPaginationType,
+  ModelBackedType, PageType, RoomType, StaffPositionType, TicketTypeType, UserConProfileType,
 };
 use crate::{
   api::{
@@ -9,14 +11,16 @@ use crate::{
     inputs::{EventFiltersInput, SortInput},
     interfaces::CmsParentImplementation,
   },
-  QueryData,
+  cms_rendering_context::CmsRenderingContext,
+  LiquidRenderer, QueryData,
 };
 use async_graphql::*;
 use chrono::{DateTime, Utc};
 use intercode_entities::{
-  conventions, events, links::ConventionToStaffPositions, runs, staff_positions, team_members,
-  user_con_profiles, users,
+  cms_parent::CmsParentTrait, cms_partials, conventions, events, links::ConventionToStaffPositions,
+  runs, staff_positions, team_members, user_con_profiles, users,
 };
+use liquid::object;
 use sea_orm::{
   sea_query::Expr, ColumnTrait, EntityTrait, JoinType, ModelTrait, Order, QueryFilter, QueryOrder,
   QuerySelect, RelationTrait,
@@ -97,6 +101,23 @@ impl ConventionType {
       .model
       .ends_at
       .map(|t| DateTime::<Utc>::from_utc(t, Utc))
+  }
+
+  #[graphql(name = "event_categories")]
+  async fn event_categories(&self, ctx: &Context<'_>) -> Result<Vec<EventCategoryType>, Error> {
+    Ok(
+      ctx
+        .data::<QueryData>()?
+        .loaders
+        .convention_event_categories
+        .load_one(self.model.id)
+        .await?
+        .expect_models()?
+        .iter()
+        .cloned()
+        .map(EventCategoryType::new)
+        .collect(),
+    )
   }
 
   #[graphql(name = "event_mailing_list_domain")]
@@ -198,6 +219,31 @@ impl ConventionType {
         .await
         .map(|result| result.map(UserConProfileType::new))
         .map_err(|e| async_graphql::Error::new(e.to_string()))
+    } else {
+      Ok(None)
+    }
+  }
+
+  #[graphql(name = "pre_schedule_content_html")]
+  async fn pre_schedule_content_html(&self, ctx: &Context<'_>) -> Result<Option<String>, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
+
+    let partial = self
+      .model
+      .cms_partials()
+      .filter(cms_partials::Column::Name.eq("pre_schedule_text"))
+      .one(&query_data.db)
+      .await?;
+
+    if let Some(partial) = partial {
+      let cms_rendering_context =
+        CmsRenderingContext::new(object!({}), query_data, liquid_renderer.clone());
+
+      cms_rendering_context
+        .render_liquid(&partial.content.unwrap_or_default(), None)
+        .await
+        .map(Some)
     } else {
       Ok(None)
     }

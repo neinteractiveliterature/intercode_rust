@@ -17,6 +17,11 @@ impl EventType {
     &self.model.author
   }
 
+  #[graphql(name = "can_play_concurrently")]
+  async fn can_play_concurrently(&self) -> bool {
+    self.model.can_play_concurrently
+  }
+
   async fn convention(&self, ctx: &Context<'_>) -> Result<Option<ConventionType>, Error> {
     let loader = &ctx.data::<QueryData>()?.loaders.conventions_by_id;
 

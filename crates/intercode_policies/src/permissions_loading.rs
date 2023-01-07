@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use intercode_entities::{
-  cms_content_groups, event_categories, organization_roles_users, permissions, staff_positions,
-  staff_positions_user_con_profiles, user_con_profiles,
+  cms_content_groups, event_categories, events, organization_roles_users, permissions,
+  staff_positions, staff_positions_user_con_profiles, team_members, user_con_profiles,
 };
 use sea_orm::{
   sea_query::{Alias, Expr},
@@ -150,6 +150,13 @@ impl UserPermissionsMap {
       .unwrap_or(false)
   }
 
+  pub fn has_any_permission(&self, permission: &str) -> bool {
+    self
+      .permissions
+      .values()
+      .any(|perm_set| perm_set.contains(permission))
+  }
+
   pub fn has_convention_permission(&self, convention_id: i64, permission: &str) -> bool {
     self.has_permission(&PermissionModelId::Convention(convention_id), permission)
   }
@@ -190,4 +197,23 @@ pub async fn load_all_permissions_in_convention_with_model_type_and_id(
       .await?
       .into_iter(),
   ))
+}
+
+pub async fn load_all_team_member_event_ids_in_convention(
+  db: &ConnectionWrapper,
+  convention_id: i64,
+  user_id: Option<i64>,
+) -> Result<HashSet<i64>, DbErr> {
+  let events = events::Entity::find()
+    .join(JoinType::InnerJoin, events::Relation::TeamMembers.def())
+    .join(
+      JoinType::InnerJoin,
+      team_members::Relation::UserConProfiles.def(),
+    )
+    .filter(events::Column::ConventionId.eq(convention_id))
+    .filter(user_con_profiles::Column::UserId.eq(user_id))
+    .all(db)
+    .await?;
+
+  Ok(events.iter().map(|event| event.id).collect())
 }
