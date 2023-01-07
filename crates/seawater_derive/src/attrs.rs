@@ -5,12 +5,14 @@ use syn::{
   NestedMeta, Path, Token,
 };
 
+use crate::associations::EagerLoadAssociation;
+
 pub struct RelatedAssociationMacroArgs {
   name: Ident,
   to: Path,
   inverse: Option<Ident>,
   serialize: bool,
-  eager_load_associations: Vec<Ident>,
+  eager_load_associations: Vec<EagerLoadAssociation>,
 }
 
 pub struct LinkedAssociationMacroArgs {
@@ -19,7 +21,7 @@ pub struct LinkedAssociationMacroArgs {
   link: Path,
   inverse: Option<Ident>,
   serialize: bool,
-  eager_load_associations: Vec<Ident>,
+  eager_load_associations: Vec<EagerLoadAssociation>,
 }
 
 struct ArgsByType {
@@ -34,7 +36,7 @@ pub trait AssociationMacroArgs {
   fn get_inverse(&self) -> Option<&Ident>;
   fn get_link(&self) -> Option<&Path>;
   fn should_serialize(&self) -> bool;
-  fn get_eager_load_associations(&self) -> &[Ident];
+  fn get_eager_load_associations(&self) -> &[EagerLoadAssociation];
 }
 
 impl AssociationMacroArgs for RelatedAssociationMacroArgs {
@@ -58,7 +60,7 @@ impl AssociationMacroArgs for RelatedAssociationMacroArgs {
     self.serialize
   }
 
-  fn get_eager_load_associations(&self) -> &[Ident] {
+  fn get_eager_load_associations(&self) -> &[EagerLoadAssociation] {
     &self.eager_load_associations
   }
 }
@@ -84,7 +86,7 @@ impl AssociationMacroArgs for LinkedAssociationMacroArgs {
     self.serialize
   }
 
-  fn get_eager_load_associations(&self) -> &[Ident] {
+  fn get_eager_load_associations(&self) -> &[EagerLoadAssociation] {
     &self.eager_load_associations
   }
 }
@@ -216,9 +218,42 @@ impl Parse for LinkedAssociationMacroArgs {
   }
 }
 
+fn parse_eager_load_association(meta: &NestedMeta) -> Result<EagerLoadAssociation, Error> {
+  match meta {
+    NestedMeta::Meta(Meta::Path(path)) => path
+      .get_ident()
+      .cloned()
+      .ok_or_else(|| Error::new(path.span(), "Not a valid identifier"))
+      .map(|ident| EagerLoadAssociation {
+        ident,
+        children: vec![],
+      }),
+    NestedMeta::Meta(Meta::List(list)) => {
+      let ident = list
+        .path
+        .get_ident()
+        .cloned()
+        .ok_or_else(|| Error::new(list.path.span(), "Not a valid identifier"));
+
+      ident.and_then(|ident| {
+        let mut children: Vec<EagerLoadAssociation> = Vec::with_capacity(list.nested.len());
+        for nested in list.nested.iter() {
+          let parse_result = parse_eager_load_association(nested);
+          match parse_result {
+            Ok(child) => children.push(child),
+            Err(e) => return Err(e),
+          }
+        }
+        Ok(EagerLoadAssociation { ident, children })
+      })
+    }
+    _ => Err(Error::new(meta.span(), "Identifier or list expected")),
+  }
+}
+
 fn parse_optional_args(
   args_by_type: &ArgsByType,
-) -> Result<(Option<Ident>, bool, Vec<Ident>), Error> {
+) -> Result<(Option<Ident>, bool, Vec<EagerLoadAssociation>), Error> {
   let inverse = args_by_type
     .list_args
     .get("inverse")
@@ -253,14 +288,8 @@ fn parse_optional_args(
     .map(|nested| {
       let nested_iter = nested.iter();
       nested_iter
-        .map(|meta| match meta {
-          NestedMeta::Meta(Meta::Path(path)) => path
-            .get_ident()
-            .cloned()
-            .ok_or_else(|| Error::new(path.span(), "Not a valid identifier")),
-          _ => Err(Error::new(meta.span(), "Identifier expected")),
-        })
-        .collect::<Result<Vec<Ident>, _>>()
+        .map(parse_eager_load_association)
+        .collect::<Result<Vec<_>, _>>()
     })
     .transpose()?
     .unwrap_or_default();

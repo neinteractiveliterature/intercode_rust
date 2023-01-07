@@ -1,13 +1,14 @@
 use async_graphql::{async_trait, dataloader::Loader};
 use sea_orm::{
   sea_query::{IntoValueTuple, ValueTuple},
-  DbErr, EntityTrait, FromQueryResult, Linked, PrimaryKeyToColumn, PrimaryKeyTrait, QuerySelect,
+  DbErr, EntityTrait, FromQueryResult, Linked, ModelTrait, PrimaryKeyToColumn, PrimaryKeyTrait,
+  QuerySelect,
 };
 use std::{collections::HashMap, marker::PhantomData, sync::Arc};
 
 use crate::ConnectionWrapper;
 
-use super::expect::ExpectModels;
+use super::{expect::ExpectModels, AssociationLoaderResult};
 
 #[derive(FromQueryResult)]
 struct ParentModelIdOnly {
@@ -24,7 +25,10 @@ pub async fn load_all_linked<
   link: &Link,
   db: &ConnectionWrapper,
 ) -> Result<
-  HashMap<<From::PrimaryKey as PrimaryKeyTrait>::ValueType, EntityLinkLoaderResult<From, To>>,
+  HashMap<
+    <From::PrimaryKey as PrimaryKeyTrait>::ValueType,
+    EntityLinkLoaderResult<From::Model, To::Model>,
+  >,
   DbErr,
 >
 where
@@ -56,8 +60,14 @@ where
     .await?
     .into_iter()
     .fold(
-      HashMap::<<From::PrimaryKey as PrimaryKeyTrait>::ValueType, EntityLinkLoaderResult<From, To>>::new(),
-      |mut acc: HashMap<<From::PrimaryKey as PrimaryKeyTrait>::ValueType, EntityLinkLoaderResult<From, To>>,
+      HashMap::<
+        <From::PrimaryKey as PrimaryKeyTrait>::ValueType,
+        EntityLinkLoaderResult<From::Model, To::Model>,
+      >::new(),
+      |mut acc: HashMap<
+        <From::PrimaryKey as PrimaryKeyTrait>::ValueType,
+        EntityLinkLoaderResult<From::Model, To::Model>,
+      >,
        (from_model, to_model): (ParentModelIdOnly, Option<To::Model>)| {
         if let Some(to_model) = to_model {
           let id = from_model.parent_model_id;
@@ -67,7 +77,7 @@ where
           } else {
             acc.insert(
               id.into(),
-              EntityLinkLoaderResult::<From, To> {
+              EntityLinkLoaderResult::<From::Model, To::Model> {
                 from_id: id.into(),
                 models: vec![to_model],
               },
@@ -83,7 +93,7 @@ where
     if !results.contains_key(id) {
       results.insert(
         id.to_owned(),
-        EntityLinkLoaderResult::<From, To> {
+        EntityLinkLoaderResult::<From::Model, To::Model> {
           from_id: id.to_owned(),
           models: vec![],
         },
@@ -95,19 +105,35 @@ where
 }
 
 #[derive(Debug, Clone)]
-pub struct EntityLinkLoaderResult<From: EntityTrait, To: EntityTrait>
+pub struct EntityLinkLoaderResult<FromModel: ModelTrait, ToModel: ModelTrait>
 where
-  <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
+  <<FromModel::Entity as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
 {
-  pub from_id: <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType,
-  pub models: Vec<To::Model>,
+  from_id: <<FromModel::Entity as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType,
+  models: Vec<ToModel>,
 }
 
-impl<From: EntityTrait, To: EntityTrait> EntityLinkLoaderResult<From, To>
+impl<FromModel: ModelTrait, ToModel: ModelTrait> AssociationLoaderResult<FromModel, ToModel>
+  for EntityLinkLoaderResult<FromModel, ToModel>
 where
-  <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
+  <<FromModel::Entity as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
 {
-  fn expect_one(&self) -> Result<&To::Model, async_graphql::Error> {
+  fn get_from_id(
+    &self,
+  ) -> <<FromModel::Entity as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType {
+    self.from_id
+  }
+
+  fn get_models(&self) -> &Vec<ToModel> {
+    &self.models
+  }
+}
+
+impl<FromModel: ModelTrait, ToModel: ModelTrait> EntityLinkLoaderResult<FromModel, ToModel>
+where
+  <<FromModel::Entity as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
+{
+  fn expect_one(&self) -> Result<&ToModel, async_graphql::Error> {
     if self.models.len() == 1 {
       Ok(&self.models[0])
     } else {
@@ -118,7 +144,7 @@ where
     }
   }
 
-  fn try_one(&self) -> Option<&To::Model> {
+  fn try_one(&self) -> Option<&ToModel> {
     if self.models.is_empty() {
       None
     } else {
@@ -127,12 +153,12 @@ where
   }
 }
 
-impl<From: EntityTrait, To: EntityTrait> ExpectModels<To::Model>
-  for Option<EntityLinkLoaderResult<From, To>>
+impl<FromModel: ModelTrait, ToModel: ModelTrait> ExpectModels<ToModel>
+  for Option<EntityLinkLoaderResult<FromModel, ToModel>>
 where
-  <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
+  <<FromModel::Entity as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
 {
-  fn expect_models(&self) -> Result<&Vec<To::Model>, async_graphql::Error> {
+  fn expect_models(&self) -> Result<&Vec<ToModel>, async_graphql::Error> {
     if let Some(result) = self {
       Ok(&result.models)
     } else {
@@ -142,7 +168,7 @@ where
     }
   }
 
-  fn expect_one(&self) -> Result<&To::Model, async_graphql::Error> {
+  fn expect_one(&self) -> Result<&ToModel, async_graphql::Error> {
     if let Some(result) = self {
       result.expect_one()
     } else {
@@ -152,17 +178,17 @@ where
     }
   }
 
-  fn try_one(&self) -> Option<&To::Model> {
+  fn try_one(&self) -> Option<&ToModel> {
     self.as_ref().and_then(|result| result.try_one())
   }
 }
 
-impl<From: EntityTrait, To: EntityTrait> ExpectModels<To::Model>
-  for Option<&EntityLinkLoaderResult<From, To>>
+impl<FromModel: ModelTrait, ToModel: ModelTrait> ExpectModels<ToModel>
+  for Option<&EntityLinkLoaderResult<FromModel, ToModel>>
 where
-  <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
+  <<FromModel::Entity as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
 {
-  fn expect_models(&self) -> Result<&Vec<To::Model>, async_graphql::Error> {
+  fn expect_models(&self) -> Result<&Vec<ToModel>, async_graphql::Error> {
     if let Some(result) = self {
       Ok(&result.models)
     } else {
@@ -172,7 +198,7 @@ where
     }
   }
 
-  fn expect_one(&self) -> Result<&To::Model, async_graphql::Error> {
+  fn expect_one(&self) -> Result<&ToModel, async_graphql::Error> {
     if let Some(result) = self {
       result.expect_one()
     } else {
@@ -182,7 +208,7 @@ where
     }
   }
 
-  fn try_one(&self) -> Option<&To::Model> {
+  fn try_one(&self) -> Option<&ToModel> {
     self.as_ref().and_then(|result| result.try_one())
   }
 }
@@ -229,14 +255,17 @@ where
   <From::PrimaryKey as PrimaryKeyTrait>::ValueType:
     Sync + Clone + Eq + std::hash::Hash + IntoValueTuple + std::convert::From<i64>,
 {
-  type Value = EntityLinkLoaderResult<From, To>;
+  type Value = EntityLinkLoaderResult<From::Model, To::Model>;
   type Error = Arc<sea_orm::DbErr>;
 
   async fn load(
     &self,
     keys: &[<From::PrimaryKey as PrimaryKeyTrait>::ValueType],
   ) -> Result<
-    HashMap<<From::PrimaryKey as PrimaryKeyTrait>::ValueType, EntityLinkLoaderResult<From, To>>,
+    HashMap<
+      <From::PrimaryKey as PrimaryKeyTrait>::ValueType,
+      EntityLinkLoaderResult<From::Model, To::Model>,
+    >,
     Self::Error,
   > {
     let pk_column = self.primary_key.into_column();

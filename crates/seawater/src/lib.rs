@@ -1,4 +1,5 @@
 mod any_map;
+mod associations;
 mod connection_wrapper;
 mod context;
 mod drop_error;

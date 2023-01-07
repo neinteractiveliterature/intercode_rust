@@ -1,9 +1,10 @@
-use crate::DropResult;
+use crate::{LiquidDropCache};
 use liquid::{ObjectView, ValueView};
 use std::{fmt::Display, hash::Hash};
 
-pub trait LiquidDrop: ValueView + ObjectView + Into<DropResult<Self>> {
-  type Cache;
+// deleted: + Into<DropResult<Self>> - not sure why it's needed and it's making this non-object-safe
+pub trait LiquidDrop: ValueView + ObjectView {
+  type Cache: LiquidDropCache;
 
   fn get_cache(&self) -> &Self::Cache;
 }

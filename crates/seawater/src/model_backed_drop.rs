@@ -18,7 +18,7 @@ where
 {
   type Model: ModelTrait;
 
-  fn new(model: Self::Model, context: Self::Context) -> Self;
+  fn new(model: Self::Model, context: Self::Context) -> Self where Self: Sized;
   fn get_model(&self) -> &Self::Model;
 
   fn link_preloader<ToDrop: ModelBackedDrop, Value: ValueView>(
@@ -29,7 +29,7 @@ where
     pk_column: DropPrimaryKey<Self>,
   ) -> EntityLinkPreloaderBuilder<Self, ToDrop, Value, Self::Context>
   where
-    Self: Send + Sync,
+    Self: Send + Sync + Sized,
     ToDrop: Send + Sync,
     DropPrimaryKeyValue<Self>: Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
     Value: Into<DropResult<Value>>,
@@ -42,7 +42,7 @@ where
     pk_column: DropPrimaryKey<Self>,
   ) -> EntityRelationPreloaderBuilder<Self, ToDrop, Value, Self::Context>
   where
-    Self: Send + Sync,
+    Self: Send + Sync + Sized,
     ToDrop: Send + Sync,
     DropEntity<Self>: Related<DropEntity<ToDrop>>,
     DropPrimaryKeyValue<Self>: Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,

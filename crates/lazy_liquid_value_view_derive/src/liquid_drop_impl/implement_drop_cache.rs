@@ -67,6 +67,14 @@ pub fn implement_drop_cache(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
     .as_ref()
     .map(|_| quote!(_phantom: Default::default(),));
 
+  let dynamic_field_getter_matches = methods.iter().map(|method| {
+    let field_name = method.name_str();
+    let cache_field_ident = method.cache_field_ident();
+    quote!(
+      #field_name => Some(&self.#cache_field_ident)
+    )
+  });
+
   Box::new(quote!(
     pub struct #cache_struct_ident #generics {
       #phantom_data
@@ -88,6 +96,15 @@ pub fn implement_drop_cache(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
         Self {
           #phantom_default
           #(#default_fields,)*
+        }
+      }
+    }
+
+    impl #generics ::lazy_liquid_value_view::LiquidDropCache for #cache_struct_ident #self_type_arguments {
+      fn get_once_cell<T>(&self, field_name: &str) -> Option<&OnceBox<T>> {
+        match field_name {
+          #(#dynamic_field_getter_matches,)*
+          _ => None
         }
       }
     }

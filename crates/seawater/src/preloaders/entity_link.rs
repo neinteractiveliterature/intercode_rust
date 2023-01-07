@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt::Debug, marker::PhantomData, pin::Pin, sync:
 
 use crate::{
   loaders::{load_all_linked, EntityLinkLoaderResult},
-  ConnectionWrapper,
+  ConnectionWrapper, DropModel,
 };
 use async_trait::async_trait;
 use lazy_liquid_value_view::{ArcValueView, DropResult, LiquidDrop, LiquidDropWithID};
@@ -37,7 +37,14 @@ pub struct EntityLinkPreloader<
   context: Context,
   get_id: Pin<Box<dyn for<'a> GetIdFn<'a, PK::ValueType, FromDrop>>>,
   loader_result_to_drops: Pin<
-    Box<dyn for<'a> LoaderResultToDropsFn<'a, EntityLinkLoaderResult<From, To>, FromDrop, ToDrop>>,
+    Box<
+      dyn for<'a> LoaderResultToDropsFn<
+        'a,
+        EntityLinkLoaderResult<From::Model, To::Model>,
+        FromDrop,
+        ToDrop,
+      >,
+    >,
   >,
   drops_to_value: Pin<Box<dyn DropsToValueFn<ToDrop, Value>>>,
   get_once_cell: Pin<Box<dyn for<'a> GetOnceCellFn<'a, FromDrop, Value>>>,
@@ -86,8 +93,9 @@ where
   Value: Into<DropResult<Value>>,
   Arc<Value>: Into<DropResult<Value>>,
   i64: std::convert::From<<ToDrop as LiquidDropWithID>::ID>,
+  FromDrop: Into<DropResult<FromDrop>>
 {
-  type LoaderResult = EntityLinkLoaderResult<From, To>;
+  type LoaderResult = EntityLinkLoaderResult<From::Model, To::Model>;
 
   fn get_id(&self, drop: &FromDrop) -> PK::ValueType {
     (self.get_id)(drop)
@@ -195,7 +203,7 @@ pub struct EntityLinkPreloaderBuilder<
       Box<
         dyn for<'a> LoaderResultToDropsFn<
           'a,
-          EntityLinkLoaderResult<DropEntity<FromDrop>, DropEntity<ToDrop>>,
+          EntityLinkLoaderResult<DropModel<FromDrop>, DropModel<ToDrop>>,
           FromDrop,
           ToDrop,
         >,
@@ -318,7 +326,7 @@ where
   where
     F: for<'a> LoaderResultToDropsFn<
         'a,
-        EntityLinkLoaderResult<DropEntity<FromDrop>, DropEntity<ToDrop>>,
+        EntityLinkLoaderResult<DropModel<FromDrop>, DropModel<ToDrop>>,
         FromDrop,
         ToDrop,
       > + 'static,

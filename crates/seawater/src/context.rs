@@ -8,4 +8,6 @@ pub trait Context: Send + Sync + Clone + Debug {
 
 pub trait ContextContainer {
   type Context: crate::Context;
+
+  fn get_context(&self) -> &Self::Context;
 }

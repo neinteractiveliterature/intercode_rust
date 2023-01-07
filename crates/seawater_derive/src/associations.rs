@@ -9,6 +9,35 @@ pub enum AssociationType {
   Linked,
 }
 
+#[derive(Debug, Clone)]
+pub struct EagerLoadAssociation {
+  pub ident: Ident,
+  pub children: Vec<EagerLoadAssociation>,
+}
+
+impl EagerLoadAssociation {
+  // fn generate_action(&self) -> Box<dyn ToTokens> {
+  //   let actions = self.children.iter().map(|child| {
+  //     let child_eager_loader_ident = Ident::new(
+  //       format!("load_{}_associations", child.ident).as_str(),
+  //       child.ident.span(),
+  //     );
+  //     let child_action = child.generate_action();
+  //     quote!(
+  //       result.#child_eager_loader_ident(context.clone())
+  //     )
+  //   });
+
+  //   let child_loads = self.children.iter().map(|child| child.generate_action());
+  //   Box::new(quote!(
+  //     #to_drop::#imperative_preload_ident(context.clone(), &drops).and_then(async |result| {
+  //       // #child_loads
+  //       Ok(result)
+  //     }).await?
+  //   ))
+  // }
+}
+
 pub enum TargetType {
   OneOptional,
   OneRequired,
@@ -21,7 +50,7 @@ trait AssociationMacro {
   fn get_to(&self) -> &Path;
   fn get_target_type(&self) -> &TargetType;
   fn get_inverse(&self) -> Option<&Ident>;
-  fn get_eager_load_associations(&self) -> &[Ident];
+  fn get_eager_load_associations(&self) -> &[EagerLoadAssociation];
   fn should_serialize(&self) -> bool;
   fn loader_result_type(&self) -> Path;
 
@@ -43,7 +72,7 @@ trait AssociationMacro {
     );
     let preloader_ident = self.preloader_ident();
     let target_path = self.target_path();
-    let eager_load_action = self.eager_load_action();
+    let eager_load_ident = self.eager_load_ident();
     let ident_str = LitStr::new(ident.to_string().as_str(), ident.span());
     let get_preloaded_drops = match self.get_target_type() {
       TargetType::Many => Box::new(quote!(
@@ -80,7 +109,7 @@ trait AssociationMacro {
           let preloader = Self::#preloader_ident(context.clone());
           let preloader_result = preloader.preload(context.db(), drops).await?;
           #get_preloaded_drops
-          #eager_load_action
+          Self::#eager_load_ident(context.clone(), &preloaded_drops).await?;
           Ok(preloader_result)
         }.boxed()
       }
@@ -106,6 +135,7 @@ trait AssociationMacro {
       Some(self.preloader_constructor()),
       Some(self.field_getter()),
       Some(self.imperative_preloader()),
+      Some(self.eager_loader()),
     ]
     .into_iter()
     .flatten()
@@ -115,6 +145,14 @@ trait AssociationMacro {
   fn preloader_ident(&self) -> Ident {
     let name = self.get_name();
     Ident::new(format!("{}_preloader", name).as_str(), name.span())
+  }
+
+  fn eager_load_ident(&self) -> Ident {
+    let name = self.get_name();
+    Ident::new(
+      format!("eager_load_{}_associations", name).as_str(),
+      name.span(),
+    )
   }
 
   fn once_cell_getter_ident(&self) -> Ident {
@@ -161,7 +199,7 @@ trait AssociationMacro {
         let preloaded_drops = vec![drop.as_ref()];
       )),
     };
-    let eager_load_action = self.eager_load_action();
+    let eager_load_ident = self.eager_load_ident();
 
     parse_quote!(
       #serialize_attr
@@ -182,38 +220,51 @@ trait AssociationMacro {
           .await?;
         let context = self.context.clone();
         #get_preloaded_drops
-        #eager_load_action
+        Self::#eager_load_ident(self.context.clone(), &preloaded_drops).await?;
         Ok(drop)
       }
     )
   }
 
-  fn eager_load_action<'a>(&'a self) -> Box<dyn ToTokens + 'a> {
+  fn eager_loader<'a>(&'a self) -> ImplItem {
+    let name = self.eager_load_ident();
     let eager_load_associations = self.get_eager_load_associations();
     if eager_load_associations.is_empty() {
-      return Box::new(quote!());
+      return parse_quote!(
+        pub async fn #name<'a>(
+          _context: <Self as seawater::ContextContainer>::Context,
+          _drops: &'a [&'a Self],
+        ) {
+        }
+      );
     }
 
     let to_drop = self.get_to();
 
-    let eager_loads = self
-      .get_eager_load_associations()
-      .iter()
-      .map(|association_name| {
-        let imperative_preload_ident = Ident::new(
-          format!("preload_{}", association_name).as_str(),
-          association_name.span(),
-        );
-        quote!(
-          #to_drop::#imperative_preload_ident(context.clone(), &preloaded_drops)
-        )
-      });
+    // let eager_loads = self.get_eager_load_associations().iter().map(|assoc| {
+    //   let imperative_preload_ident = Ident::new(
+    //     format!("preload_{}", assoc.ident).as_str(),
+    //     assoc.ident.span(),
+    //   );
+    //   let child_loads = assoc.children.iter().map(|child| quote!());
+    //   quote!(
+    //     #to_drop::#imperative_preload_ident(context.clone(), &drops).and_then(async |result| {
+    //       #child_loads
+    //       Ok(result)
+    //     }).await?
+    //   )
+    // });
 
-    Box::new(quote!(
-      ::futures::try_join!(
-        #(#eager_loads,)*
-      )?;
-    ))
+    parse_quote!(
+      pub async fn #name<'a>(
+        context: <Self as seawater::ContextContainer>::Context,
+        drops: &'a [&'a Self],
+      ) {
+        ::futures::try_join!(
+          // #(#eager_loads,)*
+        )
+      }
+    )
   }
 
   fn loader_result_to_drops<'a>(&'a self) -> Box<dyn ToTokens + 'a> {
@@ -269,7 +320,7 @@ struct RelatedAssociationMacro {
   to: Path,
   target_type: TargetType,
   inverse: Option<Ident>,
-  eager_load_associations: Vec<Ident>,
+  eager_load_associations: Vec<EagerLoadAssociation>,
   serialize: bool,
 }
 
@@ -290,7 +341,7 @@ impl AssociationMacro for RelatedAssociationMacro {
     self.inverse.as_ref()
   }
 
-  fn get_eager_load_associations(&self) -> &[Ident] {
+  fn get_eager_load_associations(&self) -> &[EagerLoadAssociation] {
     &self.eager_load_associations
   }
 
@@ -353,7 +404,7 @@ struct LinkedAssociationMacro {
   link: Path,
   target_type: TargetType,
   inverse: Option<Ident>,
-  eager_load_associations: Vec<Ident>,
+  eager_load_associations: Vec<EagerLoadAssociation>,
   serialize: bool,
 }
 
@@ -374,7 +425,7 @@ impl AssociationMacro for LinkedAssociationMacro {
     self.inverse.as_ref()
   }
 
-  fn get_eager_load_associations(&self) -> &[Ident] {
+  fn get_eager_load_associations(&self) -> &[EagerLoadAssociation] {
     &self.eager_load_associations
   }
 
