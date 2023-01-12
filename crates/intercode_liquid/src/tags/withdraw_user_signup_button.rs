@@ -95,26 +95,32 @@ impl Renderable for WithdrawUserSignupButton {
     )?;
 
     let button_text = self.button_text.evaluate(runtime)?;
-    if !button_text.is_scalar() {
-      return Error::with_msg("button_text must be a string")
+    let button_text = if button_text.is_scalar() {
+      Some(button_text.to_kstr().into_owned())
+    } else if button_text.is_nil() {
+      None
+    } else {
+      return Error::with_msg("button_text must be a string if specified")
         .context(
           "withdraw_user_signup_button",
           format!("{}", button_text.source()),
         )
         .into_err();
-    }
-    let button_text = button_text.to_kstr().into_owned();
+    };
 
     let button_class = self.button_class.evaluate(runtime)?;
-    if !button_class.is_scalar() {
-      return Error::with_msg("button_class must be a string")
+    let button_class = if button_class.is_scalar() {
+      Some(button_class.to_kstr().into_owned())
+    } else if button_class.is_nil() {
+      None
+    } else {
+      return Error::with_msg("button_class must be a string if specified")
         .context(
           "withdraw_user_signup_button",
           format!("{}", button_class.source()),
         )
         .into_err();
-    }
-    let button_class = button_class.to_kstr().into_owned();
+    };
 
     write_react_component_tag(
       writer,
