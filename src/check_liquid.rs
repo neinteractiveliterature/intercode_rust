@@ -85,13 +85,14 @@ async fn find_or_build_user_con_profile(
 
 fn build_query_data(
   cms_parent: CmsParent,
+  current_user: Option<users::Model>,
   parent_convention: &Option<conventions::Model>,
   connection_wrapper: &ConnectionWrapper,
   user_con_profile: Option<user_con_profiles::Model>,
 ) -> QueryData {
   let query_data = QueryData {
     cms_parent: Arc::new(cms_parent),
-    current_user: Arc::new(None),
+    current_user: Arc::new(current_user),
     convention: Arc::new(parent_convention.as_ref().cloned()),
     db: connection_wrapper.clone(),
     loaders: LoaderManager::new(connection_wrapper.clone()),
@@ -159,7 +160,15 @@ async fn render_layout(
     schema_data,
   )
   .await;
-  let rendering_context = CmsRenderingContext::new(object!({}), &query_data, Arc::new(renderer));
+  let rendering_context = CmsRenderingContext::new(
+    object!({
+      "content_for_head": "",
+      "content_for_layout": "",
+      "content_for_navbar": ""
+    }),
+    &query_data,
+    Arc::new(renderer),
+  );
   let content = layout.content.as_deref().unwrap_or("");
   let resource_descriptor = ResourceDescriptor::Layout(layout.name.clone());
 
@@ -220,6 +229,7 @@ async fn build_query_data_and_renderer(
   .await;
   let query_data = build_query_data(
     cms_parent,
+    current_user.as_ref().to_owned(),
     parent_convention,
     connection_wrapper,
     user_con_profile,

@@ -1,6 +1,6 @@
 use async_graphql::async_trait::async_trait;
 use futures::try_join;
-use intercode_entities::conventions;
+use intercode_entities::{conventions, events};
 use intercode_graphql::{LiquidRenderer, QueryData, SchemaData};
 use intercode_liquid::{build_liquid_parser, cms_parent_partial_source::PreloadPartialsStrategy};
 use intercode_policies::AuthorizationInfo;
@@ -9,7 +9,7 @@ use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use seawater::{Context, DropError, ModelBackedDrop};
 use std::{fmt::Debug, sync::Arc};
 
-use crate::drops::{ConventionDrop, DropContext, UserConProfileDrop};
+use crate::drops::{ConventionDrop, DropContext, EventDrop, UserConProfileDrop};
 
 #[liquid_drop_struct]
 struct IntercodeGlobals {
@@ -45,6 +45,22 @@ impl IntercodeGlobals {
         .map(|convention| ConventionDrop::new(convention.clone(), self.drop_context.clone()))
         .collect(),
     )
+  }
+
+  async fn event(&self) -> Result<Option<EventDrop>, DropError> {
+    if let Some(convention) = self.query_data.convention.as_ref().as_ref() {
+      if convention.site_mode == "single_event" {
+        return Ok(
+          events::Entity::find()
+            .filter(events::Column::ConventionId.eq(convention.id))
+            .one(self.drop_context.db())
+            .await?
+            .map(|event| EventDrop::new(event, self.drop_context.clone())),
+        );
+      }
+    }
+
+    Ok(None)
   }
 
   async fn user_con_profile(&self) -> Result<Option<ArcValueView<UserConProfileDrop>>, DropError> {
