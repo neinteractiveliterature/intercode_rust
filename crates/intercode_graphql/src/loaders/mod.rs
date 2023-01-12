@@ -1,3 +1,6 @@
+pub mod event_runs_loader;
+mod signup_count_loader;
+
 use std::env;
 use std::time::Duration;
 
@@ -10,6 +13,9 @@ use intercode_entities::links::{
 use intercode_entities::*;
 use seawater::loaders::{EntityIdLoader, EntityLinkLoader, EntityRelationLoader};
 use seawater::ConnectionWrapper;
+
+use self::event_runs_loader::EventRunsLoaderManager;
+use self::signup_count_loader::SignupCountLoader;
 
 pub struct LoaderManager {
   db: ConnectionWrapper,
@@ -41,6 +47,7 @@ pub struct LoaderManager {
   pub event_category_event_proposal_form: DataLoader<
     EntityLinkLoader<event_categories::Entity, EventCategoryToEventProposalForm, forms::Entity>,
   >,
+  pub event_runs_loader_manager: EventRunsLoaderManager,
   pub form_form_sections: DataLoader<EntityRelationLoader<forms::Entity, form_sections::Entity>>,
   pub form_section_form_items:
     DataLoader<EntityRelationLoader<form_sections::Entity, form_items::Entity>>,
@@ -48,6 +55,8 @@ pub struct LoaderManager {
   pub room_runs: DataLoader<EntityRelationLoader<rooms::Entity, runs::Entity>>,
   pub run_event: DataLoader<EntityRelationLoader<runs::Entity, events::Entity>>,
   pub run_rooms: DataLoader<EntityRelationLoader<runs::Entity, rooms::Entity>>,
+  pub run_signups: DataLoader<EntityRelationLoader<runs::Entity, signups::Entity>>,
+  pub run_signup_counts: DataLoader<SignupCountLoader>,
   pub staff_position_user_con_profiles: DataLoader<
     EntityLinkLoader<
       staff_positions::Entity,
@@ -172,6 +181,7 @@ impl LoaderManager {
         tokio::spawn,
       )
       .delay(delay_millis),
+      event_runs_loader_manager: EventRunsLoaderManager::new(db.clone(), delay_millis),
       form_form_sections: DataLoader::new(
         EntityRelationLoader::new(db.clone(), forms::PrimaryKey::Id),
         tokio::spawn,
@@ -202,6 +212,13 @@ impl LoaderManager {
         tokio::spawn,
       )
       .delay(delay_millis),
+      run_signups: DataLoader::new(
+        EntityRelationLoader::new(db.clone(), runs::PrimaryKey::Id),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
+      run_signup_counts: DataLoader::new(SignupCountLoader::new(db.clone()), tokio::spawn)
+        .delay(delay_millis),
       staff_position_user_con_profiles: DataLoader::new(
         EntityLinkLoader::new(
           db.clone(),

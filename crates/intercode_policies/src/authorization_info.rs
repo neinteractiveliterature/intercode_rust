@@ -3,7 +3,7 @@ use intercode_entities::{user_con_profiles, users};
 use oxide_auth::endpoint::Scope;
 use sea_orm::DbErr;
 use seawater::ConnectionWrapper;
-use std::{collections::HashSet, fmt::Debug, sync::Arc};
+use std::{collections::HashSet, fmt::Debug, hash::Hash, sync::Arc};
 
 use crate::{
   load_all_team_member_event_ids_in_convention,
@@ -21,6 +21,38 @@ pub struct AuthorizationInfo {
   all_model_permissions_by_convention: Arc<Mutex<UnboundCache<i64, UserPermissionsMap>>>,
   team_member_event_ids_by_convention_id: Arc<Mutex<UnboundCache<i64, HashSet<i64>>>>,
 }
+
+impl Hash for AuthorizationInfo {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    self.user.as_ref().as_ref().map(|u| u.id).hash(state);
+    self.oauth_scope.as_ref().map(|s| s.to_string()).hash(state);
+    self
+      .assumed_identity_from_profile
+      .as_ref()
+      .as_ref()
+      .map(|p| p.id)
+      .hash(state);
+  }
+}
+
+impl PartialEq for AuthorizationInfo {
+  fn eq(&self, other: &Self) -> bool {
+    self.user.as_ref().as_ref().map(|u| u.id) == other.user.as_ref().as_ref().map(|u| u.id)
+      && self.oauth_scope == other.oauth_scope
+      && self
+        .assumed_identity_from_profile
+        .as_ref()
+        .as_ref()
+        .map(|p| p.id)
+        == other
+          .assumed_identity_from_profile
+          .as_ref()
+          .as_ref()
+          .map(|p| p.id)
+  }
+}
+
+impl Eq for AuthorizationInfo {}
 
 impl AuthorizationInfo {
   pub fn new(

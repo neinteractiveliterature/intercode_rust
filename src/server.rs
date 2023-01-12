@@ -15,8 +15,8 @@ use axum::{Extension, Form, Router};
 use axum_sessions::{SameSite, SessionHandle, SessionLayer};
 use csrf::ChaCha20Poly1305CsrfProtection;
 use futures_util::stream::StreamExt;
-use i18n_embed::fluent::fluent_language_loader;
-use i18n_embed::LanguageLoader;
+use i18n_embed::fluent::{fluent_language_loader, FluentLanguageLoader};
+use i18n_embed::{I18nEmbedError, LanguageLoader};
 use intercode_entities::cms_parent::CmsParentTrait;
 use intercode_entities::{events, users};
 use intercode_graphql::cms_rendering_context::CmsRenderingContext;
@@ -249,16 +249,21 @@ async fn sign_in(
   Ok(response::Json(value!({ "status": "success" })))
 }
 
+pub fn build_language_loader() -> Result<FluentLanguageLoader, I18nEmbedError> {
+  let language_loader = fluent_language_loader!();
+  language_loader.load_languages(&Localizations, &[language_loader.fallback_language()])?;
+
+  Ok(language_loader)
+}
+
 pub async fn serve(db: DatabaseConnection) -> Result<()> {
   let db_conn = Arc::new(db);
 
-  let language_loader = fluent_language_loader!();
-  language_loader.load_languages(&Localizations, &[language_loader.fallback_language()])?;
-  let language_loader_arc = Arc::new(language_loader);
+  let language_loader_arc = Arc::new(build_language_loader()?);
 
   let schema_data = SchemaData {
     db_conn: db_conn.clone(),
-    language_loader: Arc::clone(&language_loader_arc),
+    language_loader: language_loader_arc,
   };
 
   let graphql_schema = build_intercode_graphql_schema(schema_data.clone());

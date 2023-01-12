@@ -3,7 +3,7 @@ use chrono::NaiveDateTime;
 
 pub struct DateScalar(pub NaiveDateTime);
 
-#[Scalar]
+#[Scalar(name = "Date")]
 impl ScalarType for DateScalar {
   fn parse(value: async_graphql::Value) -> async_graphql::InputValueResult<Self> {
     NaiveDateTime::parse(value)
@@ -13,5 +13,11 @@ impl ScalarType for DateScalar {
 
   fn to_value(&self) -> async_graphql::Value {
     NaiveDateTime::to_value(&self.0)
+  }
+}
+
+impl From<DateScalar> for NaiveDateTime {
+  fn from(scalar: DateScalar) -> Self {
+    scalar.0
   }
 }

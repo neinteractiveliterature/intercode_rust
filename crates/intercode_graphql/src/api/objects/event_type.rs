@@ -1,9 +1,14 @@
-use crate::QueryData;
+use crate::{
+  api::scalars::DateScalar, loaders::event_runs_loader::EventRunsLoaderFilter, QueryData,
+};
 use async_graphql::*;
-use intercode_entities::events;
+use intercode_entities::{events, RegistrationPolicy};
 use seawater::loaders::{ExpectModel, ExpectModels};
 
-use super::{ConventionType, EventCategoryType, ModelBackedType, RunType, TeamMemberType};
+use super::{
+  ConventionType, EventCategoryType, ModelBackedType, RegistrationPolicyType, RunType,
+  TeamMemberType,
+};
 use crate::model_backed_type;
 model_backed_type!(EventType, events::Model);
 
@@ -51,15 +56,38 @@ impl EventType {
     self.model.length_seconds
   }
 
-  async fn runs(&self, ctx: &Context<'_>) -> Result<Vec<RunType>, Error> {
+  #[graphql(name = "registration_policy")]
+  async fn registration_policy(&self) -> Result<Option<RegistrationPolicyType>, serde_json::Error> {
+    self
+      .model
+      .registration_policy
+      .as_ref()
+      .map(|policy| {
+        serde_json::from_value::<RegistrationPolicy>(policy.clone()).map(RegistrationPolicyType)
+      })
+      .transpose()
+  }
+
+  async fn runs(
+    &self,
+    ctx: &Context<'_>,
+    start: Option<DateScalar>,
+    finish: Option<DateScalar>,
+    #[graphql(name = "exclude_conflicts")] _exclude_conflicts: Option<DateScalar>,
+  ) -> Result<Vec<RunType>, Error> {
     let query_data = ctx.data::<QueryData>()?;
     Ok(
       query_data
         .loaders
-        .event_runs
+        .event_runs_loader_manager
+        .with_filter(EventRunsLoaderFilter {
+          start: start.map(|start| start.into()),
+          finish: finish.map(|finish| finish.into()),
+        })
+        .await
         .load_one(self.model.id)
         .await?
-        .expect_models()?
+        .unwrap_or_default()
         .iter()
         .map(|model| RunType::new(model.clone()))
         .collect(),

@@ -58,12 +58,14 @@ http = "0.2.8"
 hyper = "0.14.23"
 i18n-embed = {version = "0.13", features = ["fluent-system"]}
 i18n-embed-fl = "0.6"
+indicatif = {version = "0.17.2", features = ["improved_unicode"]}
 intercode_entities = {path = "./crates/intercode_entities"}
 intercode_graphql = {path = "./crates/intercode_graphql"}
 intercode_inflector = {path = "./crates/intercode_inflector"}
 intercode_liquid = {path = "./crates/intercode_liquid"}
 intercode_policies = {path = "./crates/intercode_policies"}
 intercode_timespan = {path = "./crates/intercode_timespan"}
+itertools = "0.10.5"
 lazy_liquid_value_view = {path = "./crates/lazy_liquid_value_view"}
 liquid = {workspace = true}
 liquid-core = {workspace = true}

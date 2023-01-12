@@ -15,6 +15,21 @@ impl RunType {
     self.model.id
   }
 
+  #[graphql(name = "confirmed_signup_count")]
+  async fn confirmed_signup_count(&self, ctx: &Context<'_>) -> Result<u64, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+
+    Ok(
+      query_data
+        .loaders
+        .run_signup_counts
+        .load_one(self.model.id)
+        .await?
+        .unwrap_or_default()
+        .counted_signups_by_state("confirmed"),
+    )
+  }
+
   #[graphql(name = "ends_at")]
   async fn ends_at(&self, ctx: &Context<'_>) -> Result<Option<NaiveDateTime>, Error> {
     let starts_at = self.model.starts_at;
@@ -33,6 +48,23 @@ impl RunType {
     } else {
       Ok(None)
     }
+  }
+
+  #[graphql(name = "not_counted_signup_count")]
+  async fn not_counted_signup_count(&self, ctx: &Context<'_>) -> Result<u64, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+
+    let counts = query_data
+      .loaders
+      .run_signup_counts
+      .load_one(self.model.id)
+      .await?
+      .unwrap_or_default();
+
+    Ok(
+      counts.not_counted_signups_by_state("confirmed")
+        + counts.not_counted_signups_by_state("waitlisted"),
+    )
   }
 
   #[graphql(name = "room_names")]
