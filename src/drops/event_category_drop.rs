@@ -14,4 +14,8 @@ impl EventCategoryDrop {
   fn name(&self) -> &str {
     &self.model.name
   }
+
+  fn team_member_name(&self) -> &str {
+    &self.model.team_member_name
+  }
 }

@@ -263,6 +263,11 @@ impl PartialSource for LazyCmsPartialSource {
   }
 
   fn try_get<'a>(&'a self, name: &str) -> Option<std::borrow::Cow<'a, str>> {
-    self.cache.try_get(name).map(|content| content.into())
+    self
+      .cache
+      .try_get(name)
+      .map(|content| content.into())
+      // Don't crash the rendering if an unknown partial is referenced
+      .or_else(|| Some(format!("Unknown partial: {}", name).into()))
   }
 }
