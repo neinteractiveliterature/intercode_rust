@@ -401,11 +401,12 @@ pub async fn check_liquid() -> Result<()> {
   }
 
   println!(
-    "{} total errors",
+    "{} total errors across {} conventions",
     errors_by_convention_name
       .values()
       .map(|errors| errors.len())
       .sum::<usize>(),
+    errors_by_convention_name.len()
   );
 
   Ok(())
