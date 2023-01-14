@@ -3,9 +3,9 @@ use chrono::{Duration, NaiveDateTime};
 use intercode_entities::runs;
 use seawater::loaders::ExpectModels;
 
-use crate::{model_backed_type, QueryData};
+use crate::{api::scalars::JsonScalar, model_backed_type, QueryData};
 
-use super::{ModelBackedType, RoomType};
+use super::{signup_request_type::SignupRequestType, ModelBackedType, RoomType, SignupType};
 
 model_backed_type!(RunType, runs::Model);
 
@@ -47,6 +47,56 @@ impl RunType {
       Ok(Some(starts_at + Duration::seconds(length_seconds.into())))
     } else {
       Ok(None)
+    }
+  }
+
+  #[graphql(name = "my_signups")]
+  async fn my_signups(&self, ctx: &Context<'_>) -> Result<Vec<SignupType>, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+    if let Some(user_con_profile) = query_data.user_con_profile.as_ref().as_ref() {
+      let loader = query_data
+        .loaders
+        .run_user_con_profile_signups
+        .get(user_con_profile.id)
+        .await;
+
+      Ok(
+        loader
+          .load_one(self.model.id)
+          .await?
+          .unwrap_or_default()
+          .iter()
+          .cloned()
+          .map(SignupType::new)
+          .collect(),
+      )
+    } else {
+      Ok(vec![])
+    }
+  }
+
+  #[graphql(name = "my_signup_requests")]
+  async fn my_signup_requests(&self, ctx: &Context<'_>) -> Result<Vec<SignupRequestType>, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+    if let Some(user_con_profile) = query_data.user_con_profile.as_ref().as_ref() {
+      let loader = query_data
+        .loaders
+        .run_user_con_profile_signup_requests
+        .get(user_con_profile.id)
+        .await;
+
+      Ok(
+        loader
+          .load_one(self.model.id)
+          .await?
+          .unwrap_or_default()
+          .iter()
+          .cloned()
+          .map(SignupRequestType::new)
+          .collect(),
+      )
+    } else {
+      Ok(vec![])
     }
   }
 
@@ -98,6 +148,25 @@ impl RunType {
   #[graphql(name = "schedule_note")]
   async fn schedule_note(&self) -> Option<&str> {
     self.model.schedule_note.as_deref()
+  }
+
+  #[graphql(name = "signup_count_by_state_and_bucket_key_and_counted")]
+  async fn signup_count_by_state_and_bucket_key_and_counted(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<JsonScalar, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+
+    let counts = query_data
+      .loaders
+      .run_signup_counts
+      .load_one(self.model.id)
+      .await?
+      .unwrap_or_default();
+
+    Ok(JsonScalar(serde_json::to_value(
+      counts.count_by_state_and_bucket_key_and_counted,
+    )?))
   }
 
   #[graphql(name = "starts_at")]

@@ -1,4 +1,8 @@
-pub mod event_runs_loader;
+mod event_user_con_profile_event_rating_loader;
+pub mod filtered_event_runs_loader;
+mod loader_spawner;
+mod run_user_con_profile_signup_requests_loader;
+mod run_user_con_profile_signups_loader;
 mod signup_count_loader;
 
 use std::env;
@@ -8,13 +12,18 @@ use async_graphql::dataloader::DataLoader;
 
 use intercode_entities::links::{
   CmsNavigationItemToCmsNavigationSection, ConventionToStaffPositions, EventCategoryToEventForm,
-  EventCategoryToEventProposalForm, StaffPositionToUserConProfiles, UserConProfileToStaffPositions,
+  EventCategoryToEventProposalForm, FormToFormItems, StaffPositionToUserConProfiles,
+  UserConProfileToStaffPositions,
 };
 use intercode_entities::*;
 use seawater::loaders::{EntityIdLoader, EntityLinkLoader, EntityRelationLoader};
 use seawater::ConnectionWrapper;
 
-use self::event_runs_loader::EventRunsLoaderManager;
+use self::event_user_con_profile_event_rating_loader::EventUserConProfileEventRatingLoader;
+use self::filtered_event_runs_loader::{EventRunsLoaderFilter, FilteredEventRunsLoader};
+use self::loader_spawner::LoaderSpawner;
+use self::run_user_con_profile_signup_requests_loader::RunUserConProfileSignupRequestsLoader;
+use self::run_user_con_profile_signups_loader::RunUserConProfileSignupsLoader;
 use self::signup_count_loader::SignupCountLoader;
 
 pub struct LoaderManager {
@@ -47,7 +56,11 @@ pub struct LoaderManager {
   pub event_category_event_proposal_form: DataLoader<
     EntityLinkLoader<event_categories::Entity, EventCategoryToEventProposalForm, forms::Entity>,
   >,
-  pub event_runs_loader_manager: EventRunsLoaderManager,
+  pub event_runs_filtered: LoaderSpawner<EventRunsLoaderFilter, i64, FilteredEventRunsLoader>,
+  pub event_user_con_profile_event_ratings:
+    LoaderSpawner<i64, i64, EventUserConProfileEventRatingLoader>,
+  pub form_form_items:
+    DataLoader<EntityLinkLoader<forms::Entity, FormToFormItems, form_items::Entity>>,
   pub form_form_sections: DataLoader<EntityRelationLoader<forms::Entity, form_sections::Entity>>,
   pub form_section_form_items:
     DataLoader<EntityRelationLoader<form_sections::Entity, form_items::Entity>>,
@@ -57,6 +70,9 @@ pub struct LoaderManager {
   pub run_rooms: DataLoader<EntityRelationLoader<runs::Entity, rooms::Entity>>,
   pub run_signups: DataLoader<EntityRelationLoader<runs::Entity, signups::Entity>>,
   pub run_signup_counts: DataLoader<SignupCountLoader>,
+  pub run_user_con_profile_signups: LoaderSpawner<i64, i64, RunUserConProfileSignupsLoader>,
+  pub run_user_con_profile_signup_requests:
+    LoaderSpawner<i64, i64, RunUserConProfileSignupRequestsLoader>,
   pub staff_position_user_con_profiles: DataLoader<
     EntityLinkLoader<
       staff_positions::Entity,
@@ -181,7 +197,21 @@ impl LoaderManager {
         tokio::spawn,
       )
       .delay(delay_millis),
-      event_runs_loader_manager: EventRunsLoaderManager::new(db.clone(), delay_millis),
+      event_runs_filtered: LoaderSpawner::new(
+        db.clone(),
+        delay_millis,
+        FilteredEventRunsLoader::new,
+      ),
+      event_user_con_profile_event_ratings: LoaderSpawner::new(
+        db.clone(),
+        delay_millis,
+        EventUserConProfileEventRatingLoader::new,
+      ),
+      form_form_items: DataLoader::new(
+        EntityLinkLoader::new(db.clone(), FormToFormItems, forms::PrimaryKey::Id),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
       form_form_sections: DataLoader::new(
         EntityRelationLoader::new(db.clone(), forms::PrimaryKey::Id),
         tokio::spawn,
@@ -219,6 +249,16 @@ impl LoaderManager {
       .delay(delay_millis),
       run_signup_counts: DataLoader::new(SignupCountLoader::new(db.clone()), tokio::spawn)
         .delay(delay_millis),
+      run_user_con_profile_signups: LoaderSpawner::new(
+        db.clone(),
+        delay_millis,
+        RunUserConProfileSignupsLoader::new,
+      ),
+      run_user_con_profile_signup_requests: LoaderSpawner::new(
+        db.clone(),
+        delay_millis,
+        RunUserConProfileSignupRequestsLoader::new,
+      ),
       staff_position_user_con_profiles: DataLoader::new(
         EntityLinkLoader::new(
           db.clone(),

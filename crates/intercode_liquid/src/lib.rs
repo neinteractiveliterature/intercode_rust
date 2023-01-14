@@ -2,16 +2,17 @@ pub mod blocks;
 pub mod cms_parent_partial_source;
 mod dig;
 pub mod filters;
+mod markdown;
 mod react_component_tag;
 pub mod tags;
 
-use pulldown_cmark::{html, Options};
+pub use markdown::*;
 pub use react_component_tag::react_component_tag;
 use seawater::ConnectionWrapper;
 
 pub use dig::liquid_datetime_to_chrono_datetime;
 use i18n_embed::fluent::FluentLanguageLoader;
-use intercode_entities::{cms_parent::CmsParent, conventions};
+use intercode_entities::{active_storage_blobs, cms_parent::CmsParent, conventions};
 use liquid::{partials::PartialCompiler, Error, Parser, ParserBuilder};
 use std::{fmt::Debug, future::Future, pin::Pin, sync::Arc};
 
@@ -92,15 +93,7 @@ pub fn build_liquid_parser<'a>(
   builder.build()
 }
 
-pub fn render_markdown(markdown: &str) -> String {
-  let mut options = Options::empty();
-  options.insert(Options::ENABLE_STRIKETHROUGH);
-  options.insert(Options::ENABLE_FOOTNOTES);
-  options.insert(Options::ENABLE_SMART_PUNCTUATION);
-  options.insert(Options::ENABLE_TABLES);
-  let parser = pulldown_cmark::Parser::new_ext(markdown, options);
-
-  let mut html_output = String::new();
-  html::push_html(&mut html_output, parser);
-  html_output
+pub fn build_active_storage_blob_url(blob: &active_storage_blobs::Model) -> String {
+  // TODO do something actually real here
+  format!("https://assets.neilhosting.net/{}", blob.key)
 }

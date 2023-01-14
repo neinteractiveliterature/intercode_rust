@@ -44,9 +44,9 @@ struct SignupCountDataRow {
   count: u64,
 }
 
-#[derive(Default, Clone, Debug, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug)]
 pub struct RunSignupCounts {
-  count_by_state_and_bucket_key_and_counted:
+  pub count_by_state_and_bucket_key_and_counted:
     HashMap<String, HashMap<Option<String>, HashMap<SignupCountDataCountedStatus, u64>>>,
 }
 

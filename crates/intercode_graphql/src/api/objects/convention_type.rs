@@ -2,14 +2,16 @@ use std::sync::Arc;
 
 use super::{
   CmsContentGroupType, CmsContentType, CmsFileType, CmsGraphqlQueryType, CmsLayoutType,
-  CmsNavigationItemType, CmsPartialType, CmsVariableType, EventCategoryType, EventsPaginationType,
-  ModelBackedType, PageType, RoomType, StaffPositionType, TicketTypeType, UserConProfileType,
+  CmsNavigationItemType, CmsPartialType, CmsVariableType, EventCategoryType, EventType,
+  EventsPaginationType, ModelBackedType, PageType, RoomType, StaffPositionType, TicketTypeType,
+  UserConProfileType,
 };
 use crate::{
   api::{
     enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
     inputs::{EventFiltersInput, SortInput},
     interfaces::CmsParentImplementation,
+    scalars::DateScalar,
   },
   cms_rendering_context::CmsRenderingContext,
   LiquidRenderer, QueryData,
@@ -18,7 +20,8 @@ use async_graphql::*;
 use chrono::{DateTime, Utc};
 use intercode_entities::{
   cms_parent::CmsParentTrait, cms_partials, conventions, events, links::ConventionToStaffPositions,
-  runs, staff_positions, team_members, user_con_profiles, users,
+  model_ext::time_bounds::TimeBoundsSelectExt, runs, staff_positions, team_members,
+  user_con_profiles, users,
 };
 use liquid::object;
 use sea_orm::{
@@ -123,6 +126,37 @@ impl ConventionType {
   #[graphql(name = "event_mailing_list_domain")]
   async fn event_mailing_list_domain(&self) -> Option<&str> {
     self.model.event_mailing_list_domain.as_deref()
+  }
+
+  async fn events(
+    &self,
+    ctx: &Context<'_>,
+    start: Option<DateScalar>,
+    finish: Option<DateScalar>,
+    #[graphql(name = "include_dropped")] include_dropped: Option<bool>,
+    filters: Option<EventFiltersInput>,
+  ) -> Result<Vec<EventType>, Error> {
+    let mut scope = self
+      .model
+      .find_related(events::Entity)
+      .between(start.map(Into::into), finish.map(Into::into));
+
+    if let Some(true) = include_dropped {
+      scope = scope.filter(events::Column::Status.eq("active"));
+    }
+
+    if let Some(filters) = filters {
+      scope = filters.apply_filters(ctx, &scope)?;
+    }
+
+    Ok(
+      scope
+        .all(ctx.data::<QueryData>()?.db.as_ref())
+        .await?
+        .into_iter()
+        .map(EventType::new)
+        .collect(),
+    )
   }
 
   #[graphql(name = "events_paginated")]

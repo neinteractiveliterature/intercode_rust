@@ -1,5 +1,5 @@
 use async_graphql::*;
-use intercode_entities::form_items;
+use intercode_entities::{form_items, model_ext::form_item_permissions::FormItemRole};
 use intercode_liquid::render_markdown;
 
 use crate::model_backed_type;
@@ -61,7 +61,7 @@ impl FormItemType {
             .map(|(key, value)| {
               let value = if let Some(value) = value.as_str() {
                 if (is_static_text && key == "content") || key == "caption" {
-                  serde_json::Value::String(render_markdown(value))
+                  serde_json::Value::String(render_markdown(value, &Default::default()))
                 } else {
                   serde_json::Value::String(value.to_string())
                 }
@@ -81,11 +81,11 @@ impl FormItemType {
     Ok(None)
   }
 
-  async fn visibility(&self) -> &str {
-    &self.model.visibility
+  async fn visibility(&self) -> FormItemRole {
+    self.model.visibility
   }
 
-  async fn writeability(&self) -> &str {
-    &self.model.writeability
+  async fn writeability(&self) -> FormItemRole {
+    self.model.writeability
   }
 }

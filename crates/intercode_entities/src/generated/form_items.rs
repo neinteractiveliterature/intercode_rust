@@ -2,6 +2,8 @@
 
 use sea_orm::entity::prelude::*;
 
+use crate::model_ext::form_item_permissions::FormItemRole;
+
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
 #[sea_orm(table_name = "form_items")]
 pub struct Model {
@@ -21,8 +23,8 @@ pub struct Model {
   pub default_value: Option<Json>,
   #[sea_orm(column_type = "Text", nullable)]
   pub public_description: Option<String>,
-  pub visibility: String,
-  pub writeability: String,
+  pub visibility: FormItemRole,
+  pub writeability: FormItemRole,
   pub expose_in: Option<Vec<String>>,
 }
 

@@ -1,4 +1,5 @@
 pub use inflector;
+use inflector::string::pluralize;
 use regex::{Captures, Regex, RegexBuilder};
 use serde::{Deserialize, Serialize};
 use std::{borrow::Borrow, collections::HashMap};
@@ -77,6 +78,10 @@ impl IntercodeInflector {
       .replace(result.borrow(), |caps: &Captures| caps[1].to_uppercase());
 
     result.to_string()
+  }
+
+  pub fn pluralize(&self, input: &str) -> String {
+    pluralize::to_plural(input)
   }
 }
 

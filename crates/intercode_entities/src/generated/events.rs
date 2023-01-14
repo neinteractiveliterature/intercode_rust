@@ -23,7 +23,7 @@ pub struct Model {
   pub updated_by_id: Option<i64>,
   pub created_at: Option<DateTime>,
   pub updated_at: Option<DateTime>,
-  pub convention_id: Option<i64>,
+  pub convention_id: i64,
   pub owner_id: Option<i64>,
   pub status: String,
   pub registration_policy: Option<Json>,
