@@ -40,24 +40,24 @@ struct SignupCountDataRow {
   state: String,
   bucket_key: Option<String>,
   requested_bucket_key: Option<String>,
-  counted: bool,
-  count: u64,
+  counted: Option<bool>,
+  count: i64,
 }
 
 #[derive(Default, Clone, Debug)]
 pub struct RunSignupCounts {
   pub count_by_state_and_bucket_key_and_counted:
-    HashMap<String, HashMap<Option<String>, HashMap<SignupCountDataCountedStatus, u64>>>,
+    HashMap<String, HashMap<String, HashMap<SignupCountDataCountedStatus, i64>>>,
 }
 
 impl RunSignupCounts {
-  pub fn add(&mut self, state: &str, bucket_key: Option<&str>, counted: bool, count: u64) {
+  pub fn add(&mut self, state: &str, bucket_key: Option<&str>, counted: bool, count: i64) {
     let state_entry = self
       .count_by_state_and_bucket_key_and_counted
       .entry(state.to_string());
     let count_by_bucket_key = state_entry.or_insert_with(Default::default);
     let count_by_counted = count_by_bucket_key
-      .entry(bucket_key.map(|key| key.to_string()))
+      .entry(bucket_key.map(|key| key.to_string()).unwrap_or_default())
       .or_insert_with(Default::default);
     let current_count_entry = count_by_counted.entry(counted.into());
     current_count_entry
@@ -65,7 +65,7 @@ impl RunSignupCounts {
       .or_insert(count);
   }
 
-  pub fn counted_signups_by_state(&self, state: &str) -> u64 {
+  pub fn counted_signups_by_state(&self, state: &str) -> i64 {
     let count_by_bucket_key_and_counted = self.count_by_state_and_bucket_key_and_counted.get(state);
 
     if let Some(count_by_bucket_key_and_counted) = count_by_bucket_key_and_counted {
@@ -82,7 +82,7 @@ impl RunSignupCounts {
     }
   }
 
-  pub fn not_counted_signups_by_state(&self, state: &str) -> u64 {
+  pub fn not_counted_signups_by_state(&self, state: &str) -> i64 {
     let count_by_bucket_key_and_counted = self.count_by_state_and_bucket_key_and_counted.get(state);
 
     if let Some(count_by_bucket_key_and_counted) = count_by_bucket_key_and_counted {
@@ -131,7 +131,12 @@ pub async fn load_signup_count_data_for_run_ids<I: IntoIterator<Item = i64>>(
       row.bucket_key.as_deref(),
       row.requested_bucket_key.as_deref(),
     );
-    run_counts.add(&row.state, effective_bucket_key, row.counted, row.count);
+    run_counts.add(
+      &row.state,
+      effective_bucket_key,
+      row.counted.unwrap_or(false),
+      row.count,
+    );
 
     acc
   }))

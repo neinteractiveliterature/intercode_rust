@@ -98,10 +98,10 @@ pub struct RegistrationPolicyBucket {
   pub minimum_slots: SlotCount,
   pub preferred_slots: SlotCount,
   pub total_slots: SlotCount,
-  slots_limited: bool,
-  pub anything: bool,
-  not_counted: bool,
-  pub expose_attendees: bool,
+  slots_limited: Option<bool>,
+  pub anything: Option<bool>,
+  not_counted: Option<bool>,
+  pub expose_attendees: Option<bool>,
 }
 
 impl RegistrationPolicyBucket {
@@ -118,7 +118,7 @@ impl RegistrationPolicyBucket {
     &self,
     signups: &[&signups::Model],
   ) -> Result<SlotCount, RegistrationPolicyError> {
-    if !self.slots_limited {
+    if self.slots_unlimited() {
       return Ok(SlotCount::Unlimited);
     }
 
@@ -128,7 +128,7 @@ impl RegistrationPolicyBucket {
         .filter(|signup| {
           signup.state == "confirmed"
             && matches!(&signup.bucket_key, Some(key) if key == &self.key)
-            && (self.not_counted || matches!(signup.counted, Some(true)))
+            && (self.is_not_counted() || matches!(signup.counted, Some(true)))
         })
         .count();
 
@@ -157,7 +157,7 @@ impl RegistrationPolicyBucket {
   }
 
   pub fn is_not_counted(&self) -> bool {
-    self.not_counted
+    self.not_counted.unwrap_or(false)
   }
 
   pub fn is_counted(&self) -> bool {
@@ -165,7 +165,7 @@ impl RegistrationPolicyBucket {
   }
 
   pub fn slots_limited(&self) -> bool {
-    self.slots_limited
+    self.slots_limited.unwrap_or(false)
   }
 
   pub fn slots_unlimited(&self) -> bool {
@@ -266,10 +266,10 @@ impl RegistrationPolicy {
           key: "unlimited".to_string(),
           name: "Signups".to_string(),
           description: "Signups for this event".to_string(),
-          slots_limited: false,
-          anything: false,
-          expose_attendees: false,
-          not_counted: false,
+          slots_limited: Some(false),
+          anything: Some(false),
+          expose_attendees: Some(false),
+          not_counted: Some(false),
           minimum_slots: SlotCount::Unlimited,
           preferred_slots: SlotCount::Unlimited,
           total_slots: SlotCount::Unlimited,
@@ -289,11 +289,11 @@ impl RegistrationPolicy {
   }
 
   pub fn counted_buckets(&self) -> impl Iterator<Item = &RegistrationPolicyBucket> {
-    self.all_buckets().filter(|bucket| !bucket.not_counted)
+    self.all_buckets().filter(|bucket| bucket.is_counted())
   }
 
   pub fn not_counted_buckets(&self) -> impl Iterator<Item = &RegistrationPolicyBucket> {
-    self.all_buckets().filter(|bucket| bucket.not_counted)
+    self.all_buckets().filter(|bucket| bucket.is_not_counted())
   }
 
   slot_count_methods!(total_slots);

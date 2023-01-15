@@ -1,12 +1,13 @@
 use async_graphql::{InputValueError, Scalar, ScalarType};
-use chrono::NaiveDateTime;
+use chrono::{DateTime, NaiveDateTime, Utc};
 
 pub struct DateScalar(pub NaiveDateTime);
 
 #[Scalar(name = "Date")]
 impl ScalarType for DateScalar {
   fn parse(value: async_graphql::Value) -> async_graphql::InputValueResult<Self> {
-    NaiveDateTime::parse(value)
+    DateTime::<Utc>::parse(value)
+      .map(|dt| dt.naive_utc())
       .map(DateScalar)
       .map_err(InputValueError::propagate)
   }

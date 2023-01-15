@@ -16,7 +16,7 @@ impl RunType {
   }
 
   #[graphql(name = "confirmed_signup_count")]
-  async fn confirmed_signup_count(&self, ctx: &Context<'_>) -> Result<u64, Error> {
+  async fn confirmed_signup_count(&self, ctx: &Context<'_>) -> Result<i64, Error> {
     let query_data = ctx.data::<QueryData>()?;
 
     Ok(
@@ -101,7 +101,7 @@ impl RunType {
   }
 
   #[graphql(name = "not_counted_signup_count")]
-  async fn not_counted_signup_count(&self, ctx: &Context<'_>) -> Result<u64, Error> {
+  async fn not_counted_signup_count(&self, ctx: &Context<'_>) -> Result<i64, Error> {
     let query_data = ctx.data::<QueryData>()?;
 
     let counts = query_data

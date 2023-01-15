@@ -14,14 +14,13 @@ use regex::Regex;
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter};
 use seawater::ConnectionWrapper;
 use std::sync::Arc;
-use tracing::{debug, error, warn};
+use tracing::{error, warn};
 
 async fn convention_from_request_parts(
   parts: &mut Parts,
   db: &ConnectionWrapper,
 ) -> Option<conventions::Model> {
   let port_regex = Regex::new(":\\d+$").unwrap();
-  debug!("headers: {:?}", parts.headers);
   let host_if_present = Host::from_request_parts(parts, &())
     .await
     .map(|host| port_regex.replace(&host.0, "").to_string())
