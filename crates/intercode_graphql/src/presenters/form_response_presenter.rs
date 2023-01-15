@@ -12,7 +12,7 @@ use std::collections::HashMap;
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum FormResponsePresentationFormat {
   Plain,
-  Markdown,
+  Html,
 }
 
 pub fn form_response_as_json<'a>(
@@ -34,7 +34,7 @@ pub fn form_response_as_json<'a>(
             (
               identifier.clone(),
               render_form_item_response(
-                &form_item,
+                form_item,
                 &value,
                 attached_images,
                 viewer_role,
@@ -66,7 +66,7 @@ pub async fn attached_images_by_filename<C: ConnectionTrait>(
   )
 }
 
-fn form_item_is_markdown_format(form_item: &form_items::Model) -> bool {
+fn form_item_takes_markdown_input(form_item: &form_items::Model) -> bool {
   if matches!(&form_item.item_type, Some(item_type) if item_type == "free_text") {
     if let Some(Value::Object(properties)) = &form_item.properties {
       if matches!(
@@ -101,7 +101,7 @@ pub fn render_form_item_response(
   }
 
   if let Value::String(value) = value {
-    if form_item_is_markdown_format(form_item) {
+    if form_item_takes_markdown_input(form_item) {
       return Value::String(render_markdown(value, attached_images));
     }
 
@@ -149,7 +149,7 @@ fn replacement_content_for_form_item(
   };
 
   match format {
-    FormResponsePresentationFormat::Markdown if form_item_is_markdown_format(form_item) => {
+    FormResponsePresentationFormat::Html if form_item_takes_markdown_input(form_item) => {
       Some(Value::String(format!("<em>{}</em>", hidden_text)))
     }
     _ => Some(Value::String(hidden_text)),

@@ -1,11 +1,10 @@
 use axum::{
   async_trait,
-  body::HttpBody,
-  extract::{FromRequest, RequestParts},
+  extract::{FromRequestParts, Host},
 };
 use axum_sea_orm_tx::Tx;
 use axum_sessions::SessionHandle;
-use http::StatusCode;
+use http::{request::Parts, StatusCode};
 use intercode_entities::{
   cms_parent::CmsParent, conventions, root_sites, user_con_profiles, users,
 };
@@ -15,18 +14,18 @@ use regex::Regex;
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter};
 use seawater::ConnectionWrapper;
 use std::sync::Arc;
-use tracing::{log::error, warn};
+use tracing::{debug, error, warn};
 
-async fn convention_from_request<B>(
-  req: &RequestParts<B>,
+async fn convention_from_request_parts(
+  parts: &mut Parts,
   db: &ConnectionWrapper,
 ) -> Option<conventions::Model> {
   let port_regex = Regex::new(":\\d+$").unwrap();
-  let host_if_present = req
-    .headers()
-    .get("host")
-    .and_then(|host| host.to_str().ok())
-    .map(|host| port_regex.replace(host, ""));
+  debug!("headers: {:?}", parts.headers);
+  let host_if_present = Host::from_request_parts(parts, &())
+    .await
+    .map(|host| port_regex.replace(&host.0, "").to_string())
+    .ok();
 
   match host_if_present {
     Some(host) => conventions::Entity::find()
@@ -41,11 +40,11 @@ async fn convention_from_request<B>(
   }
 }
 
-async fn cms_parent_from_request<B>(
-  req: &RequestParts<B>,
+async fn cms_parent_from_request_parts(
+  parts: &mut Parts,
   db: &ConnectionWrapper,
 ) -> Result<(Option<CmsParent>, Option<conventions::Model>), DbErr> {
-  let convention = convention_from_request(req, db).await;
+  let convention = convention_from_request_parts(parts, db).await;
 
   let cms_parent = if let Some(convention) = &convention {
     Some(convention.clone().into())
@@ -62,29 +61,28 @@ async fn cms_parent_from_request<B>(
 pub struct QueryDataFromRequest(pub QueryData);
 
 #[async_trait]
-impl<B: Send + Sync> FromRequest<B> for QueryDataFromRequest {
+impl<S: Sync> FromRequestParts<S> for QueryDataFromRequest {
   type Rejection = (StatusCode, String);
 
-  async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
-    let tx = req
-      .extract::<Tx<ConnectionWrapper>>()
+  async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+    let tx = Tx::<ConnectionWrapper>::from_request_parts(parts, state)
       .await
       .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
-    let session_handle = req.extensions().get::<SessionHandle>().unwrap();
-    let session = session_handle.read().await;
     let db = ConnectionWrapper::from(tx);
-    let loader_manager = LoaderManager::new(db.clone());
 
-    let (cms_parent, convention) = cms_parent_from_request(req, &db)
+    let (cms_parent, convention) = cms_parent_from_request_parts(parts, &db)
       .await
       .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
+    let session_handle = parts.extensions.get::<SessionHandle>().unwrap();
+    let session = session_handle.read().await;
+    let loader_manager = LoaderManager::new(db.clone());
 
     let Some(cms_parent) = cms_parent else {
     return Err((StatusCode::INTERNAL_SERVER_ERROR, "No root_site present in database".to_string()));
   };
 
-    let user_timezone = req
-      .headers()
+    let user_timezone = parts
+      .headers
       .get("X-Intercode-User-Timezone")
       .and_then(|header| header.to_str().ok());
 
@@ -148,17 +146,16 @@ impl<B: Send + Sync> FromRequest<B> for QueryDataFromRequest {
 pub struct AuthorizationInfoAndQueryDataFromRequest(pub AuthorizationInfo, pub QueryData);
 
 #[async_trait]
-impl<B: HttpBody + Send + Sync> FromRequest<B> for AuthorizationInfoAndQueryDataFromRequest {
+impl<S: Sync> FromRequestParts<S> for AuthorizationInfoAndQueryDataFromRequest {
   type Rejection = http::StatusCode;
 
-  async fn from_request(req: &mut axum::extract::RequestParts<B>) -> Result<Self, Self::Rejection> {
-    let QueryDataFromRequest(query_data) =
-      QueryDataFromRequest::from_request(req)
-        .await
-        .map_err(|(code, err)| {
-          error!("{}", err);
-          code
-        })?;
+  async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+    let QueryDataFromRequest(query_data) = QueryDataFromRequest::from_request_parts(parts, state)
+      .await
+      .map_err(|(code, err)| {
+        error!("{}", err);
+        code
+      })?;
 
     Ok(AuthorizationInfoAndQueryDataFromRequest(
       AuthorizationInfo::new(

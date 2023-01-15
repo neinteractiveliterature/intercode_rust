@@ -54,7 +54,7 @@ where
       &attached_images,
       // TODO get viewer_role from policy object
       FormItemRole::Normal,
-      FormResponsePresentationFormat::Markdown,
+      FormResponsePresentationFormat::Html,
       &schema_data.language_loader,
       &IntercodeInflector::new().pluralize(&self.get_team_member_name(ctx).await?),
     )))

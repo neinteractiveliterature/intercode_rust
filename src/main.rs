@@ -9,6 +9,7 @@ mod check_liquid;
 mod csrf;
 mod db_sessions;
 mod drops;
+mod form_or_multipart;
 mod legacy_passwords;
 mod liquid_renderer;
 mod middleware;
