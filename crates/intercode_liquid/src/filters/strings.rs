@@ -1,3 +1,5 @@
+#![allow(clippy::box_default)]
+
 use intercode_inflector::inflector::cases::titlecase::to_title_case;
 use intercode_inflector::inflector::string::pluralize::to_plural;
 use intercode_inflector::inflector::string::singularize::to_singular;

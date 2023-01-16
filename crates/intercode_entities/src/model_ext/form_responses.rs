@@ -102,7 +102,21 @@ impl FormResponse for event_proposals::Model {
 
   fn get(&self, identifier: &str) -> Option<JsonValue> {
     match identifier {
-      // TODO event_proposal form response fields
+      "title" => self.title.clone().map(JsonValue::String),
+      "email" => self.email.clone().map(JsonValue::String),
+      // TODO event_email
+      // "event_email" => ,
+      // TODO age_restrictions
+      // "age_restrictions" => ,
+      "team_mailing_list_name" => self.team_mailing_list_name.clone().map(JsonValue::String),
+      "length_seconds" => self
+        .length_seconds
+        .map(|length_seconds| JsonValue::Number(length_seconds.into())),
+      "description" => self.description.clone().map(JsonValue::String),
+      "short_blurb" => self.short_blurb.clone().map(JsonValue::String),
+      "registration_policy" => self.registration_policy.clone(),
+      "can_play_concurrently" => self.can_play_concurrently.map(JsonValue::Bool),
+      "timeblock_preferences" => self.timeblock_preferences.clone(),
       _ => self
         .additional_info
         .as_ref()
@@ -130,7 +144,24 @@ impl FormResponse for user_con_profiles::Model {
 
   fn get(&self, identifier: &str) -> Option<JsonValue> {
     match identifier {
-      // TODO user_con_profile form response fields
+      "first_name" => Some(JsonValue::String(self.first_name.clone())),
+      "last_name" => Some(JsonValue::String(self.last_name.clone())),
+      "nickname" => self.nickname.clone().map(JsonValue::String),
+      "birth_date" => self
+        .birth_date
+        .map(|date| JsonValue::String(date.to_string())),
+      "address" => self.address.clone().map(JsonValue::String),
+      "city" => self.city.clone().map(JsonValue::String),
+      "state" => self.state.clone().map(JsonValue::String),
+      "zipcode" => self.zipcode.clone().map(JsonValue::String),
+      "country" => self.country.clone().map(JsonValue::String),
+      "mobile_phone" => self.mobile_phone.clone().map(JsonValue::String),
+      "allow_sms" => Some(JsonValue::Bool(self.allow_sms)),
+      "day_phone" => self.day_phone.clone().map(JsonValue::String),
+      "evening_phone" => self.evening_phone.clone().map(JsonValue::String),
+      "best_call_time" => self.best_call_time.clone().map(JsonValue::String),
+      "preferred_contact" => self.preferred_contact.clone().map(JsonValue::String),
+      "receive_whos_free_emails" => Some(JsonValue::Bool(self.receive_whos_free_emails)),
       _ => self
         .additional_info
         .as_ref()

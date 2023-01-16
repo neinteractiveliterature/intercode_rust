@@ -1,3 +1,5 @@
+#![allow(clippy::box_default)]
+
 use liquid_core::{
   Display_filter, Filter, FilterReflection, ParseFilter, Result, Runtime, Value, ValueView,
 };
