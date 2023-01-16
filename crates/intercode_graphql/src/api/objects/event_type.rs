@@ -11,6 +11,7 @@ use crate::{
 };
 use async_graphql::*;
 use async_session::async_trait;
+use chrono::NaiveDateTime;
 use intercode_entities::{
   events, forms, model_ext::form_item_permissions::FormItemRole, RegistrationPolicy,
 };
@@ -48,6 +49,11 @@ impl EventType {
       .await?
       .expect_model()?;
     Ok(ConventionType::new(model))
+  }
+
+  #[graphql(name = "created_at")]
+  async fn created_at(&self) -> Option<NaiveDateTime> {
+    self.model.created_at
   }
 
   async fn email(&self) -> &Option<String> {

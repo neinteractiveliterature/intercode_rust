@@ -1,6 +1,6 @@
 use async_graphql::{Context, Error, Object};
 use intercode_entities::events;
-use sea_orm::{ConnectionTrait, EntityTrait, PaginatorTrait, Select, SelectModel};
+use sea_orm::{ConnectionTrait, EntityTrait, Paginator, PaginatorTrait, Select, SelectModel};
 
 use crate::{api::interfaces::PaginationImplementation, QueryData};
 
@@ -28,6 +28,11 @@ impl EventsPaginationType {
 
 #[Object(name = "EventsPagination")]
 impl EventsPaginationType {
+  #[graphql(name = "current_page")]
+  async fn current_page(&self) -> u64 {
+    self.page
+  }
+
   async fn entries(&self, ctx: &Context<'_>) -> Result<Vec<EventType>, Error> {
     let db = ctx.data::<QueryData>()?.db.as_ref();
     let (paginator, _) = self.paginator_and_page_size(db);
@@ -40,13 +45,28 @@ impl EventsPaginationType {
         .collect(),
     )
   }
+
+  #[graphql(name = "per_page")]
+  async fn per_page(&self) -> u64 {
+    self.per_page
+  }
+
+  #[graphql(name = "total_entries")]
+  async fn total_entries(&self, ctx: &Context<'_>) -> Result<u64, Error> {
+    <Self as PaginationImplementation<SelectModel<events::Model>>>::total_entries(self, ctx).await
+  }
+
+  #[graphql(name = "total_pages")]
+  async fn total_pages(&self, ctx: &Context<'_>) -> Result<u64, Error> {
+    <Self as PaginationImplementation<SelectModel<events::Model>>>::total_pages(self, ctx).await
+  }
 }
 
 impl PaginationImplementation<SelectModel<events::Model>> for EventsPaginationType {
   fn paginator_and_page_size<'s, C: ConnectionTrait>(
     &'s self,
     db: &'s C,
-  ) -> (sea_orm::Paginator<'s, C, SelectModel<events::Model>>, u64) {
+  ) -> (Paginator<'s, C, SelectModel<events::Model>>, u64) {
     (
       self.scope.clone().into_model().paginate(db, self.per_page),
       self.per_page,

@@ -55,9 +55,10 @@ impl EventFiltersInput {
   ) -> Result<Select<events::Entity>, Error> {
     let mut scope = scope.clone();
     if let Some(category) = &self.category {
-      scope = scope.filter(
-        events::Column::EventCategoryId.is_in(category.iter().filter_map(|id| id.to_owned())),
-      )
+      let category = category.iter().copied().flatten().collect::<Vec<_>>();
+      if !category.is_empty() {
+        scope = scope.filter(events::Column::EventCategoryId.is_in(category))
+      }
     }
 
     if let Some(title) = &self.title {
