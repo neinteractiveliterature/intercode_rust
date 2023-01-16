@@ -46,7 +46,7 @@ where
     let form_items = form_items_result.expect_models()?;
 
     let model = self.get_model();
-    let attached_images = attached_images_by_filename(model, &query_data.db).await?;
+    let attached_images = attached_images_by_filename(model, query_data).await?;
 
     Ok(JsonScalar(form_response_as_json(
       model,

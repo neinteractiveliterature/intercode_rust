@@ -141,7 +141,7 @@ impl EventType {
     let query_data = ctx.data::<QueryData>()?;
     Ok(render_markdown(
       self.model.short_blurb.as_deref().unwrap_or_default(),
-      &attached_images_by_filename(&self.model, &query_data.db).await?,
+      &attached_images_by_filename(&self.model, query_data).await?,
     ))
   }
 

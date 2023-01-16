@@ -2,15 +2,33 @@ use crate::{active_storage_attachments, event_proposals, events, user_con_profil
 use sea_orm::{ColumnTrait, EntityTrait, JsonValue, QueryFilter, Select};
 
 pub trait FormResponse: Send + Sync {
-  fn attached_images(&self) -> Select<active_storage_attachments::Entity>;
+  type Entity: EntityTrait;
+
+  fn get_id_column() -> <Self::Entity as EntityTrait>::Column
+  where
+    Self: Sized;
+  fn attached_images_scope() -> Select<active_storage_attachments::Entity>
+  where
+    Self: Sized;
+
+  fn get_id(&self) -> i64;
   fn get(&self, identifier: &str) -> Option<JsonValue>;
 }
 
 impl FormResponse for events::Model {
-  fn attached_images(&self) -> Select<active_storage_attachments::Entity> {
+  type Entity = events::Entity;
+
+  fn get_id_column() -> <Self::Entity as EntityTrait>::Column {
+    events::Column::Id
+  }
+
+  fn get_id(&self) -> i64 {
+    self.id
+  }
+
+  fn attached_images_scope() -> Select<active_storage_attachments::Entity> {
     active_storage_attachments::Entity::find()
       .filter(active_storage_attachments::Column::RecordType.eq("Event"))
-      .filter(active_storage_attachments::Column::RecordId.eq(self.id))
       .filter(active_storage_attachments::Column::Name.eq("image"))
   }
 
@@ -66,10 +84,19 @@ impl FormResponse for events::Model {
 }
 
 impl FormResponse for event_proposals::Model {
-  fn attached_images(&self) -> Select<active_storage_attachments::Entity> {
+  type Entity = event_proposals::Entity;
+
+  fn get_id_column() -> <Self::Entity as EntityTrait>::Column {
+    event_proposals::Column::Id
+  }
+
+  fn get_id(&self) -> i64 {
+    self.id
+  }
+
+  fn attached_images_scope() -> Select<active_storage_attachments::Entity> {
     active_storage_attachments::Entity::find()
       .filter(active_storage_attachments::Column::RecordType.eq("EventProposal"))
-      .filter(active_storage_attachments::Column::RecordId.eq(self.id))
       .filter(active_storage_attachments::Column::Name.eq("image"))
   }
 
@@ -85,10 +112,19 @@ impl FormResponse for event_proposals::Model {
 }
 
 impl FormResponse for user_con_profiles::Model {
-  fn attached_images(&self) -> Select<active_storage_attachments::Entity> {
+  type Entity = user_con_profiles::Entity;
+
+  fn get_id_column() -> <Self::Entity as EntityTrait>::Column {
+    user_con_profiles::Column::Id
+  }
+
+  fn get_id(&self) -> i64 {
+    self.id
+  }
+
+  fn attached_images_scope() -> Select<active_storage_attachments::Entity> {
     active_storage_attachments::Entity::find()
       .filter(active_storage_attachments::Column::RecordType.eq("UserConProfile"))
-      .filter(active_storage_attachments::Column::RecordId.eq(self.id))
       .filter(active_storage_attachments::Column::Name.eq("image"))
   }
 

@@ -1,3 +1,4 @@
+use async_graphql::Error;
 use i18n_embed::fluent::FluentLanguageLoader;
 use i18n_embed_fl::fl;
 use intercode_entities::{
@@ -5,9 +6,11 @@ use intercode_entities::{
   model_ext::{form_item_permissions::FormItemRole, FormResponse},
 };
 use intercode_liquid::render_markdown;
-use sea_orm::{ConnectionTrait, DbErr};
+use sea_orm::EntityTrait;
 use serde_json::Value;
 use std::collections::HashMap;
+
+use crate::QueryData;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum FormResponsePresentationFormat {
@@ -15,8 +18,8 @@ pub enum FormResponsePresentationFormat {
   Html,
 }
 
-pub fn form_response_as_json<'a>(
-  form_response: &dyn FormResponse,
+pub fn form_response_as_json<'a, E: EntityTrait>(
+  form_response: &dyn FormResponse<Entity = E>,
   form_items: impl Iterator<Item = &'a form_items::Model>,
   attached_images: &HashMap<String, active_storage_blobs::Model>,
   viewer_role: FormItemRole,
@@ -50,18 +53,19 @@ pub fn form_response_as_json<'a>(
   )
 }
 
-pub async fn attached_images_by_filename<C: ConnectionTrait>(
-  form_response: &dyn FormResponse,
-  db: &C,
-) -> Result<HashMap<String, active_storage_blobs::Model>, DbErr> {
+pub async fn attached_images_by_filename<E: EntityTrait>(
+  form_response: &dyn FormResponse<Entity = E>,
+  query_data: &QueryData,
+) -> Result<HashMap<String, active_storage_blobs::Model>, Error> {
   Ok(
-    form_response
-      .attached_images()
-      .find_also_related(active_storage_blobs::Entity)
-      .all(db)
+    query_data
+      .loaders
+      .event_attached_images
+      .load_one(form_response.get_id())
       .await?
+      .unwrap_or_default()
       .into_iter()
-      .filter_map(|(_image, blob)| blob.map(|blob| (blob.filename.clone(), blob)))
+      .map(|blob| (blob.filename.clone(), blob))
       .collect(),
   )
 }
