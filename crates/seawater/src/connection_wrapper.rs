@@ -1,7 +1,8 @@
 use async_trait::async_trait;
 use axum_sea_orm_tx::Tx;
 use sea_orm::{
-  ConnectionTrait, DatabaseConnection, DatabaseTransaction, TransactionError, TransactionTrait,
+  AccessMode, ConnectionTrait, DatabaseConnection, DatabaseTransaction, IsolationLevel,
+  TransactionError, TransactionTrait,
 };
 use std::{fmt::Debug, future::Future, pin::Pin, sync::Arc};
 
@@ -111,6 +112,18 @@ impl TransactionTrait for ConnectionWrapper {
     }
   }
 
+  async fn begin_with_config(
+    &self,
+    isolation_level: Option<IsolationLevel>,
+    access_mode: Option<AccessMode>,
+  ) -> Result<DatabaseTransaction, sea_orm::DbErr> {
+    match self {
+      Self::DatabaseConnection(conn) => conn.begin_with_config(isolation_level, access_mode).await,
+      Self::DatabaseTransaction(tx) => tx.begin_with_config(isolation_level, access_mode).await,
+      Self::Tx(tx) => tx.begin_with_config(isolation_level, access_mode).await,
+    }
+  }
+
   async fn transaction<F, T, E>(&self, callback: F) -> Result<T, TransactionError<E>>
   where
     F: for<'c> FnOnce(
@@ -124,6 +137,37 @@ impl TransactionTrait for ConnectionWrapper {
       Self::DatabaseConnection(conn) => conn.transaction(callback).await,
       Self::DatabaseTransaction(tx) => tx.transaction(callback).await,
       Self::Tx(tx) => tx.transaction(callback).await,
+    }
+  }
+
+  async fn transaction_with_config<F, T, E>(
+    &self,
+    callback: F,
+    isolation_level: Option<IsolationLevel>,
+    access_mode: Option<AccessMode>,
+  ) -> Result<T, TransactionError<E>>
+  where
+    F: for<'c> FnOnce(
+        &'c DatabaseTransaction,
+      ) -> Pin<Box<dyn Future<Output = Result<T, E>> + Send + 'c>>
+      + Send,
+    T: Send,
+    E: std::error::Error + Send,
+  {
+    match self {
+      Self::DatabaseConnection(conn) => {
+        conn
+          .transaction_with_config(callback, isolation_level, access_mode)
+          .await
+      }
+      Self::DatabaseTransaction(tx) => {
+        tx.transaction_with_config(callback, isolation_level, access_mode)
+          .await
+      }
+      Self::Tx(tx) => {
+        tx.transaction_with_config(callback, isolation_level, access_mode)
+          .await
+      }
     }
   }
 }

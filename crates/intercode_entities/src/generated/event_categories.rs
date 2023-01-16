@@ -47,7 +47,7 @@ pub enum Relation {
     on_update = "NoAction",
     on_delete = "NoAction"
   )]
-  Forms2,
+  EventForm,
   #[sea_orm(
     belongs_to = "super::forms::Entity",
     from = "Column::EventProposalFormId",
@@ -55,7 +55,7 @@ pub enum Relation {
     on_update = "NoAction",
     on_delete = "NoAction"
   )]
-  Forms1,
+  EventProposalForm,
   #[sea_orm(
     belongs_to = "super::departments::Entity",
     from = "Column::DepartmentId",

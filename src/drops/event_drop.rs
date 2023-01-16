@@ -25,6 +25,10 @@ impl EventDrop {
     self.model.id
   }
 
+  fn author(&self) -> Option<&str> {
+    self.model.author.as_deref()
+  }
+
   fn created_at(&self) -> Option<DateTime> {
     self
       .model
@@ -32,8 +36,28 @@ impl EventDrop {
       .and_then(naive_date_time_to_liquid_date_time)
   }
 
+  fn email(&self) -> Option<&str> {
+    self.model.email.as_deref()
+  }
+
   pub fn length_seconds(&self) -> i32 {
     self.model.length_seconds
+  }
+
+  async fn team_member_name(&self) -> String {
+    let name_future = self
+      .event_category()
+      .await
+      .get_inner()
+      .map(|event_category| event_category.team_member_name());
+
+    let name = if let Some(name_future) = name_future {
+      name_future.await.clone()
+    } else {
+      "team_member".to_string().into()
+    };
+
+    name.expect_inner().clone()
   }
 
   fn title(&self) -> &str {

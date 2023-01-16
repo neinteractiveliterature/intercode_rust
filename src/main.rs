@@ -5,15 +5,18 @@ extern crate chrono_tz;
 extern crate dotenv;
 extern crate tracing;
 
+mod check_liquid;
 mod csrf;
 mod db_sessions;
 mod drops;
+mod form_or_multipart;
 mod legacy_passwords;
 mod liquid_renderer;
 mod middleware;
 mod server;
 
 use async_graphql::*;
+use check_liquid::check_liquid;
 use clap::{command, FromArgMatches, Parser, Subcommand};
 use dotenv::dotenv;
 use intercode_graphql::api;
@@ -26,6 +29,7 @@ use sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};
 use server::serve;
 use std::env;
 use std::time::Duration;
+use tokio::runtime::Runtime;
 use tonic::metadata::{AsciiMetadataValue, MetadataMap};
 use tonic::transport::ClientTlsConfig;
 use tracing::{log::*, Subscriber};
@@ -143,24 +147,7 @@ fn setup_otlp<S: Subscriber + for<'span> tracing_subscriber::registry::LookupSpa
 }
 
 async fn run() -> Result<()> {
-  let env_filter = EnvFilter::from_default_env();
-  let fmt_layer = tracing_subscriber::fmt::layer()
-    .with_test_writer()
-    .with_filter(env_filter);
-  let subscriber = tracing_subscriber::registry().with(fmt_layer);
-
-  let (subscriber, _guard) = setup_flamegraph_subscriber(subscriber);
-
-  let otlp_layer = env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
-    .map_err(Into::into)
-    .and_then(|endpoint| setup_otlp(&subscriber, endpoint))
-    .ok();
-  let subscriber = subscriber.with(otlp_layer);
-
-  #[cfg(feature = "tokio-console")]
-  let subscriber = subscriber.with(console_subscriber::spawn());
-
-  subscriber.init();
+  setup_tracing(EnvFilter::from_default_env());
 
   let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
   info!("Connecting: {}", database_url);
@@ -170,10 +157,42 @@ async fn run() -> Result<()> {
   serve(db).await
 }
 
+fn setup_tracing(env_filter: EnvFilter) {
+  let fmt_layer = tracing_subscriber::fmt::layer()
+    .with_test_writer()
+    .with_filter(env_filter);
+  let subscriber = tracing_subscriber::registry().with(fmt_layer);
+  let (subscriber, _guard) = setup_flamegraph_subscriber(subscriber);
+  let otlp_layer = env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
+    .map_err(Into::into)
+    .and_then(|endpoint| setup_otlp(&subscriber, endpoint))
+    .ok();
+  let subscriber = subscriber.with(otlp_layer);
+  #[cfg(feature = "tokio-console")]
+  let subscriber = subscriber.with(console_subscriber::spawn());
+  subscriber.init();
+}
+
 #[derive(Parser, Debug)]
 enum Subcommands {
   Serve,
+  CheckLiquid,
   ExportSchema,
+}
+
+fn build_runtime() -> Runtime {
+  let mut builder = tokio::runtime::Builder::new_multi_thread();
+  builder.enable_all();
+
+  if let Ok(worker_threads) = env::var("WORKER_THREADS") {
+    builder.worker_threads(
+      worker_threads
+        .parse()
+        .expect("WORKER_THREADS must be a number if set"),
+    );
+  }
+
+  builder.build().unwrap()
 }
 
 fn main() -> Result<()> {
@@ -202,19 +221,10 @@ fn main() -> Result<()> {
       println!("{}", schema.sdl());
     }
     Subcommands::Serve => {
-      let mut builder = tokio::runtime::Builder::new_multi_thread();
-      builder.enable_all();
-
-      if let Ok(worker_threads) = env::var("WORKER_THREADS") {
-        builder.worker_threads(
-          worker_threads
-            .parse()
-            .expect("WORKER_THREADS must be a number if set"),
-        );
-      }
-
-      let rt = builder.build().unwrap();
-      rt.block_on(run())?;
+      build_runtime().block_on(run())?;
+    }
+    Subcommands::CheckLiquid => {
+      build_runtime().block_on(check_liquid())?;
     }
   }
 

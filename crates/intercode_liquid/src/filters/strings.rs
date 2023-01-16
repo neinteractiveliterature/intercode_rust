@@ -1,3 +1,5 @@
+#![allow(clippy::box_default)]
+
 use intercode_inflector::inflector::cases::titlecase::to_title_case;
 use intercode_inflector::inflector::string::pluralize::to_plural;
 use intercode_inflector::inflector::string::singularize::to_singular;
@@ -50,11 +52,15 @@ impl Filter for PluralizeFilter {
   fn evaluate(&self, input: &dyn ValueView, runtime: &dyn Runtime) -> Result<Value> {
     let args = self.args.evaluate(runtime)?;
 
+    if input.is_nil() {
+      return Ok(Value::Nil);
+    }
+
     let input = input
       .as_scalar()
       .ok_or_else(|| invalid_input("String or number expected"))?;
 
-    if let Some(count) = input.to_integer() {
+    if let Some(count) = input.to_integer_strict() {
       let singular = args
         .singular
         .as_scalar()

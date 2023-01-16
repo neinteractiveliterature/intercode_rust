@@ -4,6 +4,7 @@
 mod generated;
 pub mod links;
 mod maximum_event_signups_value;
+mod registration_policy;
 pub use generated::*;
 
 pub mod cms_parent;
@@ -11,3 +12,4 @@ pub mod model_ext;
 
 pub use maximum_event_signups_value::MaximumEventSignupsValue;
 pub use model_ext::UserNames;
+pub use registration_policy::*;

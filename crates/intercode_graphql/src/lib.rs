@@ -18,6 +18,7 @@ pub mod cms_rendering_context;
 pub mod entity_relay_connection;
 pub mod loaders;
 mod policy_guard;
+mod presenters;
 
 #[derive(Clone, Debug)]
 pub struct SchemaData {

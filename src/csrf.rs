@@ -3,7 +3,7 @@
 
 use crate::async_trait::async_trait;
 use axum::{
-  extract::{FromRequest, RequestParts},
+  extract::FromRequestParts,
   http::{self, StatusCode},
   middleware::Next,
   response::{IntoResponse, IntoResponseParts, Response, ResponseParts},
@@ -14,7 +14,7 @@ use axum_extra::extract::{
 };
 use axum_sessions::SameSite;
 use csrf::{CsrfCookie, CsrfProtection, CsrfToken};
-use http::Request;
+use http::{request::Parts, Request};
 use std::{
   borrow::Cow,
   fmt::{Debug, Display},
@@ -99,28 +99,25 @@ pub struct CsrfData {
 
 /// this auto pulls a Cookies nd Generates the CsrfToken from the extensions
 #[async_trait]
-impl<B> FromRequest<B> for CsrfData
-where
-  B: Send,
-{
+impl<S: Send + Sync> FromRequestParts<S> for CsrfData {
   type Rejection = CsrfExtractionFailure;
 
-  async fn from_request(req: &mut RequestParts<B>) -> Result<Self, Self::Rejection> {
-    let config = req
-      .extensions()
+  async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+    let config = parts
+      .extensions
       .get::<CsrfConfig>()
       .cloned()
       .ok_or(CsrfExtractionFailure("Can't extract CsrfConfig extension"))?;
 
-    let jar = req.extract::<CookieJar>().await.unwrap();
+    let jar = CookieJar::from_request_parts(parts, state).await.unwrap();
     let cookie: Option<Vec<u8>> = jar
       .get(&config.cookie_name)
       .map(|cookie| cookie.value())
       .and_then(|value| base64::decode(value).ok());
     let cookie = cookie.and_then(|value| config.protect.parse_cookie(&value).ok());
 
-    let header: Option<Vec<u8>> = req
-      .headers()
+    let header: Option<Vec<u8>> = parts
+      .headers
       .get("x-csrf-token")
       .and_then(|header_value| base64::decode(header_value.as_bytes()).ok());
     let token = header.and_then(|value| config.protect.parse_token(&value).ok());
@@ -185,19 +182,11 @@ impl CsrfData {
 }
 
 pub async fn csrf_middleware<B: Send>(
+  token: CsrfData,
+  jar: CookieJar,
   req: Request<B>,
   next: Next<B>,
 ) -> Result<Response, (StatusCode, String)> {
-  let mut parts = RequestParts::new(req);
-  let token = parts
-    .extract::<CsrfData>()
-    .await
-    .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.0.to_owned()))?;
-  let jar = parts.extract::<CookieJar>().await.unwrap();
-  let req = parts
-    .try_into_request()
-    .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
-
   let future = next.run(req);
   let response = future.await;
   let cookie = token.build_cookie();

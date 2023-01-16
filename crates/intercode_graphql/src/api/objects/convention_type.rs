@@ -1,22 +1,29 @@
+use std::sync::Arc;
+
 use super::{
   CmsContentGroupType, CmsContentType, CmsFileType, CmsGraphqlQueryType, CmsLayoutType,
-  CmsNavigationItemType, CmsPartialType, CmsVariableType, EventsPaginationType, ModelBackedType,
-  PageType, RoomType, StaffPositionType, TicketTypeType, UserConProfileType,
+  CmsNavigationItemType, CmsPartialType, CmsVariableType, EventCategoryType, EventType,
+  EventsPaginationType, ModelBackedType, PageType, RoomType, StaffPositionType, TicketTypeType,
+  UserConProfileType,
 };
 use crate::{
   api::{
     enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
     inputs::{EventFiltersInput, SortInput},
     interfaces::CmsParentImplementation,
+    scalars::DateScalar,
   },
-  QueryData,
+  cms_rendering_context::CmsRenderingContext,
+  LiquidRenderer, QueryData,
 };
 use async_graphql::*;
 use chrono::{DateTime, Utc};
 use intercode_entities::{
-  conventions, events, links::ConventionToStaffPositions, runs, staff_positions, team_members,
+  cms_parent::CmsParentTrait, cms_partials, conventions, events, links::ConventionToStaffPositions,
+  model_ext::time_bounds::TimeBoundsSelectExt, runs, staff_positions, team_members,
   user_con_profiles, users,
 };
+use liquid::object;
 use sea_orm::{
   sea_query::Expr, ColumnTrait, EntityTrait, JoinType, ModelTrait, Order, QueryFilter, QueryOrder,
   QuerySelect, RelationTrait,
@@ -99,9 +106,57 @@ impl ConventionType {
       .map(|t| DateTime::<Utc>::from_utc(t, Utc))
   }
 
+  #[graphql(name = "event_categories")]
+  async fn event_categories(&self, ctx: &Context<'_>) -> Result<Vec<EventCategoryType>, Error> {
+    Ok(
+      ctx
+        .data::<QueryData>()?
+        .loaders
+        .convention_event_categories
+        .load_one(self.model.id)
+        .await?
+        .expect_models()?
+        .iter()
+        .cloned()
+        .map(EventCategoryType::new)
+        .collect(),
+    )
+  }
+
   #[graphql(name = "event_mailing_list_domain")]
   async fn event_mailing_list_domain(&self) -> Option<&str> {
     self.model.event_mailing_list_domain.as_deref()
+  }
+
+  async fn events(
+    &self,
+    ctx: &Context<'_>,
+    start: Option<DateScalar>,
+    finish: Option<DateScalar>,
+    #[graphql(name = "include_dropped")] include_dropped: Option<bool>,
+    filters: Option<EventFiltersInput>,
+  ) -> Result<Vec<EventType>, Error> {
+    let mut scope = self
+      .model
+      .find_related(events::Entity)
+      .between(start.map(Into::into), finish.map(Into::into));
+
+    if let Some(true) = include_dropped {
+      scope = scope.filter(events::Column::Status.eq("active"));
+    }
+
+    if let Some(filters) = filters {
+      scope = filters.apply_filters(ctx, &scope)?;
+    }
+
+    Ok(
+      scope
+        .all(ctx.data::<QueryData>()?.db.as_ref())
+        .await?
+        .into_iter()
+        .map(EventType::new)
+        .collect(),
+    )
   }
 
   #[graphql(name = "events_paginated")]
@@ -109,7 +164,7 @@ impl ConventionType {
     &self,
     ctx: &Context<'_>,
     page: Option<u64>,
-    per_page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
     filters: Option<EventFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<EventsPaginationType, Error> {
@@ -198,6 +253,31 @@ impl ConventionType {
         .await
         .map(|result| result.map(UserConProfileType::new))
         .map_err(|e| async_graphql::Error::new(e.to_string()))
+    } else {
+      Ok(None)
+    }
+  }
+
+  #[graphql(name = "pre_schedule_content_html")]
+  async fn pre_schedule_content_html(&self, ctx: &Context<'_>) -> Result<Option<String>, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
+
+    let partial = self
+      .model
+      .cms_partials()
+      .filter(cms_partials::Column::Name.eq("pre_schedule_text"))
+      .one(&query_data.db)
+      .await?;
+
+    if let Some(partial) = partial {
+      let cms_rendering_context =
+        CmsRenderingContext::new(object!({}), query_data, liquid_renderer.clone());
+
+      cms_rendering_context
+        .render_liquid(&partial.content.unwrap_or_default(), None)
+        .await
+        .map(Some)
     } else {
       Ok(None)
     }

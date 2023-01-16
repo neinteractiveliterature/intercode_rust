@@ -11,6 +11,8 @@ use sea_orm::{ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QuerySelect};
 use seawater::ConnectionWrapper;
 use tokio::runtime::Handle;
 
+use crate::build_active_storage_blob_url;
+
 #[derive(Clone, Debug)]
 pub struct FileUrlTag {
   cms_parent: Arc<CmsParent>,
@@ -133,8 +135,7 @@ impl Renderable for FileUrl {
       ))),
     }?;
 
-    // TODO do something actually real here
-    let url = format!("https://assets.neilhosting.net/{}", blob.key);
+    let url = build_active_storage_blob_url(&blob);
 
     if let Err(error) = writer.write(url.as_bytes()) {
       Err(Error::with_msg(error.to_string()))

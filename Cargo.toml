@@ -31,14 +31,15 @@ tokio-console = ["dep:console-subscriber", "tokio/full", "tokio/tracing"]
 
 [dependencies]
 anyhow = "1.0.66"
-async-graphql = {version = "~4.0.16", features = ["tracing", "dataloader", "chrono"]}
-async-graphql-axum = "4.0.16"
-async-graphql-value = "~4.0.16"
+async-graphql = {version = "~5.0", features = ["tracing", "dataloader", "chrono"]}
+async-graphql-axum = "~5.0"
+async-graphql-value = "~5.0"
 async-stripe = {version = "0.15.0", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
-axum = {version = "0.5.17", features = ["multipart"]}
-axum-extra = {version = "0.3.7", features = ["cookie"]}
-axum-sea-orm-tx = {version = "0.1.0", git = "https://github.com/nbudin/axum-sea-orm-tx.git"}
-axum-sessions = "0.3.2"
+axum = {version = "~0.6", features = ["multipart", "macros", "headers"]}
+axum-extra = {version = "~0.4", features = ["cookie"]}
+axum-sea-orm-tx = {git = "https://github.com/nbudin/axum-sea-orm-tx.git"}
+axum-server = {version = "0.4.4", features = ["tls-rustls"]}
+axum-sessions = "~0.4"
 base64 = "0.13.1"
 bcrypt = "0.13.0"
 bumpalo-herd = "0.1.2"
@@ -47,36 +48,34 @@ chrono-tz = "0.8"
 clap = {version = "4.0.29", features = ["derive", "cargo"]}
 console-subscriber = {version = "0.1.8", optional = true}
 csrf = "0.4.1"
-ctrlc = "3.2.4"
 dhat = {version = "0.3.2", optional = true}
 dotenv = "0.15.0"
 futures = "0.3.25"
-generational-arena = "0.2.8"
 hex = "0.4.3"
 html-escape = "0.2.12"
 http = "0.2.8"
 hyper = "0.14.23"
 i18n-embed = {version = "0.13", features = ["fluent-system"]}
 i18n-embed-fl = "0.6"
+indicatif = {version = "0.17.2", features = ["improved_unicode"]}
 intercode_entities = {path = "./crates/intercode_entities"}
 intercode_graphql = {path = "./crates/intercode_graphql"}
 intercode_inflector = {path = "./crates/intercode_inflector"}
 intercode_liquid = {path = "./crates/intercode_liquid"}
 intercode_policies = {path = "./crates/intercode_policies"}
 intercode_timespan = {path = "./crates/intercode_timespan"}
+itertools = "0.10.5"
 lazy_liquid_value_view = {path = "./crates/lazy_liquid_value_view"}
 liquid = {workspace = true}
 liquid-core = {workspace = true}
 md5 = "*"
-memo-map = "0.3.1"
 once_cell = "1.16.0"
 opentelemetry = {version = "0.18.0", features = ["rt-tokio"]}
 opentelemetry-otlp = {version = "0.11.0", features = ["tls-roots"]}
 oxide-auth = "0.5.3"
-oxide-auth-axum = "0.2.0"
+oxide-auth-axum = "~0.3.0"
 parking_lot = "0.12.1"
 pulldown-cmark = "0.9.2"
-quote = "1.0.21"
 regex = "*"
 rust-embed = "6"
 rustls-pemfile = "1.0.1"
@@ -85,12 +84,10 @@ seawater = {path = "./crates/seawater"}
 serde = "1.0"
 serde_json = "1.0"
 sha1 = "0.10.5"
-syn = "1.0.105"
 time = "0.3.17"
-tls-listener = {version = "0.5.1", features = ["rustls", "tokio-net"]}
 tokio = {version = "~1.22", features = ["rt-multi-thread", "macros", "signal", "tracing"]}
-tokio-rustls = "0.23.4"
-tonic = "0.8.2"
+tokio-stream = {version = "0.1.11", features = ["net"]}
+tonic = "~0.8.3"
 tower = {version = "0.4.13", features = ["limit", "make"]}
 tower-http = {version = "0.3.4", features = ["catch-panic", "compression-br", "compression-deflate", "compression-gzip", "trace"]}
 tracing = "0.1.37"

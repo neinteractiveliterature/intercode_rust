@@ -15,7 +15,7 @@ cached = "0.40.0"
 futures = "*"
 intercode_entities = {path = "../intercode_entities"}
 oxide-auth = "*"
-oxide-auth-axum = "*"
 sea-orm = "*"
 seawater = {path = "../seawater"}
 tokio = {version = "*", features = ["rt-multi-thread", "macros"]}
+tuple-conv = "1.0.1"

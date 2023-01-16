@@ -296,7 +296,7 @@ where
     _event_proposal_id: Option<ID>,
   ) -> Result<String, Error> {
     // TODO find images for event or event proposal
-    Ok(render_markdown(&markdown))
+    Ok(render_markdown(&markdown, &Default::default()))
   }
 
   async fn root_page(&self, ctx: &Context<'_>) -> Result<PageType, Error> {

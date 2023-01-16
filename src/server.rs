@@ -1,5 +1,6 @@
 use crate::csrf::{csrf_middleware, CsrfConfig, CsrfData};
 use crate::db_sessions::DbSessionStore;
+use crate::form_or_multipart::FormOrMultipart;
 use crate::legacy_passwords::{verify_legacy_md5_password, verify_legacy_sha1_password};
 use crate::liquid_renderer::IntercodeLiquidRenderer;
 use crate::middleware::{AuthorizationInfoAndQueryDataFromRequest, QueryDataFromRequest};
@@ -8,15 +9,17 @@ use ::http::StatusCode;
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql::*;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
-use axum::extract::{Multipart, OriginalUri};
+use axum::body::HttpBody;
+use axum::extract::{FromRef, OriginalUri, State};
 use axum::response::{self, IntoResponse};
-use axum::routing::{get, post};
-use axum::{Extension, Form, Router};
+use axum::routing::{get, post, IntoMakeService};
+use axum::{debug_handler, Extension, Form, Router};
+use axum_server::tls_rustls::{RustlsAcceptor, RustlsConfig};
+use axum_server::{Handle, Server};
 use axum_sessions::{SameSite, SessionHandle, SessionLayer};
 use csrf::ChaCha20Poly1305CsrfProtection;
-use futures_util::stream::StreamExt;
-use i18n_embed::fluent::fluent_language_loader;
-use i18n_embed::LanguageLoader;
+use i18n_embed::fluent::{fluent_language_loader, FluentLanguageLoader};
+use i18n_embed::{I18nEmbedError, LanguageLoader};
 use intercode_entities::cms_parent::CmsParentTrait;
 use intercode_entities::{events, users};
 use intercode_graphql::cms_rendering_context::CmsRenderingContext;
@@ -30,13 +33,11 @@ use serde::Deserialize;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::env;
-use std::future::ready;
-use std::io::BufReader;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use std::time::Duration;
-use tls_listener::TlsListener;
-use tokio_rustls::TlsAcceptor;
+use tokio::time::sleep;
+use tower::limit::ConcurrencyLimitLayer;
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
@@ -52,9 +53,16 @@ struct FatalDatabaseError {
 
 type IntercodeSchema = Schema<api::QueryRoot, EmptyMutation, EmptySubscription>;
 
+#[derive(Clone, FromRef)]
+pub struct AppState {
+  schema: IntercodeSchema,
+  schema_data: SchemaData,
+}
+
+#[debug_handler]
 async fn single_page_app_entry(
   OriginalUri(url): OriginalUri,
-  schema_data: Extension<SchemaData>,
+  State(schema_data): State<SchemaData>,
   AuthorizationInfoAndQueryDataFromRequest(authorization_info, query_data): AuthorizationInfoAndQueryDataFromRequest,
 ) -> Result<impl IntoResponse, ::http::StatusCode> {
   let event_path_regex: regex::Regex =
@@ -112,11 +120,12 @@ async fn single_page_app_entry(
   ))
 }
 
+#[debug_handler(state = AppState)]
 async fn graphql_handler(
-  schema: Extension<IntercodeSchema>,
-  schema_data: Extension<SchemaData>,
-  req: GraphQLRequest,
+  State(schema): State<IntercodeSchema>,
+  State(schema_data): State<SchemaData>,
   AuthorizationInfoAndQueryDataFromRequest(authorization_info, query_data): AuthorizationInfoAndQueryDataFromRequest,
+  req: GraphQLRequest,
 ) -> GraphQLResponse {
   let authorization_info = Arc::new(authorization_info);
   let liquid_renderer =
@@ -172,29 +181,29 @@ struct SignInParams {
   password: String,
 }
 
+#[debug_handler]
 async fn sign_in(
   token: CsrfData,
-  form: Option<Form<SignInParams>>,
-  multipart: Option<Multipart>,
   QueryDataFromRequest(query_data): QueryDataFromRequest,
   session: Extension<SessionHandle>,
+  form_or_multipart: FormOrMultipart<SignInParams>,
 ) -> Result<impl IntoResponse, StatusCode> {
   enforce_csrf(token)?;
 
-  let params = if let Some(form) = form {
-    form
-  } else {
-    let mut mp = multipart.unwrap();
-    let mut mp_params: HashMap<String, String> = Default::default();
+  let params = match form_or_multipart {
+    FormOrMultipart::Form(form) => form,
+    FormOrMultipart::Multipart(mut multipart) => {
+      let mut mp_params: HashMap<String, String> = Default::default();
 
-    while let Some(field) = mp.next_field().await.unwrap() {
-      let name = field.name().unwrap().to_string();
-      let value = field.text().await.unwrap();
-      mp_params.insert(name, value);
+      while let Some(field) = multipart.next_field().await.unwrap() {
+        let name = field.name().unwrap().to_string();
+        let value = field.text().await.unwrap();
+        mp_params.insert(name, value);
+      }
+
+      let mp_value = serde_json::to_value(mp_params).unwrap();
+      Form(serde_json::from_value::<SignInParams>(mp_value).unwrap())
     }
-
-    let mp_value = serde_json::to_value(mp_params).unwrap();
-    Form(serde_json::from_value::<SignInParams>(mp_value).unwrap())
   };
 
   let user = users::Entity::find()
@@ -249,31 +258,55 @@ async fn sign_in(
   Ok(response::Json(value!({ "status": "success" })))
 }
 
-pub async fn serve(db: DatabaseConnection) -> Result<()> {
-  let db_conn = Arc::new(db);
-
+pub fn build_language_loader() -> Result<FluentLanguageLoader, I18nEmbedError> {
   let language_loader = fluent_language_loader!();
   language_loader.load_languages(&Localizations, &[language_loader.fallback_language()])?;
-  let language_loader_arc = Arc::new(language_loader);
 
+  Ok(language_loader)
+}
+
+async fn build_axum_server(
+  addr: SocketAddr,
+  handle: Handle,
+) -> Result<Server<RustlsAcceptor>, Server> {
+  if let (Ok(cert_path), Ok(key_path)) = (env::var("TLS_CERT_PATH"), env::var("TLS_KEY_PATH")) {
+    let config = RustlsConfig::from_pem_file(cert_path, key_path)
+      .await
+      .map_err(|err| {
+        warn!(
+          "Falling back to unencrypted HTTP because of error reading cert and/or key: {}",
+          err
+        );
+        axum_server::bind(addr).handle(handle.clone())
+      })?;
+
+    Ok(axum_server::bind_rustls(addr, config).handle(handle))
+  } else {
+    warn!(
+      "TLS_CERT_PATH and/or TLS_KEY_PATH not present in env.  Falling back to unencrypted HTTP."
+    );
+    Err(axum_server::bind(addr).handle(handle))
+  }
+}
+
+fn build_app<B: HttpBody + Send + Sync + Unpin + 'static>(
+  db_conn: Arc<DatabaseConnection>,
+) -> Result<IntoMakeService<Router<(), B>>, Error>
+where
+  axum::body::Bytes: From<<B as HttpBody>::Data>,
+  <B as HttpBody>::Data: Send + Sync,
+  <B as HttpBody>::Error: std::error::Error + Send + Sync,
+{
+  let language_loader_arc = Arc::new(build_language_loader()?);
   let schema_data = SchemaData {
     db_conn: db_conn.clone(),
-    language_loader: Arc::clone(&language_loader_arc),
+    language_loader: language_loader_arc,
   };
-
   let graphql_schema = build_intercode_graphql_schema(schema_data.clone());
-
-  let app = Router::new()
-    .route("/graphql", get(graphql_playground).post(graphql_handler))
-    .route("/authenticity_tokens", get(authenticity_tokens))
-    .route("/users/sign_in", post(sign_in))
-    .fallback(get(single_page_app_entry))
-    .layer(axum_sea_orm_tx::Layer::new(ConnectionWrapper::from(
-      schema_data.db_conn.clone(),
-    )))
-    .layer(Extension(schema_data))
-    .layer(Extension(graphql_schema));
-
+  let app_state = AppState {
+    schema: graphql_schema,
+    schema_data,
+  };
   let store = DbSessionStore::new(db_conn.into());
   let secret_bytes = hex::decode(env::var("SECRET_KEY_BASE")?)?;
   let secret: [u8; 64] = secret_bytes[0..64].try_into().unwrap_or_else(|_| {
@@ -282,6 +315,7 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
       secret_bytes.len() * 2
     )
   });
+
   let mut csrf_secret: [u8; 32] = Default::default();
   csrf_secret.clone_from_slice(&secret[0..32]);
   let protect = ChaCha20Poly1305CsrfProtection::from_key(csrf_secret);
@@ -298,16 +332,23 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
     protect: Arc::new(protect),
   };
 
-  let service = tower::ServiceBuilder::new()
-    .concurrency_limit(
+  let app = Router::new()
+    .route("/graphql", get(graphql_playground).post(graphql_handler))
+    .route("/authenticity_tokens", get(authenticity_tokens))
+    .route("/users/sign_in", post(sign_in))
+    .fallback(single_page_app_entry)
+    .layer(axum_sea_orm_tx::Layer::new(ConnectionWrapper::from(
+      app_state.schema_data.db_conn.clone(),
+    )))
+    .layer(ConcurrencyLimitLayer::new(
       env::var("MAX_CONCURRENCY")
         .unwrap_or_else(|_| "25".to_string())
         .parse()
         .unwrap_or(25),
-    )
+    ))
     .layer(CompressionLayer::new())
-    .layer(Extension(csrf_config))
     .layer(axum::middleware::from_fn(csrf_middleware))
+    .layer(Extension(csrf_config))
     .layer(session_layer)
     .layer(
       TraceLayer::new_for_http()
@@ -315,7 +356,42 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
         .on_response(DefaultOnResponse::new().level(tracing::Level::INFO)),
     )
     .layer(CatchPanicLayer::new())
-    .service(app);
+    .with_state(app_state)
+    .into_make_service();
+  Ok(app)
+}
+
+async fn graceful_shutdown(handle: Handle) {
+  let duration = Duration::from_secs(
+    env::var("SHUTDOWN_GRACE_PERIOD")
+      .unwrap_or_else(|_| "30".to_string())
+      .parse()
+      .unwrap_or(30),
+  );
+
+  let immediate_shutdown_handle = handle.clone();
+  tokio::spawn(async move {
+    tokio::signal::ctrl_c().await.unwrap();
+    info!("Received Ctrl-C; shutting down immediately");
+    immediate_shutdown_handle.shutdown();
+  });
+
+  info!(
+    "Starting graceful shutdown with {}-second timeout; press Ctrl-C again to shut down immediately",
+    duration.as_secs()
+  );
+
+  handle.graceful_shutdown(Some(duration));
+
+  while handle.connection_count() > 0 {
+    sleep(Duration::from_secs(1)).await;
+    info!("alive connections: {}", handle.connection_count());
+  }
+}
+
+pub async fn serve(db: DatabaseConnection) -> Result<()> {
+  let db_conn = Arc::new(db);
+  let app = build_app::<hyper::Body>(db_conn.clone())?;
 
   let addr = SocketAddr::new(
     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
@@ -323,60 +399,21 @@ pub async fn serve(db: DatabaseConnection) -> Result<()> {
       .unwrap_or_else(|_| String::from("5901"))
       .parse()?,
   );
-  let signal = async move {
-    tokio::signal::ctrl_c()
-      .await
-      .expect("failed to listen to shutdown signal");
-  };
 
-  if let (Ok(cert_path), Ok(key_path)) = (env::var("TLS_CERT_PATH"), env::var("TLS_KEY_PATH")) {
-    let cert_pem = std::fs::File::open(cert_path)?;
-    let key_pem = std::fs::File::open(key_path)?;
-    let mut cert_reader = BufReader::new(cert_pem);
-    let mut key_reader = BufReader::new(key_pem);
+  let handle = Handle::new();
+  let shutdown_handle = handle.clone();
+  tokio::spawn(async move {
+    tokio::signal::ctrl_c().await.unwrap();
+    graceful_shutdown(shutdown_handle).await;
+    info!("Shutting down server");
+  });
 
-    let key = tokio_rustls::rustls::PrivateKey(
-      rustls_pemfile::rsa_private_keys(&mut key_reader)?[0].to_owned(),
-    );
-    let certs = rustls_pemfile::certs(&mut cert_reader)?
-      .iter()
-      .map(|der| tokio_rustls::rustls::Certificate(der.to_owned()))
-      .collect();
+  let server = build_axum_server(addr, handle).await;
 
-    let listener = tokio::net::TcpListener::bind(addr).await?;
-    let acceptor: TlsAcceptor = Arc::new(
-      tokio_rustls::rustls::ServerConfig::builder()
-        .with_safe_defaults()
-        .with_no_client_auth()
-        .with_single_cert(certs, key)
-        .unwrap(),
-    )
-    .into();
-
-    let incoming = TlsListener::new(acceptor, listener).filter(|conn| {
-      if let Err(err) = conn {
-        error!("Error: {:?}", err);
-        ready(false)
-      } else {
-        ready(true)
-      }
-    });
-    let shared = tower::make::Shared::new(service);
-
-    hyper::Server::builder(hyper::server::accept::from_stream(incoming))
-      .serve(shared)
-      .with_graceful_shutdown(signal)
-      .await?;
-  } else {
-    warn!(
-      "TLS_CERT_PATH and/or TLS_KEY_PATH not present in env.  Falling back to unencrypted HTTP."
-    );
-    let listener = std::net::TcpListener::bind(addr)?;
-    hyper::Server::from_tcp(listener)?
-      .serve(tower::make::Shared::new(service))
-      .with_graceful_shutdown(signal)
-      .await?;
-  };
+  match server {
+    Ok(server) => server.serve(app).await,
+    Err(server) => server.serve(app).await,
+  }?;
 
   shutdown_tracer_provider();
 

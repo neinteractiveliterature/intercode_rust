@@ -8,7 +8,7 @@ version = "0.1.0"
 [dependencies]
 async-graphql = {version = "*", features = ["dataloader"]}
 async-trait = "*"
-axum-sea-orm-tx = {version = "0.1.0", git = "https://github.com/nbudin/axum-sea-orm-tx.git"}
+axum-sea-orm-tx = {git = "https://github.com/nbudin/axum-sea-orm-tx.git"}
 lazy_liquid_value_view = {path = "../lazy_liquid_value_view"}
 liquid = {workspace = true}
 liquid-core = {workspace = true}

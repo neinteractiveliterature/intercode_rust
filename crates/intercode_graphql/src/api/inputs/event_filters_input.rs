@@ -19,9 +19,10 @@ pub struct EventFiltersInput {
   form_items: Option<JsonScalar>,
 }
 
-fn question_marks(count: usize) -> String {
-  std::iter::repeat("?")
-    .take(count)
+fn numbered_placeholders(start: usize, count: usize) -> String {
+  (start..(start + count))
+    .into_iter()
+    .map(|index| format!("${}", index))
     .collect::<Vec<_>>()
     .join(", ")
 }
@@ -74,7 +75,7 @@ impl EventFiltersInput {
           .filter(Expr::cust_with_values(
             format!(
               "COALESCE(event_ratings.rating, 0) IN ({})",
-              question_marks(my_rating.len())
+              numbered_placeholders(1, my_rating.len())
             )
             .as_str(),
             my_rating.to_owned(),
@@ -86,16 +87,18 @@ impl EventFiltersInput {
       if let Some(form_items) = form_items.0.as_object() {
         for (key, value) in form_items.iter() {
           if let Some(values) = value.as_array() {
-            scope = scope.filter(Expr::cust_with_values(
-              format!(
-                "events.additional_info->>? IN ({})",
-                question_marks(values.len())
-              )
-              .as_str(),
-              std::iter::once(key.as_str())
-                .chain(values.iter().map(|v| v.as_str().unwrap_or_default()))
-                .collect::<Vec<_>>(),
-            ))
+            if !values.is_empty() {
+              scope = scope.filter(Expr::cust_with_values(
+                format!(
+                  "events.additional_info->>$1 IN ({})",
+                  numbered_placeholders(2, values.len())
+                )
+                .as_str(),
+                std::iter::once(key.as_str())
+                  .chain(values.iter().map(|v| v.as_str().unwrap_or_default()))
+                  .collect::<Vec<_>>(),
+              ))
+            }
           }
         }
       }
