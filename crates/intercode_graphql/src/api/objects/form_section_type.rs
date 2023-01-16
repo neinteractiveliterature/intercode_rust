@@ -30,4 +30,12 @@ impl FormSectionType {
         .collect(),
     )
   }
+
+  async fn position(&self) -> i32 {
+    self.model.position
+  }
+
+  async fn title(&self) -> Option<&str> {
+    self.model.title.as_deref()
+  }
 }

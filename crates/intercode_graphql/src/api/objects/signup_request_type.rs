@@ -11,6 +11,10 @@ impl SignupRequestType {
     self.model.id.into()
   }
 
+  async fn requested_bucket_key(&self) -> Option<&str> {
+    self.model.requested_bucket_key.as_deref()
+  }
+
   async fn state(&self) -> &str {
     &self.model.state
   }

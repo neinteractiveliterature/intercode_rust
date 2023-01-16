@@ -24,7 +24,7 @@ pub enum RegistrationPolicyError {
   InconsistentBucketState,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum SlotCount {
   Unlimited,
   Limited(usize),
@@ -148,6 +148,10 @@ impl RegistrationPolicyBucket {
       SlotCount::Unlimited => Ok(true),
       SlotCount::Limited(count) => Ok(count > 0),
     }
+  }
+
+  pub fn is_anything(&self) -> bool {
+    self.anything.unwrap_or(false)
   }
 
   pub fn is_full(&self, signups: &[&signups::Model]) -> Result<bool, RegistrationPolicyError> {

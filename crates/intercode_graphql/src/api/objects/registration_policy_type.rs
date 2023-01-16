@@ -40,6 +40,11 @@ impl RegistrationPolicyType {
     self.0.preferred_slots_including_not_counted().into()
   }
 
+  #[graphql(name = "prevent_no_preference_signups")]
+  async fn prevent_no_preference_signups(&self) -> bool {
+    self.0.prevent_no_preference_signups()
+  }
+
   #[graphql(name = "slots_limited")]
   async fn slots_limited(&self) -> bool {
     self.0.slots_limited()

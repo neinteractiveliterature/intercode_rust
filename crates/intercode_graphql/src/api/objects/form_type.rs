@@ -30,4 +30,13 @@ impl FormType {
         .collect(),
     )
   }
+
+  #[graphql(name = "form_type")]
+  async fn form_type(&self) -> &str {
+    &self.model.form_type
+  }
+
+  async fn title(&self) -> Option<&str> {
+    self.model.title.as_deref()
+  }
 }
