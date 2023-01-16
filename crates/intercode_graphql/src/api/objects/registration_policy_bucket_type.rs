@@ -3,7 +3,7 @@ use intercode_entities::RegistrationPolicyBucket;
 
 pub struct RegistrationPolicyBucketType(pub RegistrationPolicyBucket);
 
-#[Object]
+#[Object(name = "RegistrationPolicyBucket")]
 impl RegistrationPolicyBucketType {
   async fn key(&self) -> &str {
     &self.0.key

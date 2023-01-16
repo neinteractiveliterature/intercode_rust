@@ -164,7 +164,7 @@ impl ConventionType {
     &self,
     ctx: &Context<'_>,
     page: Option<u64>,
-    per_page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
     filters: Option<EventFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<EventsPaginationType, Error> {

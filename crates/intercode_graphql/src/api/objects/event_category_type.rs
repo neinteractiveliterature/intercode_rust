@@ -1,4 +1,4 @@
-use async_graphql::{Context, Error, Object};
+use async_graphql::{Context, Error, Object, ID};
 use intercode_entities::event_categories;
 use intercode_inflector::inflector::string::pluralize;
 use seawater::loaders::ExpectModels;
@@ -11,8 +11,8 @@ model_backed_type!(EventCategoryType, event_categories::Model);
 
 #[Object(name = "EventCategory")]
 impl EventCategoryType {
-  async fn id(&self) -> i64 {
-    self.model.id
+  async fn id(&self) -> ID {
+    self.model.id.into()
   }
 
   #[graphql(name = "default_color")]

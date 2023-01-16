@@ -4,7 +4,7 @@ use intercode_entities::RegistrationPolicy;
 
 pub struct RegistrationPolicyType(pub RegistrationPolicy);
 
-#[Object]
+#[Object(name = "RegistrationPolicy")]
 impl RegistrationPolicyType {
   async fn buckets(&self) -> Vec<RegistrationPolicyBucketType> {
     self

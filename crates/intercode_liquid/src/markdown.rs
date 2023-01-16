@@ -69,6 +69,7 @@ pub fn render_markdown(
 
   // TODO figure out how to get target="_blank" rel="noreferrer noopener" onto all links
   // TODO figure out how to get class="img-fluid" onto all images
+  // TODO strip_single_p
   let mut html_output = String::new();
   html::push_html(&mut html_output, parser);
   html_output

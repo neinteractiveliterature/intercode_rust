@@ -1,4 +1,4 @@
-use async_graphql::{Context, Error, Object};
+use async_graphql::{Context, Error, Object, ID};
 use chrono::{Duration, NaiveDateTime};
 use intercode_entities::runs;
 use seawater::loaders::ExpectModels;
@@ -11,8 +11,8 @@ model_backed_type!(RunType, runs::Model);
 
 #[Object(name = "Run")]
 impl RunType {
-  async fn id(&self) -> i64 {
-    self.model.id
+  async fn id(&self) -> ID {
+    self.model.id.into()
   }
 
   #[graphql(name = "confirmed_signup_count")]
