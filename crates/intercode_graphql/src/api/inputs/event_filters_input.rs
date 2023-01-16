@@ -2,7 +2,7 @@ use async_graphql::{Context, Error, InputObject};
 use intercode_entities::{event_ratings, events};
 use sea_orm::{
   sea_query::{Expr, Func},
-  ColumnTrait, Condition, EntityTrait, QueryFilter, Select,
+  ColumnTrait, Condition, EntityTrait, Order, QueryFilter, QueryOrder, Select,
 };
 
 use crate::{api::scalars::JsonScalar, QueryData};
@@ -65,7 +65,21 @@ impl EventFiltersInput {
       scope = string_search(scope, title, events::Column::Title);
     }
 
-    // TODO handle title_prefix pg_search stuff
+    if let Some(title_prefix) = &self.title_prefix {
+      let tsquery_string = format!("'{}':*", title_prefix);
+      scope = scope
+        .filter(Expr::cust_with_values(
+          "events.title_vector @@ to_tsquery('simple_unaccent', $1)",
+          vec![tsquery_string.clone()],
+        ))
+        .order_by(
+          Expr::cust_with_values(
+            "ts_rank(events.title_vector, to_tsquery('simple_unaccent', $1), 0)",
+            vec![tsquery_string],
+          ),
+          Order::Desc,
+        );
+    }
 
     if let Some(my_rating) = &self.my_rating {
       let query_data = ctx.data::<QueryData>()?;
