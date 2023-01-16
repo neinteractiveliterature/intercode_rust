@@ -202,6 +202,22 @@ impl ConventionType {
             .join(JoinType::LeftJoin, events::Relation::Users1.def())
             .order_by(users::Column::LastName, order.clone())
             .order_by(users::Column::FirstName, order),
+          "title" => scope.order_by(
+            Expr::cust(
+              "regexp_replace(
+                  regexp_replace(
+                    trim(regexp_replace(unaccent(events.title), '[^0-9a-z ]', '', 'gi')),
+                    '^(the|a|an) +',
+                    '',
+                    'i'
+                  ),
+                  ' ',
+                  '',
+                  'g'
+                )",
+            ),
+            order,
+          ),
           _ => scope,
         }
       }
