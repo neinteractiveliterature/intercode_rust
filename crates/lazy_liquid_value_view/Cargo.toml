@@ -7,7 +7,6 @@ version = "0.1.0"
 
 [dependencies]
 async-trait = "*"
-dyn-clone = "1.0.9"
 lazy_liquid_value_view_derive = {path = "../lazy_liquid_value_view_derive"}
 liquid = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
 liquid-core = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}

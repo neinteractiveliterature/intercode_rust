@@ -1122,16 +1122,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ctrlc"
-version = "3.2.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1631ca6e3c59112501a9d87fd86f21591ff77acd31331e8a73f8d80a65bbdd71"
-dependencies = [
- "nix",
- "windows-sys 0.42.0",
-]
-
-[[package]]
 name = "cxx"
 version = "1.0.81"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1348,12 +1338,6 @@ name = "dotenvy"
 version = "0.15.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03d8c417d7a8cb362e0c37e5d815f5eb7c37f79ff93707329d5a194e42e54ca0"
-
-[[package]]
-name = "dyn-clone"
-version = "1.0.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4f94fa09c2aeea5b8839e414b7b841bf429fd25b9c522116ac97ee87856d88b2"
 
 [[package]]
 name = "either"
@@ -1624,15 +1608,6 @@ dependencies = [
  "pin-project-lite",
  "pin-utils",
  "slab",
-]
-
-[[package]]
-name = "generational-arena"
-version = "0.2.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e1d3b771574f62d0548cee0ad9057857e9fc25d7a3335f140c84f6acd0bf601"
-dependencies = [
- "cfg-if 0.1.10",
 ]
 
 [[package]]
@@ -2149,7 +2124,6 @@ dependencies = [
  "paste",
  "regex",
  "sea-orm",
- "seawater",
  "serde",
 ]
 
@@ -2230,7 +2204,6 @@ dependencies = [
  "futures",
  "intercode_entities",
  "oxide-auth",
- "oxide-auth-axum",
  "sea-orm",
  "seawater",
  "tokio",
@@ -2259,11 +2232,9 @@ dependencies = [
  "clap",
  "console-subscriber",
  "csrf",
- "ctrlc",
  "dhat",
  "dotenv",
  "futures",
- "generational-arena",
  "hex",
  "html-escape",
  "http",
@@ -2282,7 +2253,6 @@ dependencies = [
  "liquid",
  "liquid-core",
  "md5",
- "memo-map",
  "once_cell",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -2290,7 +2260,6 @@ dependencies = [
  "oxide-auth-axum",
  "parking_lot 0.12.1",
  "pulldown-cmark",
- "quote",
  "regex",
  "rust-embed",
  "rustls-pemfile",
@@ -2299,7 +2268,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sha1",
- "syn",
  "time 0.3.17",
  "tokio",
  "tokio-stream",
@@ -2404,7 +2372,6 @@ name = "lazy_liquid_value_view"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "dyn-clone",
  "lazy_liquid_value_view_derive",
  "liquid",
  "liquid-core",
@@ -2577,12 +2544,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2dffe52ecf27772e601905b7522cb4ef790d2cc203488bbd0e2fe85fcb74566d"
 
 [[package]]
-name = "memo-map"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aec276c09560ce4447087aaefc19eb0c18d97e31bd05ebac38881c4723400c40"
-
-[[package]]
 name = "mime"
 version = "0.3.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2648,18 +2609,6 @@ name = "multimap"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e5ce46fe64a9d73be07dcbe690a38ce1b293be448fd8ce1e6c1b8062c9f72c6a"
-
-[[package]]
-name = "nix"
-version = "0.26.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46a58d1d356c6597d08cde02c2f09d785b09e28711837b1ed667dc652c08a694"
-dependencies = [
- "bitflags",
- "cfg-if 1.0.0",
- "libc",
- "static_assertions",
-]
 
 [[package]]
 name = "nom"
