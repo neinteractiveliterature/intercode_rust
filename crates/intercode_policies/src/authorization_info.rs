@@ -1,16 +1,23 @@
 use cached::{async_sync::Mutex, CachedAsync, UnboundCache};
-use intercode_entities::{user_con_profiles, users};
+use intercode_entities::{signups, user_con_profiles, users};
 use oxide_auth::endpoint::Scope;
 use sea_orm::DbErr;
 use seawater::ConnectionWrapper;
-use std::{collections::HashSet, fmt::Debug, hash::Hash, sync::Arc};
+use std::{
+  collections::{HashMap, HashSet},
+  fmt::Debug,
+  hash::Hash,
+  sync::Arc,
+};
 
 use crate::{
-  load_all_team_member_event_ids_in_convention,
+  load_all_active_signups_in_convention_by_event_id, load_all_team_member_event_ids_in_convention,
   permissions_loading::{
     load_all_permissions_in_convention_with_model_type_and_id, UserPermissionsMap,
   },
 };
+
+pub type SignupsByEventId = HashMap<i64, Vec<signups::Model>>;
 
 #[derive(Clone, Debug)]
 pub struct AuthorizationInfo {
@@ -18,6 +25,7 @@ pub struct AuthorizationInfo {
   pub user: Arc<Option<users::Model>>,
   pub oauth_scope: Option<Scope>,
   pub assumed_identity_from_profile: Arc<Option<user_con_profiles::Model>>,
+  active_signups_by_convention_and_event: Arc<Mutex<UnboundCache<i64, SignupsByEventId>>>,
   all_model_permissions_by_convention: Arc<Mutex<UnboundCache<i64, UserPermissionsMap>>>,
   team_member_event_ids_by_convention_id: Arc<Mutex<UnboundCache<i64, HashSet<i64>>>>,
 }
@@ -66,9 +74,26 @@ impl AuthorizationInfo {
       user,
       oauth_scope,
       assumed_identity_from_profile,
+      active_signups_by_convention_and_event: Arc::new(Mutex::new(UnboundCache::new())),
       all_model_permissions_by_convention: Arc::new(Mutex::new(UnboundCache::new())),
       team_member_event_ids_by_convention_id: Arc::new(Mutex::new(UnboundCache::new())),
     }
+  }
+
+  pub async fn active_signups_in_convention_by_event_id(
+    &self,
+    convention_id: i64,
+  ) -> Result<SignupsByEventId, DbErr> {
+    let mut lock = self.active_signups_by_convention_and_event.lock().await;
+
+    let signups_by_event_id = lock
+      .try_get_or_set_with(convention_id, || {
+        let user_id = self.user.as_ref().as_ref().map(|user| user.id);
+        load_all_active_signups_in_convention_by_event_id(&self.db, convention_id, user_id)
+      })
+      .await?;
+
+    Ok(signups_by_event_id.clone())
   }
 
   pub async fn all_model_permissions_in_convention(

@@ -1,8 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use intercode_entities::{
-  cms_content_groups, event_categories, events, organization_roles_users, permissions,
-  staff_positions, staff_positions_user_con_profiles, team_members, user_con_profiles,
+  cms_content_groups, event_categories, events, organization_roles_users, permissions, runs,
+  signups, staff_positions, staff_positions_user_con_profiles, team_members, user_con_profiles,
 };
 use sea_orm::{
   sea_query::{Alias, Expr},
@@ -197,6 +197,38 @@ pub async fn load_all_permissions_in_convention_with_model_type_and_id(
       .await?
       .into_iter(),
   ))
+}
+
+pub async fn load_all_active_signups_in_convention_by_event_id(
+  db: &ConnectionWrapper,
+  convention_id: i64,
+  user_id: Option<i64>,
+) -> Result<HashMap<i64, Vec<signups::Model>>, DbErr> {
+  let signups_with_runs = signups::Entity::find()
+    .join(
+      JoinType::InnerJoin,
+      signups::Relation::UserConProfiles.def(),
+    )
+    .join(JoinType::InnerJoin, signups::Relation::Runs.def())
+    .join(JoinType::InnerJoin, runs::Relation::Events.def())
+    .select_also(runs::Entity)
+    .filter(user_con_profiles::Column::UserId.eq(user_id))
+    .filter(events::Column::ConventionId.eq(convention_id))
+    .all(db)
+    .await?;
+
+  Ok(
+    signups_with_runs
+      .into_iter()
+      .fold(HashMap::new(), |mut acc, (signup, run)| {
+        if let Some(run) = run {
+          let event_signups = acc.entry(run.event_id).or_default();
+          event_signups.push(signup);
+        }
+
+        acc
+      }),
+  )
 }
 
 pub async fn load_all_team_member_event_ids_in_convention(

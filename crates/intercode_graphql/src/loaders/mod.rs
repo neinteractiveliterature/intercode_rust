@@ -1,4 +1,4 @@
-mod attached_images_loader;
+mod active_storage_attached_blobs_loader;
 mod event_user_con_profile_event_rating_loader;
 pub mod filtered_event_runs_loader;
 mod loader_spawner;
@@ -16,11 +16,12 @@ use intercode_entities::links::{
   EventCategoryToEventProposalForm, FormToFormItems, StaffPositionToUserConProfiles,
   UserConProfileToStaffPositions,
 };
+use intercode_entities::model_ext::FormResponse;
 use intercode_entities::*;
 use seawater::loaders::{EntityIdLoader, EntityLinkLoader, EntityRelationLoader};
 use seawater::ConnectionWrapper;
 
-use self::attached_images_loader::AttachedImagesLoader;
+use self::active_storage_attached_blobs_loader::ActiveStorageAttachedBlobsLoader;
 use self::event_user_con_profile_event_rating_loader::EventUserConProfileEventRatingLoader;
 use self::filtered_event_runs_loader::{EventRunsLoaderFilter, FilteredEventRunsLoader};
 use self::loader_spawner::LoaderSpawner;
@@ -53,7 +54,7 @@ pub struct LoaderManager {
   pub event_runs: DataLoader<EntityRelationLoader<events::Entity, runs::Entity>>,
   pub event_team_members: DataLoader<EntityRelationLoader<events::Entity, team_members::Entity>>,
   pub events_by_id: DataLoader<EntityIdLoader<events::Entity>>,
-  pub event_attached_images: DataLoader<AttachedImagesLoader<events::Model>>,
+  pub event_attached_images: DataLoader<ActiveStorageAttachedBlobsLoader>,
   pub event_category_event_form:
     DataLoader<EntityLinkLoader<event_categories::Entity, EventCategoryToEventForm, forms::Entity>>,
   pub event_category_event_proposal_form: DataLoader<
@@ -162,8 +163,11 @@ impl LoaderManager {
         tokio::spawn,
       )
       .delay(delay_millis),
-      event_attached_images: DataLoader::new(AttachedImagesLoader::new(db.clone()), tokio::spawn)
-        .delay(delay_millis),
+      event_attached_images: DataLoader::new(
+        ActiveStorageAttachedBlobsLoader::new(db.clone(), events::Model::attached_images_scope()),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
       event_event_category: DataLoader::new(
         EntityRelationLoader::new(db.clone(), events::PrimaryKey::Id),
         tokio::spawn,

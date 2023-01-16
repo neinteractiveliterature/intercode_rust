@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{
   api::{
     interfaces::FormResponseImplementation,
@@ -9,8 +11,11 @@ use crate::{
 };
 use async_graphql::*;
 use async_session::async_trait;
-use intercode_entities::{events, forms, RegistrationPolicy};
+use intercode_entities::{
+  events, forms, model_ext::form_item_permissions::FormItemRole, RegistrationPolicy,
+};
 use intercode_liquid::render_markdown;
+use intercode_policies::{policies::EventPolicy, AuthorizationInfo, FormResponsePolicy};
 use seawater::loaders::{ExpectModel, ExpectModels};
 
 use super::{
@@ -56,6 +61,20 @@ impl EventType {
     Ok(EventCategoryType::new(
       loader.load_one(self.model.id).await?.expect_one()?.clone(),
     ))
+  }
+
+  #[graphql(name = "form_response_attrs_json")]
+  async fn form_response_attrs_json(
+    &self,
+    ctx: &Context<'_>,
+    item_identifiers: Option<Vec<String>>,
+  ) -> Result<JsonScalar, Error> {
+    <Self as FormResponseImplementation<events::Model>>::form_response_attrs_json(
+      self,
+      ctx,
+      item_identifiers,
+    )
+    .await
   }
 
   #[graphql(name = "form_response_attrs_json_with_rendered_markdown")]
@@ -198,5 +217,10 @@ impl FormResponseImplementation<events::Model> for EventType {
     let event_category = event_category_result.expect_one()?;
 
     Ok(event_category.team_member_name.clone())
+  }
+
+  async fn get_viewer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole, Error> {
+    let authorization_info = ctx.data::<Arc<AuthorizationInfo>>()?;
+    Ok(EventPolicy::form_item_viewer_role(authorization_info.as_ref(), &self.model).await)
   }
 }

@@ -1,29 +1,22 @@
 use async_graphql::{async_trait, dataloader::Loader};
-use intercode_entities::{
-  active_storage_attachments, active_storage_blobs, model_ext::FormResponse,
-};
+use intercode_entities::{active_storage_attachments, active_storage_blobs};
 use sea_orm::{ColumnTrait, DbErr, QueryFilter, Select};
 use seawater::ConnectionWrapper;
-use std::{collections::HashMap, marker::PhantomData, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
-pub struct AttachedImagesLoader<E: FormResponse> {
+pub struct ActiveStorageAttachedBlobsLoader {
   db: ConnectionWrapper,
   scope: Select<active_storage_attachments::Entity>,
-  _phantom: PhantomData<E>,
 }
 
-impl<E: FormResponse> AttachedImagesLoader<E> {
-  pub fn new(db: ConnectionWrapper) -> Self {
-    AttachedImagesLoader {
-      db,
-      scope: E::attached_images_scope(),
-      _phantom: PhantomData,
-    }
+impl ActiveStorageAttachedBlobsLoader {
+  pub fn new(db: ConnectionWrapper, scope: Select<active_storage_attachments::Entity>) -> Self {
+    ActiveStorageAttachedBlobsLoader { db, scope }
   }
 }
 
 #[async_trait::async_trait]
-impl<E: FormResponse + Clone + 'static> Loader<i64> for AttachedImagesLoader<E> {
+impl Loader<i64> for ActiveStorageAttachedBlobsLoader {
   type Value = Vec<active_storage_blobs::Model>;
   type Error = Arc<DbErr>;
 
