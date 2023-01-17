@@ -52,7 +52,7 @@ dhat = {version = "0.3.2", optional = true}
 dotenv = "0.15.0"
 futures = "0.3.25"
 hex = "0.4.3"
-html-escape = "0.2.12"
+html-escape = "0.2.13"
 http = "0.2.8"
 hyper = "0.14.23"
 i18n-embed = {version = "0.13", features = ["fluent-system"]}
