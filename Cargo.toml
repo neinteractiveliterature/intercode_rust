@@ -30,7 +30,7 @@ flamegraph = ["dep:tracing-flame"]
 tokio-console = ["dep:console-subscriber", "tokio/full", "tokio/tracing"]
 
 [dependencies]
-anyhow = "1.0.66"
+anyhow = "1.0.68"
 async-graphql = {version = "~5.0", features = ["tracing", "dataloader", "chrono"]}
 async-graphql-axum = "~5.0"
 async-graphql-value = "~5.0"
