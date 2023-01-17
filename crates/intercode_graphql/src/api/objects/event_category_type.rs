@@ -21,7 +21,7 @@ impl EventCategoryType {
   }
 
   #[graphql(name = "event_form")]
-  async fn event_form(&self, ctx: &Context<'_>) -> Result<FormType, Error> {
+  pub async fn event_form(&self, ctx: &Context<'_>) -> Result<FormType, Error> {
     let query_data = ctx.data::<QueryData>()?;
 
     Ok(FormType::new(

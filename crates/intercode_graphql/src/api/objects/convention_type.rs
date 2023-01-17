@@ -128,6 +128,29 @@ impl ConventionType {
     self.model.event_mailing_list_domain.as_deref()
   }
 
+  /// Finds an active event by ID in this convention. If there is no event with that ID in this
+  /// convention, or the event is no longer active, errors out.
+  async fn event(&self, ctx: &Context<'_>, id: ID) -> Result<EventType, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+    let event_id: i64 = id.0.parse()?;
+
+    Ok(EventType::new(
+      self
+        .model
+        .find_related(events::Entity)
+        .filter(events::Column::Status.eq("active"))
+        .filter(events::Column::Id.eq(event_id))
+        .one(&query_data.db)
+        .await?
+        .ok_or_else(|| {
+          Error::new(format!(
+            "Could not find active event with ID {} in convention",
+            event_id
+          ))
+        })?,
+    ))
+  }
+
   async fn events(
     &self,
     ctx: &Context<'_>,
