@@ -57,7 +57,7 @@ http = "0.2.8"
 hyper = "0.14.23"
 i18n-embed = {version = "0.13", features = ["fluent-system"]}
 i18n-embed-fl = "0.6"
-indicatif = {version = "0.17.2", features = ["improved_unicode"]}
+indicatif = {version = "0.17.3", features = ["improved_unicode"]}
 intercode_entities = {path = "./crates/intercode_entities"}
 intercode_graphql = {path = "./crates/intercode_graphql"}
 intercode_inflector = {path = "./crates/intercode_inflector"}
