@@ -11,7 +11,7 @@ sea-orm = {version = "*", features = ["sqlx-postgres", "runtime-tokio-rustls", "
 [dependencies]
 async-trait = "*"
 axum = "*"
-cached = "0.40.0"
+cached = "0.42.0"
 futures = "*"
 intercode_entities = {path = "../intercode_entities"}
 oxide-auth = "*"
