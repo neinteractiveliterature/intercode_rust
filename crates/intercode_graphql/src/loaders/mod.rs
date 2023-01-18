@@ -5,6 +5,7 @@ mod loader_spawner;
 mod run_user_con_profile_signup_requests_loader;
 mod run_user_con_profile_signups_loader;
 mod signup_count_loader;
+mod waitlist_position_loader;
 
 use std::env;
 use std::time::Duration;
@@ -13,8 +14,8 @@ use async_graphql::dataloader::DataLoader;
 
 use intercode_entities::links::{
   CmsNavigationItemToCmsNavigationSection, ConventionToStaffPositions, EventCategoryToEventForm,
-  EventCategoryToEventProposalForm, FormToFormItems, StaffPositionToUserConProfiles,
-  UserConProfileToStaffPositions,
+  EventCategoryToEventProposalForm, FormToFormItems, SignupRequestToReplaceSignup,
+  SignupRequestToResultSignup, StaffPositionToUserConProfiles, UserConProfileToStaffPositions,
 };
 use intercode_entities::model_ext::FormResponse;
 use intercode_entities::*;
@@ -28,6 +29,7 @@ use self::loader_spawner::LoaderSpawner;
 use self::run_user_con_profile_signup_requests_loader::RunUserConProfileSignupRequestsLoader;
 use self::run_user_con_profile_signups_loader::RunUserConProfileSignupsLoader;
 use self::signup_count_loader::SignupCountLoader;
+use self::waitlist_position_loader::WaitlistPositionLoader;
 
 pub struct LoaderManager {
   db: ConnectionWrapper,
@@ -77,6 +79,14 @@ pub struct LoaderManager {
   pub run_user_con_profile_signups: LoaderSpawner<i64, i64, RunUserConProfileSignupsLoader>,
   pub run_user_con_profile_signup_requests:
     LoaderSpawner<i64, i64, RunUserConProfileSignupRequestsLoader>,
+  pub signup_request_replace_signup: DataLoader<
+    EntityLinkLoader<signup_requests::Entity, SignupRequestToReplaceSignup, signups::Entity>,
+  >,
+  pub signup_request_result_signup: DataLoader<
+    EntityLinkLoader<signup_requests::Entity, SignupRequestToResultSignup, signups::Entity>,
+  >,
+  pub signup_request_target_run:
+    DataLoader<EntityRelationLoader<signup_requests::Entity, runs::Entity>>,
   pub staff_position_user_con_profiles: DataLoader<
     EntityLinkLoader<
       staff_positions::Entity,
@@ -84,6 +94,7 @@ pub struct LoaderManager {
       user_con_profiles::Entity,
     >,
   >,
+  pub signup_waitlist_position: DataLoader<WaitlistPositionLoader>,
   pub staff_positions_by_id: DataLoader<EntityIdLoader<staff_positions::Entity>>,
   pub team_member_event: DataLoader<EntityRelationLoader<team_members::Entity, events::Entity>>,
   pub team_member_user_con_profile:
@@ -268,6 +279,34 @@ impl LoaderManager {
         delay_millis,
         RunUserConProfileSignupRequestsLoader::new,
       ),
+      signup_request_replace_signup: DataLoader::new(
+        EntityLinkLoader::new(
+          db.clone(),
+          SignupRequestToReplaceSignup,
+          signup_requests::PrimaryKey::Id,
+        ),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
+      signup_request_result_signup: DataLoader::new(
+        EntityLinkLoader::new(
+          db.clone(),
+          SignupRequestToResultSignup,
+          signup_requests::PrimaryKey::Id,
+        ),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
+      signup_request_target_run: DataLoader::new(
+        EntityRelationLoader::new(db.clone(), signup_requests::PrimaryKey::Id),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
+      signup_waitlist_position: DataLoader::new(
+        WaitlistPositionLoader::new(db.clone()),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
       staff_position_user_con_profiles: DataLoader::new(
         EntityLinkLoader::new(
           db.clone(),

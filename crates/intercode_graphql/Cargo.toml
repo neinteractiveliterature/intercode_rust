@@ -21,7 +21,9 @@ intercode_policies = {path = "../intercode_policies"}
 liquid = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
 liquid-core = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
 md5 = "*"
+once_cell = "*"
 pulldown-cmark = "*"
+regex = "*"
 sea-orm = "*"
 seawater = {path = "../seawater"}
 serde = "*"

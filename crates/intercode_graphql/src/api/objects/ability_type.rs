@@ -1,14 +1,14 @@
 use std::{borrow::Borrow, sync::Arc};
 
 use async_graphql::*;
-use intercode_entities::{conventions, rooms};
+use intercode_entities::{conventions, events, rooms};
 use intercode_policies::{
-  policies::{ConventionAction, ConventionPolicy, RoomPolicy},
+  policies::{ConventionAction, ConventionPolicy, EventAction, EventPolicy, RoomPolicy},
   AuthorizationInfo, Policy, ReadManageAction,
 };
-use sea_orm::ModelTrait;
+use sea_orm::{EntityTrait, ModelTrait};
 
-use crate::QueryData;
+use crate::{lax_id::LaxId, QueryData};
 
 pub struct AbilityType;
 
@@ -100,6 +100,17 @@ impl AbilityType {
   async fn can_manage_email_routes(&self) -> bool {
     false
   }
+
+  #[graphql(name = "can_update_event")]
+  async fn can_update_event(&self, ctx: &Context<'_>, event_id: ID) -> Result<bool, Error> {
+    let db = &ctx.data::<QueryData>()?.db;
+    let event = events::Entity::find_by_id(LaxId::parse(event_id)?)
+      .one(db)
+      .await?;
+
+    model_action_permitted(EventPolicy, ctx, &EventAction::Update, |_ctx| Ok(event)).await
+  }
+
   #[graphql(name = "can_update_event_categories")]
   async fn can_update_event_categories(&self) -> bool {
     false
@@ -113,6 +124,19 @@ impl AbilityType {
       &ConventionAction::ViewEventProposals,
       |ctx| Ok(ctx.data::<QueryData>()?.convention.as_ref().as_ref()),
     )
+    .await
+  }
+
+  #[graphql(name = "can_read_event_signups")]
+  async fn can_read_event_signups(&self, ctx: &Context<'_>, event_id: ID) -> Result<bool, Error> {
+    let db = &ctx.data::<QueryData>()?.db;
+    let event = events::Entity::find_by_id(LaxId::parse(event_id)?)
+      .one(db)
+      .await?;
+
+    model_action_permitted(EventPolicy, ctx, &EventAction::ReadSignups, |_ctx| {
+      Ok(event)
+    })
     .await
   }
 

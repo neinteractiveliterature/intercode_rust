@@ -20,7 +20,7 @@ use intercode_policies::{policies::EventPolicy, AuthorizationInfo, FormResponseP
 use seawater::loaders::{ExpectModel, ExpectModels};
 
 use super::{
-  ConventionType, EventCategoryType, ModelBackedType, RegistrationPolicyType, RunType,
+  ConventionType, EventCategoryType, FormType, ModelBackedType, RegistrationPolicyType, RunType,
   TeamMemberType,
 };
 use crate::model_backed_type;
@@ -58,6 +58,10 @@ impl EventType {
 
   async fn email(&self) -> &Option<String> {
     &self.model.email
+  }
+
+  async fn form(&self, ctx: &Context<'_>) -> Result<FormType, Error> {
+    self.event_category(ctx).await?.event_form(ctx).await
   }
 
   #[graphql(name = "event_category")]
@@ -121,6 +125,11 @@ impl EventType {
     } else {
       Ok(None)
     }
+  }
+
+  #[graphql(name = "private_signup_list")]
+  async fn private_signup_list(&self) -> bool {
+    self.model.private_signup_list
   }
 
   #[graphql(name = "registration_policy")]

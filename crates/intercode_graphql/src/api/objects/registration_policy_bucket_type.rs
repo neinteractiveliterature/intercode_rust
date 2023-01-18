@@ -9,6 +9,19 @@ impl RegistrationPolicyBucketType {
     &self.0.key
   }
 
+  async fn anything(&self) -> bool {
+    self.0.is_anything()
+  }
+
+  async fn description(&self) -> &str {
+    &self.0.description
+  }
+
+  #[graphql(name = "minimum_slots")]
+  async fn minimum_slots(&self) -> Option<i32> {
+    self.0.minimum_slots.into()
+  }
+
   async fn name(&self) -> &str {
     &self.0.name
   }
@@ -25,6 +38,6 @@ impl RegistrationPolicyBucketType {
 
   #[graphql(name = "total_slots")]
   async fn total_slots(&self) -> Option<i32> {
-    self.0.total_slots.clone().into()
+    self.0.total_slots.into()
   }
 }
