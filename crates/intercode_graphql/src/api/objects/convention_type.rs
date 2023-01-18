@@ -14,6 +14,7 @@ use crate::{
     scalars::DateScalar,
   },
   cms_rendering_context::CmsRenderingContext,
+  lax_id::LaxId,
   LiquidRenderer, QueryData,
 };
 use async_graphql::*;
@@ -132,7 +133,7 @@ impl ConventionType {
   /// convention, or the event is no longer active, errors out.
   async fn event(&self, ctx: &Context<'_>, id: ID) -> Result<EventType, Error> {
     let query_data = ctx.data::<QueryData>()?;
-    let event_id: i64 = id.0.parse()?;
+    let event_id: i64 = LaxId::parse(id)?;
 
     Ok(EventType::new(
       self

@@ -1,6 +1,12 @@
+use std::sync::Arc;
+
 use async_graphql::{Context, Error, Object, ID};
 use chrono::{Duration, NaiveDateTime};
 use intercode_entities::runs;
+use intercode_policies::{
+  policies::{RunAction, RunPolicy},
+  AuthorizationInfo, Policy,
+};
 use seawater::loaders::ExpectModels;
 
 use crate::{api::scalars::JsonScalar, model_backed_type, QueryData};
@@ -28,6 +34,27 @@ impl RunType {
         .unwrap_or_default()
         .counted_signups_by_state("confirmed"),
     )
+  }
+
+  #[graphql(name = "current_ability_can_signup_summary_run")]
+  async fn current_ability_can_signup_summary_run(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    let authorization_info = ctx.data::<Arc<AuthorizationInfo>>()?;
+    let query_data = ctx.data::<QueryData>()?;
+    let event = query_data
+      .loaders
+      .run_event
+      .load_one(self.model.id)
+      .await?
+      .expect_one()?
+      .clone();
+
+    RunPolicy::action_permitted(
+      authorization_info,
+      &RunAction::SignupSummary,
+      &(event, self.model.clone()),
+    )
+    .await
+    .map_err(|err| err.into())
   }
 
   #[graphql(name = "ends_at")]

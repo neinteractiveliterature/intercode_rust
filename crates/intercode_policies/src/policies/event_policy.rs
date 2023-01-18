@@ -7,6 +7,8 @@ use crate::{AuthorizationInfo, FormResponsePolicy, Policy, ReadManageAction};
 pub enum EventAction {
   Read,
   ReadAdminNotes,
+  ReadSignups,
+  ReadSignupDetails,
   UpdateAdminNotes,
   Drop,
   Create,
@@ -31,18 +33,53 @@ impl Policy<AuthorizationInfo, events::Model> for EventPolicy {
   type Error = DbErr;
 
   async fn action_permitted(
-    _principal: &AuthorizationInfo,
+    principal: &AuthorizationInfo,
     action: &Self::Action,
-    _resource: &events::Model,
+    resource: &events::Model,
   ) -> Result<bool, Self::Error> {
     match action {
       EventAction::Read => todo!(),
+      EventAction::ReadSignups => {
+        Self::action_permitted(principal, &EventAction::ReadSignupDetails, resource).await
+      }
+      EventAction::ReadSignupDetails => Ok(
+        principal
+          .has_scope_and_convention_permission(
+            "read_conventions",
+            "read_signup_details",
+            resource.convention_id,
+          )
+          .await?
+          || (principal.has_scope("read_events")
+            && principal
+              .team_member_event_ids_in_convention(resource.convention_id)
+              .await?
+              .contains(&resource.convention_id))
+          || principal.site_admin_read(),
+      ),
       EventAction::ReadAdminNotes => todo!(),
       EventAction::UpdateAdminNotes => todo!(),
       EventAction::Drop => todo!(),
       EventAction::Create => todo!(),
       EventAction::Restore => todo!(),
-      EventAction::Update => todo!(),
+      EventAction::Update => Ok(
+        principal.has_scope("manage_events")
+          && (principal
+            .team_member_event_ids_in_convention(resource.convention_id)
+            .await?
+            .contains(&resource.id)
+            || principal
+              .has_event_category_permission(
+                "update_events",
+                resource.convention_id,
+                resource.event_category_id,
+              )
+              .await?
+            || principal
+              .has_convention_permission("update_events", resource.convention_id)
+              .await?
+            || principal.site_admin_manage()),
+      ),
     }
   }
 }
