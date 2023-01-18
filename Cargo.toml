@@ -34,7 +34,7 @@ anyhow = "1.0.68"
 async-graphql = {version = "~5.0", features = ["tracing", "dataloader", "chrono"]}
 async-graphql-axum = "~5.0"
 async-graphql-value = "~5.0"
-async-stripe = {version = "0.15.0", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
+async-stripe = {version = "0.15.1", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
 axum = {version = "~0.6", features = ["multipart", "macros", "headers"]}
 axum-extra = {version = "~0.4", features = ["cookie"]}
 axum-sea-orm-tx = {git = "https://github.com/nbudin/axum-sea-orm-tx.git"}
