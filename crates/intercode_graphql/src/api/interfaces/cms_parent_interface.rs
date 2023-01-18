@@ -24,6 +24,7 @@ use crate::{
 
 #[derive(Interface)]
 #[graphql(
+  name = "CmsParent",
   field(name = "id", type = "ID"),
   field(name = "cms_content_groups", type = "Vec<CmsContentGroupType>"),
   field(

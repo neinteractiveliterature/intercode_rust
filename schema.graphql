@@ -1,19 +1,209 @@
-type ConventionType {
+type Ability {
+	can_manage_conventions: Boolean!
+	can_read_schedule: Boolean!
+	can_read_schedule_with_counts: Boolean!
+	can_list_events: Boolean!
+	can_read_user_con_profiles: Boolean!
+	can_update_convention: Boolean!
+	can_update_departments: Boolean!
+	can_manage_email_routes: Boolean!
+	can_update_event(eventId: ID!): Boolean!
+	can_update_event_categories: Boolean!
+	can_read_event_proposals: Boolean!
+	can_read_event_signups(eventId: ID!): Boolean!
+	can_manage_runs: Boolean!
+	can_manage_forms: Boolean!
+	can_read_any_mailing_list: Boolean!
+	can_update_notification_templates: Boolean!
+	can_manage_oauth_applications: Boolean!
+	can_read_reports: Boolean!
+	can_manage_rooms: Boolean!
+	can_manage_signups: Boolean!
+	can_manage_any_cms_content: Boolean!
+	can_manage_staff_positions: Boolean!
+	can_read_orders: Boolean!
+	can_manage_ticket_types: Boolean!
+	can_read_user_activity_alerts: Boolean!
+	can_read_organizations: Boolean!
+	can_read_users: Boolean!
+}
+
+
+type CmsContentGroup {
+	id: ID!
+}
+
+union CmsContentType = Page | CmsPartial | CmsLayout
+
+type CmsFile {
+	id: ID!
+}
+
+type CmsGraphqlQuery {
+	id: ID!
+}
+
+type CmsLayout {
+	id: ID!
+	content_html(path: String): String!
+	name: String
+}
+
+type CmsNavigationItem {
+	id: ID!
+	navigation_section: CmsNavigationItem
+	page: Page
+	position: Int
+	title: String
+}
+
+"""
+A CMS parent is a web site managed by Intercode. It acts as a container for CMS content, such
+as pages, partials, files, layouts, variables, content groups, and user-defined GraphQL queries.
+
+Most CMS parents are conventions, so their content will be convention-specific and scoped to
+that convention's domain name. The exception to this is the root site, which is what Intercode
+renders when there is no convention associated with the current domain name. (See the RootSite
+object for more details about this.)
+"""
+interface CmsParent {
+	id: ID!
+	cmsContentGroups: [CmsContentGroup!]!
+	cmsContentGroup(id: ID!): CmsContentGroup!
+	cmsFiles: [CmsFile!]!
+	cmsGraphqlQueries: [CmsGraphqlQuery!]!
+	cmsLayouts: [CmsLayout!]!
+	cmsNavigationItems: [CmsNavigationItem!]!
+	cmsPages: [Page!]!
+	cmsPage(id: ID, slug: String, rootPage: Boolean): Page!
+	cmsPartials: [CmsPartial!]!
+	cmsVariables: [CmsVariable!]!
+	defaultLayout: CmsLayout!
+	effectiveCmsLayout(path: String!): CmsLayout!
+	fullTextSearch(query: String!): SearchResult!
+	liquidAssigns: [LiquidAssign!]!
+	previewMarkdown(markdown: String!, eventId: ID, eventProposalId: ID): String!
+	previewLiquid(content: String!): String!
+	rootPage: Page!
+	typeaheadSearchCmsContent(name: String): [CmsContentType!]!
+}
+
+type CmsPartial {
+	id: ID!
+}
+
+type CmsVariable {
+	id: ID!
+}
+
+type Convention implements CmsParent {
 	id: ID!
 	name: String
-	bio_eligible_user_con_profiles: [UserConProfileType!]!
-	cmsPage(id: ID, slug: String, rootPage: Boolean): PageType!
-	staff_position(id: ID!): StaffPositionType!
-	user_con_profile(id: ID!): UserConProfileType!
+	accepting_proposals: Boolean!
+	bio_eligible_user_con_profiles: [UserConProfile!]!
+	canceled: Boolean!
+	clickwrap_agreement: String
+	domain: String!
+	email_from: String!
+	email_mode: String!
+	ends_at: DateTime
+	event_categories: [EventCategory!]!
+	event_mailing_list_domain: String
+	"""
+	Finds an active event by ID in this convention. If there is no event with that ID in this
+	convention, or the event is no longer active, errors out.
+	"""
+	event(id: ID!): Event!
+	events(start: Date, finish: Date, include_dropped: Boolean, filters: EventFiltersInput): [Event!]!
+	events_paginated(page: Int, per_page: Int, filters: EventFiltersInput, sort: [SortInput!]): EventsPagination!
+	hidden: Boolean!
+	language: String!
+	location: JSON
+	maximum_tickets: Int
+	my_profile: UserConProfile
+	pre_schedule_content_html: String
+	rooms: [Room!]!
+	signup_mode: SignupMode!
+	signup_requests_open: Boolean!
+	show_event_list: String!
+	show_schedule: String!
+	site_mode: SiteMode!
+	staff_position(id: ID!): StaffPosition!
+	staff_positions: [StaffPosition!]!
+	starts_at: DateTime
+	stripe_account_id: String
+	stripe_publishable_key: String
+	ticket_mode: TicketMode!
+	ticket_name: String!
+	ticketNamePlural: String!
+	ticket_types: [TicketType!]!
+	tickets_available_for_purchase: Boolean!
+	timezone_mode: TimezoneMode!
+	timezone_name: String
+	user_con_profile(id: ID!): UserConProfile!
+	cmsContentGroups: [CmsContentGroup!]!
+	cmsContentGroup(id: ID!): CmsContentGroup!
+	cmsFiles: [CmsFile!]!
+	cmsFile(id: ID!): CmsFile!
+	cmsGraphqlQueries: [CmsGraphqlQuery!]!
+	cmsGraphqlQuery(id: ID!): CmsGraphqlQuery!
+	cmsLayouts: [CmsLayout!]!
+	cmsLayout(id: ID!): CmsLayout!
+	cmsNavigationItems: [CmsNavigationItem!]!
+	cmsPages: [Page!]!
+	cmsPage(id: ID, slug: String, rootPage: Boolean): Page!
+	cmsPartials: [CmsPartial!]!
+	cmsVariables: [CmsVariable!]!
+	defaultLayout: CmsLayout!
+	effectiveCmsLayout(path: String!): CmsLayout!
+	rootPage: Page!
+	typeaheadSearchCmsContent(name: String): [CmsContentType!]!
 }
-type EventType {
+
+scalar Date
+
+"""
+Implement the DateTime<Utc> scalar
+
+The input/output is a string in RFC3339 format.
+"""
+scalar DateTime
+
+type Event {
 	id: ID!
-	title: String!
 	author: String
+	can_play_concurrently: Boolean!
+	convention: Convention!
+	created_at: NaiveDateTime
 	email: String
-	convention: ConventionType
+	form: Form!
+	event_category: EventCategory!
+	form_response_attrs_json(itemIdentifiers: [String!]): JsonScalar!
+	form_response_attrs_json_with_rendered_markdown(itemIdentifiers: [String!]): JsonScalar!
+	length_seconds: Int!
+	my_rating: Int
+	private_signup_list: Boolean!
+	registration_policy: RegistrationPolicy
+	runs(start: Date, finish: Date, exclude_conflicts: Date): [Run!]!
+	short_blurb_html: String!
+	team_members: [TeamMember!]!
+	title: String!
 }
-type EventTypeConnection {
+
+type EventCategory {
+	id: ID!
+	default_color: String!
+	event_form: Form!
+	event_proposal_form: Form
+	full_color: String!
+	name: String!
+	scheduling_ui: String!
+	signed_up_color: String!
+	team_member_name: String!
+	teamMemberNamePlural: String!
+}
+
+type EventConnection {
 	"""
 	Information to aid in pagination.
 	"""
@@ -21,21 +211,123 @@ type EventTypeConnection {
 	"""
 	A list of edges.
 	"""
-	edges: [EventTypeEdge]
+	edges: [EventEdge!]!
+	"""
+	A list of nodes.
+	"""
+	nodes: [Event!]!
 }
+
 """
 An edge in a connection.
 """
-type EventTypeEdge {
-	"""
-	The item at the end of the edge
-	"""
-	node: EventType!
+type EventEdge {
 	"""
 	A cursor for use in pagination
 	"""
 	cursor: String!
+	"""
+	The item at the end of the edge
+	"""
+	node: Event!
 }
+
+input EventFiltersInput {
+	category: [Int]
+	title: String
+	title_prefix: String
+	my_rating: [Int!]
+	form_items: JsonScalar
+}
+
+type EventsPagination {
+	current_page: Int!
+	entries: [Event!]!
+	per_page: Int!
+	total_entries: Int!
+	total_pages: Int!
+}
+
+
+type Form {
+	id: ID!
+	form_sections: [FormSection!]!
+	form_type: String!
+	title: String
+}
+
+type FormItem {
+	id: ID!
+	default_value: String
+	expose_in: [String!]
+	identifier: String
+	item_type: String
+	position: Int!
+	public_description: String
+	rendered_properties: String
+	visibility: FormItemRole!
+	writeability: FormItemRole!
+}
+
+enum FormItemRole {
+	normal
+	confirmed_attendee
+	team_member
+	all_profiles_basic_access
+	admin
+}
+
+type FormSection {
+	id: ID!
+	form_items: [FormItem!]!
+	position: Int!
+	title: String
+}
+
+
+
+"""
+A scalar that can represent any JSON value.
+"""
+scalar JSON
+
+scalar JsonScalar
+
+type LiquidAssign {
+	name: String!
+	drop_class_name: String!
+	cms_variable_value: JSON
+}
+
+"""
+ISO 8601 combined date and time without timezone.
+
+# Examples
+
+* `2015-07-01T08:59:60.123`,
+"""
+scalar NaiveDateTime
+
+type Order {
+	id: ID!
+	order_entries: [OrderEntry!]!
+}
+
+type OrderEntry {
+	id: ID!
+	quantity: Int
+}
+
+type Page {
+	id: ID!
+	content_html: String!
+	current_ability_can_delete: Boolean!
+	current_ability_can_update: Boolean!
+	name: String
+	skip_clickwrap_agreement: Boolean!
+	slug: String
+}
+
 """
 Information about pagination in a connection
 """
@@ -57,35 +349,235 @@ type PageInfo {
 	"""
 	endCursor: String
 }
-type PageType {
+
+type Product {
 	id: ID!
+	available: Boolean!
 	name: String
-	content_html: String!
 }
+
 type QueryRoot {
-	conventionByRequestHost: ConventionType
+	assumedIdentityFromProfile: UserConProfile
+	cmsParentByRequestHost: CmsParent!
+	conventionByRequestHost: Convention!
+	conventionByRequestHostIfPresent: Convention
+	currentAbility: Ability!
+	currentUser: User
+	events(after: String, before: String, first: Int, last: Int): EventConnection!
+	hasOauthApplications: Boolean!
 	previewLiquid(content: String!): String!
-	events(after: String, before: String, first: Int, last: Int): EventTypeConnection!
+	rootSite: RootSite!
 }
-type StaffPositionType {
+
+type RegistrationPolicy {
+	buckets: [RegistrationPolicyBucket!]!
+	minimum_slots: Int
+	minimum_slots_including_not_counted: Int
+	only_uncounted: Boolean!
+	preferred_slots: Int
+	preferred_slots_including_not_counted: Int
+	prevent_no_preference_signups: Boolean!
+	slots_limited: Boolean!
+	total_slots: Int
+	total_slots_including_not_counted: Int
+}
+
+type RegistrationPolicyBucket {
+	key: String!
+	anything: Boolean!
+	description: String!
+	minimum_slots: Int
+	name: String!
+	not_counted: Boolean!
+	slots_limited: Boolean!
+	total_slots: Int
+}
+
+type Room {
+	id: ID!
+	name: String
+	runs: [Run!]!
+}
+
+type RootSite implements CmsParent {
+	id: ID!
+	site_name: String
+	cmsContentGroups: [CmsContentGroup!]!
+	cmsContentGroup(id: ID!): CmsContentGroup!
+	cmsFiles: [CmsFile!]!
+	cmsFile(id: ID!): CmsFile!
+	cmsGraphqlQueries: [CmsGraphqlQuery!]!
+	cmsGraphqlQuery(id: ID!): CmsGraphqlQuery!
+	cmsLayouts: [CmsLayout!]!
+	cmsLayout(id: ID!): CmsLayout!
+	cmsNavigationItems: [CmsNavigationItem!]!
+	cmsPages: [Page!]!
+	cmsPage(id: ID, slug: String, rootPage: Boolean): Page!
+	cmsPartials: [CmsPartial!]!
+	cmsVariables: [CmsVariable!]!
+	defaultLayout: CmsLayout!
+	effectiveCmsLayout(path: String!): CmsLayout!
+	rootPage: Page!
+	typeaheadSearchCmsContent(name: String): [CmsContentType!]!
+}
+
+type Run {
+	id: ID!
+	confirmed_signup_count: Int!
+	current_ability_can_signup_summary_run: Boolean!
+	ends_at: NaiveDateTime
+	my_signups: [Signup!]!
+	my_signup_requests: [SignupRequest!]!
+	not_counted_signup_count: Int!
+	room_names: [String]!
+	rooms: [Room!]!
+	schedule_note: String
+	signup_count_by_state_and_bucket_key_and_counted: JsonScalar!
+	starts_at: NaiveDateTime
+	title_suffix: String
+}
+
+type SearchResult {
+	totalEntries: Int!
+}
+
+type Signup {
+	id: ID!
+	state: String!
+	waitlist_position: Int
+}
+
+enum SignupMode {
+	"""
+	Attendees can sign themselves up for events
+	"""
+	self_service
+	"""
+	Attendees can request signups and signup changes but con staff must approve them
+	"""
+	moderated
+}
+
+type SignupRequest {
+	id: ID!
+	replace_signup: Signup
+	result_signup: Signup
+	requested_bucket_key: String
+	state: String!
+	target_run: Run!
+}
+
+enum SiteMode {
+	"""
+	Site behaves as a convention with multiple events
+	"""
+	convention
+	"""
+	Site behaves as a single standalone event
+	"""
+	single_event
+	"""
+	Site behaves as a series of standalone events
+	"""
+	event_series
+}
+
+"""
+A description of a field to sort a result set by. This is typically used in pagination
+fields to specify how the results should be ordered.
+"""
+input SortInput {
+	"""
+	The name of the field to sort by.
+	"""
+	field: String!
+	"""
+	If true, the field will be sorted in descending order. If false, it will be sorted in
+	ascending order.
+	"""
+	desc: Boolean!
+}
+
+type StaffPosition {
 	id: ID!
 	name: String
 }
-type TeamMemberType {
+
+
+type TeamMember {
 	id: ID!
-	event: EventType!
+	display_team_member: Boolean!
+	email: String
+	event: Event!
+	user_con_profile: UserConProfile!
 }
-type UserConProfileType {
+
+type Ticket {
 	id: ID!
+}
+
+enum TicketMode {
+	"""
+	Tickets are neither sold nor required in this convention
+	"""
+	disabled
+	"""
+	A valid ticket is required to sign up for events in this convention
+	"""
+	required_for_signup
+	"""
+	Each event in this convention sells tickets separately
+	"""
+	ticket_per_event
+}
+
+type TicketType {
+	id: ID!
+	name: String!
+	providing_products: [Product!]!
+}
+
+enum TimezoneMode {
+	"""
+	Display dates and times using convention’s local time zone
+	"""
+	convention_local
+	"""
+	Display dates and times using user’s local time zone
+	"""
+	user_local
+}
+
+type User {
+	id: ID!
+	email: String!
+	first_name: String!
+	last_name: String!
+	name: String!
+	name_inverted: String!
+}
+
+type UserConProfile {
+	id: ID!
+	accepted_clickwrap_agreement: Boolean!
 	bio_html: String
 	bio_name: String!
-	convention: ConventionType!
+	convention: Convention!
+	current_pending_order: Order
+	email: String!
+	first_name: String!
+	gravatar_enabled: Boolean!
 	gravatar_url: String!
+	last_name: String!
+	mobile_phone: String
+	name: String!
 	name_inverted: String!
 	name_without_nickname: String!
-	staff_positions: [StaffPositionType!]!
-	team_members: [TeamMemberType!]!
+	staff_positions: [StaffPosition!]!
+	team_members: [TeamMember!]!
+	ticket: Ticket
 }
+
 schema {
 	query: QueryRoot
 }
