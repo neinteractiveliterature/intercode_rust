@@ -69,7 +69,7 @@ lazy_liquid_value_view = {path = "./crates/lazy_liquid_value_view"}
 liquid = {workspace = true}
 liquid-core = {workspace = true}
 md5 = "*"
-once_cell = "1.16.0"
+once_cell = "1.17.0"
 opentelemetry = {version = "0.18.0", features = ["rt-tokio"]}
 opentelemetry-otlp = {version = "0.11.0", features = ["tls-roots"]}
 oxide-auth = "0.5.3"
