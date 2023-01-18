@@ -13,4 +13,5 @@ jobs:
       - uses: kamilkisiela/graphql-inspector@master
         with:
           schema: 'schema.graphql'
-          endpoint: 'https://raw.githubusercontent.com/neinteractiveliterature/intercode/main/schema.json'
+          endpoint: 'https://raw.githubusercontent.com/neinteractiveliterature/intercode/main/schema.graphql'
+          annotations: false
