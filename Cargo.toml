@@ -89,7 +89,7 @@ tokio = {version = "~1.24", features = ["rt-multi-thread", "macros", "signal", "
 tokio-stream = {version = "0.1.11", features = ["net"]}
 tonic = "~0.8.3"
 tower = {version = "0.4.13", features = ["limit", "make"]}
-tower-http = {version = "0.3.4", features = ["catch-panic", "compression-br", "compression-deflate", "compression-gzip", "trace"]}
+tower-http = {version = "0.3.5", features = ["catch-panic", "compression-br", "compression-deflate", "compression-gzip", "trace"]}
 tracing = "0.1.37"
 tracing-flame = {version = "0.2.0", optional = true}
 tracing-opentelemetry = "0.18.0"
