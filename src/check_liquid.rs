@@ -354,7 +354,7 @@ pub async fn check_liquid() -> Result<()> {
           }),
         ),
     )
-    .buffer_unordered(2);
+    .buffer_unordered(100);
 
   let progress_bar = Arc::new(ProgressBar::new(
     ((all_pages.len() + all_layouts.len()) * 2)
