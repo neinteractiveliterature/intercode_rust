@@ -1,9 +1,10 @@
 use crate::csrf::{csrf_middleware, CsrfConfig, CsrfData};
-use crate::db_sessions::DbSessionStore;
+use crate::db_sessions::SessionWithDbStoreFromTxLayer;
 use crate::form_or_multipart::FormOrMultipart;
 use crate::legacy_passwords::{verify_legacy_md5_password, verify_legacy_sha1_password};
 use crate::liquid_renderer::IntercodeLiquidRenderer;
 use crate::middleware::{AuthorizationInfoAndQueryDataFromRequest, QueryDataFromRequest};
+use crate::request_bound_transaction::request_bound_transaction;
 use crate::Localizations;
 use ::http::StatusCode;
 use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
@@ -11,12 +12,13 @@ use async_graphql::*;
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::body::HttpBody;
 use axum::extract::{FromRef, OriginalUri, State};
+use axum::middleware::from_fn_with_state;
 use axum::response::{self, IntoResponse};
 use axum::routing::{get, post, IntoMakeService};
 use axum::{debug_handler, Extension, Form, Router};
 use axum_server::tls_rustls::{RustlsAcceptor, RustlsConfig};
 use axum_server::{Handle, Server};
-use axum_sessions::{SameSite, SessionHandle, SessionLayer};
+use axum_sessions::{SameSite, SessionHandle};
 use csrf::ChaCha20Poly1305CsrfProtection;
 use i18n_embed::fluent::{fluent_language_loader, FluentLanguageLoader};
 use i18n_embed::{I18nEmbedError, LanguageLoader};
@@ -28,7 +30,6 @@ use liquid::object;
 use opentelemetry::global::shutdown_tracer_provider;
 use regex::Regex;
 use sea_orm::{ActiveValue, ColumnTrait, DatabaseConnection, EntityTrait, ModelTrait, QueryFilter};
-use seawater::ConnectionWrapper;
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -57,6 +58,7 @@ type IntercodeSchema = Schema<api::QueryRoot, EmptyMutation, EmptySubscription>;
 pub struct AppState {
   schema: IntercodeSchema,
   schema_data: SchemaData,
+  db_conn: Arc<DatabaseConnection>,
 }
 
 #[debug_handler]
@@ -299,15 +301,10 @@ where
 {
   let language_loader_arc = Arc::new(build_language_loader()?);
   let schema_data = SchemaData {
-    db_conn: db_conn.clone(),
     language_loader: language_loader_arc,
   };
   let graphql_schema = build_intercode_graphql_schema(schema_data.clone());
-  let app_state = AppState {
-    schema: graphql_schema,
-    schema_data,
-  };
-  let store = DbSessionStore::new(db_conn.into());
+
   let secret_bytes = hex::decode(env::var("SECRET_KEY_BASE")?)?;
   let secret: [u8; 64] = secret_bytes[0..64].try_into().unwrap_or_else(|_| {
     panic!(
@@ -316,10 +313,16 @@ where
     )
   });
 
+  let app_state = AppState {
+    schema: graphql_schema,
+    schema_data,
+    db_conn,
+  };
+
   let mut csrf_secret: [u8; 32] = Default::default();
   csrf_secret.clone_from_slice(&secret[0..32]);
   let protect = ChaCha20Poly1305CsrfProtection::from_key(csrf_secret);
-  let session_layer = SessionLayer::new(store, &secret);
+  let session_layer = SessionWithDbStoreFromTxLayer::new(secret);
   let csrf_config = CsrfConfig {
     cookie_domain: None,
     cookie_http_only: true,
@@ -337,9 +340,13 @@ where
     .route("/authenticity_tokens", get(authenticity_tokens))
     .route("/users/sign_in", post(sign_in))
     .fallback(single_page_app_entry)
-    .layer(axum_sea_orm_tx::Layer::new(ConnectionWrapper::from(
-      app_state.schema_data.db_conn.clone(),
-    )))
+    .layer(axum::middleware::from_fn(csrf_middleware))
+    .layer(Extension(csrf_config))
+    .layer(session_layer)
+    .layer(from_fn_with_state(
+      app_state.clone(),
+      request_bound_transaction,
+    ))
     .layer(ConcurrencyLimitLayer::new(
       env::var("MAX_CONCURRENCY")
         .unwrap_or_else(|_| "25".to_string())
@@ -347,9 +354,6 @@ where
         .unwrap_or(25),
     ))
     .layer(CompressionLayer::new())
-    .layer(axum::middleware::from_fn(csrf_middleware))
-    .layer(Extension(csrf_config))
-    .layer(session_layer)
     .layer(
       TraceLayer::new_for_http()
         .make_span_with(DefaultMakeSpan::new().level(tracing::Level::INFO))

@@ -28,7 +28,7 @@ mod test_helpers {
     .unwrap();
 
     let tx = Arc::new(db.begin().await.unwrap());
-    f(tx.clone().into()).await;
+    f(ConnectionWrapper::DatabaseTransaction(Arc::downgrade(&tx))).await;
 
     let tx = Arc::try_unwrap(tx).unwrap();
     tx.rollback().await.unwrap();

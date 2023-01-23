@@ -9,7 +9,6 @@ use intercode_liquid::{
 use intercode_policies::AuthorizationInfo;
 use liquid::partials::LazyCompiler;
 use loaders::LoaderManager;
-use sea_orm::DatabaseConnection;
 use seawater::ConnectionWrapper;
 use std::{fmt::Debug, future::Future, sync::Arc};
 
@@ -23,7 +22,6 @@ mod presenters;
 
 #[derive(Clone, Debug)]
 pub struct SchemaData {
-  pub db_conn: Arc<DatabaseConnection>,
   pub language_loader: Arc<FluentLanguageLoader>,
 }
 

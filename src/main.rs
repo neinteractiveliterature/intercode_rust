@@ -13,6 +13,7 @@ mod form_or_multipart;
 mod legacy_passwords;
 mod liquid_renderer;
 mod middleware;
+mod request_bound_transaction;
 mod server;
 
 use async_graphql::*;

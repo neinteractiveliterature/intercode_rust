@@ -256,10 +256,9 @@ pub async fn check_liquid() -> Result<()> {
   let db = Arc::new(connect_database().await?);
   startup_bar.set_message("Loading translations...");
   let schema_data = SchemaData {
-    db_conn: db.clone(),
     language_loader: Arc::new(build_language_loader()?),
   };
-  let connection_wrapper = ConnectionWrapper::DatabaseConnection(db);
+  let connection_wrapper = ConnectionWrapper::from(db);
   startup_bar.set_message("Loading root site...");
   let root_site = root_sites::Entity::find()
     .one(&connection_wrapper)

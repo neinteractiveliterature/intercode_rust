@@ -472,25 +472,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "axum-sea-orm-tx"
-version = "0.2.0"
-source = "git+https://github.com/nbudin/axum-sea-orm-tx.git#a132cde746b22ec2ae8ab6e655632c28949edc7f"
-dependencies = [
- "async-trait",
- "axum",
- "axum-core",
- "bytes",
- "futures-core",
- "http",
- "http-body",
- "parking_lot 0.12.1",
- "sea-orm",
- "thiserror",
- "tower-layer",
- "tower-service",
-]
-
-[[package]]
 name = "axum-server"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -961,11 +942,11 @@ checksum = "245097e9a4535ee1e3e3931fcfcd55a796a44c643e8596ff6566d68f09b87bbc"
 
 [[package]]
 name = "cookie"
-version = "0.16.1"
+version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "344adc371239ef32293cb1c4fe519592fcf21206c79c02854320afcdf3ab4917"
+checksum = "e859cd57d0710d9e06c381b550c06e76992472a8c6d527aecd2fc673dcc231fb"
 dependencies = [
- "base64 0.13.1",
+ "base64 0.20.0",
  "hmac 0.12.1",
  "percent-encoding",
  "rand 0.8.5",
@@ -2202,7 +2183,6 @@ dependencies = [
  "async-stripe",
  "axum",
  "axum-extra",
- "axum-sea-orm-tx",
  "axum-server",
  "axum-sessions",
  "base64 0.13.1",
@@ -2255,6 +2235,7 @@ dependencies = [
  "tonic",
  "tower",
  "tower-http",
+ "tower-layer",
  "tracing",
  "tracing-flame",
  "tracing-opentelemetry",
@@ -3702,7 +3683,6 @@ version = "0.1.0"
 dependencies = [
  "async-graphql",
  "async-trait",
- "axum-sea-orm-tx",
  "lazy_liquid_value_view",
  "liquid",
  "liquid-core",

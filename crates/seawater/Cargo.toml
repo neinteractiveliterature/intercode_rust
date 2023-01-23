@@ -6,14 +6,13 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-async-graphql = {version = "*", features = ["dataloader"]}
-async-trait = "*"
-axum-sea-orm-tx = {git = "https://github.com/nbudin/axum-sea-orm-tx.git"}
+async-graphql = {workspace = true, features = ["dataloader"]}
+async-trait = {workspace = true}
 lazy_liquid_value_view = {path = "../lazy_liquid_value_view"}
 liquid = {workspace = true}
 liquid-core = {workspace = true}
-once_cell = "*"
-regex = "*"
-sea-orm = "*"
+once_cell = {workspace = true}
+regex = {workspace = true}
+sea-orm = {workspace = true}
 seawater_derive = {path = "../seawater_derive"}
-tracing = "*"
+tracing = {workspace = true}

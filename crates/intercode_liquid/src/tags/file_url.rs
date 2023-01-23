@@ -7,7 +7,7 @@ use liquid_core::{
   Expression, Language, ParseTag, Renderable, Result, Runtime, TagReflection, TagTokenIter,
   ValueView,
 };
-use sea_orm::{ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QuerySelect};
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QuerySelect};
 use seawater::ConnectionWrapper;
 use tokio::runtime::Handle;
 
@@ -74,36 +74,37 @@ impl Renderable for FileUrl {
         .into_err();
     }
     let filename = filename.to_kstr().into_owned();
+    let cms_parent = self.cms_parent.clone();
+    let db = self.db.clone();
 
-    let attachment = tokio::task::block_in_place(move || {
-      Handle::current().block_on(async move {
-        active_storage_attachments::Entity::find()
-          .filter(active_storage_attachments::Column::RecordType.eq("CmsFile"))
-          .filter(active_storage_attachments::Column::Name.eq("file"))
-          .filter(
-            active_storage_attachments::Column::RecordId.in_subquery(
-              QuerySelect::query(
-                &mut self
-                  .cms_parent
-                  .as_ref()
-                  .cms_files()
-                  .select_only()
-                  .column(cms_files::Column::Id),
-              )
-              .to_owned(),
-            ),
-          )
-          .one(self.db.as_ref())
-          .await
-      })
+    let attachment_handle = tokio::spawn(async move {
+      active_storage_attachments::Entity::find()
+        .filter(active_storage_attachments::Column::RecordType.eq("CmsFile"))
+        .filter(active_storage_attachments::Column::Name.eq("file"))
+        .filter(
+          active_storage_attachments::Column::RecordId.in_subquery(
+            QuerySelect::query(
+              &mut cms_parent
+                .as_ref()
+                .cms_files()
+                .select_only()
+                .column(cms_files::Column::Id),
+            )
+            .to_owned(),
+          ),
+        )
+        .find_also_related(active_storage_blobs::Entity)
+        .one(db.as_ref())
+        .await
     });
+    let attachment = Handle::current().block_on(attachment_handle).unwrap();
 
     let attachment = match attachment {
       Ok(att) => Ok(att),
       Err(error) => Err(liquid_core::Error::with_msg(error.to_string())),
     }?;
 
-    let attachment = match attachment {
+    let (attachment, blob) = match attachment {
       Some(att) => Ok(att),
       None => Err(liquid_core::Error::with_msg(format!(
         "File not found: {}",
@@ -111,27 +112,11 @@ impl Renderable for FileUrl {
       ))),
     }?;
 
-    let att_id = attachment.id;
-    let att_blob_id = attachment.blob_id;
-    let blob = tokio::task::block_in_place(move || {
-      Handle::current().block_on(async move {
-        attachment
-          .find_related(active_storage_blobs::Entity)
-          .one(self.db.as_ref())
-          .await
-      })
-    });
-
-    let blob = match blob {
-      Ok(b) => Ok(b),
-      Err(error) => Err(liquid_core::Error::with_msg(error.to_string())),
-    }?;
-
     let blob = match blob {
       Some(b) => Ok(b),
       None => Err(liquid_core::Error::with_msg(format!(
         "Attachment {} is missing blob record {} in the database",
-        att_id, att_blob_id
+        attachment.id, attachment.blob_id
       ))),
     }?;
 

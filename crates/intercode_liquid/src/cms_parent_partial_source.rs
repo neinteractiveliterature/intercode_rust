@@ -73,31 +73,30 @@ impl LazyCmsPartialCacheCell {
     }
   }
 
-  fn try_get<C: ConnectionTrait>(
+  fn try_get<C: ConnectionTrait + Send + 'static>(
     &mut self,
-    db: &C,
-    cms_parent: &CmsParent,
+    db: Arc<C>,
+    cms_parent: Arc<CmsParent>,
   ) -> Option<&PartialNameAndContent> {
     if self.partial.is_some() {
       self.partial.as_ref()
     } else {
-      let name = self.name.as_str();
+      let name = self.name.clone();
       warn!("Uncached single partial read: {}", name);
-      let partial = tokio::task::block_in_place(move || {
-        Handle::current().block_on(async move {
-          cms_parent
-            .cms_partials()
-            .filter(cms_partials::Column::Name.eq(name))
-            .select_only()
-            .column(cms_partials::Column::Name)
-            .column(cms_partials::Column::Content)
-            .into_model::<PartialNameAndContent>()
-            .one(db)
-            .await
-            .ok()
-            .unwrap_or_default()
-        })
+      let join_handle = tokio::spawn(async move {
+        cms_parent
+          .cms_partials()
+          .filter(cms_partials::Column::Name.eq(name.as_str()))
+          .select_only()
+          .column(cms_partials::Column::Name)
+          .column(cms_partials::Column::Content)
+          .into_model::<PartialNameAndContent>()
+          .one(db.as_ref())
+          .await
+          .ok()
+          .unwrap_or_default()
       });
+      let partial = Handle::current().block_on(join_handle).unwrap();
       self.partial = partial;
       self.partial.as_ref()
     }
@@ -139,7 +138,7 @@ impl LazyCmsPartialCache {
     let cache_cell = partials
       .entry(name.to_string())
       .or_insert_with(|| LazyCmsPartialCacheCell::new(name.to_string()));
-    if let Some(partial) = cache_cell.try_get(self.db.as_ref(), self.cms_parent.as_ref()) {
+    if let Some(partial) = cache_cell.try_get(self.db.clone().into(), self.cms_parent.clone()) {
       partial.content.clone()
     } else {
       None

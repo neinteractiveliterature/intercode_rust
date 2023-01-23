@@ -1,9 +1,16 @@
-use axum::async_trait;
-use axum_sessions::async_session::{Session, SessionStore};
+use axum::{async_trait, response::Response};
+use axum_sessions::{
+  async_session::{MemoryStore, Session, SessionStore},
+  SessionLayer,
+};
 use chrono::Utc;
+use futures::future::BoxFuture;
+use http::Request;
 use intercode_entities::sessions;
 use sea_orm::{sea_query::OnConflict, ColumnTrait, EntityTrait, QueryFilter};
 use seawater::ConnectionWrapper;
+use tower::{Layer, Service};
+use tracing::log::error;
 
 #[derive(Clone, Debug)]
 pub struct DbSessionStore {
@@ -80,5 +87,79 @@ impl SessionStore for DbSessionStore {
       .await?;
 
     Ok(())
+  }
+}
+
+#[derive(Clone)]
+pub struct SessionWithDbStoreFromTxLayer {
+  secret: [u8; 64],
+}
+
+impl SessionWithDbStoreFromTxLayer {
+  pub fn new(secret: [u8; 64]) -> Self {
+    Self { secret }
+  }
+}
+
+impl<S> Layer<S> for SessionWithDbStoreFromTxLayer {
+  type Service = SessionWithDbStoreFromTxService<S>;
+
+  fn layer(&self, inner: S) -> Self::Service {
+    SessionWithDbStoreFromTxService {
+      secret: self.secret,
+      inner,
+    }
+  }
+}
+
+#[derive(Clone)]
+pub struct SessionWithDbStoreFromTxService<S> {
+  secret: [u8; 64],
+  inner: S,
+}
+
+impl<S, ReqBody, ResBody> Service<Request<ReqBody>> for SessionWithDbStoreFromTxService<S>
+where
+  S: Service<Request<ReqBody>, Response = Response<ResBody>> + Clone + Send + 'static,
+  ResBody: Send + 'static,
+  ReqBody: Send + 'static,
+  S::Future: Send + 'static,
+{
+  type Response = Response<ResBody>;
+  type Error = S::Error;
+  type Future = BoxFuture<'static, Result<Self::Response, Self::Error>>;
+
+  fn poll_ready(
+    &mut self,
+    cx: &mut std::task::Context<'_>,
+  ) -> std::task::Poll<Result<(), Self::Error>> {
+    self.inner.poll_ready(cx)
+  }
+
+  fn call(&mut self, req: Request<ReqBody>) -> Self::Future {
+    let inner = self.inner.clone();
+    let secret = self.secret;
+    Box::pin(async move {
+      let (parts, body) = req.into_parts();
+      let db = parts.extensions.get::<ConnectionWrapper>();
+
+      match db {
+        Some(wrapper) => {
+          let store = DbSessionStore::new(wrapper.clone());
+          let layer = SessionLayer::new(store, &secret);
+          let mut service = layer.layer(inner);
+          let req = Request::from_parts(parts, body);
+          service.call(req).await
+        }
+        None => {
+          error!("Couldn't get ConnectionWrapper from request extensions");
+          let store = MemoryStore::new();
+          let layer = SessionLayer::new(store, &secret);
+          let mut service = layer.layer(inner);
+          let req = Request::from_parts(parts, body);
+          service.call(req).await
+        }
+      }
+    })
   }
 }

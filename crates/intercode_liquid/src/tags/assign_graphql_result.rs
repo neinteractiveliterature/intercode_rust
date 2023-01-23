@@ -155,7 +155,7 @@ impl<E: GraphQLExecutor> AssignGraphQLResult<E> {
   }
 }
 
-impl<E: GraphQLExecutor> Renderable for AssignGraphQLResult<E> {
+impl<E: GraphQLExecutor + 'static> Renderable for AssignGraphQLResult<E> {
   fn render_to(&self, _writer: &mut dyn Write, runtime: &dyn Runtime) -> Result<()> {
     let db_ref = self.db.clone();
     let cms_graphql_queries_select = self
@@ -163,14 +163,15 @@ impl<E: GraphQLExecutor> Renderable for AssignGraphQLResult<E> {
       .as_ref()
       .cms_graphql_queries()
       .filter(cms_graphql_queries::Column::Identifier.eq(self.query_name.clone()));
-    let graphql_query = tokio::task::block_in_place(move || {
-      Handle::current()
-        .block_on(async move { cms_graphql_queries_select.one(db_ref.as_ref()).await })
-    })
-    .map_err(|err| liquid_core::Error::with_msg(err.to_string()))?
-    .ok_or_else(|| {
-      liquid_core::Error::with_msg(format!("GraphQL query not found: {}", self.query_name))
-    })?;
+    let graphql_query_handle =
+      tokio::spawn(async move { cms_graphql_queries_select.one(db_ref.as_ref()).await });
+    let graphql_query = Handle::current()
+      .block_on(graphql_query_handle)
+      .unwrap()
+      .map_err(|err| liquid_core::Error::with_msg(err.to_string()))?
+      .ok_or_else(|| {
+        liquid_core::Error::with_msg(format!("GraphQL query not found: {}", self.query_name))
+      })?;
 
     let mut variables_map = IndexMap::with_capacity(self.arg_mapping.len());
     let variable_pairs = self
@@ -193,9 +194,9 @@ impl<E: GraphQLExecutor> Renderable for AssignGraphQLResult<E> {
     let request =
       async_graphql::Request::new(graphql_query.query.unwrap_or_else(|| String::from("")))
         .variables(Variables::from_value(ConstValue::Object(variables_map)));
-    let response = tokio::task::block_in_place(move || {
-      Handle::current().block_on(async move { self.graphql_executor.execute(request).await })
-    });
+    let executor = self.graphql_executor.clone();
+    let response_handle = tokio::spawn(async move { executor.execute(request).await });
+    let response = Handle::current().block_on(response_handle).unwrap();
 
     runtime.set_global(
       liquid_core::model::KString::from_string(self.destination.clone()),

@@ -2,7 +2,6 @@ use axum::{
   async_trait,
   extract::{FromRequestParts, Host},
 };
-use axum_sea_orm_tx::Tx;
 use axum_sessions::SessionHandle;
 use http::{request::Parts, StatusCode};
 use intercode_entities::{
@@ -63,11 +62,28 @@ pub struct QueryDataFromRequest(pub QueryData);
 impl<S: Sync> FromRequestParts<S> for QueryDataFromRequest {
   type Rejection = (StatusCode, String);
 
-  async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-    let tx = Tx::<ConnectionWrapper>::from_request_parts(parts, state)
-      .await
-      .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
-    let db = ConnectionWrapper::from(tx);
+  async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+    let db = parts
+      .extensions
+      .get::<ConnectionWrapper>()
+      .ok_or_else(|| {
+        (
+          StatusCode::INTERNAL_SERVER_ERROR,
+          "Could not get connection wrapper from request extensions".to_string(),
+        )
+      })?
+      .clone();
+
+    // let db = parts
+    //   .extensions
+    //   .get::<ConnectionWrapper>()
+    //   .cloned()
+    //   .ok_or_else(|| {
+    //     (
+    //       StatusCode::INTERNAL_SERVER_ERROR,
+    //       "Could not get connection wrapper from request extensions".to_string(),
+    //     )
+    //   })?;
 
     let (cms_parent, convention) = cms_parent_from_request_parts(parts, &db)
       .await

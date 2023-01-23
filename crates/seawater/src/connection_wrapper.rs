@@ -1,16 +1,25 @@
 use async_trait::async_trait;
-use axum_sea_orm_tx::Tx;
 use sea_orm::{
   AccessMode, ConnectionTrait, DatabaseConnection, DatabaseTransaction, IsolationLevel,
   TransactionError, TransactionTrait,
 };
-use std::{fmt::Debug, future::Future, pin::Pin, sync::Arc};
+use std::{
+  fmt::Debug,
+  future::Future,
+  pin::Pin,
+  sync::{Arc, Weak},
+};
 
 #[derive(Clone, Debug)]
 pub enum ConnectionWrapper {
   DatabaseConnection(Arc<DatabaseConnection>),
-  DatabaseTransaction(Arc<DatabaseTransaction>),
-  Tx(Arc<Tx<ConnectionWrapper>>),
+  DatabaseTransaction(Weak<DatabaseTransaction>),
+}
+
+impl Drop for ConnectionWrapper {
+  fn drop(&mut self) {
+    // eprintln!("Dropping ConnectionWrapper {:?}", self);
+  }
 }
 
 impl AsRef<Self> for ConnectionWrapper {
@@ -25,33 +34,9 @@ impl From<DatabaseConnection> for ConnectionWrapper {
   }
 }
 
-impl From<DatabaseTransaction> for ConnectionWrapper {
-  fn from(tx: DatabaseTransaction) -> Self {
-    Self::DatabaseTransaction(Arc::new(tx))
-  }
-}
-
-impl From<Tx<ConnectionWrapper>> for ConnectionWrapper {
-  fn from(tx: Tx<ConnectionWrapper>) -> Self {
-    Self::Tx(Arc::new(tx))
-  }
-}
-
 impl From<Arc<DatabaseConnection>> for ConnectionWrapper {
   fn from(arc: Arc<DatabaseConnection>) -> Self {
     Self::DatabaseConnection(arc)
-  }
-}
-
-impl From<Arc<DatabaseTransaction>> for ConnectionWrapper {
-  fn from(arc: Arc<DatabaseTransaction>) -> Self {
-    Self::DatabaseTransaction(arc)
-  }
-}
-
-impl From<Arc<Tx<ConnectionWrapper>>> for ConnectionWrapper {
-  fn from(arc: Arc<Tx<ConnectionWrapper>>) -> Self {
-    Self::Tx(arc)
   }
 }
 
@@ -66,16 +51,19 @@ impl ConnectionTrait for ConnectionWrapper {
   fn get_database_backend(&self) -> sea_orm::DbBackend {
     match self {
       Self::DatabaseConnection(conn) => conn.get_database_backend(),
-      Self::DatabaseTransaction(tx) => tx.get_database_backend(),
-      Self::Tx(tx) => tx.get_database_backend(),
+      Self::DatabaseTransaction(tx) => tx.upgrade().unwrap().get_database_backend(),
     }
   }
 
   async fn execute(&self, stmt: sea_orm::Statement) -> Result<sea_orm::ExecResult, sea_orm::DbErr> {
     match self {
       Self::DatabaseConnection(conn) => conn.execute(stmt).await,
-      Self::DatabaseTransaction(tx) => tx.execute(stmt).await,
-      Self::Tx(tx) => tx.execute(stmt).await,
+      Self::DatabaseTransaction(tx) => {
+        tx.upgrade()
+          .ok_or_else(|| sea_orm::DbErr::Custom("Transaction has already ended".to_string()))?
+          .execute(stmt)
+          .await
+      }
     }
   }
 
@@ -85,8 +73,12 @@ impl ConnectionTrait for ConnectionWrapper {
   ) -> Result<Option<sea_orm::QueryResult>, sea_orm::DbErr> {
     match self {
       Self::DatabaseConnection(conn) => conn.query_one(stmt).await,
-      Self::DatabaseTransaction(tx) => tx.query_one(stmt).await,
-      Self::Tx(tx) => tx.query_one(stmt).await,
+      Self::DatabaseTransaction(tx) => {
+        tx.upgrade()
+          .ok_or_else(|| sea_orm::DbErr::Custom("Transaction has already ended".to_string()))?
+          .query_one(stmt)
+          .await
+      }
     }
   }
 
@@ -96,8 +88,12 @@ impl ConnectionTrait for ConnectionWrapper {
   ) -> Result<Vec<sea_orm::QueryResult>, sea_orm::DbErr> {
     match self {
       Self::DatabaseConnection(conn) => conn.query_all(stmt).await,
-      Self::DatabaseTransaction(tx) => tx.query_all(stmt).await,
-      Self::Tx(tx) => tx.query_all(stmt).await,
+      Self::DatabaseTransaction(tx) => {
+        tx.upgrade()
+          .ok_or_else(|| sea_orm::DbErr::Custom("Transaction has already ended".to_string()))?
+          .query_all(stmt)
+          .await
+      }
     }
   }
 }
@@ -107,8 +103,12 @@ impl TransactionTrait for ConnectionWrapper {
   async fn begin(&self) -> Result<DatabaseTransaction, sea_orm::DbErr> {
     match self {
       Self::DatabaseConnection(conn) => conn.begin().await,
-      Self::DatabaseTransaction(tx) => tx.begin().await,
-      Self::Tx(tx) => tx.begin().await,
+      Self::DatabaseTransaction(tx) => {
+        tx.upgrade()
+          .ok_or_else(|| sea_orm::DbErr::Custom("Transaction has already ended".to_string()))?
+          .begin()
+          .await
+      }
     }
   }
 
@@ -119,8 +119,12 @@ impl TransactionTrait for ConnectionWrapper {
   ) -> Result<DatabaseTransaction, sea_orm::DbErr> {
     match self {
       Self::DatabaseConnection(conn) => conn.begin_with_config(isolation_level, access_mode).await,
-      Self::DatabaseTransaction(tx) => tx.begin_with_config(isolation_level, access_mode).await,
-      Self::Tx(tx) => tx.begin_with_config(isolation_level, access_mode).await,
+      Self::DatabaseTransaction(tx) => {
+        tx.upgrade()
+          .ok_or_else(|| sea_orm::DbErr::Custom("Transaction has already ended".to_string()))?
+          .begin_with_config(isolation_level, access_mode)
+          .await
+      }
     }
   }
 
@@ -135,8 +139,15 @@ impl TransactionTrait for ConnectionWrapper {
   {
     match self {
       Self::DatabaseConnection(conn) => conn.transaction(callback).await,
-      Self::DatabaseTransaction(tx) => tx.transaction(callback).await,
-      Self::Tx(tx) => tx.transaction(callback).await,
+      Self::DatabaseTransaction(tx) => {
+        let upgraded = tx.upgrade();
+        match upgraded {
+          None => Err(TransactionError::Connection(sea_orm::DbErr::Custom(
+            "Transaction has already ended".to_string(),
+          ))),
+          Some(tx) => tx.transaction(callback).await,
+        }
+      }
     }
   }
 
@@ -161,12 +172,16 @@ impl TransactionTrait for ConnectionWrapper {
           .await
       }
       Self::DatabaseTransaction(tx) => {
-        tx.transaction_with_config(callback, isolation_level, access_mode)
-          .await
-      }
-      Self::Tx(tx) => {
-        tx.transaction_with_config(callback, isolation_level, access_mode)
-          .await
+        let upgraded = tx.upgrade();
+        match upgraded {
+          None => Err(TransactionError::Connection(sea_orm::DbErr::Custom(
+            "Transaction has already ended".to_string(),
+          ))),
+          Some(tx) => {
+            tx.transaction_with_config(callback, isolation_level, access_mode)
+              .await
+          }
+        }
       }
     }
   }

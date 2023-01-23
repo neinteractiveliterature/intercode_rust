@@ -154,7 +154,8 @@ impl LiquidRenderer for IntercodeLiquidRenderer {
     let globals_with_builtins = builtins.extend(globals);
 
     let template = parser.parse(content)?;
-    let result = template.render(&globals_with_builtins);
+    let result =
+      tokio::task::spawn_blocking(move || template.render(&globals_with_builtins)).await?;
 
     match result {
       Ok(content) => Ok(content),
