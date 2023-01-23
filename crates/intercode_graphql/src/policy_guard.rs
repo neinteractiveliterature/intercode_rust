@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_graphql::{Context, Guard, Result};
-use async_session::async_trait;
+use async_trait::async_trait;
 use intercode_policies::{AuthorizationInfo, Policy};
 
 pub struct PolicyGuard<'a, P: Policy<AuthorizationInfo, R>, R: Send + Sync> {

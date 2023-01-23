@@ -1,5 +1,5 @@
 use async_graphql::dataloader::Loader;
-use async_session::async_trait;
+use async_trait::async_trait;
 use intercode_entities::signup_requests;
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter};
 use seawater::ConnectionWrapper;

@@ -2092,7 +2092,7 @@ name = "intercode_graphql"
 version = "0.1.0"
 dependencies = [
  "async-graphql",
- "async-session",
+ "async-trait",
  "chrono",
  "chrono-tz",
  "html-escape",
@@ -2179,7 +2179,6 @@ dependencies = [
  "anyhow",
  "async-graphql",
  "async-graphql-axum",
- "async-graphql-value",
  "async-stripe",
  "axum",
  "axum-extra",

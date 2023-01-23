@@ -10,7 +10,7 @@ use crate::{
   QueryData,
 };
 use async_graphql::*;
-use async_session::async_trait;
+use async_trait::async_trait;
 use chrono::NaiveDateTime;
 use intercode_entities::{
   events, forms, model_ext::form_item_permissions::FormItemRole, RegistrationPolicy,

@@ -1,5 +1,5 @@
 use async_graphql::dataloader::Loader;
-use async_session::async_trait;
+use async_trait::async_trait;
 use chrono::NaiveDateTime;
 use intercode_entities::{model_ext::time_bounds::TimeBoundsSelectExt, runs};
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter};

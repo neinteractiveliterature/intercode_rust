@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use async_graphql::{Context, Error, Interface};
-use async_session::async_trait;
+use async_trait::async_trait;
 use intercode_entities::model_ext::form_item_permissions::FormItemRole;
 use intercode_entities::model_ext::FormResponse;
 use intercode_entities::{form_items, forms};
