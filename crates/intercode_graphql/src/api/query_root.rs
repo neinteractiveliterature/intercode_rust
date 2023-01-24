@@ -16,7 +16,7 @@ use sea_orm::{EntityTrait, PaginatorTrait};
 
 pub struct QueryRoot;
 
-#[Object]
+#[Object(name = "Query")]
 impl QueryRoot {
   pub async fn assumed_identity_from_profile(
     &self,

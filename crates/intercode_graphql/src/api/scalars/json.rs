@@ -2,7 +2,7 @@ use async_graphql::{Scalar, ScalarType};
 
 pub struct JsonScalar(pub serde_json::Value);
 
-#[Scalar]
+#[Scalar(name = "JSON")]
 impl ScalarType for JsonScalar {
   fn parse(value: async_graphql::Value) -> async_graphql::InputValueResult<Self> {
     match value {

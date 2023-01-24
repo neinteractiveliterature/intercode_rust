@@ -178,8 +178,8 @@ type Event {
 	email: String
 	form: Form!
 	event_category: EventCategory!
-	form_response_attrs_json(itemIdentifiers: [String!]): JsonScalar!
-	form_response_attrs_json_with_rendered_markdown(itemIdentifiers: [String!]): JsonScalar!
+	form_response_attrs_json(itemIdentifiers: [String!]): JSON!
+	form_response_attrs_json_with_rendered_markdown(itemIdentifiers: [String!]): JSON!
 	length_seconds: Int!
 	my_rating: Int
 	private_signup_list: Boolean!
@@ -237,7 +237,7 @@ input EventFiltersInput {
 	title: String
 	title_prefix: String
 	my_rating: [Int!]
-	form_items: JsonScalar
+	form_items: JSON
 }
 
 type EventsPagination {
@@ -286,12 +286,7 @@ type FormSection {
 
 
 
-"""
-A scalar that can represent any JSON value.
-"""
 scalar JSON
-
-scalar JsonScalar
 
 type LiquidAssign {
 	name: String!
@@ -356,7 +351,7 @@ type Product {
 	name: String
 }
 
-type QueryRoot {
+type Query {
 	assumedIdentityFromProfile: UserConProfile
 	cmsParentByRequestHost: CmsParent!
 	conventionByRequestHost: Convention!
@@ -432,7 +427,7 @@ type Run {
 	room_names: [String]!
 	rooms: [Room!]!
 	schedule_note: String
-	signup_count_by_state_and_bucket_key_and_counted: JsonScalar!
+	signup_count_by_state_and_bucket_key_and_counted: JSON!
 	starts_at: NaiveDateTime
 	title_suffix: String
 }
@@ -579,6 +574,6 @@ type UserConProfile {
 }
 
 schema {
-	query: QueryRoot
+	query: Query
 }
 
