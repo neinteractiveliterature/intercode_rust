@@ -1,6 +1,10 @@
-name: CI
+name: GraphQL schema compatibility check
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
+      - schema-diff
 
 jobs:
   test:
@@ -12,4 +16,17 @@ jobs:
         uses: actions/checkout@master
       - uses: actions/setup-node@v3
       - run: npm install @graphql-tools/load @graphql-tools/url-loader @graphql-tools/graphql-file-loader @graphql-inspector/core
-      - run: node graphql-schema-diff.js
+      - id: schema_diff
+        run: |
+          echo 'MARKDOWN<<EOF' >>$GITHUB_OUTPUT
+          node graphql-schema-diff.js >>$GITHUB_OUTPUT
+          echo 'EOF' >>$GITHUB_OUTPUT
+      - uses: actions/github-script@v6
+        with:
+          script: |
+            github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 83,
+              body: ${{ steps.schema_diff.outputs.MARKDOWN }}
+            })
