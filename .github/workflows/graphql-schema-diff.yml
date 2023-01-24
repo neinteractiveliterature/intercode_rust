@@ -23,7 +23,7 @@ jobs:
       - id: schema_diff
         run: |
           echo 'MARKDOWN<<EOF' >>$GITHUB_OUTPUT
-          node graphql-schema-diff.js >>$GITHUB_OUTPUT
+          node ./.github/graphql-schema-diff.js >>$GITHUB_OUTPUT
           echo 'EOF' >>$GITHUB_OUTPUT
       - uses: actions/github-script@v6
         with:
