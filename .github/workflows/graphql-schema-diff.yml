@@ -16,6 +16,9 @@ jobs:
         uses: actions/checkout@master
       - uses: actions/setup-node@v3
       - run: npm install @graphql-tools/load @graphql-tools/url-loader @graphql-tools/graphql-file-loader @graphql-inspector/core
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo run export-schema >schema.graphql
       - id: schema_diff
         run: |
           echo 'MARKDOWN<<EOF' >>$GITHUB_OUTPUT
