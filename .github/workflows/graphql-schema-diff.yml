@@ -10,8 +10,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@master
-      - uses: kamilkisiela/graphql-inspector@master
-        with:
-          schema: 'schema.graphql'
-          endpoint: 'https://raw.githubusercontent.com/neinteractiveliterature/intercode/main/schema.graphql'
-          annotations: false
+      - uses: actions/setup-node@v3
+      - run: npm install @graphql-tools/load @graphql-tools/url-loader @graphql-tools/graphql-file-loader @graphql-inspector/core
+      - run: node graphql-schema-diff.js
