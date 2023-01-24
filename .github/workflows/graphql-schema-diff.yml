@@ -18,7 +18,7 @@ jobs:
       - run: npm install @graphql-tools/load @graphql-tools/url-loader @graphql-tools/graphql-file-loader @graphql-inspector/core
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: sudo apt-get install protobuf3-compiler
+      - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - run: cargo run export-schema >schema.graphql
       - id: schema_diff
         run: |
