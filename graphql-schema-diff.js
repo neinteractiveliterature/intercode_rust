@@ -20,7 +20,7 @@ async function main() {
   const missingTypes = result
     .filter((change) => change.type === "TYPE_REMOVED")
     .sort((a, b) => a.path.localeCompare(b.path))
-    .map((change) => `- [] ${change.path}`);
+    .map((change) => `- [ ] ${change.path}`);
 
   const otherChanges = result
     .filter((change) => change.type !== "TYPE_REMOVED")
@@ -41,7 +41,7 @@ async function main() {
 
       return a.message.localeCompare(b.message);
     })
-    .map((change) => `- [] ${change.criticality.level}: ${change.message}`);
+    .map((change) => `- [ ] ${change.criticality.level}: ${change.message}`);
 
   const message = `
 # Missing types
