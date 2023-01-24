@@ -1,6 +1,10 @@
-name: CI
+name: GraphQL schema compatibility check
 
-on: [push]
+on:
+  push:
+    branches:
+      - main
+      - schema-diff
 
 jobs:
   test:
@@ -10,8 +14,23 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@master
-      - uses: kamilkisiela/graphql-inspector@master
+      - uses: actions/setup-node@v3
+      - run: npm install @graphql-tools/load @graphql-tools/url-loader @graphql-tools/graphql-file-loader @graphql-inspector/core
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - run: cargo run export-schema >schema.graphql
+      - id: schema_diff
+        run: |
+          echo 'MARKDOWN<<EOF' >>$GITHUB_OUTPUT
+          node ./.github/graphql-schema-diff.js >>$GITHUB_OUTPUT
+          echo 'EOF' >>$GITHUB_OUTPUT
+      - uses: actions/github-script@v6
         with:
-          schema: 'schema.graphql'
-          endpoint: 'https://raw.githubusercontent.com/neinteractiveliterature/intercode/main/schema.graphql'
-          annotations: false
+          script: |
+            github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: 83,
+              body: ${{ steps.schema_diff.outputs.MARKDOWN }}
+            })
