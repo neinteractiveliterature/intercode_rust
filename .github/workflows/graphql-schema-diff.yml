@@ -15,7 +15,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@master
       - uses: actions/setup-node@v3
-      - run: npm install @graphql-tools/load @graphql-tools/url-loader @graphql-tools/graphql-file-loader @graphql-inspector/core
+      - run: npm install @graphql-tools/load @graphql-tools/url-loader @graphql-tools/graphql-file-loader @graphql-inspector/core lodash
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: sudo apt-get update && sudo apt-get install -y protobuf-compiler

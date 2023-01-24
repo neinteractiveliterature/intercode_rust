@@ -2,12 +2,27 @@ const { loadSchema } = require("@graphql-tools/load");
 const { UrlLoader } = require("@graphql-tools/url-loader");
 const { GraphQLFileLoader } = require("@graphql-tools/graphql-file-loader");
 const { diff } = require("@graphql-inspector/core");
+const { groupBy } = require("lodash");
 
 const intercodeRubySchemaUrl =
   "https://raw.githubusercontent.com/neinteractiveliterature/intercode/main/schema.graphql";
 
 function makeChecklist(items) {
   return items.map((item) => `- [ ] ${item}`).join("\n");
+}
+
+function groupChangesByType(changes) {
+  return groupBy(changes, (change) => change.path.replace(/\.(.*)$/, ""));
+}
+
+function makeGroupedChecklists(groupedItems, transform) {
+  return Object.entries(groupedItems).map(
+    ([groupKey, items]) => `
+## ${groupKey}
+
+${makeChecklist(items.map(transform))}
+`
+  );
 }
 
 async function main() {
@@ -32,31 +47,16 @@ async function main() {
     (path) => !missingInputs.includes(path) && !missingPayloads.includes(path)
   );
 
-  const otherChanges = result
-    .filter((change) => change.type !== "TYPE_REMOVED")
-    .sort((a, b) => {
-      if (
-        a.criticality.level === "BREAKING" &&
-        b.criticality.level != "BREAKING"
-      ) {
-        return -1;
-      }
+  const otherChanges = result.filter(
+    (change) => change.type !== "TYPE_REMOVED"
+  );
 
-      if (
-        b.criticality.level === "BREAKING" &&
-        a.criticality.level != "BREAKING"
-      ) {
-        return 1;
-      }
-
-      const typeCompare = a.path.localeCompare(b.path);
-      if (typeCompare !== 0) {
-        return typeCompare;
-      }
-
-      return a.message.localeCompare(b.message);
-    })
-    .map((change) => `${change.criticality.level}: ${change.message}`);
+  const breakingChanges = groupChangesByType(
+    otherChanges.filter((change) => change.criticality.level === "BREAKING")
+  );
+  const nonBreakingChanges = groupChangesByType(
+    otherChanges.filter((change) => change.criticality.level !== "BREAKING")
+  );
 
   const message = `
 # Missing types
@@ -78,7 +78,13 @@ ${makeChecklist(missingOther)}
 
 # Other changes
 
-${makeChecklist(otherChanges)}
+${makeGroupedChecklists(breakingChanges, (change) => change.message)}
+
+<details>
+  <summary>Non-breaking changes</summary>
+
+  ${makeGroupedChecklists(nonBreakingChanges, (change) => change.message)}
+</details>
   `;
 
   console.log(JSON.stringify(message));
