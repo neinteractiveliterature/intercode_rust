@@ -39,6 +39,11 @@ async function main() {
         return 1;
       }
 
+      const typeCompare = a.path.localeCompare(b.path);
+      if (typeCompare !== 0) {
+        return typeCompare;
+      }
+
       return a.message.localeCompare(b.message);
     })
     .map((change) => `- [ ] ${change.criticality.level}: ${change.message}`);
