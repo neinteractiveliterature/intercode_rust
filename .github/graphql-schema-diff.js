@@ -6,6 +6,10 @@ const { diff } = require("@graphql-inspector/core");
 const intercodeRubySchemaUrl =
   "https://raw.githubusercontent.com/neinteractiveliterature/intercode/main/schema.graphql";
 
+function makeChecklist(items) {
+  return items.map((item) => `- [ ] ${item}`).join("\n");
+}
+
 async function main() {
   const intercodeRubySchema = await loadSchema(intercodeRubySchemaUrl, {
     loaders: [new UrlLoader()],
@@ -20,7 +24,13 @@ async function main() {
   const missingTypes = result
     .filter((change) => change.type === "TYPE_REMOVED")
     .sort((a, b) => a.path.localeCompare(b.path))
-    .map((change) => `- [ ] ${change.path}`);
+    .map((change) => change.path);
+
+  const missingInputs = missingTypes.filter((path) => path.match(/Input$/));
+  const missingPayloads = missingTypes.filter((path) => path.match(/Payload$/));
+  const missingOther = missingTypes.filter(
+    (path) => !missingInputs.includes(path) && !missingPayloads.includes(path)
+  );
 
   const otherChanges = result
     .filter((change) => change.type !== "TYPE_REMOVED")
@@ -46,16 +56,29 @@ async function main() {
 
       return a.message.localeCompare(b.message);
     })
-    .map((change) => `- [ ] ${change.criticality.level}: ${change.message}`);
+    .map((change) => `${change.criticality.level}: ${change.message}`);
 
   const message = `
 # Missing types
 
-${missingTypes.join("\n")}
+${makeChecklist(missingOther)}
+
+<details>
+  <summary>Missing input types</summary>
+
+  ${makeChecklist(missingInputs)}
+</details>
+
+
+<details>
+  <summary>Missing payload types</summary>
+
+  ${makeChecklist(missingPayloads)}
+</details>
 
 # Other changes
 
-${otherChanges.join("\n")}
+${makeChecklist(otherChanges)}
   `;
 
   console.log(JSON.stringify(message));
