@@ -1,3 +1,5 @@
+// @ts-check
+
 const { loadSchema } = require("@graphql-tools/load");
 const { UrlLoader } = require("@graphql-tools/url-loader");
 const { GraphQLFileLoader } = require("@graphql-tools/graphql-file-loader");
@@ -7,22 +9,36 @@ const { groupBy } = require("lodash");
 const intercodeRubySchemaUrl =
   "https://raw.githubusercontent.com/neinteractiveliterature/intercode/main/schema.graphql";
 
+/**
+ * @param {string[]} items
+ */
 function makeChecklist(items) {
   return items.map((item) => `- [ ] ${item}`).join("\n");
 }
 
+/**
+ * @param {import('@graphql-inspector/core').Change[]} changes
+ */
 function groupChangesByType(changes) {
-  return groupBy(changes, (change) => change.path.replace(/\.(.*)$/, ""));
+  return groupBy(changes, (change) =>
+    (change.path ?? "Unknown path").replace(/\.(.*)$/, "")
+  );
 }
 
+/**
+ * @param {ReturnType<typeof groupChangesByType>} groupedItems
+ * @param {(change: import('@graphql-inspector/core').Change) => string} transform
+ */
 function makeGroupedChecklists(groupedItems, transform) {
-  return Object.entries(groupedItems).map(
-    ([groupKey, items]) => `
+  return Object.entries(groupedItems)
+    .map(
+      ([groupKey, items]) => `
 ## ${groupKey}
 
 ${makeChecklist(items.map(transform))}
 `
-  );
+    )
+    .join("\n\n");
 }
 
 async function main() {
@@ -38,11 +54,15 @@ async function main() {
 
   const missingTypes = result
     .filter((change) => change.type === "TYPE_REMOVED")
-    .sort((a, b) => a.path.localeCompare(b.path))
-    .map((change) => change.path);
+    .sort((a, b) => (a.path ?? "").localeCompare(b.path ?? ""))
+    .map((change) => change.path ?? "Unknown path");
 
-  const missingInputs = missingTypes.filter((path) => path.match(/Input$/));
-  const missingPayloads = missingTypes.filter((path) => path.match(/Payload$/));
+  const missingInputs = missingTypes.filter((path) =>
+    (path ?? "").match(/Input$/)
+  );
+  const missingPayloads = missingTypes.filter((path) =>
+    (path ?? "").match(/Payload$/)
+  );
   const missingOther = missingTypes.filter(
     (path) => !missingInputs.includes(path) && !missingPayloads.includes(path)
   );
