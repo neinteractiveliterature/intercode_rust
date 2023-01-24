@@ -53,7 +53,7 @@ ${missingTypes.join("\n")}
 ${otherChanges.join("\n")}
   `;
 
-  console.log(message);
+  console.log(JSON.stringify(message));
 }
 
 main();

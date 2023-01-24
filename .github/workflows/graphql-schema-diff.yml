@@ -28,5 +28,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: 83,
-              body: JSON.stringify(${{ steps.schema_diff.outputs.MARKDOWN }})
+              body: ${{ steps.schema_diff.outputs.MARKDOWN }}
             })
