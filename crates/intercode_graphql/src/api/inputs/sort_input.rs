@@ -1,4 +1,5 @@
 use async_graphql::InputObject;
+use sea_orm::Order;
 
 #[derive(InputObject)]
 /// A description of a field to sort a result set by. This is typically used in pagination
@@ -9,4 +10,14 @@ pub struct SortInput {
   /// If true, the field will be sorted in descending order. If false, it will be sorted in
   /// ascending order.
   pub desc: bool,
+}
+
+impl SortInput {
+  pub fn query_order(&self) -> Order {
+    if self.desc {
+      Order::Desc
+    } else {
+      Order::Asc
+    }
+  }
 }

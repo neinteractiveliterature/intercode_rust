@@ -26,7 +26,7 @@ use intercode_entities::{
 };
 use liquid::object;
 use sea_orm::{
-  sea_query::Expr, ColumnTrait, EntityTrait, JoinType, ModelTrait, Order, QueryFilter, QueryOrder,
+  sea_query::Expr, ColumnTrait, EntityTrait, JoinType, ModelTrait, QueryFilter, QueryOrder,
   QuerySelect, RelationTrait,
 };
 use seawater::loaders::ExpectModels;
@@ -203,11 +203,7 @@ impl ConventionType {
 
     if let Some(sort) = sort {
       for sort_column in sort {
-        let order = if sort_column.desc {
-          Order::Desc
-        } else {
-          Order::Asc
-        };
+        let order = sort_column.query_order();
 
         scope = match sort_column.field.as_str() {
           "first_scheduled_run_start" => {
