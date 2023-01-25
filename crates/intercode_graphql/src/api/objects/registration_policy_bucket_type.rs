@@ -17,6 +17,11 @@ impl RegistrationPolicyBucketType {
     &self.0.description
   }
 
+  #[graphql(name = "expose_attendees")]
+  async fn expose_attendees(&self) -> bool {
+    self.0.expose_attendees.unwrap_or(false)
+  }
+
   #[graphql(name = "minimum_slots")]
   async fn minimum_slots(&self) -> Option<i32> {
     self.0.minimum_slots.into()
