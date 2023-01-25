@@ -2,16 +2,29 @@ use std::sync::Arc;
 
 use async_graphql::{Context, Error, Object, ID};
 use chrono::{Duration, NaiveDateTime};
-use intercode_entities::runs;
+use intercode_entities::{events, runs, signups, user_con_profiles, users};
 use intercode_policies::{
   policies::{RunAction, RunPolicy},
   AuthorizationInfo, Policy,
 };
+use sea_orm::{
+  sea_query::{Expr, Func},
+  JoinType, ModelTrait, QueryOrder, QuerySelect, RelationTrait,
+};
 use seawater::loaders::ExpectModels;
 
-use crate::{api::scalars::JsonScalar, model_backed_type, QueryData};
+use crate::{
+  api::{
+    inputs::{SignupFiltersInput, SortInput},
+    scalars::JsonScalar,
+  },
+  model_backed_type, QueryData,
+};
 
-use super::{signup_request_type::SignupRequestType, ModelBackedType, RoomType, SignupType};
+use super::{
+  signup_request_type::SignupRequestType, ModelBackedType, RoomType, SignupType,
+  SignupsPaginationType,
+};
 
 model_backed_type!(RunType, runs::Model);
 
@@ -194,6 +207,65 @@ impl RunType {
     Ok(JsonScalar(serde_json::to_value(
       counts.count_by_state_and_bucket_key_and_counted,
     )?))
+  }
+
+  #[graphql(name = "signups_paginated")]
+  async fn signups_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
+    filters: Option<SignupFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<SignupsPaginationType, Error> {
+    let mut scope = self.model.find_related(signups::Entity);
+
+    if let Some(filters) = filters {
+      scope = filters.apply_filters(ctx, &scope)?;
+    }
+
+    if let Some(sort) = sort {
+      for sort_column in sort {
+        let order = sort_column.query_order();
+
+        scope = match sort_column.field.as_str() {
+          "id" => scope.order_by(signups::Column::Id, order),
+          "state" => scope.order_by(signups::Column::State, order),
+          "name" => scope
+            .join(
+              JoinType::InnerJoin,
+              signups::Relation::UserConProfiles.def(),
+            )
+            .order_by(
+              Func::lower(Expr::col(user_con_profiles::Column::LastName)),
+              order.clone(),
+            )
+            .order_by(
+              Func::lower(Expr::col(user_con_profiles::Column::FirstName)),
+              order,
+            ),
+          "event_title" => scope
+            .join(JoinType::InnerJoin, signups::Relation::Runs.def())
+            .join(JoinType::InnerJoin, runs::Relation::Events.def())
+            .order_by(Func::lower(Expr::col(events::Column::Title)), order),
+          "bucket" => scope.order_by(signups::Column::BucketKey, order),
+          "email" => scope
+            .join(
+              JoinType::InnerJoin,
+              signups::Relation::UserConProfiles.def(),
+            )
+            .join(
+              JoinType::InnerJoin,
+              user_con_profiles::Relation::Users.def(),
+            )
+            .order_by(users::Column::Email, order),
+          "created_at" => scope.order_by(signups::Column::CreatedAt, order),
+          _ => scope,
+        }
+      }
+    }
+
+    Ok(SignupsPaginationType::new(Some(scope), page, per_page))
   }
 
   #[graphql(name = "starts_at")]

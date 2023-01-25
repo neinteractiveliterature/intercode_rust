@@ -79,6 +79,7 @@ pub struct LoaderManager {
   pub run_user_con_profile_signups: LoaderSpawner<i64, i64, RunUserConProfileSignupsLoader>,
   pub run_user_con_profile_signup_requests:
     LoaderSpawner<i64, i64, RunUserConProfileSignupRequestsLoader>,
+  pub runs_by_id: DataLoader<EntityIdLoader<runs::Entity>>,
   pub signup_request_replace_signup: DataLoader<
     EntityLinkLoader<signup_requests::Entity, SignupRequestToReplaceSignup, signups::Entity>,
   >,
@@ -94,7 +95,10 @@ pub struct LoaderManager {
       user_con_profiles::Entity,
     >,
   >,
+  pub signup_run: DataLoader<EntityRelationLoader<signups::Entity, runs::Entity>>,
   pub signup_waitlist_position: DataLoader<WaitlistPositionLoader>,
+  pub signup_user_con_profile:
+    DataLoader<EntityRelationLoader<signups::Entity, user_con_profiles::Entity>>,
   pub staff_positions_by_id: DataLoader<EntityIdLoader<staff_positions::Entity>>,
   pub team_member_event: DataLoader<EntityRelationLoader<team_members::Entity, events::Entity>>,
   pub team_member_user_con_profile:
@@ -279,6 +283,11 @@ impl LoaderManager {
         delay_millis,
         RunUserConProfileSignupRequestsLoader::new,
       ),
+      runs_by_id: DataLoader::new(
+        EntityIdLoader::new(db.clone(), runs::PrimaryKey::Id),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
       signup_request_replace_signup: DataLoader::new(
         EntityLinkLoader::new(
           db.clone(),
@@ -302,8 +311,18 @@ impl LoaderManager {
         tokio::spawn,
       )
       .delay(delay_millis),
+      signup_run: DataLoader::new(
+        EntityRelationLoader::new(db.clone(), signups::PrimaryKey::Id),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
       signup_waitlist_position: DataLoader::new(
         WaitlistPositionLoader::new(db.clone()),
+        tokio::spawn,
+      )
+      .delay(delay_millis),
+      signup_user_con_profile: DataLoader::new(
+        EntityRelationLoader::new(db.clone(), signups::PrimaryKey::Id),
         tokio::spawn,
       )
       .delay(delay_millis),

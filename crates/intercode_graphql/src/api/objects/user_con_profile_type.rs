@@ -1,5 +1,6 @@
 use crate::QueryData;
 use async_graphql::*;
+use chrono::NaiveDate;
 use intercode_entities::{order_entries, orders, user_con_profiles, UserNames};
 use pulldown_cmark::{html, Options, Parser};
 use sea_orm::{sea_query::Expr, ColumnTrait, EntityTrait, QueryFilter};
@@ -43,6 +44,11 @@ impl UserConProfileType {
   #[graphql(name = "bio_name")]
   async fn bio_name(&self) -> String {
     self.model.bio_name()
+  }
+
+  #[graphql(name = "birth_date")]
+  async fn birth_date(&self) -> Option<NaiveDate> {
+    self.model.birth_date
   }
 
   async fn convention(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {

@@ -1,11 +1,12 @@
 use async_graphql::{Context, Error, InputObject};
 use intercode_entities::{event_ratings, events};
-use sea_orm::{
-  sea_query::{Expr, Func},
-  ColumnTrait, Condition, EntityTrait, Order, QueryFilter, QueryOrder, Select,
-};
+use sea_orm::{sea_query::Expr, ColumnTrait, Order, QueryFilter, QueryOrder, Select};
 
-use crate::{api::scalars::JsonScalar, QueryData};
+use crate::{
+  api::scalars::JsonScalar,
+  filter_utils::{numbered_placeholders, string_search},
+  QueryData,
+};
 
 #[derive(InputObject, Default)]
 pub struct EventFiltersInput {
@@ -17,34 +18,6 @@ pub struct EventFiltersInput {
   my_rating: Option<Vec<i64>>,
   #[graphql(name = "form_items")]
   form_items: Option<JsonScalar>,
-}
-
-fn numbered_placeholders(start: usize, count: usize) -> String {
-  (start..(start + count))
-    .into_iter()
-    .map(|index| format!("${}", index))
-    .collect::<Vec<_>>()
-    .join(", ")
-}
-
-fn string_search<T: EntityTrait>(
-  scope: Select<T>,
-  search_string: &str,
-  column: impl ColumnTrait,
-) -> Select<T> {
-  let terms = search_string.split_whitespace().filter_map(|term| {
-    if !term.is_empty() {
-      Some(format!("%{}%", term.to_lowercase()))
-    } else {
-      None
-    }
-  });
-
-  let condition = terms.fold(Condition::any(), |cond, term| {
-    let lower_col = Expr::expr(Func::lower(Expr::col(column)));
-    cond.add(lower_col.like(term))
-  });
-  scope.filter(condition)
 }
 
 impl EventFiltersInput {

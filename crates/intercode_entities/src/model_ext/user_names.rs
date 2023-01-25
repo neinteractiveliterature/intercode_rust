@@ -9,7 +9,7 @@ pub trait UserNames {
   }
 
   fn name_inverted(&self) -> String {
-    format!("{}, {}", self.get_first_name(), self.get_last_name())
+    format!("{}, {}", self.get_last_name(), self.get_first_name())
       .trim()
       .to_string()
   }

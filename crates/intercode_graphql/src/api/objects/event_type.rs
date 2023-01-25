@@ -144,6 +144,18 @@ impl EventType {
       .transpose()
   }
 
+  async fn run(&self, ctx: &Context<'_>, id: ID) -> Result<RunType, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+    let run = query_data
+      .loaders
+      .runs_by_id
+      .load_one(id.parse()?)
+      .await?
+      .expect_model()?;
+
+    Ok(RunType::new(run))
+  }
+
   async fn runs(
     &self,
     ctx: &Context<'_>,
