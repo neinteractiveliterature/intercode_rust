@@ -1,12 +1,16 @@
 use std::{borrow::Borrow, sync::Arc};
 
 use async_graphql::*;
-use intercode_entities::{conventions, events, rooms};
+use intercode_entities::{conventions, events, rooms, runs, signups};
 use intercode_policies::{
-  policies::{ConventionAction, ConventionPolicy, EventAction, EventPolicy, RoomPolicy},
+  policies::{
+    ConventionAction, ConventionPolicy, EventAction, EventPolicy, RoomPolicy, SignupAction,
+    SignupPolicy,
+  },
   AuthorizationInfo, Policy, ReadManageAction,
 };
-use sea_orm::{EntityTrait, ModelTrait};
+use sea_orm::EntityTrait;
+use seawater::loaders::ExpectModels;
 
 use crate::{lax_id::LaxId, QueryData};
 
@@ -15,7 +19,7 @@ pub struct AbilityType;
 async fn model_action_permitted<
   'a,
   P: Policy<AuthorizationInfo, M>,
-  M: ModelTrait + Sync + 'a,
+  M: Send + Sync + 'a,
   R: Borrow<M>,
 >(
   _policy: P,
@@ -219,5 +223,69 @@ impl AbilityType {
   #[graphql(name = "can_read_users")]
   async fn can_read_users(&self) -> bool {
     false
+  }
+
+  #[graphql(name = "can_force_confirm_signup")]
+  async fn can_force_confirm_signup(
+    &self,
+    ctx: &Context<'_>,
+    signup_id: ID,
+  ) -> Result<bool, Error> {
+    let policy_model = self.get_signup_policy_model(ctx, signup_id).await?;
+
+    model_action_permitted(SignupPolicy, ctx, &SignupAction::ForceConfirm, |_ctx| {
+      Ok(Some(&policy_model))
+    })
+    .await
+  }
+
+  #[graphql(name = "can_update_bucket_signup")]
+  async fn can_update_bucket_signup(
+    &self,
+    ctx: &Context<'_>,
+    signup_id: ID,
+  ) -> Result<bool, Error> {
+    let policy_model = self.get_signup_policy_model(ctx, signup_id).await?;
+
+    model_action_permitted(SignupPolicy, ctx, &SignupAction::UpdateBucket, |_ctx| {
+      Ok(Some(&policy_model))
+    })
+    .await
+  }
+
+  #[graphql(name = "can_update_counted_signup")]
+  async fn can_update_counted_signup(
+    &self,
+    ctx: &Context<'_>,
+    signup_id: ID,
+  ) -> Result<bool, Error> {
+    let policy_model = self.get_signup_policy_model(ctx, signup_id).await?;
+
+    model_action_permitted(SignupPolicy, ctx, &SignupAction::UpdateCounted, |_ctx| {
+      Ok(Some(&policy_model))
+    })
+    .await
+  }
+}
+
+impl AbilityType {
+  async fn get_signup_policy_model(
+    &self,
+    ctx: &Context<'_>,
+    signup_id: ID,
+  ) -> Result<(events::Model, runs::Model, signups::Model), Error> {
+    let query_data = ctx.data::<QueryData>()?;
+    let signup = signups::Entity::find_by_id(signup_id.parse()?)
+      .one(&query_data.db)
+      .await?
+      .ok_or_else(|| Error::new("Signup not found"))?;
+
+    let run_result = query_data.loaders.signup_run.load_one(signup.id).await?;
+    let run = run_result.expect_one()?;
+
+    let event_result = query_data.loaders.run_event.load_one(run.id).await?;
+    let event = event_result.expect_one()?;
+
+    Ok((event.clone(), run.clone(), signup))
   }
 }

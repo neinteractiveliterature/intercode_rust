@@ -3,8 +3,8 @@ use std::sync::Arc;
 use super::{
   CmsContentGroupType, CmsContentType, CmsFileType, CmsGraphqlQueryType, CmsLayoutType,
   CmsNavigationItemType, CmsPartialType, CmsVariableType, EventCategoryType, EventType,
-  EventsPaginationType, ModelBackedType, PageType, RoomType, StaffPositionType, TicketTypeType,
-  UserConProfileType,
+  EventsPaginationType, ModelBackedType, PageType, RoomType, SignupType, StaffPositionType,
+  TicketTypeType, UserConProfileType,
 };
 use crate::{
   api::{
@@ -20,9 +20,11 @@ use crate::{
 use async_graphql::*;
 use chrono::{DateTime, Utc};
 use intercode_entities::{
-  cms_parent::CmsParentTrait, cms_partials, conventions, events, links::ConventionToStaffPositions,
-  model_ext::time_bounds::TimeBoundsSelectExt, runs, staff_positions, team_members,
-  user_con_profiles, users,
+  cms_parent::CmsParentTrait,
+  cms_partials, conventions, events,
+  links::{ConventionToSignups, ConventionToStaffPositions},
+  model_ext::time_bounds::TimeBoundsSelectExt,
+  runs, signups, staff_positions, team_members, user_con_profiles, users,
 };
 use liquid::object;
 use sea_orm::{
@@ -332,6 +334,20 @@ impl ConventionType {
         .map(|room| RoomType::new(room.clone()))
         .collect(),
     )
+  }
+
+  async fn signup(&self, ctx: &Context<'_>, id: ID) -> Result<SignupType, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+
+    Ok(SignupType::new(
+      self
+        .model
+        .find_linked(ConventionToSignups)
+        .filter(signups::Column::Id.eq(id.parse::<i64>()?))
+        .one(&query_data.db)
+        .await?
+        .ok_or_else(|| Error::new("Signup not found"))?,
+    ))
   }
 
   #[graphql(name = "signup_mode")]
