@@ -1,4 +1,4 @@
-use crate::{conventions, staff_positions};
+use crate::{conventions, events, runs, signups, staff_positions};
 use sea_orm::{Linked, RelationDef, RelationTrait};
 
 #[derive(Debug, Clone)]
@@ -10,5 +10,21 @@ impl Linked for ConventionToStaffPositions {
 
   fn link(&self) -> Vec<RelationDef> {
     vec![staff_positions::Relation::Conventions.def().rev()]
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct ConventionToSignups;
+
+impl Linked for ConventionToSignups {
+  type FromEntity = conventions::Entity;
+  type ToEntity = signups::Entity;
+
+  fn link(&self) -> Vec<sea_orm::LinkDef> {
+    vec![
+      conventions::Relation::Events.def(),
+      events::Relation::Runs.def(),
+      runs::Relation::Signups.def(),
+    ]
   }
 }

@@ -23,6 +23,10 @@ impl UserConProfileType {
     self.model.accepted_clickwrap_agreement
   }
 
+  async fn address(&self) -> Option<&str> {
+    self.model.address.as_deref()
+  }
+
   #[graphql(name = "bio_html")]
   async fn bio_html(&self) -> Option<String> {
     if let Some(bio) = &self.model.bio {
@@ -51,6 +55,10 @@ impl UserConProfileType {
     self.model.birth_date
   }
 
+  async fn city(&self) -> Option<&str> {
+    self.model.city.as_deref()
+  }
+
   async fn convention(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {
     let loader = &ctx.data::<QueryData>()?.loaders.conventions_by_id;
 
@@ -60,6 +68,10 @@ impl UserConProfileType {
       .expect_model()?;
 
     Ok(ConventionType::new(model))
+  }
+
+  async fn country(&self) -> Option<&str> {
+    self.model.country.as_deref()
   }
 
   #[graphql(name = "current_pending_order")]
@@ -162,6 +174,10 @@ impl UserConProfileType {
     self.model.name_without_nickname()
   }
 
+  async fn nickname(&self) -> Option<&str> {
+    self.model.nickname.as_deref()
+  }
+
   #[graphql(name = "staff_positions")]
   async fn staff_positions(&self, ctx: &Context<'_>) -> Result<Vec<StaffPositionType>, Error> {
     let loader = &ctx
@@ -178,6 +194,10 @@ impl UserConProfileType {
         .map(|staff_position| StaffPositionType::new(staff_position.to_owned()))
         .collect(),
     )
+  }
+
+  async fn state(&self) -> Option<&str> {
+    self.model.state.as_deref()
   }
 
   #[graphql(name = "team_members")]
@@ -208,5 +228,9 @@ impl UserConProfileType {
         .try_one()
         .map(|ticket| TicketType::new(ticket.to_owned())),
     )
+  }
+
+  async fn zipcode(&self) -> Option<&str> {
+    self.model.zipcode.as_deref()
   }
 }

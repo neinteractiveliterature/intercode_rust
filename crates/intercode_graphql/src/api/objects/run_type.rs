@@ -22,7 +22,7 @@ use crate::{
 };
 
 use super::{
-  signup_request_type::SignupRequestType, ModelBackedType, RoomType, SignupType,
+  signup_request_type::SignupRequestType, EventType, ModelBackedType, RoomType, SignupType,
   SignupsPaginationType,
 };
 
@@ -88,6 +88,20 @@ impl RunType {
     } else {
       Ok(None)
     }
+  }
+
+  async fn event(&self, ctx: &Context<'_>) -> Result<EventType, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+
+    Ok(EventType::new(
+      query_data
+        .loaders
+        .run_event
+        .load_one(self.model.id)
+        .await?
+        .expect_one()?
+        .clone(),
+    ))
   }
 
   #[graphql(name = "my_signups")]
