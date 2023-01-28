@@ -30,8 +30,6 @@ pub struct LoaderManager {
   db: ConnectionWrapper,
   delay: Duration,
   loaders_by_type: Arc<Mutex<HashMap<std::any::TypeId, Arc<dyn Any + Send + Sync>>>>,
-  pub conventions_by_id: DataLoader<EntityIdLoader<conventions::Entity>>,
-  pub events_by_id: DataLoader<EntityIdLoader<events::Entity>>,
   pub event_attached_images: DataLoader<ActiveStorageAttachedBlobsLoader>,
   pub event_runs_filtered: LoaderSpawner<EventRunsLoaderFilter, i64, FilteredEventRunsLoader>,
   pub event_user_con_profile_event_ratings:
@@ -40,11 +38,7 @@ pub struct LoaderManager {
   pub run_user_con_profile_signups: LoaderSpawner<i64, i64, RunUserConProfileSignupsLoader>,
   pub run_user_con_profile_signup_requests:
     LoaderSpawner<i64, i64, RunUserConProfileSignupRequestsLoader>,
-  pub runs_by_id: DataLoader<EntityIdLoader<runs::Entity>>,
   pub signup_waitlist_position: DataLoader<WaitlistPositionLoader>,
-  pub staff_positions_by_id: DataLoader<EntityIdLoader<staff_positions::Entity>>,
-  pub team_members_by_id: DataLoader<EntityIdLoader<team_members::Entity>>,
-  pub users_by_id: DataLoader<EntityIdLoader<users::Entity>>,
 }
 
 impl LoaderManager {
@@ -60,18 +54,8 @@ impl LoaderManager {
       db: db.clone(),
       delay: delay_millis,
       loaders_by_type: Arc::new(Mutex::new(Default::default())),
-      conventions_by_id: DataLoader::new(
-        EntityIdLoader::new(db.clone(), conventions::PrimaryKey::Id),
-        tokio::spawn,
-      )
-      .delay(delay_millis),
       event_attached_images: DataLoader::new(
         ActiveStorageAttachedBlobsLoader::new(db.clone(), events::Model::attached_images_scope()),
-        tokio::spawn,
-      )
-      .delay(delay_millis),
-      events_by_id: DataLoader::new(
-        EntityIdLoader::new(db.clone(), events::PrimaryKey::Id),
         tokio::spawn,
       )
       .delay(delay_millis),
@@ -97,34 +81,44 @@ impl LoaderManager {
         delay_millis,
         RunUserConProfileSignupRequestsLoader::new,
       ),
-      runs_by_id: DataLoader::new(
-        EntityIdLoader::new(db.clone(), runs::PrimaryKey::Id),
-        tokio::spawn,
-      )
-      .delay(delay_millis),
-
-      signup_waitlist_position: DataLoader::new(
-        WaitlistPositionLoader::new(db.clone()),
-        tokio::spawn,
-      )
-      .delay(delay_millis),
-
-      staff_positions_by_id: DataLoader::new(
-        EntityIdLoader::new(db.clone(), staff_positions::PrimaryKey::Id),
-        tokio::spawn,
-      )
-      .delay(delay_millis),
-
-      team_members_by_id: DataLoader::new(
-        EntityIdLoader::new(db.clone(), team_members::PrimaryKey::Id),
-        tokio::spawn,
-      )
-      .delay(delay_millis),
-
-      users_by_id: DataLoader::new(EntityIdLoader::new(db, users::PrimaryKey::Id), tokio::spawn)
+      signup_waitlist_position: DataLoader::new(WaitlistPositionLoader::new(db), tokio::spawn)
         .delay(delay_millis),
     }
   }
+}
+
+impl Drop for LoaderManager {
+  fn drop(&mut self) {
+    eprintln!(
+      "Dropping LoaderManager!  LoadersByType has {} strong refs",
+      Arc::strong_count(&self.loaders_by_type)
+    );
+  }
+}
+
+macro_rules! entity_id_loader {
+  ($name: ident, $entity: ident) => {
+    pub fn $name(&self) -> Arc<DataLoader<EntityIdLoader<$entity::Entity>>> {
+      let mut lock = self.loaders_by_type.lock().unwrap();
+
+      let loader = lock
+        .entry(std::any::TypeId::of::<EntityIdLoader<$entity::Entity>>())
+        .or_insert_with(|| {
+          Arc::new(
+            DataLoader::new(
+              EntityIdLoader::<$entity::Entity>::new(self.db.clone(), $entity::PrimaryKey::Id),
+              tokio::spawn,
+            )
+            .delay(self.delay),
+          )
+        });
+
+      loader
+        .clone()
+        .downcast::<DataLoader<EntityIdLoader<$entity::Entity>>>()
+        .unwrap()
+    }
+  };
 }
 
 macro_rules! entity_relation_loader {
@@ -196,10 +190,12 @@ impl LoaderManager {
   entity_relation_loader!(convention_rooms, conventions, rooms);
   entity_link_loader!(convention_staff_positions, ConventionToStaffPositions);
   entity_relation_loader!(convention_ticket_types, conventions, ticket_types);
+  entity_id_loader!(conventions_by_id, conventions);
   entity_relation_loader!(event_event_category, events, event_categories);
   entity_link_loader!(event_provided_tickets, EventToProvidedTickets);
   entity_relation_loader!(event_runs, events, runs);
   entity_relation_loader!(event_team_members, events, team_members);
+  entity_id_loader!(events_by_id, events);
   entity_link_loader!(event_category_event_form, EventCategoryToEventForm);
   entity_link_loader!(
     event_category_event_proposal_form,
@@ -213,6 +209,7 @@ impl LoaderManager {
   entity_relation_loader!(run_event, runs, events);
   entity_relation_loader!(run_rooms, runs, rooms);
   entity_relation_loader!(run_signups, runs, signups);
+  entity_id_loader!(runs_by_id, runs);
   entity_relation_loader!(signup_run, signups, runs);
   entity_relation_loader!(signup_user_con_profile, signups, user_con_profiles);
   entity_link_loader!(signup_request_replace_signup, SignupRequestToReplaceSignup);
@@ -222,12 +219,14 @@ impl LoaderManager {
     staff_position_user_con_profiles,
     StaffPositionToUserConProfiles
   );
+  entity_id_loader!(staff_positions_by_id, staff_positions);
   entity_relation_loader!(team_member_event, team_members, events);
   entity_relation_loader!(
     team_member_user_con_profile,
     team_members,
     user_con_profiles
   );
+  entity_id_loader!(team_members_by_id, team_members);
   entity_link_loader!(ticket_provided_by_event, TicketToProvidedByEvent);
   entity_relation_loader!(ticket_user_con_profile, tickets, user_con_profiles);
   entity_relation_loader!(ticket_type_providing_products, ticket_types, products);
@@ -243,6 +242,7 @@ impl LoaderManager {
   );
   entity_relation_loader!(user_con_profile_ticket, user_con_profiles, tickets);
   entity_relation_loader!(user_con_profile_user, user_con_profiles, users);
+  entity_id_loader!(users_by_id, users);
 }
 
 impl std::fmt::Debug for LoaderManager {

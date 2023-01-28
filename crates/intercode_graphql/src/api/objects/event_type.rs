@@ -42,7 +42,7 @@ impl EventType {
   }
 
   async fn convention(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {
-    let loader = &ctx.data::<QueryData>()?.loaders.conventions_by_id;
+    let loader = &ctx.data::<QueryData>()?.loaders.conventions_by_id();
 
     let model = loader
       .load_one(self.model.convention_id)
@@ -148,7 +148,7 @@ impl EventType {
     let query_data = ctx.data::<QueryData>()?;
     let run = query_data
       .loaders
-      .runs_by_id
+      .runs_by_id()
       .load_one(id.parse()?)
       .await?
       .expect_model()?;
