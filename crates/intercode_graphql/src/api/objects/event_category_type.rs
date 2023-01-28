@@ -32,7 +32,7 @@ impl EventCategoryType {
     Ok(FormType::new(
       query_data
         .loaders
-        .event_category_event_form
+        .event_category_event_form()
         .load_one(self.model.id)
         .await?
         .expect_one()?
@@ -47,7 +47,7 @@ impl EventCategoryType {
     Ok(
       query_data
         .loaders
-        .event_category_event_proposal_form
+        .event_category_event_proposal_form()
         .load_one(self.model.id)
         .await?
         .try_one()

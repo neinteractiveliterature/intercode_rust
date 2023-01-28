@@ -20,7 +20,11 @@ async fn load_filtered_form_items(
   form_id: i64,
   item_identifiers: Option<Vec<String>>,
 ) -> Result<Vec<form_items::Model>, Error> {
-  let form_items_result = query_data.loaders.form_form_items.load_one(form_id).await?;
+  let form_items_result = query_data
+    .loaders
+    .form_form_items()
+    .load_one(form_id)
+    .await?;
   let form_items = form_items_result.expect_models()?;
   let form_items: Vec<form_items::Model> = match item_identifiers {
     Some(item_identifiers) => {

@@ -20,7 +20,7 @@ impl SignupRequestType {
     Ok(
       query_data
         .loaders
-        .signup_request_replace_signup
+        .signup_request_replace_signup()
         .load_one(self.model.id)
         .await?
         .try_one()
@@ -35,7 +35,7 @@ impl SignupRequestType {
     Ok(
       query_data
         .loaders
-        .signup_request_result_signup
+        .signup_request_result_signup()
         .load_one(self.model.id)
         .await?
         .try_one()

@@ -20,7 +20,7 @@ impl FormSectionType {
     Ok(
       query_data
         .loaders
-        .form_section_form_items
+        .form_section_form_items()
         .load_one(self.model.id)
         .await?
         .expect_models()?

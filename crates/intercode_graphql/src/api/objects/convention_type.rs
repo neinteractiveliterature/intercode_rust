@@ -401,7 +401,7 @@ impl ConventionType {
     Ok(
       query_data
         .loaders
-        .convention_staff_positions
+        .convention_staff_positions()
         .load_one(self.model.id)
         .await?
         .expect_models()?

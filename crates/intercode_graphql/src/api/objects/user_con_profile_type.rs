@@ -183,7 +183,7 @@ impl UserConProfileType {
     let loader = &ctx
       .data::<QueryData>()?
       .loaders
-      .user_con_profile_staff_positions;
+      .user_con_profile_staff_positions();
 
     Ok(
       loader

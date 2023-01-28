@@ -226,7 +226,7 @@ impl FormResponseImplementation<events::Model> for EventType {
     Ok(
       query_data
         .loaders
-        .event_category_event_form
+        .event_category_event_form()
         .load_one(event_category.id)
         .await?
         .expect_one()?
