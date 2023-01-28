@@ -110,7 +110,7 @@ impl UserConProfileType {
   }
 
   async fn email(&self, ctx: &Context<'_>) -> Result<String, Error> {
-    let loader = &ctx.data::<QueryData>()?.loaders.user_con_profile_user;
+    let loader = ctx.data::<QueryData>()?.loaders.user_con_profile_user();
 
     Ok(
       loader
@@ -205,7 +205,7 @@ impl UserConProfileType {
     let loader = &ctx
       .data::<QueryData>()?
       .loaders
-      .user_con_profile_team_members;
+      .user_con_profile_team_members();
 
     Ok(
       loader
@@ -219,7 +219,7 @@ impl UserConProfileType {
   }
 
   async fn ticket(&self, ctx: &Context<'_>) -> Result<Option<TicketType>, Error> {
-    let loader = &ctx.data::<QueryData>()?.loaders.user_con_profile_ticket;
+    let loader = &ctx.data::<QueryData>()?.loaders.user_con_profile_ticket();
 
     Ok(
       loader

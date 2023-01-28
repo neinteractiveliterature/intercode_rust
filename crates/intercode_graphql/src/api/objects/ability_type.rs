@@ -280,10 +280,10 @@ impl AbilityType {
       .await?
       .ok_or_else(|| Error::new("Signup not found"))?;
 
-    let run_result = query_data.loaders.signup_run.load_one(signup.id).await?;
+    let run_result = query_data.loaders.signup_run().load_one(signup.id).await?;
     let run = run_result.expect_one()?;
 
-    let event_result = query_data.loaders.run_event.load_one(run.id).await?;
+    let event_result = query_data.loaders.run_event().load_one(run.id).await?;
     let event = event_result.expect_one()?;
 
     Ok((event.clone(), run.clone(), signup))

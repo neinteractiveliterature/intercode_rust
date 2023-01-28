@@ -59,7 +59,7 @@ impl SignupRequestType {
     Ok(RunType::new(
       query_data
         .loaders
-        .signup_request_target_run
+        .signup_request_target_run()
         .load_one(self.model.id)
         .await?
         .expect_one()?

@@ -115,7 +115,7 @@ impl ConventionType {
       ctx
         .data::<QueryData>()?
         .loaders
-        .convention_event_categories
+        .convention_event_categories()
         .load_one(self.model.id)
         .await?
         .expect_models()?
@@ -326,7 +326,7 @@ impl ConventionType {
       ctx
         .data::<QueryData>()?
         .loaders
-        .convention_rooms
+        .convention_rooms()
         .load_one(self.model.id)
         .await?
         .expect_models()?
@@ -450,7 +450,7 @@ impl ConventionType {
     Ok(
       query_data
         .loaders
-        .convention_ticket_types
+        .convention_ticket_types()
         .load_one(self.model.id)
         .await?
         .expect_models()?

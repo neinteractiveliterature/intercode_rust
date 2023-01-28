@@ -55,7 +55,7 @@ impl RunType {
     let query_data = ctx.data::<QueryData>()?;
     let event = query_data
       .loaders
-      .run_event
+      .run_event()
       .load_one(self.model.id)
       .await?
       .expect_one()?
@@ -78,7 +78,7 @@ impl RunType {
       let query_data = ctx.data::<QueryData>()?;
       let length_seconds = query_data
         .loaders
-        .run_event
+        .run_event()
         .load_one(self.model.id)
         .await?
         .expect_one()?
@@ -96,7 +96,7 @@ impl RunType {
     Ok(EventType::new(
       query_data
         .loaders
-        .run_event
+        .run_event()
         .load_one(self.model.id)
         .await?
         .expect_one()?
@@ -189,7 +189,7 @@ impl RunType {
     Ok(
       query_data
         .loaders
-        .run_rooms
+        .run_rooms()
         .load_one(self.model.id)
         .await?
         .expect_models()?

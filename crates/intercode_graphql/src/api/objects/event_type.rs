@@ -66,7 +66,7 @@ impl EventType {
 
   #[graphql(name = "event_category")]
   async fn event_category(&self, ctx: &Context<'_>) -> Result<EventCategoryType, Error> {
-    let loader = &ctx.data::<QueryData>()?.loaders.event_event_category;
+    let loader = &ctx.data::<QueryData>()?.loaders.event_event_category();
 
     Ok(EventCategoryType::new(
       loader.load_one(self.model.id).await?.expect_one()?.clone(),
@@ -197,7 +197,7 @@ impl EventType {
     Ok(
       query_data
         .loaders
-        .event_team_members
+        .event_team_members()
         .load_one(self.model.id)
         .await?
         .expect_models()?
@@ -218,7 +218,7 @@ impl FormResponseImplementation<events::Model> for EventType {
     let query_data = ctx.data::<QueryData>()?;
     let event_category_result = query_data
       .loaders
-      .event_event_category
+      .event_event_category()
       .load_one(self.model.id)
       .await?;
     let event_category = event_category_result.expect_one()?;
@@ -238,7 +238,7 @@ impl FormResponseImplementation<events::Model> for EventType {
     let query_data = ctx.data::<QueryData>()?;
     let event_category_result = query_data
       .loaders
-      .event_event_category
+      .event_event_category()
       .load_one(self.model.id)
       .await?;
     let event_category = event_category_result.expect_one()?;
