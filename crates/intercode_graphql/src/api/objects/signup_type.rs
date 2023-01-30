@@ -33,7 +33,7 @@ impl SignupType {
       async {
         Ok::<_, Error>(
           query_data
-            .loaders
+            .loaders()
             .signup_user_con_profile()
             .load_one(self.model.id)
             .await?
@@ -43,14 +43,14 @@ impl SignupType {
       },
       async {
         let run = query_data
-          .loaders
+          .loaders()
           .signup_run()
           .load_one(self.model.id)
           .await?
           .expect_one()?
           .clone();
         let event = query_data
-          .loaders
+          .loaders()
           .run_event()
           .load_one(run.id)
           .await?
@@ -94,7 +94,7 @@ impl SignupType {
 
     Ok(RunType::new(
       query_data
-        .loaders
+        .loaders()
         .signup_run()
         .load_one(self.model.id)
         .await?
@@ -113,7 +113,7 @@ impl SignupType {
 
     Ok(UserConProfileType::new(
       query_data
-        .loaders
+        .loaders()
         .signup_user_con_profile()
         .load_one(self.model.id)
         .await?
@@ -127,7 +127,7 @@ impl SignupType {
     let query_data = ctx.data::<QueryData>()?;
     Ok(
       query_data
-        .loaders
+        .loaders()
         .signup_waitlist_position
         .load_one(self.model.clone().into())
         .await?

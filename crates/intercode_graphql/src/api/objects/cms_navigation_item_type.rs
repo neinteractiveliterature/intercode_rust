@@ -22,7 +22,7 @@ impl CmsNavigationItemType {
 
     Ok(
       query_data
-        .loaders
+        .loaders()
         .cms_navigation_item_section()
         .load_one(self.model.id)
         .await?
@@ -36,7 +36,7 @@ impl CmsNavigationItemType {
 
     Ok(
       query_data
-        .loaders
+        .loaders()
         .cms_navigation_item_page()
         .load_one(self.model.id)
         .await?

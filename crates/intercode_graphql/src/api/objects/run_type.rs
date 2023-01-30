@@ -40,7 +40,7 @@ impl RunType {
 
     Ok(
       query_data
-        .loaders
+        .loaders()
         .run_signup_counts
         .load_one(self.model.id)
         .await?
@@ -54,7 +54,7 @@ impl RunType {
     let authorization_info = ctx.data::<Arc<AuthorizationInfo>>()?;
     let query_data = ctx.data::<QueryData>()?;
     let event = query_data
-      .loaders
+      .loaders()
       .run_event()
       .load_one(self.model.id)
       .await?
@@ -77,7 +77,7 @@ impl RunType {
     if let Some(starts_at) = starts_at {
       let query_data = ctx.data::<QueryData>()?;
       let length_seconds = query_data
-        .loaders
+        .loaders()
         .run_event()
         .load_one(self.model.id)
         .await?
@@ -95,7 +95,7 @@ impl RunType {
 
     Ok(EventType::new(
       query_data
-        .loaders
+        .loaders()
         .run_event()
         .load_one(self.model.id)
         .await?
@@ -107,9 +107,9 @@ impl RunType {
   #[graphql(name = "my_signups")]
   async fn my_signups(&self, ctx: &Context<'_>) -> Result<Vec<SignupType>, Error> {
     let query_data = ctx.data::<QueryData>()?;
-    if let Some(user_con_profile) = query_data.user_con_profile.as_ref().as_ref() {
+    if let Some(user_con_profile) = query_data.user_con_profile() {
       let loader = query_data
-        .loaders
+        .loaders()
         .run_user_con_profile_signups
         .get(user_con_profile.id)
         .await;
@@ -132,9 +132,9 @@ impl RunType {
   #[graphql(name = "my_signup_requests")]
   async fn my_signup_requests(&self, ctx: &Context<'_>) -> Result<Vec<SignupRequestType>, Error> {
     let query_data = ctx.data::<QueryData>()?;
-    if let Some(user_con_profile) = query_data.user_con_profile.as_ref().as_ref() {
+    if let Some(user_con_profile) = query_data.user_con_profile() {
       let loader = query_data
-        .loaders
+        .loaders()
         .run_user_con_profile_signup_requests
         .get(user_con_profile.id)
         .await;
@@ -159,7 +159,7 @@ impl RunType {
     let query_data = ctx.data::<QueryData>()?;
 
     let counts = query_data
-      .loaders
+      .loaders()
       .run_signup_counts
       .load_one(self.model.id)
       .await?
@@ -188,7 +188,7 @@ impl RunType {
 
     Ok(
       query_data
-        .loaders
+        .loaders()
         .run_rooms()
         .load_one(self.model.id)
         .await?
@@ -212,7 +212,7 @@ impl RunType {
     let query_data = ctx.data::<QueryData>()?;
 
     let counts = query_data
-      .loaders
+      .loaders()
       .run_signup_counts
       .load_one(self.model.id)
       .await?

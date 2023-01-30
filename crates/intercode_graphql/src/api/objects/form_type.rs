@@ -19,7 +19,7 @@ impl FormType {
 
     Ok(
       query_data
-        .loaders
+        .loaders()
         .form_form_sections()
         .load_one(self.model.id)
         .await?

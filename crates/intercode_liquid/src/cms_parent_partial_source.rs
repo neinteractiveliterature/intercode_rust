@@ -76,16 +76,16 @@ impl LazyCmsPartialCacheCell {
   fn try_get<C: ConnectionTrait + Send + 'static>(
     &mut self,
     db: Arc<C>,
-    cms_parent: Arc<CmsParent>,
+    cms_parent: &CmsParent,
   ) -> Option<&PartialNameAndContent> {
     if self.partial.is_some() {
       self.partial.as_ref()
     } else {
       let name = self.name.clone();
       warn!("Uncached single partial read: {}", name);
+      let partials = cms_parent.cms_partials();
       let join_handle = tokio::spawn(async move {
-        cms_parent
-          .cms_partials()
+        partials
           .filter(cms_partials::Column::Name.eq(name.as_str()))
           .select_only()
           .column(cms_partials::Column::Name)
@@ -111,11 +111,11 @@ impl LazyCmsPartialCacheCell {
 struct LazyCmsPartialCache {
   cached_partials: Arc<Mutex<HashMap<String, LazyCmsPartialCacheCell>>>,
   db: ConnectionWrapper,
-  cms_parent: Arc<CmsParent>,
+  cms_parent: CmsParent,
 }
 
 impl LazyCmsPartialCache {
-  pub fn new(cms_parent: Arc<CmsParent>, db: ConnectionWrapper) -> LazyCmsPartialCache {
+  pub fn new(cms_parent: CmsParent, db: ConnectionWrapper) -> LazyCmsPartialCache {
     let cached_partials = HashMap::<String, LazyCmsPartialCacheCell>::new();
 
     LazyCmsPartialCache {
@@ -138,7 +138,7 @@ impl LazyCmsPartialCache {
     let cache_cell = partials
       .entry(name.to_string())
       .or_insert_with(|| LazyCmsPartialCacheCell::new(name.to_string()));
-    if let Some(partial) = cache_cell.try_get(self.db.clone().into(), self.cms_parent.clone()) {
+    if let Some(partial) = cache_cell.try_get(self.db.clone().into(), &self.cms_parent) {
       partial.content.clone()
     } else {
       None
@@ -148,10 +148,10 @@ impl LazyCmsPartialCache {
   async fn preload_by_name(
     &self,
     db: &ConnectionWrapper,
-    cms_parent: &CmsParent,
     names: Vec<&str>,
   ) -> Result<(), sea_orm::DbErr> {
-    let loaded_partials = cms_parent
+    let loaded_partials = self
+      .cms_parent
       .cms_partials()
       .filter(cms_partials::Column::Name.is_in(names))
       .select_only()
@@ -226,7 +226,7 @@ pub struct LazyCmsPartialSource {
 }
 
 impl LazyCmsPartialSource {
-  pub fn new(cms_parent: Arc<CmsParent>, db: ConnectionWrapper) -> LazyCmsPartialSource {
+  pub fn new(cms_parent: CmsParent, db: ConnectionWrapper) -> LazyCmsPartialSource {
     let cache = LazyCmsPartialCache::new(cms_parent, db);
 
     LazyCmsPartialSource { cache }
@@ -235,13 +235,10 @@ impl LazyCmsPartialSource {
   pub async fn preload<'a>(
     &self,
     db: &ConnectionWrapper,
-    cms_parent: &CmsParent,
     strategy: PreloadPartialsStrategy<'a>,
   ) -> Result<(), sea_orm::DbErr> {
     match strategy {
-      PreloadPartialsStrategy::ByName(names) => {
-        self.cache.preload_by_name(db, cms_parent, names).await
-      }
+      PreloadPartialsStrategy::ByName(names) => self.cache.preload_by_name(db, names).await,
       PreloadPartialsStrategy::ByLayout(layout) => self.cache.preload_by_layout(db, layout).await,
       PreloadPartialsStrategy::ByPage(page) => self.cache.preload_by_page(db, page).await,
     }

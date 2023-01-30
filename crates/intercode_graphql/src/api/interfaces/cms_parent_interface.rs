@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use async_graphql::{
   async_trait::async_trait,
   futures_util::{try_join, TryFutureExt},
@@ -107,7 +105,7 @@ macro_rules! assoc_getter {
           self
             .get_model()
             .$name()
-            .all(query_data.db.as_ref())
+            .all(query_data.db())
             .await?
             .iter()
             .map(|item| $ty::new(item.to_owned()))
@@ -139,7 +137,7 @@ macro_rules! id_getter {
             .get_model()
             .$model_name()
             .filter($model_name::Column::Id.eq(id))
-            .one(query_data.db.as_ref())
+            .one(query_data.db())
             .await?
             .ok_or_else(|| Error::new(format!("{} {} not found", stringify!($name), id)))?,
         ))
@@ -176,7 +174,7 @@ where
       self
         .get_model()
         .pages()
-        .all(query_data.db.as_ref())
+        .all(query_data.db())
         .await?
         .iter()
         .map(|item| PageType::new(item.to_owned()))
@@ -211,7 +209,7 @@ where
     };
 
     pages
-      .one(query_data.db.as_ref())
+      .one(query_data.db())
       .await?
       .ok_or_else(|| Error::new("Page not found"))
       .map(PageType::new)
@@ -225,7 +223,7 @@ where
     self
       .get_model()
       .default_layout()
-      .one(query_data.db.as_ref())
+      .one(query_data.db())
       .await?
       .ok_or_else(|| Error::new("Default layout not found for root site"))
       .map(CmsLayoutType::new)
@@ -239,7 +237,7 @@ where
     let query_data = ctx.data::<QueryData>()?;
     self
       .get_model()
-      .effective_cms_layout(path.as_str(), query_data.db.as_ref())
+      .effective_cms_layout(path.as_str(), query_data.db())
       .await
       .map(CmsLayoutType::new)
       .map_err(|db_err| Error::new(db_err.to_string()))
@@ -256,9 +254,9 @@ where
 
   async fn liquid_assigns(&self, ctx: &Context<'_>) -> Result<Vec<LiquidAssignType>, Error> {
     let query_data = ctx.data::<QueryData>()?;
-    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
+    let liquid_renderer = ctx.data::<Box<dyn LiquidRenderer>>()?;
     let cms_rendering_context =
-      CmsRenderingContext::new(liquid::object!({}), query_data, liquid_renderer.clone());
+      CmsRenderingContext::new(liquid::object!({}), query_data, liquid_renderer.as_ref());
 
     let (builtins, cms_variables) = try_join!(
       liquid_renderer.builtin_globals(),
@@ -282,9 +280,9 @@ where
 
   async fn preview_liquid(&self, ctx: &Context<'_>, content: String) -> Result<String, Error> {
     let query_data = ctx.data::<QueryData>()?;
-    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
+    let liquid_renderer = ctx.data::<Box<dyn LiquidRenderer>>()?;
     let cms_rendering_context =
-      CmsRenderingContext::new(liquid::object!({}), query_data, liquid_renderer.clone());
+      CmsRenderingContext::new(liquid::object!({}), query_data, liquid_renderer.as_ref());
 
     cms_rendering_context.render_liquid(&content, None).await
   }
@@ -305,7 +303,7 @@ where
     self
       .get_model()
       .root_page()
-      .one(query_data.db.as_ref())
+      .one(query_data.db())
       .await?
       .ok_or_else(|| Error::new("root page not found"))
       .map(PageType::new)

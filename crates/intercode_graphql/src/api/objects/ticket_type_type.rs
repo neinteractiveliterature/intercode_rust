@@ -32,7 +32,7 @@ impl TicketTypeType {
 
     Ok(
       query_data
-        .loaders
+        .loaders()
         .ticket_type_providing_products()
         .load_one(self.model.id)
         .await?

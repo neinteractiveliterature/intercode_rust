@@ -1,4 +1,4 @@
-use std::{env, sync::Arc};
+use std::env;
 
 use crate::{LiquidRenderer, QueryData};
 use html_escape::encode_double_quoted_attribute;
@@ -93,7 +93,7 @@ async fn find_blob_by_attached_model(
         .and(active_storage_attachments::Column::RecordId.eq(record_id)),
     )
     .find_also_related(active_storage_blobs::Entity)
-    .one(db.as_ref())
+    .one(&db)
     .await?;
 
   if let Some((_attachment, Some(blob))) = result {
@@ -260,14 +260,14 @@ async fn content_for_head(
 pub struct CmsRenderingContext<'a> {
   globals: liquid::Object,
   query_data: &'a QueryData,
-  liquid_renderer: Arc<dyn LiquidRenderer>,
+  liquid_renderer: &'a dyn LiquidRenderer,
 }
 
 impl<'a> CmsRenderingContext<'a> {
   pub fn new(
     globals: liquid::Object,
     query_data: &'a QueryData,
-    liquid_renderer: Arc<dyn LiquidRenderer>,
+    liquid_renderer: &'a dyn LiquidRenderer,
   ) -> Self {
     CmsRenderingContext {
       globals,
@@ -279,9 +279,9 @@ impl<'a> CmsRenderingContext<'a> {
   pub async fn cms_variables(&self) -> Result<Vec<cms_variables::Model>, DbErr> {
     self
       .query_data
-      .cms_parent
+      .cms_parent()
       .cms_variables()
-      .all(self.query_data.db.as_ref())
+      .all(self.query_data.db())
       .await
   }
 
@@ -327,8 +327,8 @@ impl<'a> CmsRenderingContext<'a> {
   ) -> String {
     let content_for_head = content_for_head(
       request_url,
-      self.query_data.db.clone(),
-      self.query_data.convention.as_ref().as_ref(),
+      self.query_data.db().clone(),
+      self.query_data.convention(),
       page,
       event,
       page_title,

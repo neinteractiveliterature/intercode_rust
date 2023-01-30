@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use super::{
   CmsContentGroupType, CmsContentType, CmsFileType, CmsGraphqlQueryType, CmsLayoutType,
   CmsNavigationItemType, CmsPartialType, CmsVariableType, EventCategoryType, EventType,
@@ -56,7 +54,7 @@ impl ConventionType {
     &self,
     ctx: &Context<'_>,
   ) -> Result<Vec<UserConProfileType>, Error> {
-    let db = &ctx.data::<QueryData>()?.db;
+    let db = ctx.data::<QueryData>()?.db();
 
     let profiles: Vec<UserConProfileType> = self
       .model
@@ -114,7 +112,7 @@ impl ConventionType {
     Ok(
       ctx
         .data::<QueryData>()?
-        .loaders
+        .loaders()
         .convention_event_categories()
         .load_one(self.model.id)
         .await?
@@ -143,7 +141,7 @@ impl ConventionType {
         .find_related(events::Entity)
         .filter(events::Column::Status.eq("active"))
         .filter(events::Column::Id.eq(event_id))
-        .one(&query_data.db)
+        .one(query_data.db())
         .await?
         .ok_or_else(|| {
           Error::new(format!(
@@ -177,7 +175,7 @@ impl ConventionType {
 
     Ok(
       scope
-        .all(ctx.data::<QueryData>()?.db.as_ref())
+        .all(ctx.data::<QueryData>()?.db())
         .await?
         .into_iter()
         .map(EventType::new)
@@ -268,26 +266,23 @@ impl ConventionType {
   #[graphql(name = "my_profile")]
   async fn my_profile(&self, ctx: &Context<'_>) -> Result<Option<UserConProfileType>, Error> {
     let query_data = ctx.data::<QueryData>()?;
-    let convention_id = query_data.convention.as_ref().as_ref().map(|c| c.id);
+    let convention_id = query_data.convention().map(|c| c.id);
 
     if convention_id == Some(self.model.id) {
       Ok(
         query_data
-          .user_con_profile
-          .as_ref()
-          .as_ref()
-          .map(|ucp| UserConProfileType::new(ucp.to_owned())),
+          .user_con_profile()
+          .cloned()
+          .map(UserConProfileType::new),
       )
-    } else if let Some(user) = query_data.current_user.as_ref() {
-      let query_data = ctx.data::<QueryData>()?;
-
+    } else if let Some(user) = query_data.current_user() {
       user_con_profiles::Entity::find()
         .filter(
           user_con_profiles::Column::ConventionId
             .eq(self.model.id)
             .and(user_con_profiles::Column::UserId.eq(user.id)),
         )
-        .one(query_data.db.as_ref())
+        .one(query_data.db())
         .await
         .map(|result| result.map(UserConProfileType::new))
         .map_err(|e| async_graphql::Error::new(e.to_string()))
@@ -299,18 +294,18 @@ impl ConventionType {
   #[graphql(name = "pre_schedule_content_html")]
   async fn pre_schedule_content_html(&self, ctx: &Context<'_>) -> Result<Option<String>, Error> {
     let query_data = ctx.data::<QueryData>()?;
-    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
+    let liquid_renderer = ctx.data::<Box<dyn LiquidRenderer>>()?;
 
     let partial = self
       .model
       .cms_partials()
       .filter(cms_partials::Column::Name.eq("pre_schedule_text"))
-      .one(&query_data.db)
+      .one(query_data.db())
       .await?;
 
     if let Some(partial) = partial {
       let cms_rendering_context =
-        CmsRenderingContext::new(object!({}), query_data, liquid_renderer.clone());
+        CmsRenderingContext::new(object!({}), query_data, liquid_renderer.as_ref());
 
       cms_rendering_context
         .render_liquid(&partial.content.unwrap_or_default(), None)
@@ -325,7 +320,7 @@ impl ConventionType {
     Ok(
       ctx
         .data::<QueryData>()?
-        .loaders
+        .loaders()
         .convention_rooms()
         .load_one(self.model.id)
         .await?
@@ -344,7 +339,7 @@ impl ConventionType {
         .model
         .find_linked(ConventionToSignups)
         .filter(signups::Column::Id.eq(id.parse::<i64>()?))
-        .one(&query_data.db)
+        .one(query_data.db())
         .await?
         .ok_or_else(|| Error::new("Signup not found"))?,
     ))
@@ -377,7 +372,7 @@ impl ConventionType {
 
   #[graphql(name = "staff_position")]
   async fn staff_position(&self, ctx: &Context<'_>, id: ID) -> Result<StaffPositionType, Error> {
-    let db = &ctx.data::<QueryData>()?.db;
+    let db = ctx.data::<QueryData>()?.db();
 
     self
       .model
@@ -400,7 +395,7 @@ impl ConventionType {
 
     Ok(
       query_data
-        .loaders
+        .loaders()
         .convention_staff_positions()
         .load_one(self.model.id)
         .await?
@@ -449,7 +444,7 @@ impl ConventionType {
 
     Ok(
       query_data
-        .loaders
+        .loaders()
         .convention_ticket_types()
         .load_one(self.model.id)
         .await?
@@ -477,7 +472,7 @@ impl ConventionType {
 
   #[graphql(name = "user_con_profile")]
   async fn user_con_profile(&self, ctx: &Context<'_>, id: ID) -> Result<UserConProfileType, Error> {
-    let db = &ctx.data::<QueryData>()?.db;
+    let db = ctx.data::<QueryData>()?.db();
 
     self
       .model

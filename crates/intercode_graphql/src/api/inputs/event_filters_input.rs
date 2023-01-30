@@ -56,7 +56,7 @@ impl EventFiltersInput {
 
     if let Some(my_rating) = &self.my_rating {
       let query_data = ctx.data::<QueryData>()?;
-      if let Some(user_con_profile) = query_data.user_con_profile.as_ref() {
+      if let Some(user_con_profile) = query_data.user_con_profile() {
         scope = scope
           .inner_join(event_ratings::Entity)
           .filter(event_ratings::Column::UserConProfileId.eq(user_con_profile.id))

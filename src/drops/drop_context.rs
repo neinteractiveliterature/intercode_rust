@@ -39,6 +39,6 @@ impl seawater::Context for DropContext {
   }
 
   fn db(&self) -> &ConnectionWrapper {
-    self.query_data.db.as_ref()
+    self.query_data.db()
   }
 }

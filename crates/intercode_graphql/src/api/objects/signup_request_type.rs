@@ -19,7 +19,7 @@ impl SignupRequestType {
     let query_data = ctx.data::<QueryData>()?;
     Ok(
       query_data
-        .loaders
+        .loaders()
         .signup_request_replace_signup()
         .load_one(self.model.id)
         .await?
@@ -34,7 +34,7 @@ impl SignupRequestType {
     let query_data = ctx.data::<QueryData>()?;
     Ok(
       query_data
-        .loaders
+        .loaders()
         .signup_request_result_signup()
         .load_one(self.model.id)
         .await?
@@ -58,7 +58,7 @@ impl SignupRequestType {
     let query_data = ctx.data::<QueryData>()?;
     Ok(RunType::new(
       query_data
-        .loaders
+        .loaders()
         .signup_request_target_run()
         .load_one(self.model.id)
         .await?

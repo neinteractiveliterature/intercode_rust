@@ -1354,6 +1354,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03d8c417d7a8cb362e0c37e5d815f5eb7c37f79ff93707329d5a194e42e54ca0"
 
 [[package]]
+name = "dyn-clone"
+version = "1.0.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9b0705efd4599c15a38151f4721f7bc388306f61084d3bfd50bd07fbca5cb60"
+
+[[package]]
 name = "either"
 version = "1.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2182,6 +2188,7 @@ name = "intercode_inflector"
 version = "0.1.0"
 dependencies = [
  "Inflector",
+ "once_cell",
  "regex",
  "serde",
  "serde_json",
@@ -2195,6 +2202,7 @@ dependencies = [
  "async-graphql-value",
  "chrono",
  "chrono-tz",
+ "dyn-clone",
  "html-escape",
  "i18n-embed",
  "i18n-embed-fl",
@@ -2205,6 +2213,7 @@ dependencies = [
  "liquid",
  "liquid-core",
  "md5",
+ "once_cell",
  "pulldown-cmark",
  "regex",
  "sea-orm",

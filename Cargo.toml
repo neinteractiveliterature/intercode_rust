@@ -26,9 +26,11 @@ async-graphql = {version = "~5.0", features = ["tracing", "dataloader", "chrono"
 async-graphql-value = {version = "~5.0"}
 async-trait = "*"
 axum = {version = "~0.6", features = ["multipart", "macros", "headers"]}
+bumpalo-herd = "0.1.2"
 cached = "~0.42"
 chrono = "0.4"
 chrono-tz = "0.8"
+dyn-clone = "1.0.10"
 futures = "0.3.25"
 html-escape = "0.2.13"
 http = "0.2.8"
@@ -66,7 +68,7 @@ axum-server = {version = "0.4.4", features = ["tls-rustls"]}
 axum-sessions = "~0.4"
 base64 = "0.13.1"
 bcrypt = "0.13.0"
-bumpalo-herd = "0.1.2"
+bumpalo-herd = {workspace = true}
 chrono = {workspace = true}
 chrono-tz = {workspace = true}
 clap = {version = "4.1.4", features = ["derive", "cargo"]}

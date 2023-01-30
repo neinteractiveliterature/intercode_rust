@@ -10,6 +10,7 @@ async-graphql = {workspace = true}
 async-graphql-value = {workspace = true}
 chrono = {workspace = true}
 chrono-tz = {workspace = true}
+dyn-clone = {workspace = true}
 html-escape = {workspace = true}
 i18n-embed = {workspace = true}
 i18n-embed-fl = {workspace = true}
@@ -20,6 +21,7 @@ linkify = {workspace = true}
 liquid = {workspace = true}
 liquid-core = {workspace = true}
 md5 = {workspace = true}
+once_cell = {workspace = true}
 pulldown-cmark = {workspace = true}
 regex = {workspace = true}
 sea-orm = {workspace = true}

@@ -60,7 +60,7 @@ impl UserConProfileType {
   }
 
   async fn convention(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {
-    let loader = &ctx.data::<QueryData>()?.loaders.conventions_by_id();
+    let loader = &ctx.data::<QueryData>()?.loaders().conventions_by_id();
 
     let model = loader
       .load_one(self.model.convention_id)
@@ -83,7 +83,7 @@ impl UserConProfileType {
           .eq(self.model.id)
           .and(orders::Column::Status.eq("pending")),
       )
-      .all(query_data.db.as_ref())
+      .all(query_data.db())
       .await?;
 
     if pending_orders.is_empty() {
@@ -100,7 +100,7 @@ impl UserConProfileType {
           order_entries::Column::OrderId
             .is_in(rest.iter().map(|order| order.id).collect::<Vec<i64>>()),
         )
-        .exec(query_data.db.as_ref())
+        .exec(query_data.db())
         .await?;
 
       Ok(Some(OrderType::new(first[0].to_owned())))
@@ -110,7 +110,7 @@ impl UserConProfileType {
   }
 
   async fn email(&self, ctx: &Context<'_>) -> Result<String, Error> {
-    let loader = ctx.data::<QueryData>()?.loaders.user_con_profile_user();
+    let loader = ctx.data::<QueryData>()?.loaders().user_con_profile_user();
 
     Ok(
       loader
@@ -135,7 +135,7 @@ impl UserConProfileType {
   #[graphql(name = "gravatar_url")]
   async fn gravatar_url(&self, ctx: &Context<'_>) -> Result<String, Error> {
     if self.model.gravatar_enabled {
-      let loader = &ctx.data::<QueryData>()?.loaders.users_by_id();
+      let loader = &ctx.data::<QueryData>()?.loaders().users_by_id();
 
       let model = loader.load_one(self.model.user_id).await?.expect_model()?;
       Ok(format!(
@@ -182,7 +182,7 @@ impl UserConProfileType {
   async fn staff_positions(&self, ctx: &Context<'_>) -> Result<Vec<StaffPositionType>, Error> {
     let loader = &ctx
       .data::<QueryData>()?
-      .loaders
+      .loaders()
       .user_con_profile_staff_positions();
 
     Ok(
@@ -204,7 +204,7 @@ impl UserConProfileType {
   async fn team_members(&self, ctx: &Context<'_>) -> Result<Vec<TeamMemberType>, Error> {
     let loader = &ctx
       .data::<QueryData>()?
-      .loaders
+      .loaders()
       .user_con_profile_team_members();
 
     Ok(
@@ -219,7 +219,7 @@ impl UserConProfileType {
   }
 
   async fn ticket(&self, ctx: &Context<'_>) -> Result<Option<TicketType>, Error> {
-    let loader = &ctx.data::<QueryData>()?.loaders.user_con_profile_ticket();
+    let loader = &ctx.data::<QueryData>()?.loaders().user_con_profile_ticket();
 
     Ok(
       loader

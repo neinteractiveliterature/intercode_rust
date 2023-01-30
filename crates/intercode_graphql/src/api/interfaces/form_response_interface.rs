@@ -21,7 +21,7 @@ async fn load_filtered_form_items(
   item_identifiers: Option<Vec<String>>,
 ) -> Result<Vec<form_items::Model>, Error> {
   let form_items_result = query_data
-    .loaders
+    .loaders()
     .form_form_items()
     .load_one(form_id)
     .await?;

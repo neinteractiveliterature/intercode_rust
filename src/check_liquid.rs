@@ -13,7 +13,7 @@ use intercode_entities::{
   UserNames,
 };
 use intercode_graphql::{
-  cms_rendering_context::CmsRenderingContext, loaders::LoaderManager, QueryData, SchemaData,
+  cms_rendering_context::CmsRenderingContext, ArcQueryData, OwnedQueryData, QueryData, SchemaData,
 };
 use intercode_liquid::cms_parent_partial_source::PreloadPartialsStrategy;
 use intercode_policies::AuthorizationInfo;
@@ -86,24 +86,23 @@ async fn find_or_build_user_con_profile(
 fn build_query_data(
   cms_parent: CmsParent,
   current_user: Option<users::Model>,
-  parent_convention: &Option<conventions::Model>,
+  parent_convention: Option<conventions::Model>,
   connection_wrapper: &ConnectionWrapper,
   user_con_profile: Option<user_con_profiles::Model>,
 ) -> QueryData {
-  let query_data = QueryData {
-    cms_parent: Arc::new(cms_parent),
-    current_user: Arc::new(current_user),
-    convention: Arc::new(parent_convention.as_ref().cloned()),
-    db: connection_wrapper.clone(),
-    loaders: LoaderManager::new(connection_wrapper.clone()),
-    timezone: parent_convention
-      .as_ref()
-      .and_then(|c| c.timezone_name.as_ref())
+  let query_data = OwnedQueryData::new(
+    cms_parent,
+    current_user,
+    parent_convention.clone(),
+    connection_wrapper.clone(),
+    parent_convention
+      .and_then(|c| c.timezone_name)
       .and_then(|tz_name| tz_name.parse().ok())
       .unwrap_or(UTC),
-    user_con_profile: Arc::new(user_con_profile),
-  };
-  query_data
+    user_con_profile,
+  );
+
+  Box::new(ArcQueryData::new(query_data))
 }
 
 async fn render_page(
@@ -119,14 +118,14 @@ async fn render_page(
     _ => None,
   };
   let (query_data, renderer) = build_query_data_and_renderer(
-    &parent_convention,
+    parent_convention,
     root_site,
     user,
     connection_wrapper,
     schema_data,
   )
   .await;
-  let rendering_context = CmsRenderingContext::new(object!({}), &query_data, Arc::new(renderer));
+  let rendering_context = CmsRenderingContext::new(object!({}), &query_data, &renderer);
   let content = page.content.as_deref().unwrap_or("");
   let resource_descriptor = ResourceDescriptor::Page(page.name.clone());
 
@@ -153,7 +152,7 @@ async fn render_layout(
     _ => None,
   };
   let (query_data, renderer) = build_query_data_and_renderer(
-    &parent_convention,
+    parent_convention,
     root_site,
     user,
     connection_wrapper,
@@ -167,7 +166,7 @@ async fn render_layout(
       "content_for_navbar": ""
     }),
     &query_data,
-    Arc::new(renderer),
+    &renderer,
   );
   let content = layout.content.as_deref().unwrap_or("");
   let resource_descriptor = ResourceDescriptor::Layout(layout.name.clone());
@@ -193,16 +192,10 @@ async fn check_rendering<'a>(
     .render_liquid(content, preload_partials_strategy)
     .await
     .map_err(|err| LiquidRenderingError {
-      convention_name: query_data
-        .convention
-        .as_ref()
-        .as_ref()
-        .and_then(|c| c.name.clone()),
+      convention_name: query_data.convention().and_then(|c| c.name.clone()),
       resource_descriptor,
       user_descriptor: query_data
-        .current_user
-        .as_ref()
-        .as_ref()
+        .current_user()
         .map(|u| u.name_without_nickname())
         .unwrap_or_else(|| "anonymous user".to_string()),
       error: err,
@@ -210,13 +203,13 @@ async fn check_rendering<'a>(
 }
 
 async fn build_query_data_and_renderer(
-  parent_convention: &Option<conventions::Model>,
+  parent_convention: Option<conventions::Model>,
   root_site: &root_sites::Model,
   user: Option<users::Model>,
   connection_wrapper: &ConnectionWrapper,
   schema_data: &SchemaData,
 ) -> (QueryData, IntercodeLiquidRenderer) {
-  let cms_parent = match parent_convention {
+  let cms_parent = match parent_convention.as_ref() {
     Some(convention) => CmsParent::Convention(Box::new(convention.clone())),
     None => CmsParent::RootSite(Box::new(root_site.clone())),
   };
@@ -239,9 +232,9 @@ async fn build_query_data_and_renderer(
     schema_data,
     Arc::new(AuthorizationInfo::new(
       connection_wrapper.clone(),
-      current_user.clone(),
+      current_user.as_ref().clone(),
       None,
-      Arc::new(None),
+      None,
     )),
   );
   (query_data, renderer)

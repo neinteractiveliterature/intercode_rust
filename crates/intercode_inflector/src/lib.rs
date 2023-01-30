@@ -1,8 +1,18 @@
 pub use inflector;
 use inflector::string::pluralize;
+use once_cell::sync::Lazy;
 use regex::{Captures, Regex, RegexBuilder};
 use serde::{Deserialize, Serialize};
 use std::{borrow::Borrow, collections::HashMap};
+
+static ID_SUFFIX_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r" id$").unwrap());
+static WORD_REGEX: Lazy<Regex> = Lazy::new(|| {
+  RegexBuilder::new(r"([a-z\d]+)")
+    .case_insensitive(true)
+    .build()
+    .expect("Could not parse regex for word replacement")
+});
+static INITIAL_WORD_CHARACTER_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w)").unwrap());
 
 #[derive(Deserialize, Serialize)]
 pub struct IntercodeInflectorConfig {
@@ -11,25 +21,12 @@ pub struct IntercodeInflectorConfig {
 
 pub struct IntercodeInflector {
   acronyms: HashMap<String, String>,
-  id_suffix_regex: Regex,
-  word_regex: Regex,
-  initial_word_character_regex: Regex,
 }
 
 impl IntercodeInflector {
   pub fn new() -> Self {
-    let id_suffix_regex = Regex::new(r" id$").unwrap();
-    let word_regex = RegexBuilder::new(r"([a-z\d]+)")
-      .case_insensitive(true)
-      .build()
-      .expect("Could not parse regex for word replacement");
-    let initial_word_character_regex = Regex::new(r"^(\w)").unwrap();
-
     IntercodeInflector {
       acronyms: HashMap::<String, String>::new(),
-      id_suffix_regex,
-      word_regex,
-      initial_word_character_regex,
     }
   }
 
@@ -64,17 +61,14 @@ impl IntercodeInflector {
     let result = input.replace('_', " ");
     let result = result.trim_start();
 
-    let result = self.id_suffix_regex.replace(result, "");
+    let result = ID_SUFFIX_REGEX.replace(result, "");
 
-    let result = self
-      .word_regex
-      .replace_all(result.borrow(), |caps: &Captures| {
-        let lowered = caps[1].to_lowercase();
-        self.acronymize_if_applicable(&lowered)
-      });
+    let result = WORD_REGEX.replace_all(result.borrow(), |caps: &Captures| {
+      let lowered = caps[1].to_lowercase();
+      self.acronymize_if_applicable(&lowered)
+    });
 
-    let result = self
-      .initial_word_character_regex
+    let result = INITIAL_WORD_CHARACTER_REGEX
       .replace(result.borrow(), |caps: &Captures| caps[1].to_uppercase());
 
     result.to_string()

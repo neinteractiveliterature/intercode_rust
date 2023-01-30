@@ -11,6 +11,8 @@ pub enum CmsParent {
   RootSite(Box<root_sites::Model>),
 }
 
+impl CmsParent {}
+
 impl From<conventions::Model> for CmsParent {
   fn from(convention: conventions::Model) -> Self {
     CmsParent::Convention(Box::new(convention))

@@ -1,7 +1,8 @@
-use std::{collections::HashMap, io::Write, sync::Arc};
+use std::{collections::HashMap, fmt::Debug, io::Write};
 
 use async_graphql::{indexmap::IndexMap, Variables};
 use async_graphql_value::ConstValue;
+use dyn_clone::DynClone;
 use intercode_entities::{
   cms_graphql_queries,
   cms_parent::{CmsParent, CmsParentTrait},
@@ -12,7 +13,7 @@ use liquid_core::{
   Expression, Language, ParseTag, Renderable, Result, Runtime, TagReflection, TagTokenIter,
   ValueCow,
 };
-use sea_orm::{ColumnTrait, QueryFilter};
+use sea_orm::{ColumnTrait, QueryFilter, Select};
 use seawater::ConnectionWrapper;
 use tokio::runtime::Handle;
 
@@ -30,28 +31,38 @@ fn graphql_const_to_liquid_value(
   serde_json::from_value::<liquid_core::Value>(serde_json::to_value(value)?)
 }
 
-#[derive(Clone, Debug)]
-pub struct AssignGraphQLResultTag<E: GraphQLExecutor> {
-  cms_parent: Arc<CmsParent>,
-  db: ConnectionWrapper,
-  graphql_executor: E,
+pub trait GraphQLExecutorBuilder: Send + Sync + Debug + DynClone {
+  fn build_executor(&self) -> Box<dyn GraphQLExecutor>;
 }
 
-impl<E: GraphQLExecutor> AssignGraphQLResultTag<E> {
+impl Clone for Box<dyn GraphQLExecutorBuilder> {
+  fn clone(&self) -> Self {
+    dyn_clone::clone_box(self.as_ref())
+  }
+}
+
+#[derive(Clone, Debug)]
+pub struct AssignGraphQLResultTag {
+  cms_parent_graphql_queries_scope: Select<cms_graphql_queries::Entity>,
+  db: ConnectionWrapper,
+  graphql_executor_builder: Box<dyn GraphQLExecutorBuilder>,
+}
+
+impl AssignGraphQLResultTag {
   pub fn new(
-    cms_parent: Arc<CmsParent>,
+    cms_parent: &CmsParent,
     db: ConnectionWrapper,
-    graphql_executor: E,
-  ) -> AssignGraphQLResultTag<E> {
+    graphql_executor_builder: Box<dyn GraphQLExecutorBuilder>,
+  ) -> AssignGraphQLResultTag {
     AssignGraphQLResultTag {
-      cms_parent,
+      cms_parent_graphql_queries_scope: cms_parent.cms_graphql_queries(),
       db,
-      graphql_executor,
+      graphql_executor_builder,
     }
   }
 }
 
-impl<E: GraphQLExecutor> TagReflection for AssignGraphQLResultTag<E> {
+impl TagReflection for AssignGraphQLResultTag {
   fn tag(&self) -> &'static str {
     "assign_graphql_result"
   }
@@ -62,7 +73,7 @@ impl<E: GraphQLExecutor> TagReflection for AssignGraphQLResultTag<E> {
   }
 }
 
-impl<E: 'static + GraphQLExecutor> ParseTag for AssignGraphQLResultTag<E> {
+impl ParseTag for AssignGraphQLResultTag {
   fn parse(
     &self,
     mut arguments: TagTokenIter<'_>,
@@ -115,9 +126,9 @@ impl<E: 'static + GraphQLExecutor> ParseTag for AssignGraphQLResultTag<E> {
     arguments.expect_nothing()?;
 
     Ok(Box::new(AssignGraphQLResult {
-      cms_parent: self.cms_parent.clone(),
+      cms_parent_graphql_queries_scope: self.cms_parent_graphql_queries_scope.clone(),
       db: self.db.clone(),
-      graphql_executor: self.graphql_executor.clone(),
+      graphql_executor_builder: self.graphql_executor_builder.clone(),
       arg_mapping,
       destination,
       query_name,
@@ -130,16 +141,16 @@ impl<E: 'static + GraphQLExecutor> ParseTag for AssignGraphQLResultTag<E> {
 }
 
 #[derive(Debug)]
-struct AssignGraphQLResult<E: GraphQLExecutor> {
-  cms_parent: Arc<CmsParent>,
+struct AssignGraphQLResult {
+  cms_parent_graphql_queries_scope: Select<cms_graphql_queries::Entity>,
   db: ConnectionWrapper,
-  graphql_executor: E,
+  graphql_executor_builder: Box<dyn GraphQLExecutorBuilder>,
   arg_mapping: HashMap<String, Expression>,
   destination: String,
   query_name: String,
 }
 
-impl<E: GraphQLExecutor> AssignGraphQLResult<E> {
+impl AssignGraphQLResult {
   fn trace(&self) -> String {
     format!(
       "{{% assign_graphql_result {} = {}({}) %}}",
@@ -155,13 +166,12 @@ impl<E: GraphQLExecutor> AssignGraphQLResult<E> {
   }
 }
 
-impl<E: GraphQLExecutor + 'static> Renderable for AssignGraphQLResult<E> {
+impl Renderable for AssignGraphQLResult {
   fn render_to(&self, _writer: &mut dyn Write, runtime: &dyn Runtime) -> Result<()> {
     let db_ref = self.db.clone();
     let cms_graphql_queries_select = self
-      .cms_parent
-      .as_ref()
-      .cms_graphql_queries()
+      .cms_parent_graphql_queries_scope
+      .clone()
       .filter(cms_graphql_queries::Column::Identifier.eq(self.query_name.clone()));
     let graphql_query_handle =
       tokio::spawn(async move { cms_graphql_queries_select.one(db_ref.as_ref()).await });
@@ -194,7 +204,7 @@ impl<E: GraphQLExecutor + 'static> Renderable for AssignGraphQLResult<E> {
     let request =
       async_graphql::Request::new(graphql_query.query.unwrap_or_else(|| String::from("")))
         .variables(Variables::from_value(ConstValue::Object(variables_map)));
-    let executor = self.graphql_executor.clone();
+    let executor = self.graphql_executor_builder.build_executor();
     let response_handle = tokio::spawn(async move { executor.execute(request).await });
     let response = Handle::current().block_on(response_handle).unwrap();
 

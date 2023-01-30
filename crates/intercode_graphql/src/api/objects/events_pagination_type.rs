@@ -34,7 +34,7 @@ impl EventsPaginationType {
   }
 
   async fn entries(&self, ctx: &Context<'_>) -> Result<Vec<EventType>, Error> {
-    let db = ctx.data::<QueryData>()?.db.as_ref();
+    let db = ctx.data::<QueryData>()?.db();
     let (paginator, _) = self.paginator_and_page_size(db);
     Ok(
       paginator

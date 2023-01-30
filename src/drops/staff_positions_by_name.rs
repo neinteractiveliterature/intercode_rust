@@ -4,14 +4,15 @@ use super::{DropContext, StaffPositionDrop};
 use intercode_entities::{conventions, links::ConventionToStaffPositions};
 use lazy_liquid_value_view::DropResult;
 use liquid::{ObjectView, ValueView};
-use once_cell::race::OnceBox;
+use once_cell::{race::OnceBox, sync::Lazy};
 use regex::Regex;
 use sea_orm::ModelTrait;
 use seawater::{Context, DropError, ModelBackedDrop};
 
+static NON_WHITESPACE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("\\W").unwrap());
+
 fn normalize_staff_position_name(name: &str) -> String {
-  Regex::new("\\W")
-    .unwrap()
+  NON_WHITESPACE_REGEX
     .replace_all(name.to_lowercase().as_str(), "_")
     .to_string()
 }

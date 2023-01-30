@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use super::interfaces::CmsParentInterface;
 use super::objects::{
   AbilityType, ConventionType, EventType, RootSiteType, UserConProfileType, UserType,
@@ -32,7 +30,7 @@ impl QueryRoot {
   ) -> Result<CmsParentInterface, Error> {
     let query_data = ctx.data::<QueryData>()?;
 
-    Ok(match query_data.cms_parent.as_ref() {
+    Ok(match query_data.cms_parent() {
       CmsParent::Convention(convention) => {
         CmsParentInterface::Convention(Box::new(ConventionType::new(*convention.to_owned())))
       }
@@ -57,7 +55,7 @@ impl QueryRoot {
   ) -> Result<Option<ConventionType>, Error> {
     let query_data = ctx.data::<QueryData>()?;
 
-    match query_data.convention.as_ref() {
+    match query_data.convention() {
       Some(convention) => Ok(Some(ConventionType::new(convention.to_owned()))),
       None => Ok(None),
     }
@@ -70,7 +68,7 @@ impl QueryRoot {
   async fn current_user(&self, ctx: &Context<'_>) -> Result<Option<UserType>, Error> {
     let query_data = ctx.data::<QueryData>()?;
 
-    match query_data.current_user.as_ref() {
+    match query_data.current_user() {
       Some(user) => Ok(Some(UserType::new(user.to_owned()))),
       None => Ok(None),
     }
@@ -90,7 +88,7 @@ impl QueryRoot {
       first,
       last,
       |after, before, first, last| async move {
-        let db = ctx.data::<QueryData>()?.db.as_ref();
+        let db = ctx.data::<QueryData>()?.db();
 
         let connection = events::Entity::find()
           .relay_connection(db, EventType::new, after, before, first, last)
@@ -107,13 +105,13 @@ impl QueryRoot {
     let query_data = ctx.data::<QueryData>()?;
 
     let count = oauth_applications::Entity::find()
-      .count(query_data.db.as_ref())
+      .count(query_data.db())
       .await?;
     Ok(count > 0)
   }
 
   async fn preview_liquid(&self, ctx: &Context<'_>, content: String) -> Result<String, Error> {
-    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
+    let liquid_renderer = ctx.data::<Box<dyn LiquidRenderer>>()?;
     liquid_renderer
       .render_liquid(content.as_str(), object!({}), None)
       .await
@@ -122,9 +120,7 @@ impl QueryRoot {
   async fn root_site(&self, ctx: &Context<'_>) -> Result<RootSiteType, Error> {
     let query_data = ctx.data::<QueryData>()?;
 
-    let root_site = root_sites::Entity::find()
-      .one(query_data.db.as_ref())
-      .await?;
+    let root_site = root_sites::Entity::find().one(query_data.db()).await?;
 
     if let Some(root_site) = root_site {
       Ok(RootSiteType::new(root_site))

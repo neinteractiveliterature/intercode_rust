@@ -14,12 +14,13 @@ pub use dig::liquid_datetime_to_chrono_datetime;
 use i18n_embed::fluent::FluentLanguageLoader;
 use intercode_entities::{active_storage_blobs, cms_parent::CmsParent, conventions};
 use liquid::{partials::PartialCompiler, Error, Parser, ParserBuilder};
-use std::{fmt::Debug, future::Future, pin::Pin, sync::Arc};
+use std::{fmt::Debug, future::Future, pin::Pin, sync::Weak};
+use tags::GraphQLExecutorBuilder;
 
-pub trait GraphQLExecutor: Debug + Clone + Send + Sync {
+pub trait GraphQLExecutor: Debug + Send + Sync {
   fn execute(
     &self,
-    request: impl Into<async_graphql::Request>,
+    request: async_graphql::Request,
   ) -> Pin<Box<dyn Future<Output = async_graphql::Response> + Send + '_>>;
 }
 
@@ -39,13 +40,13 @@ where
     .context("cause", cause)
 }
 
-pub fn build_liquid_parser<'a>(
-  convention: &'a Arc<Option<conventions::Model>>,
-  language_loader: &'a Arc<FluentLanguageLoader>,
-  cms_parent: &'a Arc<CmsParent>,
-  db: &ConnectionWrapper,
+pub fn build_liquid_parser(
+  convention: Option<&conventions::Model>,
+  language_loader: Weak<FluentLanguageLoader>,
+  cms_parent: &CmsParent,
+  db: ConnectionWrapper,
   user_signed_in: bool,
-  graphql_executor: impl GraphQLExecutor + 'static,
+  graphql_executor_builder: Box<dyn GraphQLExecutorBuilder>,
   partial_compiler: impl PartialCompiler,
 ) -> Result<Parser, liquid_core::Error> {
   let builder = ParserBuilder::with_stdlib()
@@ -56,31 +57,31 @@ pub fn build_liquid_parser<'a>(
     .filter(filters::Singularize)
     .filter(filters::Titleize)
     .filter(filters::AbsoluteUrl {
-      convention: convention.clone(),
+      convention_domain: convention.map(|c| c.domain.clone()),
     })
     .filter(filters::CondenseWhitespace)
     .filter(filters::MD5)
     .filter(filters::DateWithLocalTime {
-      convention: convention.clone(),
+      convention_timezone: convention.and_then(|c| c.timezone_name.clone()),
     })
     .filter(filters::TimespanWithLocalTime {
-      convention: convention.clone(),
-      language_loader: language_loader.clone(),
+      convention_timezone: convention.and_then(|c| c.timezone_name.clone()),
+      language_loader,
     })
     .tag(tags::AddToCalendarDropdownTag)
     .tag(tags::AssignGraphQLResultTag::new(
-      cms_parent.clone(),
+      cms_parent,
       db.clone(),
-      graphql_executor,
+      graphql_executor_builder,
     ))
     .tag(tags::CookieConsentTag)
     .tag(tags::EventAdminMenuTag)
     .tag(tags::EventRunsSectionTag)
-    .tag(tags::FileUrlTag::new(cms_parent.clone(), db.clone()))
+    .tag(tags::FileUrlTag::new(cms_parent, db))
     .tag(tags::LongFormEventDetailsTag)
     .tag(tags::MapTag)
     .tag(tags::MaximumEventSignupsPreviewTag {
-      convention: convention.clone(),
+      convention_timezone: convention.and_then(|c| c.timezone_name.clone()),
     })
     .tag(tags::NewEventProposalButtonTag)
     .tag(tags::PageUrlTag)

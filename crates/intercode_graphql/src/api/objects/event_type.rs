@@ -42,7 +42,7 @@ impl EventType {
   }
 
   async fn convention(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {
-    let loader = &ctx.data::<QueryData>()?.loaders.conventions_by_id();
+    let loader = ctx.data::<QueryData>()?.loaders().conventions_by_id();
 
     let model = loader
       .load_one(self.model.convention_id)
@@ -66,7 +66,7 @@ impl EventType {
 
   #[graphql(name = "event_category")]
   async fn event_category(&self, ctx: &Context<'_>) -> Result<EventCategoryType, Error> {
-    let loader = &ctx.data::<QueryData>()?.loaders.event_event_category();
+    let loader = ctx.data::<QueryData>()?.loaders().event_event_category();
 
     Ok(EventCategoryType::new(
       loader.load_one(self.model.id).await?.expect_one()?.clone(),
@@ -109,9 +109,9 @@ impl EventType {
   #[graphql(name = "my_rating")]
   async fn my_rating(&self, ctx: &Context<'_>) -> Result<Option<i32>, Error> {
     let query_data = ctx.data::<QueryData>()?;
-    if let Some(user_con_profile) = query_data.user_con_profile.as_ref().as_ref() {
+    if let Some(user_con_profile) = query_data.user_con_profile() {
       let loader = query_data
-        .loaders
+        .loaders()
         .event_user_con_profile_event_ratings
         .get(user_con_profile.id)
         .await;
@@ -147,7 +147,7 @@ impl EventType {
   async fn run(&self, ctx: &Context<'_>, id: ID) -> Result<RunType, Error> {
     let query_data = ctx.data::<QueryData>()?;
     let run = query_data
-      .loaders
+      .loaders()
       .runs_by_id()
       .load_one(id.parse()?)
       .await?
@@ -166,7 +166,7 @@ impl EventType {
     let query_data = ctx.data::<QueryData>()?;
     Ok(
       query_data
-        .loaders
+        .loaders()
         .event_runs_filtered
         .get(EventRunsLoaderFilter {
           start: start.map(|start| start.into()),
@@ -196,7 +196,7 @@ impl EventType {
     let query_data = ctx.data::<QueryData>()?;
     Ok(
       query_data
-        .loaders
+        .loaders()
         .event_team_members()
         .load_one(self.model.id)
         .await?
@@ -217,7 +217,7 @@ impl FormResponseImplementation<events::Model> for EventType {
   async fn get_form(&self, ctx: &Context<'_>) -> Result<forms::Model, Error> {
     let query_data = ctx.data::<QueryData>()?;
     let event_category_result = query_data
-      .loaders
+      .loaders()
       .event_event_category()
       .load_one(self.model.id)
       .await?;
@@ -225,7 +225,7 @@ impl FormResponseImplementation<events::Model> for EventType {
 
     Ok(
       query_data
-        .loaders
+        .loaders()
         .event_category_event_form()
         .load_one(event_category.id)
         .await?
@@ -237,7 +237,7 @@ impl FormResponseImplementation<events::Model> for EventType {
   async fn get_team_member_name(&self, ctx: &Context<'_>) -> Result<String, Error> {
     let query_data = ctx.data::<QueryData>()?;
     let event_category_result = query_data
-      .loaders
+      .loaders()
       .event_event_category()
       .load_one(self.model.id)
       .await?;

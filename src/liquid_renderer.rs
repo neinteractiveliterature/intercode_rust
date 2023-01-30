@@ -1,7 +1,9 @@
 use async_graphql::async_trait::async_trait;
 use futures::try_join;
 use intercode_entities::{conventions, events};
-use intercode_graphql::{LiquidRenderer, QueryData, SchemaData};
+use intercode_graphql::{
+  build_partial_compiler, EmbeddedGraphQLExecutorBuilder, LiquidRenderer, QueryData, SchemaData,
+};
 use intercode_liquid::{build_liquid_parser, cms_parent_partial_source::PreloadPartialsStrategy};
 use intercode_policies::AuthorizationInfo;
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct, ArcValueView};
@@ -29,9 +31,7 @@ impl IntercodeGlobals {
   fn convention(&self) -> Option<ConventionDrop> {
     self
       .query_data
-      .convention
-      .as_ref()
-      .as_ref()
+      .convention()
       .map(|convention| ConventionDrop::new(convention.clone(), self.drop_context.clone()))
   }
 
@@ -48,7 +48,7 @@ impl IntercodeGlobals {
   }
 
   async fn event(&self) -> Result<Option<EventDrop>, DropError> {
-    if let Some(convention) = self.query_data.convention.as_ref().as_ref() {
+    if let Some(convention) = self.query_data.convention() {
       if convention.site_mode == "single_event" {
         return Ok(
           events::Entity::find()
@@ -64,14 +64,9 @@ impl IntercodeGlobals {
   }
 
   async fn user_con_profile(&self) -> Result<Option<ArcValueView<UserConProfileDrop>>, DropError> {
-    let ucp = self
-      .query_data
-      .user_con_profile
-      .as_ref()
-      .as_ref()
-      .map(|user_con_profile| {
-        UserConProfileDrop::new(user_con_profile.clone(), self.drop_context.clone())
-      });
+    let ucp = self.query_data.user_con_profile().map(|user_con_profile| {
+      UserConProfileDrop::new(user_con_profile.clone(), self.drop_context.clone())
+    });
 
     if let Some(ucp) = ucp {
       let ucp = self.drop_context.drop_cache().put(ucp)?;
@@ -128,25 +123,28 @@ impl LiquidRenderer for IntercodeLiquidRenderer {
   ) -> Result<String, async_graphql::Error> {
     let schema_data: SchemaData = self.schema_data.clone();
     let query_data: QueryData = self.query_data.clone();
+    let cms_parent = query_data.cms_parent().clone();
 
-    let partial_compiler = query_data
-      .build_partial_compiler(query_data.db.clone(), preload_partials_strategy)
-      .await?;
-    let convention = query_data.convention.clone();
-    let language_loader = schema_data.language_loader.clone();
-    let cms_parent = query_data.cms_parent.clone();
-    let db = query_data.db.clone();
-    let user_signed_in = query_data.current_user.is_some();
-    let executor =
-      query_data.build_embedded_graphql_executor(&schema_data, self.authorization_info.clone());
+    let partial_compiler = build_partial_compiler(
+      cms_parent,
+      query_data.db().clone(),
+      preload_partials_strategy,
+    )
+    .await?;
+    let user_signed_in = query_data.current_user().is_some();
+    let executor_builder = EmbeddedGraphQLExecutorBuilder::new(
+      query_data.clone(),
+      schema_data.clone(),
+      self.authorization_info.as_ref().clone(),
+    );
 
     let parser = build_liquid_parser(
-      &convention,
-      &language_loader,
-      &cms_parent,
-      &db,
+      query_data.convention(),
+      Arc::downgrade(&schema_data.language_loader),
+      query_data.cms_parent(),
+      query_data.db().clone(),
       user_signed_in,
-      executor,
+      Box::new(executor_builder),
       partial_compiler,
     )?;
 

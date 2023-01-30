@@ -12,14 +12,8 @@ use std::{
 
 #[derive(Clone, Debug)]
 pub enum ConnectionWrapper {
-  DatabaseConnection(Arc<DatabaseConnection>),
+  DatabaseConnection(Weak<DatabaseConnection>),
   DatabaseTransaction(Weak<DatabaseTransaction>),
-}
-
-impl Drop for ConnectionWrapper {
-  fn drop(&mut self) {
-    // eprintln!("Dropping ConnectionWrapper {:?}", self);
-  }
 }
 
 impl AsRef<Self> for ConnectionWrapper {
@@ -28,15 +22,9 @@ impl AsRef<Self> for ConnectionWrapper {
   }
 }
 
-impl From<DatabaseConnection> for ConnectionWrapper {
-  fn from(conn: DatabaseConnection) -> Self {
-    Self::DatabaseConnection(Arc::new(conn))
-  }
-}
-
 impl From<Arc<DatabaseConnection>> for ConnectionWrapper {
   fn from(arc: Arc<DatabaseConnection>) -> Self {
-    Self::DatabaseConnection(arc)
+    Self::DatabaseConnection(Arc::downgrade(&arc))
   }
 }
 
@@ -50,14 +38,20 @@ impl From<&ConnectionWrapper> for ConnectionWrapper {
 impl ConnectionTrait for ConnectionWrapper {
   fn get_database_backend(&self) -> sea_orm::DbBackend {
     match self {
-      Self::DatabaseConnection(conn) => conn.get_database_backend(),
+      Self::DatabaseConnection(conn) => conn.upgrade().unwrap().get_database_backend(),
       Self::DatabaseTransaction(tx) => tx.upgrade().unwrap().get_database_backend(),
     }
   }
 
   async fn execute(&self, stmt: sea_orm::Statement) -> Result<sea_orm::ExecResult, sea_orm::DbErr> {
     match self {
-      Self::DatabaseConnection(conn) => conn.execute(stmt).await,
+      Self::DatabaseConnection(conn) => {
+        conn
+          .upgrade()
+          .ok_or_else(|| sea_orm::DbErr::Custom("Database has been disconnected".to_string()))?
+          .execute(stmt)
+          .await
+      }
       Self::DatabaseTransaction(tx) => {
         tx.upgrade()
           .ok_or_else(|| sea_orm::DbErr::Custom("Transaction has already ended".to_string()))?
@@ -72,7 +66,13 @@ impl ConnectionTrait for ConnectionWrapper {
     stmt: sea_orm::Statement,
   ) -> Result<Option<sea_orm::QueryResult>, sea_orm::DbErr> {
     match self {
-      Self::DatabaseConnection(conn) => conn.query_one(stmt).await,
+      Self::DatabaseConnection(conn) => {
+        conn
+          .upgrade()
+          .ok_or_else(|| sea_orm::DbErr::Custom("Database has been disconnected".to_string()))?
+          .query_one(stmt)
+          .await
+      }
       Self::DatabaseTransaction(tx) => {
         tx.upgrade()
           .ok_or_else(|| sea_orm::DbErr::Custom("Transaction has already ended".to_string()))?
@@ -87,7 +87,13 @@ impl ConnectionTrait for ConnectionWrapper {
     stmt: sea_orm::Statement,
   ) -> Result<Vec<sea_orm::QueryResult>, sea_orm::DbErr> {
     match self {
-      Self::DatabaseConnection(conn) => conn.query_all(stmt).await,
+      Self::DatabaseConnection(conn) => {
+        conn
+          .upgrade()
+          .ok_or_else(|| sea_orm::DbErr::Custom("Database has been disconnected".to_string()))?
+          .query_all(stmt)
+          .await
+      }
       Self::DatabaseTransaction(tx) => {
         tx.upgrade()
           .ok_or_else(|| sea_orm::DbErr::Custom("Transaction has already ended".to_string()))?
@@ -102,7 +108,13 @@ impl ConnectionTrait for ConnectionWrapper {
 impl TransactionTrait for ConnectionWrapper {
   async fn begin(&self) -> Result<DatabaseTransaction, sea_orm::DbErr> {
     match self {
-      Self::DatabaseConnection(conn) => conn.begin().await,
+      Self::DatabaseConnection(conn) => {
+        conn
+          .upgrade()
+          .ok_or_else(|| sea_orm::DbErr::Custom("Database has been disconnected".to_string()))?
+          .begin()
+          .await
+      }
       Self::DatabaseTransaction(tx) => {
         tx.upgrade()
           .ok_or_else(|| sea_orm::DbErr::Custom("Transaction has already ended".to_string()))?
@@ -118,7 +130,13 @@ impl TransactionTrait for ConnectionWrapper {
     access_mode: Option<AccessMode>,
   ) -> Result<DatabaseTransaction, sea_orm::DbErr> {
     match self {
-      Self::DatabaseConnection(conn) => conn.begin_with_config(isolation_level, access_mode).await,
+      Self::DatabaseConnection(conn) => {
+        conn
+          .upgrade()
+          .ok_or_else(|| sea_orm::DbErr::Custom("Database has been disconnected".to_string()))?
+          .begin_with_config(isolation_level, access_mode)
+          .await
+      }
       Self::DatabaseTransaction(tx) => {
         tx.upgrade()
           .ok_or_else(|| sea_orm::DbErr::Custom("Transaction has already ended".to_string()))?
@@ -138,7 +156,15 @@ impl TransactionTrait for ConnectionWrapper {
     E: std::error::Error + Send,
   {
     match self {
-      Self::DatabaseConnection(conn) => conn.transaction(callback).await,
+      Self::DatabaseConnection(conn) => {
+        let upgraded = conn.upgrade();
+        match upgraded {
+          None => Err(TransactionError::Connection(sea_orm::DbErr::Custom(
+            "Database has been disconnected".to_string(),
+          ))),
+          Some(tx) => tx.transaction(callback).await,
+        }
+      }
       Self::DatabaseTransaction(tx) => {
         let upgraded = tx.upgrade();
         match upgraded {
@@ -167,9 +193,16 @@ impl TransactionTrait for ConnectionWrapper {
   {
     match self {
       Self::DatabaseConnection(conn) => {
-        conn
-          .transaction_with_config(callback, isolation_level, access_mode)
-          .await
+        let upgraded = conn.upgrade();
+        match upgraded {
+          None => Err(TransactionError::Connection(sea_orm::DbErr::Custom(
+            "Database has been disconnected".to_string(),
+          ))),
+          Some(tx) => {
+            tx.transaction_with_config(callback, isolation_level, access_mode)
+              .await
+          }
+        }
       }
       Self::DatabaseTransaction(tx) => {
         let upgraded = tx.upgrade();

@@ -27,6 +27,7 @@ use intercode_entities::{events, users};
 use intercode_graphql::cms_rendering_context::CmsRenderingContext;
 use intercode_graphql::{api, build_intercode_graphql_schema, LiquidRenderer, SchemaData};
 use liquid::object;
+use once_cell::sync::Lazy;
 use opentelemetry::global::shutdown_tracer_provider;
 use regex::Regex;
 use sea_orm::{ActiveValue, ColumnTrait, DatabaseConnection, EntityTrait, ModelTrait, QueryFilter};
@@ -61,17 +62,17 @@ pub struct AppState {
   db_conn: Arc<DatabaseConnection>,
 }
 
+static EVENT_PATH_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("^/events/(\\d+)").unwrap());
+
 #[debug_handler]
 async fn single_page_app_entry(
   OriginalUri(url): OriginalUri,
   State(schema_data): State<SchemaData>,
   AuthorizationInfoAndQueryDataFromRequest(authorization_info, query_data): AuthorizationInfoAndQueryDataFromRequest,
 ) -> Result<impl IntoResponse, ::http::StatusCode> {
-  let event_path_regex: regex::Regex =
-    Regex::new("^/events/(\\d+)").map_err(|_| ::http::StatusCode::INTERNAL_SERVER_ERROR)?;
-  let db = &query_data.db;
+  let db = query_data.db();
   let path = url.path();
-  let page_scope = query_data.cms_parent.cms_page_for_path(path);
+  let page_scope = query_data.cms_parent().cms_page_for_path(path);
 
   let page = if let Some(page_scope) = page_scope {
     page_scope
@@ -82,14 +83,14 @@ async fn single_page_app_entry(
     None
   };
 
-  let event = if let Some(convention) = query_data.convention.as_ref() {
+  let event = if let Some(convention) = query_data.convention() {
     if convention.site_mode == "single_event" {
       convention
         .find_related(events::Entity)
         .one(db.as_ref())
         .await
         .map_err(|_db_err| ::http::StatusCode::INTERNAL_SERVER_ERROR)?
-    } else if let Some(event_captures) = event_path_regex.captures(path) {
+    } else if let Some(event_captures) = EVENT_PATH_REGEX.captures(path) {
       let event_id = event_captures.get(1).unwrap().as_str().parse::<i64>();
       if let Ok(event_id) = event_id {
         convention
@@ -111,8 +112,7 @@ async fn single_page_app_entry(
   let liquid_renderer =
     IntercodeLiquidRenderer::new(&query_data, &schema_data, Arc::new(authorization_info));
 
-  let cms_rendering_context =
-    CmsRenderingContext::new(object!({}), &query_data, Arc::new(liquid_renderer));
+  let cms_rendering_context = CmsRenderingContext::new(object!({}), &query_data, &liquid_renderer);
   let page_title = "TODO";
 
   Ok(response::Html(
@@ -135,7 +135,7 @@ async fn graphql_handler(
   let req = req
     .into_inner()
     .data(query_data)
-    .data::<Arc<dyn LiquidRenderer>>(Arc::new(liquid_renderer))
+    .data::<Box<dyn LiquidRenderer>>(Box::new(liquid_renderer))
     .data(authorization_info);
 
   schema.execute(req).await.into()
@@ -210,7 +210,7 @@ async fn sign_in(
 
   let user = users::Entity::find()
     .filter(users::Column::Email.eq(params.email.as_str()))
-    .one(query_data.db.as_ref())
+    .one(query_data.db().as_ref())
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
     .ok_or(StatusCode::NOT_FOUND)?;
@@ -247,7 +247,7 @@ async fn sign_in(
     };
 
     users::Entity::update(upgrade)
-      .exec(query_data.db.as_ref())
+      .exec(query_data.db().as_ref())
       .await
       .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
   }

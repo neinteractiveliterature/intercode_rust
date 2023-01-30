@@ -21,7 +21,7 @@ impl TeamMemberType {
 
   async fn email(&self, ctx: &Context<'_>) -> Result<Option<String>, Error> {
     let query_data = ctx.data::<QueryData>()?;
-    if query_data.current_user.is_none()
+    if query_data.current_user().is_none()
       || !self.model.show_email.unwrap_or(false)
       || !self.model.display.unwrap_or(false)
     {
@@ -29,13 +29,13 @@ impl TeamMemberType {
     }
 
     let user_con_profile_result = query_data
-      .loaders
+      .loaders()
       .team_member_user_con_profile()
       .load_one(self.model.id)
       .await?;
 
     let user_result = query_data
-      .loaders
+      .loaders()
       .user_con_profile_user()
       .load_one(user_con_profile_result.expect_one()?.id)
       .await?;
@@ -44,7 +44,7 @@ impl TeamMemberType {
   }
 
   async fn event(&self, ctx: &Context<'_>) -> Result<EventType, Error> {
-    let loader = &ctx.data::<QueryData>()?.loaders.team_member_event();
+    let loader = ctx.data::<QueryData>()?.loaders().team_member_event();
 
     let result = loader.load_one(self.model.id).await?;
     let event = result.expect_one()?;
@@ -71,7 +71,7 @@ impl TeamMemberType {
   async fn user_con_profile(&self, ctx: &Context<'_>) -> Result<UserConProfileType, Error> {
     let loader = &ctx
       .data::<QueryData>()?
-      .loaders
+      .loaders()
       .team_member_user_con_profile();
 
     let result = loader.load_one(self.model.id).await?;
