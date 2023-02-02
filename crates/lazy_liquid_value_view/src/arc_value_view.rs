@@ -1,7 +1,20 @@
-use std::{ops::Deref, sync::Arc};
+use std::{
+  ops::Deref,
+  sync::{Arc, Weak},
+};
 
 #[derive(Debug)]
 pub struct ArcValueView<T: liquid::model::ValueView>(pub Arc<T>);
+
+impl<T: liquid::model::ValueView> ArcValueView<T> {
+  pub fn upgrade(weak: Weak<T>) -> Self {
+    Self(weak.upgrade().unwrap())
+  }
+
+  pub fn downgrade(&self) -> Weak<T> {
+    Arc::downgrade(&self.0)
+  }
+}
 
 impl<T: liquid::model::ValueView> Clone for ArcValueView<T> {
   fn clone(&self) -> Self {

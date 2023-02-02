@@ -109,8 +109,7 @@ async fn single_page_app_entry(
     None
   };
 
-  let liquid_renderer =
-    IntercodeLiquidRenderer::new(&query_data, &schema_data, Arc::new(authorization_info));
+  let liquid_renderer = IntercodeLiquidRenderer::new(&query_data, &schema_data, authorization_info);
 
   let cms_rendering_context = CmsRenderingContext::new(object!({}), &query_data, &liquid_renderer);
   let page_title = "TODO";
@@ -129,7 +128,6 @@ async fn graphql_handler(
   AuthorizationInfoAndQueryDataFromRequest(authorization_info, query_data): AuthorizationInfoAndQueryDataFromRequest,
   req: GraphQLRequest,
 ) -> GraphQLResponse {
-  let authorization_info = Arc::new(authorization_info);
   let liquid_renderer =
     IntercodeLiquidRenderer::new(&query_data, &schema_data, authorization_info.clone());
   let req = req

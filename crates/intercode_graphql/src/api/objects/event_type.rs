@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{
   api::{
     interfaces::FormResponseImplementation,
@@ -247,7 +245,7 @@ impl FormResponseImplementation<events::Model> for EventType {
   }
 
   async fn get_viewer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole, Error> {
-    let authorization_info = ctx.data::<Arc<AuthorizationInfo>>()?;
-    Ok(EventPolicy::form_item_viewer_role(authorization_info.as_ref(), &self.model).await)
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    Ok(EventPolicy::form_item_viewer_role(authorization_info, &self.model).await)
   }
 }

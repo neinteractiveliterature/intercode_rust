@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use async_graphql::{Context, Error, Object, ID};
 use chrono::{Duration, NaiveDateTime};
 use intercode_entities::{events, runs, signups, user_con_profiles, users};
@@ -51,7 +49,7 @@ impl RunType {
 
   #[graphql(name = "current_ability_can_signup_summary_run")]
   async fn current_ability_can_signup_summary_run(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    let authorization_info = ctx.data::<Arc<AuthorizationInfo>>()?;
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
     let query_data = ctx.data::<QueryData>()?;
     let event = query_data
       .loaders()

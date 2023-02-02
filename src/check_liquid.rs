@@ -230,12 +230,12 @@ async fn build_query_data_and_renderer(
   let renderer = IntercodeLiquidRenderer::new(
     &query_data,
     schema_data,
-    Arc::new(AuthorizationInfo::new(
+    AuthorizationInfo::new(
       connection_wrapper.clone(),
       current_user.as_ref().clone(),
       None,
       None,
-    )),
+    ),
   );
   (query_data, renderer)
 }

@@ -88,14 +88,14 @@ impl IntercodeGlobals {
 pub struct IntercodeLiquidRenderer {
   query_data: QueryData,
   schema_data: SchemaData,
-  authorization_info: Arc<AuthorizationInfo>,
+  authorization_info: AuthorizationInfo,
 }
 
 impl IntercodeLiquidRenderer {
   pub fn new(
     query_data: &QueryData,
     schema_data: &SchemaData,
-    authorization_info: Arc<AuthorizationInfo>,
+    authorization_info: AuthorizationInfo,
   ) -> Self {
     IntercodeLiquidRenderer {
       query_data: query_data.clone(),
@@ -135,7 +135,7 @@ impl LiquidRenderer for IntercodeLiquidRenderer {
     let executor_builder = EmbeddedGraphQLExecutorBuilder::new(
       query_data.clone(),
       schema_data.clone(),
-      self.authorization_info.as_ref().clone(),
+      self.authorization_info.clone(),
     );
 
     let parser = build_liquid_parser(

@@ -145,7 +145,7 @@ impl QueryDataContainer for ArcQueryData {
 pub struct EmbeddedGraphQLExecutor {
   schema_data: SchemaData,
   query_data: QueryData,
-  authorization_info: Arc<AuthorizationInfo>,
+  authorization_info: AuthorizationInfo,
 }
 
 pub fn build_intercode_graphql_schema(
@@ -218,7 +218,7 @@ impl GraphQLExecutorBuilder for EmbeddedGraphQLExecutorBuilder {
     Box::new(EmbeddedGraphQLExecutor {
       query_data: self.query_data.clone_ref(),
       schema_data: self.schema_data.clone(),
-      authorization_info: Arc::new(self.authorization_info.clone()),
+      authorization_info: self.authorization_info.clone(),
     })
   }
 }

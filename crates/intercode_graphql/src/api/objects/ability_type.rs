@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, sync::Arc};
+use std::borrow::Borrow;
 
 use async_graphql::*;
 use intercode_entities::{conventions, events, rooms, runs, signups};
@@ -27,7 +27,7 @@ async fn model_action_permitted<
   action: &P::Action,
   get_model: impl FnOnce(&'a Context<'_>) -> Result<Option<R>, Error>,
 ) -> Result<bool, Error> {
-  let authorization_info = ctx.data::<Arc<AuthorizationInfo>>()?;
+  let authorization_info = ctx.data::<AuthorizationInfo>()?;
   let model_ref = get_model(ctx)?;
 
   if let Some(model_ref) = model_ref {
