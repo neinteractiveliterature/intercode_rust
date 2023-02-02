@@ -21,14 +21,13 @@ pub async fn load_all_linked<
 >(
   pk_column: <From::PrimaryKey as PrimaryKeyToColumn>::Column,
   keys: &[<From::PrimaryKey as PrimaryKeyTrait>::ValueType],
-  link: &Link,
+  link: Link,
   db: &ConnectionWrapper,
 ) -> Result<
   HashMap<<From::PrimaryKey as PrimaryKeyTrait>::ValueType, EntityLinkLoaderResult<From, To>>,
   DbErr,
 >
 where
-  Link: Clone,
   <From::PrimaryKey as PrimaryKeyTrait>::ValueType:
     Eq + std::hash::Hash + Clone + std::convert::From<i64>,
 {
@@ -50,7 +49,7 @@ where
     .filter(pk_column.is_in(pk_values))
     .select_only()
     .column_as(pk_column, "parent_model_id")
-    .find_also_linked(link.clone())
+    .find_also_linked(link)
     .into_model::<ParentModelIdOnly, To::Model>()
     .all(db)
     .await?
@@ -235,6 +234,6 @@ where
   > {
     let pk_column = self.primary_key.into_column();
 
-    Ok(load_all_linked(pk_column, keys, &self.link, self.db.as_ref()).await?)
+    Ok(load_all_linked(pk_column, keys, self.link.clone(), self.db.as_ref()).await?)
   }
 }

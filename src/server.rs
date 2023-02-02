@@ -393,7 +393,7 @@ async fn graceful_shutdown(handle: Handle) {
 
 pub async fn serve(db: DatabaseConnection) -> Result<()> {
   let db_conn = Arc::new(db);
-  let app = build_app::<hyper::Body>(db_conn.clone())?;
+  let app = build_app::<hyper::Body>(db_conn)?;
 
   let addr = SocketAddr::new(
     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),

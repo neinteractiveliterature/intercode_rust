@@ -33,7 +33,7 @@ pub struct EntityLinkPreloader<
   Value: Into<DropResult<Value>>,
 {
   pk_column: PK::Column,
-  link: ArcLink<From, To>,
+  link: BoxLink<From, To>,
   context: Context,
   get_id: Pin<Box<dyn for<'a> GetIdFn<'a, PK::ValueType, FromDrop>>>,
   loader_result_to_drops: Pin<
@@ -159,12 +159,11 @@ impl<FromDrop: ModelBackedDrop, ToDrop: ModelBackedDrop> Linked
   }
 }
 
-#[derive(Clone)]
-struct ArcLink<FromEntity, ToEntity>(
-  Arc<dyn Linked<FromEntity = FromEntity, ToEntity = ToEntity> + Send + Sync>,
+pub struct BoxLink<FromEntity, ToEntity>(
+  Box<dyn Linked<FromEntity = FromEntity, ToEntity = ToEntity> + Send + Sync>,
 );
 
-impl<FromEntity: EntityTrait, ToEntity: EntityTrait> Linked for ArcLink<FromEntity, ToEntity> {
+impl<FromEntity: EntityTrait, ToEntity: EntityTrait> Linked for &BoxLink<FromEntity, ToEntity> {
   type FromEntity = FromEntity;
   type ToEntity = ToEntity;
 
@@ -248,7 +247,7 @@ where
     ) {
       Ok(EntityLinkPreloader {
         pk_column: self.pk_column.into_column(),
-        link: ArcLink(Arc::new(self.link)),
+        link: BoxLink(Box::new(self.link)),
         context,
         get_id,
         loader_result_to_drops,

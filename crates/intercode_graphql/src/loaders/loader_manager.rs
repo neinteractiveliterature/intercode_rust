@@ -11,7 +11,6 @@ use intercode_entities::links::{
 };
 use intercode_entities::model_ext::FormResponse;
 use intercode_entities::*;
-use once_cell::race::OnceBox;
 use seawater::loaders::{EntityIdLoader, EntityLinkLoader, EntityRelationLoader};
 use seawater::ConnectionWrapper;
 
@@ -27,26 +26,24 @@ use super::waitlist_position_loader::WaitlistPositionLoader;
 macro_rules! loader_manager {
   (@fields entity_id($name: ident, $entity: ident); $($tail:tt)*) => {
     loader_manager! {
-      @fields $($tail)* $name: OnceBox<DataLoader<EntityIdLoader<$entity::Entity>>>,
+      @fields $($tail)* $name: DataLoader<EntityIdLoader<$entity::Entity>>,
     }
   };
 
   (@fields entity_relation($name: ident, $from: ident, $to: ident); $($tail:tt)*) => {
     loader_manager! {
-      @fields $($tail)* $name: OnceBox<DataLoader<EntityRelationLoader<$from::Entity, $to::Entity>>>,
+      @fields $($tail)* $name: DataLoader<EntityRelationLoader<$from::Entity, $to::Entity>>,
     }
   };
 
   (@fields entity_link($name: ident, $link: ident); $($tail:tt)*) => {
     loader_manager! {
-      @fields $($tail)* $name: OnceBox<DataLoader<EntityLinkLoader<$link>>>,
+      @fields $($tail)* $name: DataLoader<EntityLinkLoader<$link>>,
     }
   };
 
   (@fields $($tail:tt)*) => {
     pub struct LoaderManager {
-      db: ConnectionWrapper,
-      delay: Duration,
       pub event_attached_images: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub event_runs_filtered: LoaderSpawner<EventRunsLoaderFilter, i64, FilteredEventRunsLoader>,
       pub event_user_con_profile_event_ratings:
@@ -62,26 +59,39 @@ macro_rules! loader_manager {
 
   (@constructor $db: expr, $delay_millis: expr, entity_id($name: ident, $entity: ident); $($tail:tt)*) => {
     loader_manager! {
-      @constructor $db, $delay_millis, $($tail)* $name: Default::default(),
+      @constructor $db, $delay_millis, $($tail)* $name: DataLoader::new(
+        EntityIdLoader::<$entity::Entity>::new($db.clone(), $entity::PrimaryKey::Id),
+        tokio::spawn,
+      )
+      .delay($delay_millis),
     }
   };
 
   (@constructor $db: expr, $delay_millis: expr, entity_relation($name: ident, $from: ident, $to: ident); $($tail:tt)*) => {
     loader_manager! {
-      @constructor $db, $delay_millis, $($tail)* $name: Default::default(),
+      @constructor $db, $delay_millis, $($tail)* $name: DataLoader::new(
+        EntityRelationLoader::<$from::Entity, $to::Entity>::new($db.clone(), $from::PrimaryKey::Id),
+        tokio::spawn,
+      )
+      .delay($delay_millis),
     }
   };
 
   (@constructor $db: expr, $delay_millis: expr, entity_link($name: ident, $link: ident); $($tail:tt)*) => {
     loader_manager! {
-      @constructor $db, $delay_millis, $($tail)* $name: Default::default(),
+      @constructor $db, $delay_millis, $($tail)* $name: DataLoader::new(
+        EntityLinkLoader::<$link>::new(
+          $db.clone(), $link,
+          <<$link as sea_orm::Linked>::FromEntity as sea_orm::EntityTrait>::PrimaryKey::Id,
+        ),
+        tokio::spawn,
+      )
+      .delay($delay_millis),
     }
   };
 
   (@constructor $db: expr, $delay_millis: expr, $($tail:tt)*) => {
     LoaderManager {
-      db: $db.clone(),
-      delay: $delay_millis,
       event_attached_images: DataLoader::new(
         ActiveStorageAttachedBlobsLoader::new($db.clone(), events::Model::attached_images_scope()),
         tokio::spawn,
@@ -109,7 +119,7 @@ macro_rules! loader_manager {
         $delay_millis,
         RunUserConProfileSignupRequestsLoader::new,
       ),
-      signup_waitlist_position: DataLoader::new(WaitlistPositionLoader::new($db), tokio::spawn)
+      signup_waitlist_position: DataLoader::new(WaitlistPositionLoader::new($db.clone()), tokio::spawn)
         .delay($delay_millis),
       $($tail)*
     }
@@ -120,15 +130,7 @@ macro_rules! loader_manager {
       @getters $($tail)*
 
       pub fn $name(&self) -> &DataLoader<EntityIdLoader<$entity::Entity>> {
-        self.$name.get_or_init(||
-          Box::new(
-            DataLoader::new(
-              EntityIdLoader::<$entity::Entity>::new(self.db.clone(), $entity::PrimaryKey::Id),
-              tokio::spawn,
-            )
-            .delay(self.delay),
-          )
-        )
+        &self.$name
       }
     }
   };
@@ -138,15 +140,7 @@ macro_rules! loader_manager {
       @getters $($tail)*
 
       pub fn $name(&self) -> &DataLoader<EntityRelationLoader<$from::Entity, $to::Entity>> {
-        self.$name.get_or_init(||
-          Box::new(
-            DataLoader::new(
-              EntityRelationLoader::<$from::Entity, $to::Entity>::new(self.db.clone(), $from::PrimaryKey::Id),
-              tokio::spawn,
-            )
-            .delay(self.delay),
-          )
-        )
+        &self.$name
       }
     }
   };
@@ -156,18 +150,7 @@ macro_rules! loader_manager {
       @getters $($tail)*
 
       pub fn $name(&self) -> &DataLoader<EntityLinkLoader<$link>> {
-        self.$name.get_or_init(||
-          Box::new(
-            DataLoader::new(
-              EntityLinkLoader::<$link>::new(
-                self.db.clone(), $link,
-                <<$link as sea_orm::Linked>::FromEntity as sea_orm::EntityTrait>::PrimaryKey::Id,
-              ),
-              tokio::spawn,
-            )
-            .delay(self.delay),
-          )
-        )
+        &self.$name
       }
     }
   };
@@ -271,8 +254,6 @@ loader_manager!(
 impl std::fmt::Debug for LoaderManager {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     // DataLoader doesn't implement Debug, so we're just going to exclude the loaders from the debug output
-    f.debug_struct("LoaderManager")
-      .field("db", &self.db)
-      .finish_non_exhaustive()
+    f.debug_struct("LoaderManager").finish_non_exhaustive()
   }
 }
