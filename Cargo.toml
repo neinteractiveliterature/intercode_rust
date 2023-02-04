@@ -6,6 +6,9 @@ version = "0.1.0"
 [profile.release]
 debug = 1
 
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator = {version = "0.5", features = ["profiling"]}
+
 [workspace]
 members = [
   "./crates/intercode_entities",
