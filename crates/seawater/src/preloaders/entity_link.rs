@@ -95,7 +95,7 @@ where
 
   fn loader_result_to_drops(
     &self,
-    result: Option<&Self::LoaderResult>,
+    result: Option<Self::LoaderResult>,
     drop: &FromDrop,
   ) -> Result<Vec<ToDrop>, DropError> {
     (self.loader_result_to_drops)(result, drop)

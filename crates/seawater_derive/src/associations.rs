@@ -224,9 +224,9 @@ trait AssociationMacro {
     let loader_result_type = self.loader_result_type();
 
     Box::new(quote!(
-      |result: Option<&#loader_result_type>, from_drop: &Self| {
+      |result: Option<#loader_result_type>, from_drop: &Self| {
         result.map(|result| {
-          Ok(result.models.iter().map(|model| <#to_drop>::new(model.clone(), from_drop.context.clone())).collect())
+          Ok(result.models.into_iter().map(|model| <#to_drop>::new(model, from_drop.context.clone())).collect())
         }).unwrap_or_else(|| Ok(vec![]))
       }
     ))

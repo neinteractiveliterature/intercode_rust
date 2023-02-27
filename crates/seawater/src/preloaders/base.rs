@@ -36,14 +36,14 @@ impl<'a, ID, Drop: 'a, T> GetIdFn<'a, ID, Drop> for T where T: Fn(&'a Drop) -> I
 
 pub trait LoaderResultToDropsFn<'a, LoaderResult: 'a, FromDrop: 'a, ToDrop>
 where
-  Self: Fn(Option<&'a LoaderResult>, &'a FromDrop) -> Result<Vec<ToDrop>, DropError> + Send + Sync,
+  Self: Fn(Option<LoaderResult>, &'a FromDrop) -> Result<Vec<ToDrop>, DropError> + Send + Sync,
 {
 }
 
 impl<'a, LoaderResult: 'a, FromDrop: 'a, ToDrop, T>
   LoaderResultToDropsFn<'a, LoaderResult, FromDrop, ToDrop> for T
 where
-  T: Fn(Option<&'a LoaderResult>, &'a FromDrop) -> Result<Vec<ToDrop>, DropError> + Send + Sync,
+  T: Fn(Option<LoaderResult>, &'a FromDrop) -> Result<Vec<ToDrop>, DropError> + Send + Sync,
 {
 }
 
@@ -108,7 +108,7 @@ pub trait Preloader<
   fn get_id(&self, drop: &FromDrop) -> Id;
   fn loader_result_to_drops(
     &self,
-    result: Option<&Self::LoaderResult>,
+    result: Option<Self::LoaderResult>,
     drop: &FromDrop,
   ) -> Result<Vec<ToDrop>, DropError>;
   fn get_normalized_drop_cache(&self) -> &NormalizedDropCache<i64>;
@@ -186,7 +186,7 @@ pub trait Preloader<
 
     let _enter = span.enter();
 
-    let model_lists = self
+    let mut model_lists = self
       .load_model_lists(
         db,
         unloaded_drops_by_id
@@ -200,7 +200,7 @@ pub trait Preloader<
     let newly_loaded_drop_lists = unloaded_drops_by_id
       .iter()
       .map(|(id, drop)| {
-        let result = model_lists.get(id);
+        let result = model_lists.remove(id);
         let converted_drops = self.loader_result_to_drops(result, drop)?;
         let normalized_drop_cache = self.get_normalized_drop_cache();
         let normalized_drops: Vec<ArcValueView<ToDrop>> =
