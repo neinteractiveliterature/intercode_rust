@@ -101,8 +101,8 @@ where
     (self.loader_result_to_drops)(result, drop)
   }
 
-  fn get_normalized_drop_cache(&self) -> Option<&NormalizedDropCache<i64>> {
-    Some(self.context.drop_cache())
+  fn get_normalized_drop_cache(&self) -> &NormalizedDropCache<i64> {
+    self.context.drop_cache()
   }
 
   fn drops_to_value(

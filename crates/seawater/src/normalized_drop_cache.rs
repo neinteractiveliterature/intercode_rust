@@ -25,7 +25,77 @@ impl<ID: Eq + Hash + Copy> NormalizedDropCache<ID> {
     })
   }
 
-  pub fn put<D: LiquidDrop + LiquidDropWithID + Send + Sync + 'static>(
+  pub fn normalize<D: LiquidDrop + LiquidDropWithID + Send + Sync + 'static>(
+    &self,
+    drop: D,
+  ) -> Result<ArcValueView<D>, PoisonError<RwLockWriteGuard<AnyMap<ID>>>>
+  where
+    ID: From<D::ID>,
+  {
+    self.get_or_insert(drop)
+  }
+
+  pub fn normalize_ref<D: Clone + LiquidDrop + LiquidDropWithID + Send + Sync + 'static>(
+    &self,
+    drop_ref: &D,
+  ) -> Result<ArcValueView<D>, PoisonError<()>>
+  where
+    ID: From<D::ID>,
+  {
+    self.get_or_insert_with(drop_ref.id().into(), || drop_ref.clone())
+  }
+
+  pub fn normalize_all<
+    D: LiquidDrop + LiquidDropWithID + Send + Sync + 'static,
+    I: IntoIterator<Item = D>,
+  >(
+    &self,
+    drops: I,
+  ) -> Result<Vec<ArcValueView<D>>, PoisonError<RwLockWriteGuard<AnyMap<ID>>>>
+  where
+    ID: From<D::ID>,
+  {
+    drops.into_iter().map(|drop| self.normalize(drop)).collect()
+  }
+
+  pub fn normalize_all_refs<
+    'a,
+    D: Clone + LiquidDrop + LiquidDropWithID + Send + Sync + 'static,
+    I: IntoIterator<Item = &'a D>,
+  >(
+    &'a self,
+    drop_refs: I,
+  ) -> Result<Vec<ArcValueView<D>>, PoisonError<()>>
+  where
+    ID: From<D::ID>,
+  {
+    drop_refs
+      .into_iter()
+      .map(|drop_ref| self.normalize_ref(drop_ref))
+      .collect()
+  }
+
+  fn get_or_insert_with<
+    D: LiquidDrop + LiquidDropWithID + Send + Sync + 'static,
+    F: FnOnce() -> D,
+  >(
+    &self,
+    id: ID,
+    init: F,
+  ) -> Result<ArcValueView<D>, PoisonError<()>>
+  where
+    ID: From<D::ID>,
+  {
+    match self.get(id).map_err(|_| PoisonError::new(()))? {
+      Some(drop) => Ok(drop),
+      None => {
+        let drop = init();
+        self.get_or_insert(drop).map_err(|_| PoisonError::new(()))
+      }
+    }
+  }
+
+  fn get_or_insert<D: LiquidDrop + LiquidDropWithID + Send + Sync + 'static>(
     &self,
     value: D,
   ) -> Result<ArcValueView<D>, PoisonError<RwLockWriteGuard<AnyMap<ID>>>>

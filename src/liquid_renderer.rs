@@ -69,8 +69,8 @@ impl IntercodeGlobals {
     });
 
     if let Some(ucp) = ucp {
-      let ucp = self.drop_context.drop_cache().put(ucp)?;
-      let drops = vec![ucp.as_ref()];
+      let ucp = self.drop_context.drop_cache().normalize(ucp)?;
+      let drops = vec![ucp.clone()];
       try_join!(
         UserConProfileDrop::preload_signups(self.drop_context.clone(), &drops),
         UserConProfileDrop::preload_staff_positions(self.drop_context.clone(), &drops),

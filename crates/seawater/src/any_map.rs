@@ -17,7 +17,7 @@ pub struct AnyMap<K: Eq + Hash>(HashMap<HashKey<K>, Anything>);
 impl<K: Eq + Hash> AnyMap<K> {
   /// Creates a new hashmap that can store
   /// any data which can be tagged with the
-  /// `Any` traißt.
+  /// `Any` trait.
   pub fn new() -> Self {
     Self(HashMap::new())
   }
