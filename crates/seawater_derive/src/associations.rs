@@ -178,8 +178,9 @@ trait AssociationMacro {
           ::seawater::pretty_type_name::<#target_path>()
         );
 
-        let drop_cache = self.context.drop_cache();
-        let cached_self = drop_cache.normalize_ref(self)?;
+        let cached_self = self.context.with_drop_cache(|drop_cache| {
+          drop_cache.normalize_ref(self)
+        })?;
         let drop = Self::#preloader_ident(self.context.clone())
           .expect_single(self.context.db(), cached_self)
           .await?;

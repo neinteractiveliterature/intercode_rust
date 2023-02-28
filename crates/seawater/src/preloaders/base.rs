@@ -111,7 +111,7 @@ pub trait Preloader<
     result: Option<Self::LoaderResult>,
     drop: &FromDrop,
   ) -> Result<Vec<ToDrop>, DropError>;
-  fn get_normalized_drop_cache(&self) -> &NormalizedDropCache<i64>;
+  fn with_normalized_drop_cache<R, F: FnOnce(&NormalizedDropCache<i64>) -> R>(&self, f: F) -> R;
   fn drops_to_value(&self, drops: Vec<ArcValueView<ToDrop>>) -> Result<DropResult<V>, DropError>;
   fn get_once_cell<'a>(&'a self, cache: &'a FromDrop::Cache) -> &'a OnceBox<DropResult<V>>;
   fn get_inverse_once_cell<'a>(
@@ -197,17 +197,18 @@ pub trait Preloader<
       )
       .await?;
 
-    let newly_loaded_drop_lists = unloaded_drops_by_id
-      .iter()
-      .map(|(id, drop)| {
-        let result = model_lists.remove(id);
-        let converted_drops = self.loader_result_to_drops(result, drop)?;
-        let normalized_drop_cache = self.get_normalized_drop_cache();
-        let normalized_drops: Vec<ArcValueView<ToDrop>> =
-          normalized_drop_cache.normalize_all(converted_drops)?;
-        Ok((*id, normalized_drops))
-      })
-      .collect::<Result<HashMap<_, _>, DropError>>()?;
+    let newly_loaded_drop_lists = self.with_normalized_drop_cache(|normalized_drop_cache| {
+      unloaded_drops_by_id
+        .iter()
+        .map(|(id, drop)| {
+          let result = model_lists.remove(id);
+          let converted_drops = self.loader_result_to_drops(result, drop)?;
+          let normalized_drops: Vec<ArcValueView<ToDrop>> =
+            normalized_drop_cache.normalize_all(converted_drops)?;
+          Ok((*id, normalized_drops))
+        })
+        .collect::<Result<HashMap<_, _>, DropError>>()
+    })?;
 
     for (id, drops) in newly_loaded_drop_lists.iter() {
       let from_drop = unloaded_drops_by_id.get(id).unwrap();

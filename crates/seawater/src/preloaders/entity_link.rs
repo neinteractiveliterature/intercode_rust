@@ -93,16 +93,16 @@ where
     (self.get_id)(drop)
   }
 
+  fn with_normalized_drop_cache<R, F: FnOnce(&NormalizedDropCache<i64>) -> R>(&self, f: F) -> R {
+    self.context.with_drop_cache(f)
+  }
+
   fn loader_result_to_drops(
     &self,
     result: Option<Self::LoaderResult>,
     drop: &FromDrop,
   ) -> Result<Vec<ToDrop>, DropError> {
     (self.loader_result_to_drops)(result, drop)
-  }
-
-  fn get_normalized_drop_cache(&self) -> &NormalizedDropCache<i64> {
-    self.context.drop_cache()
   }
 
   fn drops_to_value(

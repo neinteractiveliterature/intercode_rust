@@ -4,12 +4,22 @@ use std::{
   hash::Hash,
   sync::{Arc, PoisonError, RwLock, RwLockReadGuard, RwLockWriteGuard},
 };
+use tracing::log::warn;
 
 use crate::any_map::AnyMap;
 
 #[derive(Clone, Debug, Default)]
 pub struct NormalizedDropCache<ID: Eq + Hash + Copy> {
   storage: Arc<RwLock<AnyMap<ID>>>,
+}
+
+impl<ID: Eq + Hash + Copy> Drop for NormalizedDropCache<ID> {
+  fn drop(&mut self) {
+    eprintln!(
+      "Dropping NDC; storage has {} strong refs",
+      Arc::strong_count(&self.storage)
+    );
+  }
 }
 
 impl<ID: Eq + Hash + Copy> NormalizedDropCache<ID> {
@@ -90,6 +100,11 @@ impl<ID: Eq + Hash + Copy> NormalizedDropCache<ID> {
       Some(drop) => Ok(drop),
       None => {
         let drop = init();
+        warn!(
+          "NormalizedDropCache miss on {} {}",
+          std::any::type_name::<D>(),
+          drop.id()
+        );
         self.get_or_insert(drop).map_err(|_| PoisonError::new(()))
       }
     }

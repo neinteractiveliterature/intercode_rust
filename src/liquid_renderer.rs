@@ -8,8 +8,11 @@ use intercode_liquid::{build_liquid_parser, cms_parent_partial_source::PreloadPa
 use intercode_policies::AuthorizationInfo;
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct, ArcValueView};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-use seawater::{Context, DropError, ModelBackedDrop};
-use std::{fmt::Debug, sync::Arc};
+use seawater::{Context, DropError, ModelBackedDrop, NormalizedDropCache};
+use std::{
+  fmt::Debug,
+  sync::{Arc, PoisonError, Weak},
+};
 
 use crate::drops::{ConventionDrop, DropContext, EventDrop, UserConProfileDrop};
 
@@ -21,10 +24,14 @@ struct IntercodeGlobals {
 
 #[liquid_drop_impl]
 impl IntercodeGlobals {
-  pub fn new(query_data: QueryData, schema_data: SchemaData) -> Self {
+  pub fn new(
+    query_data: QueryData,
+    schema_data: SchemaData,
+    normalized_drop_cache: Weak<NormalizedDropCache<i64>>,
+  ) -> Self {
     IntercodeGlobals {
       query_data: query_data.clone(),
-      drop_context: DropContext::new(schema_data, query_data),
+      drop_context: DropContext::new(schema_data, query_data, normalized_drop_cache),
     }
   }
 
@@ -69,7 +76,9 @@ impl IntercodeGlobals {
     });
 
     if let Some(ucp) = ucp {
-      let ucp = self.drop_context.drop_cache().normalize(ucp)?;
+      let ucp = self.drop_context.with_drop_cache(|drop_cache| {
+        drop_cache.normalize(ucp).map_err(|_| PoisonError::new(()))
+      })?;
       let drops = vec![ucp.clone()];
       try_join!(
         UserConProfileDrop::preload_signups(self.drop_context.clone(), &drops),
@@ -89,6 +98,7 @@ pub struct IntercodeLiquidRenderer {
   query_data: QueryData,
   schema_data: SchemaData,
   authorization_info: AuthorizationInfo,
+  normalized_drop_cache: Arc<NormalizedDropCache<i64>>,
 }
 
 impl IntercodeLiquidRenderer {
@@ -101,6 +111,7 @@ impl IntercodeLiquidRenderer {
       query_data: query_data.clone(),
       schema_data: schema_data.clone(),
       authorization_info,
+      normalized_drop_cache: Default::default(),
     }
   }
 }
@@ -112,7 +123,11 @@ impl LiquidRenderer for IntercodeLiquidRenderer {
   ) -> Result<Box<dyn liquid::ObjectView + Send>, async_graphql::Error> {
     let schema_data: SchemaData = self.schema_data.clone();
     let query_data: QueryData = self.query_data.clone();
-    Ok(Box::new(IntercodeGlobals::new(query_data, schema_data)))
+    Ok(Box::new(IntercodeGlobals::new(
+      query_data,
+      schema_data,
+      Arc::downgrade(&self.normalized_drop_cache),
+    )))
   }
 
   async fn render_liquid(
@@ -148,7 +163,11 @@ impl LiquidRenderer for IntercodeLiquidRenderer {
       partial_compiler,
     )?;
 
-    let builtins = IntercodeGlobals::new(query_data, schema_data);
+    let builtins = IntercodeGlobals::new(
+      query_data,
+      schema_data,
+      Arc::downgrade(&self.normalized_drop_cache),
+    );
     let globals_with_builtins = builtins.extend(globals);
 
     let template = parser.parse(content)?;
