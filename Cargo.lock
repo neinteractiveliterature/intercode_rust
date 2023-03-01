@@ -2284,7 +2284,6 @@ dependencies = [
  "intercode_policies",
  "intercode_timespan",
  "itertools",
- "lazy_liquid_value_view",
  "liquid",
  "liquid-core",
  "md5",
@@ -2402,28 +2401,6 @@ checksum = "ec3066350882a1cd6d950d055997f379ac37fd39f81cd4d8ed186032eb3c5747"
 dependencies = [
  "serde",
  "static_assertions",
-]
-
-[[package]]
-name = "lazy_liquid_value_view"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "lazy_liquid_value_view_derive",
- "liquid",
- "liquid-core",
- "once_cell",
- "serde",
- "serde_json",
- "tokio",
-]
-
-[[package]]
-name = "lazy_liquid_value_view_derive"
-version = "0.1.0"
-dependencies = [
- "quote",
- "syn",
 ]
 
 [[package]]
@@ -3841,7 +3818,6 @@ version = "0.1.0"
 dependencies = [
  "async-graphql",
  "async-trait",
- "lazy_liquid_value_view",
  "liquid",
  "liquid-core",
  "once_cell",

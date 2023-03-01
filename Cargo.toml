@@ -17,8 +17,6 @@ members = [
   "./crates/intercode_liquid",
   "./crates/intercode_policies",
   "./crates/intercode_timespan",
-  "./crates/lazy_liquid_value_view",
-  "./crates/lazy_liquid_value_view_derive",
   "./crates/seawater",
   "./crates/seawater_derive",
 ]
@@ -94,7 +92,6 @@ intercode_liquid = {path = "./crates/intercode_liquid"}
 intercode_policies = {path = "./crates/intercode_policies"}
 intercode_timespan = {path = "./crates/intercode_timespan"}
 itertools = "0.10.5"
-lazy_liquid_value_view = {path = "./crates/lazy_liquid_value_view"}
 liquid = {workspace = true}
 liquid-core = {workspace = true}
 md5 = {workspace = true}

@@ -9,7 +9,7 @@ pub trait LiquidDrop: ValueView + ObjectView + Into<DropResult<Self>> {
 }
 
 pub trait LiquidDropWithID {
-  type ID: Eq + Hash + Copy + Display;
+  type ID: Eq + Hash + Copy + Display + Send + Sync;
 
   fn id(&self) -> Self::ID;
 }

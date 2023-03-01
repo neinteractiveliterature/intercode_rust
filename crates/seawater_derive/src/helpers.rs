@@ -1,28 +1,7 @@
-use quote::quote;
 use syn::{
-  parse::Parser, parse_quote, punctuated::Punctuated, token::Comma, Data, Error, Field,
-  GenericArgument, GenericParam, Path, PathArguments, PathSegment, Type, TypeGroup, TypeParamBound,
-  TypePath,
+  parse_quote, punctuated::Punctuated, token::Comma, Error, GenericArgument, GenericParam,
+  PathArguments, PathSegment, Type, TypeGroup, TypeParamBound, TypePath,
 };
-
-pub fn add_value_cell(data: &mut Data, value_type: &Path) {
-  match data {
-    Data::Struct(struct_data) => match &mut struct_data.fields {
-      syn::Fields::Named(named_fields) => {
-        named_fields.named.push(
-          Field::parse_named
-            .parse2(quote!(
-              value_cell: once_cell::race::OnceBox<#value_type>
-            ))
-            .unwrap(),
-        );
-      }
-      syn::Fields::Unnamed(_) => unimplemented!(),
-      syn::Fields::Unit => unimplemented!(),
-    },
-    Data::Enum(_) | Data::Union(_) => unimplemented!(),
-  }
-}
 
 // stolen from async_graphql_derive
 pub fn get_type_path_and_name_and_arguments(

@@ -24,8 +24,8 @@ pub struct EntityRelationPreloader<
   From: EntityTrait<PrimaryKey = PK> + Related<To>,
   To: EntityTrait,
   PK: PrimaryKeyTrait + PrimaryKeyToColumn<Column = From::Column>,
-  FromDrop: LiquidDrop + Send + Sync,
-  ToDrop: LiquidDrop + Send + Sync,
+  FromDrop: LiquidDrop + LiquidDropWithID + Send + Sync + 'static,
+  ToDrop: LiquidDrop + LiquidDropWithID + Send + Sync + 'static,
   Value: ValueView + Into<DropResult<Value>>,
   Context: crate::Context,
 > where
@@ -34,12 +34,9 @@ pub struct EntityRelationPreloader<
 {
   pk_column: PK::Column,
   context: Context,
-  get_id: Pin<Box<dyn for<'a> GetIdFn<'a, PK::ValueType, FromDrop>>>,
-  loader_result_to_drops: Pin<
-    Box<
-      dyn for<'a> LoaderResultToDropsFn<'a, EntityRelationLoaderResult<From, To>, FromDrop, ToDrop>,
-    >,
-  >,
+  get_id: Pin<Box<dyn GetIdFn<PK::ValueType, FromDrop>>>,
+  loader_result_to_drops:
+    Pin<Box<dyn LoaderResultToDropsFn<EntityRelationLoaderResult<From, To>, FromDrop, ToDrop>>>,
   drops_to_value: Pin<Box<dyn DropsToValueFn<ToDrop, Value>>>,
   get_once_cell: Pin<Box<dyn for<'a> GetOnceCellFn<'a, FromDrop, Value>>>,
   get_inverse_once_cell: Option<Pin<Box<dyn for<'a> GetInverseOnceCellFn<'a, FromDrop, ToDrop>>>>,
@@ -118,8 +115,8 @@ pub struct EntityRelationPreloaderBuilder<
   Value: ValueView,
   Context: crate::Context,
 > where
-  FromDrop: Send + Sync,
-  ToDrop: Send + Sync,
+  FromDrop: Send + Sync + LiquidDropWithID + 'static,
+  ToDrop: Send + Sync + LiquidDropWithID + 'static,
   DropEntity<FromDrop>: Related<DropEntity<ToDrop>>,
   DropPrimaryKeyValue<FromDrop>:
     Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
@@ -128,12 +125,11 @@ pub struct EntityRelationPreloaderBuilder<
 {
   pk_column: DropPrimaryKey<FromDrop>,
   context: Option<Context>,
-  get_id: Option<Pin<Box<dyn for<'a> GetIdFn<'a, DropPrimaryKeyValue<FromDrop>, FromDrop>>>>,
+  get_id: Option<Pin<Box<dyn GetIdFn<DropPrimaryKeyValue<FromDrop>, FromDrop>>>>,
   loader_result_to_drops: Option<
     Pin<
       Box<
-        dyn for<'a> LoaderResultToDropsFn<
-          'a,
+        dyn LoaderResultToDropsFn<
           EntityRelationLoaderResult<DropEntity<FromDrop>, DropEntity<ToDrop>>,
           FromDrop,
           ToDrop,
@@ -154,8 +150,8 @@ impl<
     Context: crate::Context,
   > PreloaderBuilder for EntityRelationPreloaderBuilder<FromDrop, ToDrop, Value, Context>
 where
-  FromDrop: Send + Sync,
-  ToDrop: Send + Sync,
+  FromDrop: Send + Sync + LiquidDropWithID,
+  ToDrop: Send + Sync + LiquidDropWithID,
   DropEntity<FromDrop>: Related<DropEntity<ToDrop>>,
   Value: Into<DropResult<Value>>,
   DropPrimaryKeyValue<FromDrop>:
@@ -209,8 +205,8 @@ impl<
     Context: crate::Context,
   > EntityRelationPreloaderBuilder<FromDrop, ToDrop, Value, Context>
 where
-  FromDrop: Send + Sync,
-  ToDrop: Send + Sync,
+  FromDrop: Send + Sync + LiquidDropWithID,
+  ToDrop: Send + Sync + LiquidDropWithID + 'static,
   DropEntity<FromDrop>: Related<DropEntity<ToDrop>>,
   Value: Into<DropResult<Value>>,
   DropPrimaryKeyValue<FromDrop>:
@@ -236,7 +232,7 @@ where
 
   pub fn with_id_getter<F>(mut self, get_id: F) -> Self
   where
-    F: for<'a> GetIdFn<'a, DropPrimaryKeyValue<FromDrop>, FromDrop> + 'static,
+    F: GetIdFn<DropPrimaryKeyValue<FromDrop>, FromDrop> + 'static,
   {
     self.get_id = Some(Box::pin(get_id));
     self
@@ -244,8 +240,7 @@ where
 
   pub fn with_loader_result_to_drops<F>(mut self, loader_result_to_drops: F) -> Self
   where
-    F: for<'a> LoaderResultToDropsFn<
-        'a,
+    F: LoaderResultToDropsFn<
         EntityRelationLoaderResult<DropEntity<FromDrop>, DropEntity<ToDrop>>,
         FromDrop,
         ToDrop,

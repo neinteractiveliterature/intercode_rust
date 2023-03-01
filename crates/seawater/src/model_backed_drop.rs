@@ -1,4 +1,4 @@
-use lazy_liquid_value_view::{DropResult, LiquidDrop};
+use lazy_liquid_value_view::{DropResult, LiquidDrop, LiquidDropWithID};
 use liquid::ValueView;
 use sea_orm::{EntityTrait, Linked, ModelTrait, PrimaryKeyTrait, Related};
 
@@ -29,8 +29,8 @@ where
     pk_column: DropPrimaryKey<Self>,
   ) -> EntityLinkPreloaderBuilder<Self, ToDrop, Value, Self::Context>
   where
-    Self: Send + Sync,
-    ToDrop: Send + Sync,
+    Self: Send + Sync + LiquidDropWithID,
+    ToDrop: Send + Sync + LiquidDropWithID,
     DropPrimaryKeyValue<Self>: Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
     Value: Into<DropResult<Value>>,
     DropPrimaryKeyValue<Self>: Clone,
@@ -42,8 +42,8 @@ where
     pk_column: DropPrimaryKey<Self>,
   ) -> EntityRelationPreloaderBuilder<Self, ToDrop, Value, Self::Context>
   where
-    Self: Send + Sync,
-    ToDrop: Send + Sync,
+    Self: Send + Sync + LiquidDropWithID,
+    ToDrop: Send + Sync + LiquidDropWithID,
     DropEntity<Self>: Related<DropEntity<ToDrop>>,
     DropPrimaryKeyValue<Self>: Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
     Value: Into<DropResult<Value>>,
