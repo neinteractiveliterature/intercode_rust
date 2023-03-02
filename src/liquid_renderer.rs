@@ -8,7 +8,7 @@ use intercode_liquid::{build_liquid_parser, cms_parent_partial_source::PreloadPa
 use intercode_policies::AuthorizationInfo;
 use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct, ArcValueView};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-use seawater::{Context, DropError, ModelBackedDrop, NormalizedDropCache};
+use seawater::{Context, DropError, DropStore, ModelBackedDrop};
 use std::{
   fmt::Debug,
   sync::{Arc, PoisonError, Weak},
@@ -27,7 +27,7 @@ impl IntercodeGlobals {
   pub fn new(
     query_data: QueryData,
     schema_data: SchemaData,
-    normalized_drop_cache: Weak<NormalizedDropCache<i64>>,
+    normalized_drop_cache: Weak<DropStore<i64>>,
   ) -> Self {
     IntercodeGlobals {
       query_data: query_data.clone(),
@@ -76,7 +76,7 @@ impl IntercodeGlobals {
     });
 
     if let Some(ucp) = ucp {
-      let ucp = self.drop_context.with_drop_cache(|drop_cache| {
+      let ucp = self.drop_context.with_drop_store(|drop_cache| {
         drop_cache.normalize(ucp).map_err(|_| PoisonError::new(()))
       })?;
       let drops = vec![ucp.clone()];
@@ -98,7 +98,7 @@ pub struct IntercodeLiquidRenderer {
   query_data: QueryData,
   schema_data: SchemaData,
   authorization_info: AuthorizationInfo,
-  normalized_drop_cache: Arc<NormalizedDropCache<i64>>,
+  normalized_drop_cache: Arc<DropStore<i64>>,
 }
 
 impl IntercodeLiquidRenderer {

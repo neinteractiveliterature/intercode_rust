@@ -11,6 +11,7 @@ pub enum DropError {
   DbErr(Arc<sea_orm::DbErr>),
   ExpectedEntityNotFound(String),
   PoisonError(String),
+  StoreWentAway,
 }
 
 impl Display for DropError {
@@ -23,6 +24,7 @@ impl Display for DropError {
         f.write_fmt(format_args!("ExpectedEntityNotFound({})", err))
       }
       Self::PoisonError(err) => f.write_fmt(format_args!("PoisonError({})", err)),
+      Self::StoreWentAway => f.write_fmt(format_args!("StoreWentAway")),
     }
   }
 }

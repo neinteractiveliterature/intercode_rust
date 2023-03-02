@@ -1,4 +1,4 @@
-use lazy_liquid_value_view::{DropResult, LiquidDrop, LiquidDropWithID};
+use crate::{DropResult, LiquidDrop, LiquidDropWithID};
 use liquid::ValueView;
 use sea_orm::{EntityTrait, Linked, ModelTrait, PrimaryKeyTrait, Related};
 

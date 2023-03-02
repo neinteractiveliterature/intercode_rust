@@ -3,16 +3,15 @@ use std::{collections::HashMap, marker::PhantomData, pin::Pin};
 
 use crate::{
   loaders::{load_all_related, EntityRelationLoaderResult},
-  ConnectionWrapper,
+  ArcValueView, ConnectionWrapper, DropResult, LiquidDrop, LiquidDropWithID,
 };
 use async_trait::async_trait;
-use lazy_liquid_value_view::{ArcValueView, DropResult, LiquidDrop, LiquidDropWithID};
 use liquid::ValueView;
 use once_cell::race::OnceBox;
 use sea_orm::{EntityTrait, PrimaryKeyToColumn, PrimaryKeyTrait, Related};
 
 use crate::{
-  DropEntity, DropError, DropPrimaryKey, DropPrimaryKeyValue, ModelBackedDrop, NormalizedDropCache,
+  DropEntity, DropError, DropPrimaryKey, DropPrimaryKeyValue, DropStore, ModelBackedDrop,
 };
 
 use super::{
@@ -73,8 +72,8 @@ where
     (self.loader_result_to_drops)(result, drop)
   }
 
-  fn with_normalized_drop_cache<R, F: FnOnce(&NormalizedDropCache<i64>) -> R>(&self, f: F) -> R {
-    self.context.with_drop_cache(f)
+  fn with_drop_store<R, F: FnOnce(&DropStore<i64>) -> R>(&self, f: F) -> R {
+    self.context.with_drop_store(f)
   }
 
   fn drops_to_value(

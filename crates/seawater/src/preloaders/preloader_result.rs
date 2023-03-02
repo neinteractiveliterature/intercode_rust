@@ -1,5 +1,5 @@
 use crate::DropError;
-use lazy_liquid_value_view::{ArcValueView, DropResult};
+use crate::{ArcValueView, DropResult};
 use liquid::ValueView;
 use std::{
   collections::{hash_map::IterMut, HashMap},

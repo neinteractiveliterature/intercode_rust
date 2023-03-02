@@ -14,5 +14,5 @@ once_cell = {workspace = true}
 regex = {workspace = true}
 sea-orm = {workspace = true}
 seawater_derive = {path = "../seawater_derive"}
-serde-json = {workspace = true}
+serde_json = {workspace = true}
 tracing = {workspace = true}

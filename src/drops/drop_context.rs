@@ -2,21 +2,17 @@ use std::{fmt::Debug, sync::Weak};
 
 use i18n_embed::fluent::FluentLanguageLoader;
 use intercode_graphql::{QueryData, SchemaData};
-use seawater::{ConnectionWrapper, NormalizedDropCache};
+use seawater::{ConnectionWrapper, DropStore};
 
 #[derive(Clone)]
 pub struct DropContext {
   schema_data: SchemaData,
   query_data: QueryData,
-  cache: Weak<NormalizedDropCache<i64>>,
+  cache: Weak<DropStore<i64>>,
 }
 
 impl DropContext {
-  pub fn new(
-    schema_data: SchemaData,
-    query_data: QueryData,
-    cache: Weak<NormalizedDropCache<i64>>,
-  ) -> Self {
+  pub fn new(schema_data: SchemaData, query_data: QueryData, cache: Weak<DropStore<i64>>) -> Self {
     DropContext {
       schema_data,
       query_data,
@@ -38,7 +34,7 @@ impl Debug for DropContext {
 }
 
 impl seawater::Context for DropContext {
-  fn with_drop_cache<R, F: FnOnce(&NormalizedDropCache<i64>) -> R>(&self, f: F) -> R {
+  fn with_drop_store<R, F: FnOnce(&DropStore<i64>) -> R>(&self, f: F) -> R {
     let arc = self.cache.upgrade().unwrap();
     f(arc.as_ref())
   }

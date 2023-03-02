@@ -1,14 +1,14 @@
 use liquid::ValueView;
 
-use crate::DropResult;
+use crate::DropResultTrait;
 
 #[derive(Debug, Clone)]
-pub struct ExtendedDropResult<T: liquid::model::ValueView> {
-  pub drop_result: DropResult<T>,
+pub struct ExtendedDropResult<'a, T: ValueView> {
+  pub drop_result: &'a dyn DropResultTrait<T>,
   pub extensions: liquid::model::Object,
 }
 
-impl<T: liquid::model::ValueView> liquid::ValueView for ExtendedDropResult<T> {
+impl<'a, T: ValueView> ValueView for ExtendedDropResult<'a, T> {
   fn as_debug(&self) -> &dyn std::fmt::Debug {
     todo!()
   }
@@ -18,23 +18,23 @@ impl<T: liquid::model::ValueView> liquid::ValueView for ExtendedDropResult<T> {
   }
 
   fn render(&self) -> liquid::model::DisplayCow<'_> {
-    self.drop_result.render()
+    self.drop_result.get_inner().render()
   }
 
   fn source(&self) -> liquid::model::DisplayCow<'_> {
-    self.drop_result.source()
+    self.drop_result.get_inner().source()
   }
 
   fn type_name(&self) -> &'static str {
-    self.drop_result.type_name()
+    self.drop_result.get_inner().type_name()
   }
 
   fn query_state(&self, state: liquid::model::State) -> bool {
-    self.drop_result.query_state(state)
+    self.drop_result.get_inner().query_state(state)
   }
 
   fn to_kstr(&self) -> liquid::model::KStringCow<'_> {
-    self.drop_result.to_kstr()
+    self.drop_result.get_inner().to_kstr()
   }
 
   fn to_value(&self) -> liquid_core::Value {
@@ -42,17 +42,17 @@ impl<T: liquid::model::ValueView> liquid::ValueView for ExtendedDropResult<T> {
   }
 }
 
-impl<T: liquid::model::ValueView> liquid::ObjectView for ExtendedDropResult<T> {
+impl<'a, T: ValueView> liquid::ObjectView for ExtendedDropResult<'a, T> {
   fn as_value(&self) -> &dyn ValueView {
     self
   }
 
   fn size(&self) -> i64 {
-    self.drop_result.as_object().unwrap().size() + self.extensions.size()
+    self.drop_result.get_inner().as_object().unwrap().size() + self.extensions.size()
   }
 
   fn keys<'k>(&'k self) -> Box<dyn Iterator<Item = liquid::model::KStringCow<'k>> + 'k> {
-    let drop_result_keys = self.drop_result.as_object().unwrap().keys();
+    let drop_result_keys = self.drop_result.get_inner().as_object().unwrap().keys();
     let extension_keys: Box<dyn Iterator<Item = liquid::model::KStringCow<'k>> + 'k> =
       Box::new(self.extensions.keys().map(|key| key.into()));
 
@@ -60,7 +60,7 @@ impl<T: liquid::model::ValueView> liquid::ObjectView for ExtendedDropResult<T> {
   }
 
   fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn ValueView> + 'k> {
-    let drop_result_values = self.drop_result.as_object().unwrap().values();
+    let drop_result_values = self.drop_result.get_inner().as_object().unwrap().values();
     let extension_values: Box<dyn Iterator<Item = &'k dyn ValueView> + 'k> =
       Box::new(self.extensions.values().map(|value| value.as_view()));
 
@@ -70,7 +70,7 @@ impl<T: liquid::model::ValueView> liquid::ObjectView for ExtendedDropResult<T> {
   fn iter<'k>(
     &'k self,
   ) -> Box<dyn Iterator<Item = (liquid::model::KStringCow<'k>, &'k dyn ValueView)> + 'k> {
-    let drop_result_iter = self.drop_result.as_object().unwrap().iter();
+    let drop_result_iter = self.drop_result.get_inner().as_object().unwrap().iter();
     let extension_iter: Box<
       dyn Iterator<Item = (liquid::model::KStringCow<'k>, &'k dyn ValueView)> + 'k,
     > = Box::new(
@@ -84,12 +84,19 @@ impl<T: liquid::model::ValueView> liquid::ObjectView for ExtendedDropResult<T> {
   }
 
   fn contains_key(&self, index: &str) -> bool {
-    self.drop_result.as_object().unwrap().contains_key(index) || self.extensions.contains_key(index)
+    self
+      .drop_result
+      .get_inner()
+      .as_object()
+      .unwrap()
+      .contains_key(index)
+      || self.extensions.contains_key(index)
   }
 
   fn get<'s>(&'s self, index: &str) -> Option<&'s dyn ValueView> {
     self
       .drop_result
+      .get_inner()
       .as_object()
       .unwrap()
       .get(index)
@@ -97,13 +104,13 @@ impl<T: liquid::model::ValueView> liquid::ObjectView for ExtendedDropResult<T> {
   }
 }
 
-impl<T: liquid::model::ValueView> Extend<(liquid::model::KString, liquid::model::Value)>
-  for ExtendedDropResult<T>
+impl<'a, T: ValueView> Extend<(liquid::model::KString, liquid::model::Value)>
+  for ExtendedDropResult<'a, T>
 {
   fn extend<I: IntoIterator<Item = (liquid::model::KString, liquid::model::Value)>>(
     &mut self,
     iter: I,
   ) {
-    self.extensions.extend(iter)
+    self.extensions.extend(liquid::Object::from_iter(iter));
   }
 }

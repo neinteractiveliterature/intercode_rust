@@ -5,13 +5,13 @@ use std::{
   hash::Hash,
 };
 
+use crate::{ArcValueView, DropResult, LiquidDrop, LiquidDropWithID};
 use async_trait::async_trait;
-use lazy_liquid_value_view::{ArcValueView, DropResult, LiquidDrop, LiquidDropWithID};
 use liquid::ValueView;
 use once_cell::race::OnceBox;
 use tracing::{info_span, warn, warn_span};
 
-use crate::{ConnectionWrapper, DropError, DropRef, NormalizedDropCache};
+use crate::{ConnectionWrapper, DropError, DropRef, DropStore};
 
 use super::PreloaderResult;
 
@@ -119,7 +119,7 @@ pub trait Preloader<
     result: Option<Self::LoaderResult>,
     drop: DropRef<FromDrop>,
   ) -> Result<Vec<ToDrop>, DropError>;
-  fn with_normalized_drop_cache<R, F: FnOnce(&NormalizedDropCache<i64>) -> R>(&self, f: F) -> R;
+  fn with_drop_store<R, F: FnOnce(&DropStore<i64>) -> R>(&self, f: F) -> R;
   fn drops_to_value(&self, drops: Vec<DropRef<ToDrop>>) -> Result<DropResult<V>, DropError>;
   fn get_once_cell<'a>(&'a self, cache: &'a FromDrop::Cache) -> &'a OnceBox<DropResult<V>>;
   fn get_inverse_once_cell<'a>(
@@ -149,28 +149,27 @@ pub trait Preloader<
 
     let _enter = span.enter();
 
-    let (loaded_values_by_drop_id, unloaded_drops_by_id) =
-      self.with_normalized_drop_cache(|cache| {
-        let loaded_values_by_drop_id: HashMap<Id, &DropResult<V>> = drops
-          .iter()
-          .copied()
-          .filter_map(|drop| {
-            let once_cell = self.get_once_cell(drop.fetch(cache).get_cache());
-            once_cell.get().map(|value| (self.get_id(drop), value))
-          })
-          .collect();
+    let (loaded_values_by_drop_id, unloaded_drops_by_id) = self.with_drop_store(|cache| {
+      let loaded_values_by_drop_id: HashMap<Id, &DropResult<V>> = drops
+        .iter()
+        .copied()
+        .filter_map(|drop| {
+          let once_cell = self.get_once_cell(drop.fetch(cache).get_cache());
+          once_cell.get().map(|value| (self.get_id(drop), value))
+        })
+        .collect();
 
-        let unloaded_drops = drops
-          .iter()
-          .copied()
-          .filter(|drop| !loaded_values_by_drop_id.contains_key(&self.get_id(drop.clone())));
+      let unloaded_drops = drops
+        .iter()
+        .copied()
+        .filter(|drop| !loaded_values_by_drop_id.contains_key(&self.get_id(drop.clone())));
 
-        let unloaded_drops_by_id = unloaded_drops
-          .map(|drop| (self.get_id(drop.clone()), drop))
-          .collect::<HashMap<_, _>>();
+      let unloaded_drops_by_id = unloaded_drops
+        .map(|drop| (self.get_id(drop.clone()), drop))
+        .collect::<HashMap<_, _>>();
 
-        (loaded_values_by_drop_id, unloaded_drops_by_id)
-      });
+      (loaded_values_by_drop_id, unloaded_drops_by_id)
+    });
 
     let newly_loaded_drop_lists = self.load_drop_lists(&unloaded_drops_by_id, db).await?;
 
@@ -212,7 +211,7 @@ pub trait Preloader<
       )
       .await?;
 
-    let newly_loaded_drop_lists = self.with_normalized_drop_cache(|normalized_drop_cache| {
+    let newly_loaded_drop_lists = self.with_drop_store(|normalized_drop_cache| {
       unloaded_drops_by_id
         .iter()
         .map(|(id, drop)| {
@@ -245,7 +244,7 @@ pub trait Preloader<
     let mut values_by_id: HashMap<Id, DropResult<V>> =
       HashMap::with_capacity(newly_loaded_drop_lists.len() + loaded_values_by_drop_id.len());
 
-    self.with_normalized_drop_cache(|cache| {
+    self.with_drop_store(|cache| {
       newly_loaded_drop_lists
         .into_iter()
         .map(|(id, drop_list)| {
@@ -273,7 +272,7 @@ pub trait Preloader<
     i64: From<FromDrop::ID>,
     FromDrop: 'static,
   {
-    self.with_normalized_drop_cache(|cache| {
+    self.with_drop_store(|cache| {
       for to_drop in drops {
         let inverse_once_cell = self.get_inverse_once_cell(&to_drop.fetch(cache));
         if let Some(inverse_once_cell) = inverse_once_cell {

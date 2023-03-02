@@ -3,16 +3,15 @@ use std::{collections::HashMap, fmt::Debug, marker::PhantomData, pin::Pin, sync:
 
 use crate::{
   loaders::{load_all_linked, EntityLinkLoaderResult},
-  ConnectionWrapper, DropRef,
+  ConnectionWrapper, DropRef, DropResult, LiquidDrop, LiquidDropWithID,
 };
 use async_trait::async_trait;
-use lazy_liquid_value_view::{DropResult, LiquidDrop, LiquidDropWithID};
 use liquid::ValueView;
 use once_cell::race::OnceBox;
 use sea_orm::{EntityTrait, Linked, ModelTrait, PrimaryKeyToColumn, PrimaryKeyTrait};
 
 use crate::{
-  DropEntity, DropError, DropPrimaryKey, DropPrimaryKeyValue, ModelBackedDrop, NormalizedDropCache,
+  DropEntity, DropError, DropPrimaryKey, DropPrimaryKeyValue, DropStore, ModelBackedDrop,
 };
 
 use super::{
@@ -92,8 +91,8 @@ where
     (self.get_id)(drop)
   }
 
-  fn with_normalized_drop_cache<R, F: FnOnce(&NormalizedDropCache<i64>) -> R>(&self, f: F) -> R {
-    self.context.with_drop_cache(f)
+  fn with_drop_store<R, F: FnOnce(&DropStore<i64>) -> R>(&self, f: F) -> R {
+    self.context.with_drop_store(f)
   }
 
   fn loader_result_to_drops(
@@ -115,7 +114,7 @@ where
   fn get_inverse_once_cell<'a>(
     &'a self,
     drop: &'a ToDrop,
-  ) -> Option<&'a OnceBox<DropResult<DropRef<FromDrop>>>> {
+  ) -> Option<&'a OnceBox<DropResult<FromDrop>>> {
     self
       .get_inverse_once_cell
       .as_ref()

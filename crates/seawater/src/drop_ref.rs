@@ -1,18 +1,35 @@
-use crate::NormalizedDropCache;
 use crate::{ArcValueView, LiquidDrop, LiquidDropWithID};
-use std::{fmt::Debug, hash::Hash, marker::PhantomData};
+use crate::{DropError, DropStore};
+use std::hash::Hash;
+use std::{fmt::Debug, marker::PhantomData};
 
-pub struct DropRef<D: LiquidDrop + LiquidDropWithID + 'static> {
+pub struct DropRef<
+  'store,
+  D: LiquidDrop + LiquidDropWithID + 'static,
+  StoreID: From<D::ID> + Hash + Eq + Copy = <D as LiquidDropWithID>::ID,
+> {
   id: D::ID,
+  store: &'store DropStore<StoreID>,
   _phantom: PhantomData<D>,
 }
 
-impl<D: LiquidDrop + LiquidDropWithID + 'static> DropRef<D> {
-  pub fn fetch<CacheID: From<D::ID> + Eq + Hash + Copy>(
-    &self,
-    cache: &NormalizedDropCache<CacheID>,
-  ) -> ArcValueView<D> {
-    cache.get(self.id.into()).unwrap().unwrap()
+impl<'store, D: LiquidDrop + LiquidDropWithID + 'static, StoreID: From<D::ID> + Hash + Eq + Copy>
+  DropRef<'store, D, StoreID>
+{
+  pub fn new(id: D::ID, store: &'store DropStore<StoreID>) -> Self {
+    DropRef {
+      id,
+      store,
+      _phantom: Default::default(),
+    }
+  }
+
+  pub fn fetch(&self) -> ArcValueView<D> {
+    self.try_fetch().unwrap()
+  }
+
+  pub fn try_fetch(&self) -> Result<ArcValueView<D>, DropError> {
+    Ok(self.store.get(self.id.into())?.unwrap())
   }
 
   pub fn id(&self) -> D::ID {
@@ -20,45 +37,20 @@ impl<D: LiquidDrop + LiquidDropWithID + 'static> DropRef<D> {
   }
 }
 
-impl<D: LiquidDrop + LiquidDropWithID + 'static> Clone for DropRef<D> {
+impl<'store, D: LiquidDrop + LiquidDropWithID + 'static, StoreID: From<D::ID> + Hash + Eq + Copy>
+  Clone for DropRef<'store, D, StoreID>
+{
   fn clone(&self) -> Self {
     Self {
       id: self.id,
+      store: self.store.clone(),
       _phantom: Default::default(),
     }
   }
 }
 
-impl<D: LiquidDrop + LiquidDropWithID + 'static> Copy for DropRef<D> {}
-
-impl<D: LiquidDrop + LiquidDropWithID + 'static> From<D> for DropRef<D> {
-  fn from(value: D) -> Self {
-    DropRef {
-      id: value.id(),
-      _phantom: Default::default(),
-    }
-  }
-}
-
-impl<D: LiquidDrop + LiquidDropWithID + 'static> From<&D> for DropRef<D> {
-  fn from(value: &D) -> Self {
-    DropRef {
-      id: value.id(),
-      _phantom: Default::default(),
-    }
-  }
-}
-
-impl<D: LiquidDrop + LiquidDropWithID + 'static> From<ArcValueView<D>> for DropRef<D> {
-  fn from(value: ArcValueView<D>) -> Self {
-    DropRef {
-      id: value.id(),
-      _phantom: Default::default(),
-    }
-  }
-}
-
-impl<D: LiquidDrop + LiquidDropWithID + 'static> Debug for DropRef<D>
+impl<'store, D: LiquidDrop + LiquidDropWithID + 'static, StoreID: From<D::ID> + Hash + Eq + Copy>
+  Debug for DropRef<'store, D, StoreID>
 where
   D::ID: Debug,
 {
@@ -66,6 +58,6 @@ where
     f.debug_struct("DropRef")
       .field("id", &self.id)
       .field("type", &std::any::type_name::<D>())
-      .finish()
+      .finish_non_exhaustive()
   }
 }
