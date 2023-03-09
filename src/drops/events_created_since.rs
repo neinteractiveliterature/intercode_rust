@@ -4,9 +4,9 @@ use bumpalo_herd::Herd;
 use futures::try_join;
 use intercode_entities::events;
 use intercode_liquid::liquid_datetime_to_chrono_datetime;
-use lazy_liquid_value_view::DropResult;
 use liquid::{ObjectView, ValueView};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Select};
+use seawater::DropResult;
 use seawater::{Context, DropError, ModelBackedDrop};
 
 use super::{drop_context::DropContext, EventDrop};

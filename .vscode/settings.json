@@ -1,3 +1,4 @@
 {
-  "workbench.colorTheme": "United Ubuntu"
+  "workbench.colorTheme": "United Ubuntu",
+  "rust-analyzer.inlayHints.lifetimeElisionHints.enable": "never"
 }

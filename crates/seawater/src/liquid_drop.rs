@@ -1,15 +1,19 @@
-use crate::DropResult;
+use crate::{Context, DropResult};
 use liquid::{ObjectView, ValueView};
-use std::{fmt::Display, hash::Hash};
+use std::{
+  fmt::{Debug, Display},
+  hash::Hash,
+};
 
-pub trait LiquidDrop: ValueView + ObjectView + Into<DropResult<Self>> {
-  type Cache;
-
-  fn get_cache(&self) -> &Self::Cache;
-}
-
-pub trait LiquidDropWithID {
-  type ID: Eq + Hash + Copy + Display + Send + Sync;
+pub trait LiquidDrop: ValueView + ObjectView + Clone + Into<DropResult<Self>> {
+  type Cache: LiquidDropCache;
+  type ID: Eq + Hash + Copy + Display + Send + Sync + Debug;
+  type Context: Context;
 
   fn id(&self) -> Self::ID;
+  fn get_context(&self) -> Self::Context;
+}
+
+pub trait LiquidDropCache: Send + Sync {
+  fn new() -> Self;
 }

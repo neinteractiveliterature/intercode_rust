@@ -43,39 +43,26 @@ pub fn implement_drop(
     .map(|method| method.uncached_getter())
     .collect::<Vec<_>>();
 
-  let drop_with_id_impl = id_type.map(|id_type| {
-    quote!(
-      impl #generics ::lazy_liquid_value_view::LiquidDropWithID for #self_ty {
-        type ID = #id_type;
-
-        #(#id_methods)*
-      }
-    )
-  });
-
   Box::new(quote!(
     impl #generics #self_ty {
       #(#constructors)*
       #(#other_items)*
       #(#method_getters)*
 
-      pub fn extend(&self, extensions: liquid::model::Object) -> ::lazy_liquid_value_view::ExtendedDropResult<#self_ty> {
-        ::lazy_liquid_value_view::ExtendedDropResult {
+      pub fn extend(&self, extensions: liquid::model::Object) -> ::seawater::ExtendedDropResult<#self_ty> {
+        ::seawater::ExtendedDropResult {
           drop_result: self.into(),
           extensions,
         }
       }
     }
 
-    impl #generics ::lazy_liquid_value_view::LiquidDrop for #self_ty {
+    impl #generics ::seawater::LiquidDrop for #self_ty {
       type Cache = #cache_struct_ident #generic_args;
+      type ID = #id_type;
 
-      fn get_cache(&self) -> &#cache_struct_ident #generic_args {
-        &self.drop_cache
-      }
+      #(#id_methods)*
     }
-
-    #drop_with_id_impl
   ))
 }
 

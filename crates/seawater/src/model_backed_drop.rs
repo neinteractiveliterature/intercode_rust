@@ -1,11 +1,8 @@
-use crate::{DropResult, LiquidDrop, LiquidDropWithID};
+use crate::{DropResult, LiquidDrop};
 use liquid::ValueView;
 use sea_orm::{EntityTrait, Linked, ModelTrait, PrimaryKeyTrait, Related};
 
-use crate::{
-  preloaders::{EntityLinkPreloaderBuilder, EntityRelationPreloaderBuilder},
-  ContextContainer,
-};
+use crate::preloaders::{EntityLinkPreloaderBuilder, EntityRelationPreloaderBuilder};
 
 pub type DropModel<D> = <D as ModelBackedDrop>::Model;
 pub type DropEntity<D> = <DropModel<D> as ModelTrait>::Entity;
@@ -14,7 +11,7 @@ pub type DropPrimaryKeyValue<D> = <DropPrimaryKey<D> as PrimaryKeyTrait>::ValueT
 
 pub trait ModelBackedDrop
 where
-  Self: LiquidDrop + ContextContainer,
+  Self: LiquidDrop,
 {
   type Model: ModelTrait;
 
@@ -29,10 +26,10 @@ where
     pk_column: DropPrimaryKey<Self>,
   ) -> EntityLinkPreloaderBuilder<Self, ToDrop, Value, Self::Context>
   where
-    Self: Send + Sync + LiquidDropWithID,
-    ToDrop: Send + Sync + LiquidDropWithID,
+    Self: Send + Sync + Clone,
+    ToDrop: Send + Sync + Clone,
     DropPrimaryKeyValue<Self>: Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
-    Value: Into<DropResult<Value>>,
+    Value: Into<DropResult<Value>> + Clone,
     DropPrimaryKeyValue<Self>: Clone,
   {
     EntityLinkPreloaderBuilder::new(link, pk_column)
@@ -42,11 +39,11 @@ where
     pk_column: DropPrimaryKey<Self>,
   ) -> EntityRelationPreloaderBuilder<Self, ToDrop, Value, Self::Context>
   where
-    Self: Send + Sync + LiquidDropWithID,
-    ToDrop: Send + Sync + LiquidDropWithID,
+    Self: Send + Sync + Clone,
+    ToDrop: Send + Sync + Clone,
     DropEntity<Self>: Related<DropEntity<ToDrop>>,
     DropPrimaryKeyValue<Self>: Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
-    Value: Into<DropResult<Value>>,
+    Value: Into<DropResult<Value>> + Clone,
     DropPrimaryKeyValue<Self>: Clone,
   {
     EntityRelationPreloaderBuilder::new(pk_column)
@@ -56,15 +53,11 @@ where
 #[macro_export]
 macro_rules! model_backed_drop {
   ($type_name: ident, $model_type: ty, $context_type: ty) => {
-    #[liquid_drop_struct]
+    #[::seawater::liquid_drop_struct]
     pub struct $type_name {
       model: $model_type,
       #[allow(dead_code)]
       context: $context_type,
-    }
-
-    impl $crate::ContextContainer for $type_name {
-      type Context = $context_type;
     }
 
     impl $crate::ModelBackedDrop for $type_name {

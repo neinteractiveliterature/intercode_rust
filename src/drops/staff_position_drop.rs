@@ -1,5 +1,5 @@
 use intercode_entities::{links::StaffPositionToUserConProfiles, staff_positions};
-use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
+use seawater::liquid_drop_impl;
 use seawater::{has_many_linked, model_backed_drop};
 
 use super::{drop_context::DropContext, UserConProfileDrop};

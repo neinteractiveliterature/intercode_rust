@@ -30,9 +30,9 @@ trait AssociationMacro {
 
     match self.get_target_type() {
       TargetType::OneOptional | TargetType::OneRequired => {
-        parse_quote!(::lazy_liquid_value_view::ArcValueView<#to_drop>)
+        parse_quote!(::seawater::ArcValueView<#to_drop>)
       }
-      TargetType::Many => parse_quote!(Vec<::lazy_liquid_value_view::ArcValueView<#to_drop>>),
+      TargetType::Many => parse_quote!(Vec<::seawater::ArcValueView<#to_drop>>),
     }
   }
 
@@ -60,7 +60,7 @@ trait AssociationMacro {
     parse_quote!(
       pub fn #ident<'a>(
         context: <Self as seawater::ContextContainer>::Context,
-        drops: &'a [::lazy_liquid_value_view::ArcValueView<Self>],
+        drops: &'a [::seawater::ArcValueView<Self>],
       ) -> ::futures::future::BoxFuture<'a, Result<::seawater::preloaders::PreloaderResult<<<<<Self as ::seawater::ModelBackedDrop>::Model as ::sea_orm::ModelTrait>::Entity as ::sea_orm::EntityTrait>::PrimaryKey as sea_orm::PrimaryKeyTrait>::ValueType, #target_path>, ::seawater::DropError>> {
         use ::futures::FutureExt;
 
@@ -93,7 +93,7 @@ trait AssociationMacro {
     let once_cell_getter_ident = self.once_cell_getter_ident();
 
     parse_quote!(
-      fn #once_cell_getter_ident(cache: &<Self as ::lazy_liquid_value_view::LiquidDrop>::Cache) -> &::once_cell::race::OnceBox<::lazy_liquid_value_view::DropResult<#target_path>> {
+      fn #once_cell_getter_ident(cache: &<Self as ::seawater::LiquidDrop>::Cache) -> &::once_cell::race::OnceBox<::seawater::DropResult<#target_path>> {
         &cache.#name
       }
     )
@@ -136,7 +136,7 @@ trait AssociationMacro {
       let ident = self.inverse_once_cell_getter_ident().unwrap();
       let to_drop_ident = self.get_to();
       parse_quote!(
-        fn #ident(drop: &#to_drop_ident) -> &::once_cell::race::OnceBox<::lazy_liquid_value_view::DropResult<::lazy_liquid_value_view::ArcValueView<Self>>> {
+        fn #ident(drop: &#to_drop_ident) -> &::once_cell::race::OnceBox<::seawater::DropResult<::seawater::ArcValueView<Self>>> {
           &drop.drop_cache.#name
         }
       )
@@ -166,7 +166,7 @@ trait AssociationMacro {
     parse_quote!(
       #serialize_attr
       pub async fn #name(&self) -> Result<#target_path, ::seawater::DropError> {
-        use ::lazy_liquid_value_view::LiquidDropWithID;
+        use ::seawater::LiquidDrop;
         use ::seawater::preloaders::Preloader;
         use ::seawater::Context;
         use ::tracing::log::info;
@@ -237,17 +237,17 @@ trait AssociationMacro {
     let to_drop = self.get_to();
 
     match self.get_target_type() {
-      TargetType::OneOptional => Box::new(
-        quote!(|drops: Vec<::lazy_liquid_value_view::ArcValueView<#to_drop>>| {
+      TargetType::OneOptional => {
+        Box::new(quote!(|drops: Vec<::seawater::ArcValueView<#to_drop>>| {
           if drops.len() == 1 {
             Ok(drops[0].clone().into())
           } else {
-            Ok(None::<::lazy_liquid_value_view::ArcValueView<#to_drop>>.into())
+            Ok(None::<::seawater::ArcValueView<#to_drop>>.into())
           }
-        }),
-      ),
-      TargetType::OneRequired => Box::new(
-        quote!(|drops: Vec<::lazy_liquid_value_view::ArcValueView<#to_drop>>| {
+        }))
+      }
+      TargetType::OneRequired => {
+        Box::new(quote!(|drops: Vec<::seawater::ArcValueView<#to_drop>>| {
           if drops.len() == 1 {
             Ok(drops[0].clone().into())
           } else {
@@ -257,13 +257,11 @@ trait AssociationMacro {
               drops.len()
             )))
           }
-        }),
-      ),
-      TargetType::Many => Box::new(
-        quote!(|drops: Vec<::lazy_liquid_value_view::ArcValueView<#to_drop>>| {
-          Ok(drops.into_iter().map(|drop| ::lazy_liquid_value_view::ArcValueView(::std::sync::Arc::new(drop))).collect::<Vec<_>>().into())
-        }),
-      ),
+        }))
+      }
+      TargetType::Many => Box::new(quote!(|drops: Vec<::seawater::ArcValueView<#to_drop>>| {
+        Ok(drops.into_iter().map(|drop| ::seawater::ArcValueView(::std::sync::Arc::new(drop))).collect::<Vec<_>>().into())
+      })),
     }
   }
 }
@@ -333,7 +331,7 @@ impl AssociationMacro for RelatedAssociationMacro {
       ) -> <::seawater::preloaders::EntityRelationPreloaderBuilder<Self, #to_drop, #target_path, <Self as seawater::ContextContainer>::Context> as ::seawater::preloaders::PreloaderBuilder>::Preloader {
         use ::seawater::preloaders::PreloaderBuilder;
         use ::seawater::ModelBackedDrop;
-        use ::lazy_liquid_value_view::LiquidDropWithID;
+        use ::seawater::LiquidDrop;
 
         Self::relation_preloader::<#to_drop, #target_path>(
           <<<Self as ::seawater::ModelBackedDrop>::Model as ::sea_orm::ModelTrait>::Entity as ::sea_orm::EntityTrait>::PrimaryKey::Id,
@@ -419,7 +417,7 @@ impl AssociationMacro for LinkedAssociationMacro {
       {
         use ::seawater::preloaders::PreloaderBuilder;
         use ::seawater::ModelBackedDrop;
-        use ::lazy_liquid_value_view::LiquidDropWithID;
+        use ::seawater::LiquidDrop;
 
         Self::link_preloader::<#to_drop, #target_path>(
           #link,

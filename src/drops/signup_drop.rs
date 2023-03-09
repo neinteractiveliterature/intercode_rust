@@ -1,9 +1,9 @@
 use intercode_entities::{links::SignupToEvent, signups};
-use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 use liquid::model::DateTime;
 use seawater::{
   belongs_to_linked, belongs_to_related, model_backed_drop, DropError, ModelBackedDrop,
 };
+use seawater::{liquid_drop_impl, liquid_drop_struct};
 
 use super::{drop_context::DropContext, EventDrop, RunDrop, UserConProfileDrop};
 

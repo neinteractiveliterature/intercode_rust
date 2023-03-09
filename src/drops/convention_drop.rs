@@ -1,8 +1,8 @@
 use chrono::Utc;
 use intercode_entities::{conventions, MaximumEventSignupsValue};
 use intercode_timespan::ScheduledValue;
-use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 use sea_orm::JsonValue;
+use seawater::liquid_drop_impl;
 use seawater::{has_many_related, model_backed_drop};
 
 use super::{

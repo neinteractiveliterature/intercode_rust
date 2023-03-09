@@ -1,7 +1,7 @@
 use intercode_entities::{events, links::EventToTeamMemberUserConProfiles};
-use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 use liquid::model::DateTime;
 use seawater::{belongs_to_related, has_many_linked, has_many_related, model_backed_drop};
+use seawater::{liquid_drop_impl, liquid_drop_struct};
 
 use super::{
   drop_context::DropContext, utils::naive_date_time_to_liquid_date_time, EventCategoryDrop,

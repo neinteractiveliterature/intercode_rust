@@ -11,6 +11,7 @@ async-trait = {workspace = true}
 liquid = {workspace = true}
 liquid-core = {workspace = true}
 once_cell = {workspace = true}
+parking_lot = {workspace = true}
 regex = {workspace = true}
 sea-orm = {workspace = true}
 seawater_derive = {path = "../seawater_derive"}

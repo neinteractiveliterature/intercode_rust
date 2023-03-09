@@ -19,9 +19,9 @@ pub fn implement_drop_result_from(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn 
   ));
 
   Box::new(quote!(
-    impl #generics From<#self_ty> for ::lazy_liquid_value_view::DropResult<#self_ty> {
+    impl #generics From<#self_ty> for ::seawater::DropResult<#self_ty> {
       fn from(drop: #self_ty) -> Self {
-        ::lazy_liquid_value_view::DropResult::new(drop.clone())
+        ::seawater::DropResult::new(drop.clone())
       }
     }
 
@@ -33,7 +33,7 @@ pub fn implement_drop_result_from(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn 
     //   }
     // }
 
-    // impl #generics_plus_convertible From<OptionConvertible> for ::lazy_liquid_value_view::DropResult<#self_ty> {
+    // impl #generics_plus_convertible From<OptionConvertible> for ::seawater::DropResult<#self_ty> {
     //   fn from(option: OptionConvertible) -> Self {
     //     option.into().0.map(|value| value.into()).unwrap_or_default()
     //   }

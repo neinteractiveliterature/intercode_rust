@@ -1,14 +1,88 @@
-use crate::{
-  optional_value_view::OptionalValueView, DropRef, ExtendedDropResult, LiquidDrop, LiquidDropWithID,
-};
+use crate::{optional_value_view::OptionalValueView, DropRef, ExtendedDropResult, LiquidDrop};
 use liquid::{ObjectView, ValueView};
-use std::fmt::Debug;
+use once_cell::race::OnceBox;
+use std::{
+  borrow::Cow,
+  fmt::{Debug, Display},
+};
 
-pub trait DropResultTrait<T: ValueView>: Debug {
-  fn get_inner(&self) -> &T;
-  fn get_value(&self) -> Box<&dyn liquid::ValueView>;
+// Really I'd like this to be an enum but unfortunately DropRef only works with drops, and we need DropResult to
+// be able to wrap more or less anything that implements ValueView
+pub trait DropResultTrait<T: ValueView + Clone + ToOwned<Owned = T>>: Send + Sync {
+  fn get_inner(&self) -> Cow<T>;
 
-  fn extend(&self, extensions: liquid::model::Object) -> ExtendedDropResult<T>
+  fn get_inner_owned(&self) -> T {
+    self.get_inner().into_owned()
+  }
+}
+
+impl<'store, D: LiquidDrop + Clone + Send + Sync> DropResultTrait<D> for DropRef<'store, D>
+where
+  D::ID: Display + Debug,
+{
+  fn get_inner(&self) -> Cow<D> {
+    Cow::Owned(self.fetch().clone())
+  }
+}
+
+impl DropResultTrait<liquid::model::Value> for liquid::model::Value {
+  fn get_inner(&self) -> Cow<liquid::model::Value> {
+    Cow::Borrowed(self)
+  }
+}
+
+impl<V: ValueView + Clone + Send + Sync> DropResultTrait<OptionalValueView<V>>
+  for OptionalValueView<V>
+{
+  fn get_inner(&self) -> Cow<OptionalValueView<V>> {
+    Cow::Borrowed(self)
+  }
+}
+
+impl<V: ValueView + Clone + Send + Sync> DropResultTrait<Vec<V>> for Vec<V> {
+  fn get_inner(&self) -> Cow<Vec<V>> {
+    Cow::Borrowed(self)
+  }
+}
+
+pub struct DropResult<T: ValueView + Debug + Clone> {
+  result: Box<dyn DropResultTrait<T>>,
+  owned: OnceBox<T>,
+}
+
+impl<T: ValueView + Clone> Debug for DropResult<T> {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("DropResult")
+      .field("type", &std::any::type_name::<T>())
+      .field("owned", &self.owned)
+      .finish_non_exhaustive()
+  }
+}
+
+impl<T: ValueView + Clone + DropResultTrait<T> + Debug + 'static> Clone for DropResult<T> {
+  fn clone(&self) -> Self {
+    let cloned = Self::new(self.result.get_inner().into_owned());
+    if let Some(value) = self.owned.get() {
+      cloned.owned.set(Box::new(value.clone())).unwrap()
+    }
+
+    cloned
+  }
+}
+
+impl<T: ValueView + Debug + Clone> DropResult<T> {
+  pub fn new<R: DropResultTrait<T> + 'static>(result: R) -> Self {
+    Self {
+      result: Box::new(result),
+      owned: OnceBox::new(),
+    }
+  }
+
+  pub fn get_inner(&self) -> Cow<T> {
+    self.result.get_inner()
+  }
+
+  pub fn extend(&self, extensions: liquid::model::Object) -> ExtendedDropResult<T>
   where
     Self: Sized,
   {
@@ -17,36 +91,17 @@ pub trait DropResultTrait<T: ValueView>: Debug {
       extensions,
     }
   }
-}
 
-impl<'store, D: LiquidDrop + LiquidDropWithID> DropResultTrait<D> for DropRef<'store, D>
-where
-  D::ID: Debug,
-{
-  fn get_inner(&self) -> &D {
-    self.fetch().as_ref()
-  }
-
-  fn get_value(&self) -> Box<&dyn liquid::ValueView> {
-    Box::new(self.fetch().as_value())
-  }
-}
-
-impl<T: ValueView> DropResultTrait<T> for T {
-  fn get_inner(&self) -> &T {
+  pub(crate) fn get_value(&self) -> &dyn ValueView {
     self
-  }
-
-  fn get_value(&self) -> Box<&dyn liquid::ValueView> {
-    Box::new(self)
+      .owned
+      .get_or_init(|| Box::new(self.result.get_inner().into_owned()))
   }
 }
 
-pub type DropResult<T: ValueView> = Box<dyn DropResultTrait<T>>;
-
-impl<T: ValueView> liquid::ValueView for DropResult<T> {
+impl<T: ValueView + Clone> liquid::ValueView for DropResult<T> {
   fn as_debug(&self) -> &dyn std::fmt::Debug {
-    self.get_value().as_debug()
+    self
   }
 
   fn as_object(&self) -> Option<&dyn liquid::ObjectView> {
@@ -110,7 +165,7 @@ impl<T: ValueView> liquid::ValueView for DropResult<T> {
   }
 }
 
-impl<T: ValueView> ObjectView for DropResult<T> {
+impl<T: ValueView + Clone> ObjectView for DropResult<T> {
   fn as_value(&self) -> &dyn liquid::ValueView {
     self
   }
@@ -146,7 +201,7 @@ macro_rules! drop_result_value_converter {
   ($t: ty) => {
     impl From<$t> for DropResult<::liquid::model::Value> {
       fn from(value: $t) -> Self {
-        Box::new(::liquid::model::Value::scalar(value))
+        DropResult::new(::liquid::model::Value::scalar(value))
       }
     }
   };
@@ -161,31 +216,35 @@ drop_result_value_converter!(bool);
 drop_result_value_converter!(String);
 drop_result_value_converter!(liquid::model::DateTime);
 
-impl From<&str> for DropResult<String> {
+impl From<&str> for DropResult<liquid::model::Value> {
   fn from(string: &str) -> Self {
-    Box::new(string.to_owned())
+    DropResult::new(liquid::model::Value::scalar(string.to_owned()))
   }
 }
 
 impl From<&serde_json::Value> for DropResult<liquid::model::Value> {
   fn from(value: &serde_json::Value) -> Self {
-    Box::new(liquid::model::to_value(value).unwrap())
+    DropResult::new(liquid::model::to_value(value).unwrap())
   }
 }
 
-impl<V: ValueView, T: Into<V>> From<Option<T>> for DropResult<OptionalValueView<V>> {
+impl<V: ValueView + Clone + Send + Sync + 'static, T: Into<V>> From<Option<T>>
+  for DropResult<OptionalValueView<V>>
+{
   fn from(option: Option<T>) -> Self {
-    Box::new(OptionalValueView::from(option.map(|value| value.into())))
+    DropResult::new(OptionalValueView::from(option.map(|value| value.into())))
   }
 }
 
-impl<V: ValueView, T: Into<V>, E> From<Result<T, E>> for DropResult<OptionalValueView<V>> {
+impl<V: ValueView + Clone + Send + Sync + 'static, T: Into<V>, E> From<Result<T, E>>
+  for DropResult<OptionalValueView<V>>
+{
   fn from(result: Result<T, E>) -> Self {
     result.ok().into()
   }
 }
 
-impl<'a, D: LiquidDrop + LiquidDropWithID, T, E> From<Result<&'a T, E>>
+impl<'a, D: LiquidDrop + Clone, T, E> From<Result<&'a T, E>>
   for &'a DropResult<OptionalValueView<D>>
 where
   &'a T: Into<&'a DropResult<D>>,
@@ -195,14 +254,14 @@ where
   }
 }
 
-impl<V: ValueView, T: Into<V>> From<Vec<T>> for DropResult<Vec<V>> {
+impl<V: ValueView + Clone + Send + Sync + 'static, T: Into<V>> From<Vec<T>> for DropResult<Vec<V>> {
   fn from(values: Vec<T>) -> Self {
     let converted_values = values
       .into_iter()
       .map(|value| value.into())
       .collect::<Vec<V>>();
 
-    Box::new(converted_values)
+    DropResult::new(converted_values)
   }
 }
 

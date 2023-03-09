@@ -28,7 +28,7 @@ pub fn implement_serialize(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToken
       {
         use ::serde::ser::SerializeStruct;
         use ::liquid_core::ValueView;
-        use ::lazy_liquid_value_view::LiquidDropWithID;
+        use ::seawater::LiquidDrop;
 
         let mut struct_serializer = serializer.serialize_struct(#type_name, #method_count)?;
         #get_all_blocking

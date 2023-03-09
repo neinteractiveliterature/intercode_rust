@@ -2,8 +2,8 @@ use std::fmt::Debug;
 
 use chrono::TimeZone;
 use intercode_timespan::TimespanWithValue;
-use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 use liquid::model::DateTime;
+use seawater::{liquid_drop_impl, liquid_drop_struct};
 use serde::Serialize;
 
 use super::{utils::date_time_to_liquid_date_time, DropContext};

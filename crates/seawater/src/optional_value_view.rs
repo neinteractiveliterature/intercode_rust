@@ -1,6 +1,8 @@
+use std::borrow::Cow;
+
 use liquid::ValueView;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum OptionalValueView<V: ValueView> {
   Some(V),
   None,
@@ -11,6 +13,23 @@ impl<V: ValueView> OptionalValueView<V> {
     match self {
       OptionalValueView::Some(value) => value,
       OptionalValueView::None => &liquid::model::Value::Nil,
+    }
+  }
+
+  pub fn as_option(&self) -> Option<&V> {
+    match self {
+      OptionalValueView::Some(value) => Some(value),
+      OptionalValueView::None => None,
+    }
+  }
+
+  pub fn cloned(&self) -> OptionalValueView<V>
+  where
+    V: Clone,
+  {
+    match self {
+      OptionalValueView::Some(value) => OptionalValueView::Some(value.clone()),
+      OptionalValueView::None => OptionalValueView::None,
     }
   }
 }
@@ -59,6 +78,15 @@ impl<V: ValueView> From<OptionalValueView<V>> for Option<V> {
     match value {
       OptionalValueView::Some(value) => Some(value),
       OptionalValueView::None => None,
+    }
+  }
+}
+
+impl<V: ValueView + Clone> From<Option<Cow<'_, V>>> for OptionalValueView<V> {
+  fn from(value: Option<Cow<V>>) -> Self {
+    match value {
+      Some(value) => OptionalValueView::Some(value.into_owned()),
+      None => OptionalValueView::None,
     }
   }
 }

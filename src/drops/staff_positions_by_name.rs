@@ -2,11 +2,11 @@ use std::collections::HashMap;
 
 use super::{DropContext, StaffPositionDrop};
 use intercode_entities::{conventions, links::ConventionToStaffPositions};
-use lazy_liquid_value_view::DropResult;
 use liquid::{ObjectView, ValueView};
 use once_cell::{race::OnceBox, sync::Lazy};
 use regex::Regex;
 use sea_orm::ModelTrait;
+use seawater::DropResult;
 use seawater::{Context, DropError, ModelBackedDrop};
 
 static NON_WHITESPACE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("\\W").unwrap());

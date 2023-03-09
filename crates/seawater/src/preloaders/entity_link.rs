@@ -1,9 +1,15 @@
 #![allow(clippy::type_complexity)]
-use std::{collections::HashMap, fmt::Debug, marker::PhantomData, pin::Pin, sync::Arc};
+use std::{
+  collections::HashMap,
+  fmt::{Debug, Display},
+  marker::PhantomData,
+  pin::Pin,
+  sync::Arc,
+};
 
 use crate::{
   loaders::{load_all_linked, EntityLinkLoaderResult},
-  ConnectionWrapper, DropRef, DropResult, LiquidDrop, LiquidDropWithID,
+  ConnectionWrapper, DropRef, DropResult, DropResultTrait, LiquidDrop,
 };
 use async_trait::async_trait;
 use liquid::ValueView;
@@ -15,7 +21,7 @@ use crate::{
 };
 
 use super::{
-  DropsToValueFn, GetIdFn, GetInverseOnceCellFn, GetOnceCellFn, IncompleteBuilderError,
+  DropsToValueFn, GetInverseOnceCellFn, GetOnceCellFn, IncompleteBuilderError,
   LoaderResultToDropsFn, Preloader, PreloaderBuilder,
 };
 
@@ -23,9 +29,9 @@ pub struct EntityLinkPreloader<
   From: EntityTrait<PrimaryKey = PK>,
   To: EntityTrait,
   PK: PrimaryKeyTrait + PrimaryKeyToColumn<Column = From::Column>,
-  FromDrop: LiquidDrop + LiquidDropWithID + Send + Sync + 'static,
-  ToDrop: LiquidDrop + LiquidDropWithID + Send + Sync + 'static,
-  Value: ValueView,
+  FromDrop: LiquidDrop + Clone + Send + Sync + 'static,
+  ToDrop: LiquidDrop + Clone + Send + Sync + 'static,
+  Value: ValueView + Clone,
   Context: crate::Context,
 > where
   PK::ValueType: Eq + std::hash::Hash + Clone + std::convert::From<i64>,
@@ -34,7 +40,6 @@ pub struct EntityLinkPreloader<
   pk_column: PK::Column,
   link: BoxLink<From, To>,
   context: Context,
-  get_id: Pin<Box<dyn GetIdFn<PK::ValueType, FromDrop>>>,
   loader_result_to_drops:
     Pin<Box<dyn LoaderResultToDropsFn<EntityLinkLoaderResult<From, To>, FromDrop, ToDrop>>>,
   drops_to_value: Pin<Box<dyn DropsToValueFn<ToDrop, Value>>>,
@@ -47,9 +52,9 @@ impl<
     From: EntityTrait<PrimaryKey = PK>,
     To: EntityTrait,
     PK: PrimaryKeyTrait + PrimaryKeyToColumn<Column = From::Column>,
-    FromDrop: LiquidDrop + LiquidDropWithID + Send + Sync,
-    ToDrop: LiquidDrop + LiquidDropWithID + Send + Sync,
-    Value: ValueView,
+    FromDrop: LiquidDrop + Clone + Send + Sync,
+    ToDrop: LiquidDrop + Clone + Send + Sync,
+    Value: ValueView + Clone,
     Context: crate::Context,
   > Debug for EntityLinkPreloader<From, To, PK, FromDrop, ToDrop, Value, Context>
 where
@@ -69,29 +74,35 @@ impl<
     From: EntityTrait<PrimaryKey = PK>,
     To: EntityTrait,
     PK: PrimaryKeyTrait + PrimaryKeyToColumn<Column = From::Column>,
-    FromDrop: LiquidDrop + LiquidDropWithID + Send + Sync + Clone,
-    ToDrop: LiquidDrop + LiquidDropWithID + Send + Sync,
-    Value: ValueView + Clone + Send + Sync + 'static,
+    FromDrop: LiquidDrop<ID = PK::ValueType> + Send + Sync + Clone,
+    ToDrop: LiquidDrop<ID = PK::ValueType> + Send + Sync + Clone,
+    Value: ValueView + Clone + Send + Sync + DropResultTrait<Value> + 'static,
     Context: crate::Context,
   > Preloader<FromDrop, ToDrop, PK::ValueType, Value>
   for EntityLinkPreloader<From, To, PK, FromDrop, ToDrop, Value, Context>
 where
-  PK::ValueType:
-    Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync + Into<i64> + Copy,
+  PK::ValueType: Eq
+    + std::hash::Hash
+    + Clone
+    + std::convert::From<i64>
+    + Send
+    + Sync
+    + Into<i64>
+    + Copy
+    + Display,
   To::Model: Send + Sync,
   <To::PrimaryKey as PrimaryKeyTrait>::ValueType:
     Eq + std::hash::Hash + Clone + std::convert::Into<i64> + Send + Sync + Into<i64> + Copy,
   Value: Into<DropResult<Value>>,
   Arc<Value>: Into<DropResult<Value>>,
-  i64: std::convert::From<<ToDrop as LiquidDropWithID>::ID>,
+  i64: std::convert::From<<ToDrop as LiquidDrop>::ID>,
 {
   type LoaderResult = EntityLinkLoaderResult<From, To>;
 
-  fn get_id(&self, drop: DropRef<FromDrop>) -> PK::ValueType {
-    (self.get_id)(drop)
-  }
-
-  fn with_drop_store<R, F: FnOnce(&DropStore<i64>) -> R>(&self, f: F) -> R {
+  fn with_drop_store<'store, R, F: FnOnce(&'store DropStore<PK::ValueType>) -> R>(
+    &self,
+    f: F,
+  ) -> R {
     self.context.with_drop_store(f)
   }
 
@@ -113,12 +124,12 @@ where
 
   fn get_inverse_once_cell<'a>(
     &'a self,
-    drop: &'a ToDrop,
+    cache: &'a ToDrop::Cache,
   ) -> Option<&'a OnceBox<DropResult<FromDrop>>> {
     self
       .get_inverse_once_cell
       .as_ref()
-      .map(|get_inverse_once_cell| (get_inverse_once_cell)(drop))
+      .map(|get_inverse_once_cell| (get_inverse_once_cell)(cache))
   }
 
   async fn load_model_lists(
@@ -170,11 +181,11 @@ impl<FromEntity: EntityTrait, ToEntity: EntityTrait> Linked for &BoxLink<FromEnt
 pub struct EntityLinkPreloaderBuilder<
   FromDrop: ModelBackedDrop,
   ToDrop: ModelBackedDrop,
-  Value: ValueView,
+  Value: ValueView + Clone,
   Context: crate::Context,
 > where
-  FromDrop: Send + Sync + LiquidDropWithID + 'static,
-  ToDrop: Send + Sync + LiquidDropWithID + 'static,
+  FromDrop: Send + Sync + Clone + 'static,
+  ToDrop: Send + Sync + Clone + 'static,
   DropPrimaryKeyValue<FromDrop>:
     Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
   Value: Into<DropResult<Value>>,
@@ -183,7 +194,6 @@ pub struct EntityLinkPreloaderBuilder<
   link: ModelBackedDropLink<FromDrop, ToDrop>,
   context: Option<Context>,
   pk_column: <<FromDrop::Model as ModelTrait>::Entity as EntityTrait>::PrimaryKey,
-  get_id: Option<Pin<Box<dyn GetIdFn<DropPrimaryKeyValue<FromDrop>, FromDrop>>>>,
   loader_result_to_drops: Option<
     Pin<
       Box<
@@ -204,12 +214,12 @@ pub struct EntityLinkPreloaderBuilder<
 impl<
     FromDrop: ModelBackedDrop,
     ToDrop: ModelBackedDrop,
-    Value: ValueView,
+    Value: ValueView + Clone,
     Context: crate::Context,
   > PreloaderBuilder for EntityLinkPreloaderBuilder<FromDrop, ToDrop, Value, Context>
 where
-  FromDrop: Send + Sync + LiquidDropWithID + 'static,
-  ToDrop: Send + Sync + LiquidDropWithID + 'static,
+  FromDrop: Send + Sync + Clone + 'static,
+  ToDrop: Send + Sync + Clone + 'static,
   Value: Into<DropResult<Value>>,
   DropPrimaryKeyValue<FromDrop>:
     Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
@@ -228,13 +238,11 @@ where
   fn finalize(self) -> Result<Self::Preloader, Self::Error> {
     if let (
       Some(context),
-      Some(get_id),
       Some(loader_result_to_drops),
       Some(drops_to_value),
       Some(get_once_cell),
     ) = (
       self.context,
-      self.get_id,
       self.loader_result_to_drops,
       self.drops_to_value,
       self.get_once_cell,
@@ -243,7 +251,6 @@ where
         pk_column: self.pk_column.into_column(),
         link: BoxLink(Box::new(self.link)),
         context,
-        get_id,
         loader_result_to_drops,
         drops_to_value,
         get_once_cell,
@@ -259,12 +266,12 @@ where
 impl<
     FromDrop: ModelBackedDrop,
     ToDrop: ModelBackedDrop,
-    Value: ValueView,
+    Value: ValueView + Clone,
     Context: crate::Context,
   > EntityLinkPreloaderBuilder<FromDrop, ToDrop, Value, Context>
 where
-  FromDrop: Send + Sync + LiquidDropWithID + 'static,
-  ToDrop: Send + Sync + LiquidDropWithID + 'static,
+  FromDrop: Send + Sync + Clone + 'static,
+  ToDrop: Send + Sync + Clone + 'static,
   Value: Into<DropResult<Value>>,
   DropPrimaryKeyValue<FromDrop>:
     Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
@@ -285,7 +292,6 @@ where
       },
       pk_column,
       context: None,
-      get_id: None,
       loader_result_to_drops: None,
       drops_to_value: None,
       get_once_cell: None,
@@ -296,14 +302,6 @@ where
 
   pub fn with_context(mut self, context: Context) -> Self {
     self.context = Some(context);
-    self
-  }
-
-  pub fn with_id_getter<F>(mut self, get_id: F) -> Self
-  where
-    F: GetIdFn<DropPrimaryKeyValue<FromDrop>, FromDrop> + 'static,
-  {
-    self.get_id = Some(Box::pin(get_id));
     self
   }
 

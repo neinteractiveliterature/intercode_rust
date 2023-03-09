@@ -3821,6 +3821,7 @@ dependencies = [
  "liquid",
  "liquid-core",
  "once_cell",
+ "parking_lot 0.12.1",
  "regex",
  "sea-orm",
  "seawater_derive",
