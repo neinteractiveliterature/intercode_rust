@@ -19,7 +19,7 @@ model_backed_drop!(ConventionDrop, conventions::Model, DropContext);
   serialize = true,
   eager_load(user_con_profiles)
 )]
-#[liquid_drop_impl(i64)]
+#[liquid_drop_impl(i64, DropContext)]
 impl ConventionDrop {
   fn id(&self) -> i64 {
     self.model.id

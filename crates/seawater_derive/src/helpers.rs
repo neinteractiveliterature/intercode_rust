@@ -125,16 +125,30 @@ pub fn extract_first_generic_arg(path_type: &syn::TypePath) -> Option<Box<Type>>
   None
 }
 
+pub fn path_without_generics(path: &syn::Path) -> syn::Path {
+  let segments = path.segments.iter().map(|segment| PathSegment {
+    ident: segment.ident.clone(),
+    arguments: PathArguments::None,
+  });
+
+  syn::Path {
+    leading_colon: None,
+    segments: segments.collect(),
+  }
+}
+
 pub fn get_drop_result_generic_arg(ty: Box<Type>) -> Box<Type> {
   let deref_type = eliminate_references(ty);
 
   if let Type::Path(path_type) = *deref_type.clone() {
-    if path_type.path.segments.len() == 1 {
-      let segment = path_type.path.segments.first().unwrap();
-      if segment.ident == "Result" || segment.ident == "Option" {
-        if let Some(value) = extract_first_generic_arg(&path_type) {
-          return get_drop_result_generic_arg(value);
-        }
+    let normalized_path = path_without_generics(&path_type.path);
+    if normalized_path == parse_quote!(Result)
+      || normalized_path == parse_quote!(Option)
+      || normalized_path == parse_quote!(DropRef)
+      || normalized_path == parse_quote!(seawater::DropRef)
+    {
+      if let Some(value) = extract_first_generic_arg(&path_type) {
+        return get_drop_result_generic_arg(value);
       }
     }
   }

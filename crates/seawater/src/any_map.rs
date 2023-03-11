@@ -1,5 +1,6 @@
 // based on
 // http://benfalk.com/blog/2022/02/27/rust-hashmap-to-store-anything/
+// and https://twitter.com/nercury/status/883046507225776134
 // and async-graphql's Context
 use std::{
   any::{Any, TypeId},

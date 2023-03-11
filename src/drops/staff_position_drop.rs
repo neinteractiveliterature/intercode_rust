@@ -7,7 +7,7 @@ use super::{drop_context::DropContext, UserConProfileDrop};
 model_backed_drop!(StaffPositionDrop, staff_positions::Model, DropContext);
 
 #[has_many_linked(user_con_profiles, UserConProfileDrop, StaffPositionToUserConProfiles)]
-#[liquid_drop_impl(i64)]
+#[liquid_drop_impl(i64, DropContext)]
 impl StaffPositionDrop {
   fn id(&self) -> i64 {
     self.model.id

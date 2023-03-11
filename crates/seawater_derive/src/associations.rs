@@ -30,9 +30,9 @@ trait AssociationMacro {
 
     match self.get_target_type() {
       TargetType::OneOptional | TargetType::OneRequired => {
-        parse_quote!(::seawater::ArcValueView<#to_drop>)
+        parse_quote!(::seawater::DropRef<#to_drop>)
       }
-      TargetType::Many => parse_quote!(Vec<::seawater::ArcValueView<#to_drop>>),
+      TargetType::Many => parse_quote!(Vec<::seawater::DropRef<#to_drop>>),
     }
   }
 
@@ -59,8 +59,8 @@ trait AssociationMacro {
 
     parse_quote!(
       pub fn #ident<'a>(
-        context: <Self as seawater::ContextContainer>::Context,
-        drops: &'a [::seawater::ArcValueView<Self>],
+        context: <Self as ::seawater::LiquidDrop>::Context,
+        drops: &'a [::seawater::DropRef<Self>],
       ) -> ::futures::future::BoxFuture<'a, Result<::seawater::preloaders::PreloaderResult<<<<<Self as ::seawater::ModelBackedDrop>::Model as ::sea_orm::ModelTrait>::Entity as ::sea_orm::EntityTrait>::PrimaryKey as sea_orm::PrimaryKeyTrait>::ValueType, #target_path>, ::seawater::DropError>> {
         use ::futures::FutureExt;
 
@@ -136,7 +136,7 @@ trait AssociationMacro {
       let ident = self.inverse_once_cell_getter_ident().unwrap();
       let to_drop_ident = self.get_to();
       parse_quote!(
-        fn #ident(drop: &#to_drop_ident) -> &::once_cell::race::OnceBox<::seawater::DropResult<::seawater::ArcValueView<Self>>> {
+        fn #ident(drop: &#to_drop_ident) -> &::once_cell::race::OnceBox<::seawater::DropResult<Self>> {
           &drop.drop_cache.#name
         }
       )
@@ -237,30 +237,26 @@ trait AssociationMacro {
     let to_drop = self.get_to();
 
     match self.get_target_type() {
-      TargetType::OneOptional => {
-        Box::new(quote!(|drops: Vec<::seawater::ArcValueView<#to_drop>>| {
-          if drops.len() == 1 {
-            Ok(drops[0].clone().into())
-          } else {
-            Ok(None::<::seawater::ArcValueView<#to_drop>>.into())
-          }
-        }))
-      }
-      TargetType::OneRequired => {
-        Box::new(quote!(|drops: Vec<::seawater::ArcValueView<#to_drop>>| {
-          if drops.len() == 1 {
-            Ok(drops[0].clone().into())
-          } else {
-            Err(::seawater::DropError::ExpectedEntityNotFound(format!(
-              "Expected one {}, but there are {}",
-              ::seawater::pretty_type_name::<#to_drop>(),
-              drops.len()
-            )))
-          }
-        }))
-      }
-      TargetType::Many => Box::new(quote!(|drops: Vec<::seawater::ArcValueView<#to_drop>>| {
-        Ok(drops.into_iter().map(|drop| ::seawater::ArcValueView(::std::sync::Arc::new(drop))).collect::<Vec<_>>().into())
+      TargetType::OneOptional => Box::new(quote!(|drops: Vec<::seawater::DropResult<#to_drop>>| {
+        if drops.len() == 1 {
+          Ok(drops[0].clone().into())
+        } else {
+          Ok(None::<::seawater::DropRef<#to_drop>>.into())
+        }
+      })),
+      TargetType::OneRequired => Box::new(quote!(|drops: Vec<::seawater::DropResult<#to_drop>>| {
+        if drops.len() == 1 {
+          Ok(drops[0].clone().into())
+        } else {
+          Err(::seawater::DropError::ExpectedEntityNotFound(format!(
+            "Expected one {}, but there are {}",
+            ::seawater::pretty_type_name::<#to_drop>(),
+            drops.len()
+          )))
+        }
+      })),
+      TargetType::Many => Box::new(quote!(|drops: Vec<::seawater::DropResult<#to_drop>>| {
+        Ok(drops.into_iter().map(|drop| ::seawater::DropRef(::std::sync::Arc::new(drop))).collect::<Vec<_>>().into())
       })),
     }
   }
@@ -327,8 +323,8 @@ impl AssociationMacro for RelatedAssociationMacro {
 
     parse_quote!(
       pub fn #preloader_ident(
-        context: <Self as seawater::ContextContainer>::Context
-      ) -> <::seawater::preloaders::EntityRelationPreloaderBuilder<Self, #to_drop, #target_path, <Self as seawater::ContextContainer>::Context> as ::seawater::preloaders::PreloaderBuilder>::Preloader {
+        context: <Self as ::seawater::LiquidDrop>::Context
+      ) -> <::seawater::preloaders::EntityRelationPreloaderBuilder<Self, #to_drop, #target_path, <Self as ::seawater::LiquidDrop>::Context> as ::seawater::preloaders::PreloaderBuilder>::Preloader {
         use ::seawater::preloaders::PreloaderBuilder;
         use ::seawater::ModelBackedDrop;
         use ::seawater::LiquidDrop;
@@ -412,8 +408,8 @@ impl AssociationMacro for LinkedAssociationMacro {
 
     parse_quote!(
       pub fn #preloader_ident(
-        context: <Self as seawater::ContextContainer>::Context
-      ) -> <::seawater::preloaders::EntityLinkPreloaderBuilder<Self, #to_drop, #target_path, <Self as seawater::ContextContainer>::Context> as ::seawater::preloaders::PreloaderBuilder>::Preloader
+        context: <Self as ::seawater::LiquidDrop>::Context
+      ) -> <::seawater::preloaders::EntityLinkPreloaderBuilder<Self, #to_drop, #target_path, <Self as ::seawater::LiquidDrop>::Context> as ::seawater::preloaders::PreloaderBuilder>::Preloader
       {
         use ::seawater::preloaders::PreloaderBuilder;
         use ::seawater::ModelBackedDrop;

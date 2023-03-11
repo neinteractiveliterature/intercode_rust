@@ -6,7 +6,7 @@ use super::drop_context::DropContext;
 
 model_backed_drop!(RoomDrop, rooms::Model, DropContext);
 
-#[liquid_drop_impl(i64)]
+#[liquid_drop_impl(i64, DropContext)]
 impl RoomDrop {
   fn id(&self) -> i64 {
     self.model.id

@@ -1,7 +1,7 @@
 use intercode_entities::{events, links::EventToTeamMemberUserConProfiles};
 use liquid::model::DateTime;
+use seawater::liquid_drop_impl;
 use seawater::{belongs_to_related, has_many_linked, has_many_related, model_backed_drop};
-use seawater::{liquid_drop_impl, liquid_drop_struct};
 
 use super::{
   drop_context::DropContext, utils::naive_date_time_to_liquid_date_time, EventCategoryDrop,
@@ -19,7 +19,7 @@ model_backed_drop!(EventDrop, events::Model, DropContext);
   serialize = true,
   eager_load(signups, staff_positions, ticket, user)
 )]
-#[liquid_drop_impl(i64)]
+#[liquid_drop_impl(i64, DropContext)]
 impl EventDrop {
   fn id(&self) -> i64 {
     self.model.id

@@ -17,7 +17,7 @@ fn normalize_staff_position_name(name: &str) -> String {
     .to_string()
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StaffPositionsByName {
   context: DropContext,
   convention: conventions::Model,
@@ -108,7 +108,7 @@ impl ObjectView for StaffPositionsByName {
   fn size(&self) -> i64 {
     self
       .blocking_get_all()
-      .map(|staff_positions| staff_positions.size())
+      .map(|staff_positions| staff_positions.len())
       .unwrap_or(0)
   }
 

@@ -4,6 +4,7 @@ use parking_lot::{lock_api::RwLockReadGuard, MappedRwLockReadGuard, RwLock};
 use std::{
   fmt::{Debug, Display},
   hash::Hash,
+  sync::{Arc, Weak},
 };
 
 use crate::{any_map::AnyMap, DropRef};
@@ -25,10 +26,18 @@ impl<D: LiquidDrop> DropAndCache<D> {
 #[derive(Debug, Default)]
 pub struct DropStore<ID: Eq + Hash + Copy + Display + Debug> {
   storage: RwLock<AnyMap<ID>>,
+  weak: Weak<Self>,
 }
 
 impl<ID: Eq + Hash + Copy + Display + Debug> DropStore<ID> {
-  pub fn get<D: LiquidDrop + 'static>(&self, id: ID) -> Option<MappedRwLockReadGuard<D>> {
+  pub fn new() -> Arc<Self> {
+    Arc::new_cyclic(|weak| DropStore {
+      storage: RwLock::new(AnyMap::new()),
+      weak: weak.clone(),
+    })
+  }
+
+  pub fn get<D: LiquidDrop + 'static>(&self, id: ID) -> Option<MappedRwLockReadGuard<'_, D>> {
     let lock = self.storage.read();
     RwLockReadGuard::try_map(lock, |lock| {
       lock.get::<DropAndCache<D>>(id).map(|dc| &dc.drop)
@@ -38,24 +47,21 @@ impl<ID: Eq + Hash + Copy + Display + Debug> DropStore<ID> {
 
   pub fn get_drop_cache<D: LiquidDrop + 'static>(
     &self,
-    drop_id: D::ID,
-  ) -> MappedRwLockReadGuard<D::Cache>
+    drop_id: ID,
+  ) -> MappedRwLockReadGuard<'_, D::Cache>
   where
-    ID: From<D::ID>,
-    D::ID: Debug,
+    ID: Debug,
   {
     let lock = self.storage.read();
     RwLockReadGuard::try_map(lock, |lock| {
-      lock
-        .get::<DropAndCache<D>>(drop_id.into())
-        .map(|dc| &dc.cache)
+      lock.get::<DropAndCache<D>>(drop_id).map(|dc| &dc.cache)
     })
     .unwrap()
   }
 
   pub fn store<D: LiquidDrop + Clone + Send + Sync + 'static>(&self, drop: D) -> DropRef<D, ID>
   where
-    ID: From<D::ID>,
+    ID: From<D::ID> + Send + Sync,
   {
     self.get_or_insert(drop)
   }
@@ -65,32 +71,14 @@ impl<ID: Eq + Hash + Copy + Display + Debug> DropStore<ID> {
     drops: I,
   ) -> Vec<DropRef<D, ID>>
   where
-    ID: From<D::ID>,
+    ID: From<D::ID> + Send + Sync,
   {
     drops.into_iter().map(|drop| self.store(drop)).collect()
   }
 
-  fn get_or_insert_with<D: LiquidDrop + Clone + Send + Sync + 'static, F: FnOnce() -> D>(
-    &self,
-    id: ID,
-    init: F,
-  ) -> DropRef<D, ID>
-  where
-    ID: From<D::ID>,
-    D::ID: From<ID>,
-  {
-    match self.get::<D>(id).as_ref() {
-      Some(drop) => DropRef::new(drop.id(), self),
-      None => {
-        let drop = init();
-        self.get_or_insert(drop)
-      }
-    }
-  }
-
   fn get_or_insert<D: LiquidDrop + Clone + Send + Sync + 'static>(&self, value: D) -> DropRef<D, ID>
   where
-    ID: From<D::ID>,
+    ID: From<D::ID> + Send + Sync,
   {
     let mut lock = self.storage.write();
     let id = value.id();
@@ -105,6 +93,6 @@ impl<ID: Eq + Hash + Copy + Display + Debug> DropStore<ID> {
 
     once_box.get_or_init(|| Box::new(DropAndCache::new(value)));
 
-    DropRef::new(id, self)
+    DropRef::new(id.into(), self.weak.clone())
   }
 }

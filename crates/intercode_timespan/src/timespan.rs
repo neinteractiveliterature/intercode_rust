@@ -7,7 +7,7 @@ use i18n_embed::fluent::FluentLanguageLoader;
 use i18n_embed_fl::fl;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Hash)]
 #[serde(
   from = "SerializedTimespan",
   into = "SerializedTimespan",
@@ -21,7 +21,7 @@ pub struct Timespan<StartTz: TimeZone, FinishTz: TimeZone> {
   pub finish: Option<DateTime<FinishTz>>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize, Hash)]
 #[serde(
   from = "SerializedTimespanWithValue<T>",
   into = "SerializedTimespanWithValue<T>",

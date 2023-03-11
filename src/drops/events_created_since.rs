@@ -1,5 +1,3 @@
-use std::sync::PoisonError;
-
 use bumpalo_herd::Herd;
 use futures::try_join;
 use intercode_entities::events;
@@ -70,11 +68,7 @@ impl EventsCreatedSince {
       .map(|event| EventDrop::new(event, self.context.clone()))
       .collect::<Vec<_>>();
 
-    let drops = self.context.with_drop_store(|drop_cache| {
-      drop_cache
-        .normalize_all(value)
-        .map_err(|_| PoisonError::new(()))
-    })?;
+    let drops = self.context.with_drop_store(|store| store.store_all(value));
 
     try_join![
       EventDrop::preload_runs(self.context.clone(), &drops),

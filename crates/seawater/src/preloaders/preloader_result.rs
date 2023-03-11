@@ -15,18 +15,18 @@ impl<Id: Eq + Hash, Value: ValueView + Clone + Send + Sync + 'static> PreloaderR
     Self { values_by_id }
   }
 
-  pub fn get(&self, id: &Id) -> DropResult<OptionalValueView<Value>> {
+  pub fn get(&self, id: Id) -> DropResult<OptionalValueView<Value>> {
     DropResult::new::<OptionalValueView<Value>>(
       self
         .values_by_id
-        .get(id)
+        .get(&id)
         .map(|drop_result| drop_result.get_inner())
         .into(),
     )
   }
 
   #[allow(dead_code)]
-  pub fn expect_value(&self, id: &Id) -> Result<Value, DropError> {
+  pub fn expect_value(&self, id: Id) -> Result<Value, DropError> {
     self
       .get(id)
       .get_inner()
@@ -35,7 +35,7 @@ impl<Id: Eq + Hash, Value: ValueView + Clone + Send + Sync + 'static> PreloaderR
       .cloned()
   }
 
-  pub fn all_values<'a>(&'a self) -> Box<dyn Iterator<Item = &'a DropResult<Value>> + 'a> {
+  pub fn all_values(&self) -> Box<dyn Iterator<Item = &DropResult<Value>> + '_> {
     Box::new(self.values_by_id.values())
   }
 

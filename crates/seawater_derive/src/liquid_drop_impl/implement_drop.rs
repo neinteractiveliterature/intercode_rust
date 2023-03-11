@@ -10,7 +10,8 @@ use super::LiquidDropImpl;
 
 pub fn implement_drop(
   liquid_drop_impl: &LiquidDropImpl,
-  id_type: Option<&Path>,
+  id_type: &Path,
+  context_type: &Path,
 ) -> Box<dyn ToTokens> {
   let mut constructors = liquid_drop_impl.constructors.clone();
   let generics = &liquid_drop_impl.generics;
@@ -60,8 +61,13 @@ pub fn implement_drop(
     impl #generics ::seawater::LiquidDrop for #self_ty {
       type Cache = #cache_struct_ident #generic_args;
       type ID = #id_type;
+      type Context = #context_type;
 
       #(#id_methods)*
+
+      fn get_context(&self) -> &Self::Context {
+        &self.context
+      }
     }
   ))
 }

@@ -6,7 +6,7 @@ use super::drop_context::DropContext;
 
 model_backed_drop!(UserDrop, users::Model, DropContext);
 
-#[liquid_drop_impl(i64)]
+#[liquid_drop_impl(i64, DropContext)]
 impl UserDrop {
   fn id(&self) -> i64 {
     self.model.id

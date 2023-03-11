@@ -3,18 +3,18 @@ use std::fmt::Debug;
 use chrono::{TimeZone, Utc};
 use intercode_timespan::{ScheduledValue, TimespanWithValue};
 use liquid::model::DateTime;
-use seawater::{liquid_drop_impl, liquid_drop_struct};
+use seawater::liquid_drop_impl;
 use serde::Serialize;
 
 use super::{utils::date_time_to_liquid_date_time, DropContext, TimespanWithValueDrop};
 
-#[liquid_drop_struct]
+#[derive(Clone, Debug)]
 pub struct ScheduledValueDrop<Tz: TimeZone + Debug, V: Serialize + Debug + Clone + Default> {
   scheduled_value: ScheduledValue<Tz, V>,
   context: DropContext,
 }
 
-#[liquid_drop_impl]
+#[liquid_drop_impl(ScheduledValue<Tz, V>, DropContext)]
 impl<Tz: TimeZone + Debug, V: Serialize + Debug + Clone + Default> ScheduledValueDrop<Tz, V> {
   pub fn new(scheduled_value: ScheduledValue<Tz, V>, context: DropContext) -> Self {
     Self {

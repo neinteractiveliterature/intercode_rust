@@ -192,31 +192,35 @@ impl DropGetterMethod {
       )),
       DropGetterMethodImplItem::Async(_) => Box::new(quote!(
         #caching_getter_sig {
-          use ::seawater::LiquidDrop;
-          self
-            .drop_cache
-            .#cache_field_ident.
-            get_or_init(
-              || Box::<::seawater::DropResult<#return_type>>::new(
-                ::tokio::task::block_in_place(|| {
-                  ::tokio::runtime::Handle::current()
-                    .block_on(async move {
-                      self.#uncached_getter_ident().await.into()
+          use ::seawater::{Context, LiquidDrop};
+          self.get_context().with_drop_store(|store| {
+            let cache = store.get_drop_cache::<Self>(self.id());
+            cache.
+              #cache_field_ident.
+              get_or_init(
+                || Box::<::seawater::DropResult<#return_type>>::new(
+                  ::tokio::task::block_in_place(|| {
+                    ::tokio::runtime::Handle::current()
+                      .block_on(async move {
+                        self.#uncached_getter_ident().await.into()
+                      })
                     })
-                  })
+                  )
                 )
-              )
+          })
         }
       )),
       _ => Box::new(quote!(
         #caching_getter_sig {
-          use ::seawater::LiquidDrop;
-          self
-            .drop_cache
-            .#cache_field_ident.
-            get_or_init(|| {
-              Box::new(self.#uncached_getter_ident().into())
-            })
+          use ::seawater::{Context, LiquidDrop};
+          self.get_context().with_drop_store(|store| {
+            let cache = store.get_drop_cache::<Self>(self.id());
+            cache.
+              #cache_field_ident.
+              get_or_init(|| {
+                Box::new(self.#uncached_getter_ident().into())
+              })
+          })
         }
       )),
     }

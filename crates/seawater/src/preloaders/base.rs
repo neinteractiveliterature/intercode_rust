@@ -9,6 +9,7 @@ use crate::{optional_value_view::OptionalValueView, DropResult, DropResultTrait,
 use async_trait::async_trait;
 use liquid::ValueView;
 use once_cell::race::OnceBox;
+use parking_lot::MappedRwLockReadGuard;
 use tracing::{info_span, warn, warn_span};
 
 use crate::{ConnectionWrapper, DropError, DropRef, DropStore};
@@ -26,56 +27,83 @@ impl Display for IncompleteBuilderError {
 
 impl Error for IncompleteBuilderError {}
 
-pub trait LoaderResultToDropsFn<LoaderResult, FromDrop: LiquidDrop + 'static, ToDrop>
-where
-  Self: Fn(Option<LoaderResult>, DropRef<FromDrop>) -> Result<Vec<ToDrop>, DropError> + Send + Sync,
+pub trait LoaderResultToDropsFn<
+  LoaderResult,
+  FromDrop: LiquidDrop + 'static,
+  ToDrop,
+  StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug,
+> where
+  Self: Fn(Option<LoaderResult>, DropRef<FromDrop, StoreID>) -> Result<Vec<ToDrop>, DropError>
+    + Send
+    + Sync,
 {
 }
 
-impl<LoaderResult, FromDrop: LiquidDrop + 'static, ToDrop, T>
-  LoaderResultToDropsFn<LoaderResult, FromDrop, ToDrop> for T
+impl<
+    LoaderResult,
+    FromDrop: LiquidDrop + 'static,
+    ToDrop,
+    T,
+    StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug,
+  > LoaderResultToDropsFn<LoaderResult, FromDrop, ToDrop, StoreID> for T
 where
-  T: Fn(Option<LoaderResult>, DropRef<FromDrop>) -> Result<Vec<ToDrop>, DropError> + Send + Sync,
+  T: Fn(Option<LoaderResult>, DropRef<FromDrop, StoreID>) -> Result<Vec<ToDrop>, DropError>
+    + Send
+    + Sync,
 {
 }
 
-pub trait DropsToValueFn<Drop: LiquidDrop + 'static, Value: ValueView + Clone>
-where
-  Self: Fn(Vec<DropRef<Drop>>) -> Result<DropResult<Value>, DropError> + Send + Sync,
+pub trait DropsToValueFn<
+  Drop: LiquidDrop + 'static,
+  Value: ValueView + Clone,
+  StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug,
+> where
+  Self: Fn(Vec<DropRef<Drop, StoreID>>) -> Result<DropResult<Value>, DropError> + Send + Sync,
 {
 }
 
-impl<Drop: LiquidDrop + 'static, Value: ValueView + Clone, T> DropsToValueFn<Drop, Value> for T where
-  T: Fn(Vec<DropRef<Drop>>) -> Result<DropResult<Value>, DropError> + Send + Sync
+impl<
+    Drop: LiquidDrop + 'static,
+    Value: ValueView + Clone,
+    T,
+    StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug,
+  > DropsToValueFn<Drop, Value, StoreID> for T
+where
+  T: Fn(Vec<DropRef<Drop, StoreID>>) -> Result<DropResult<Value>, DropError> + Send + Sync,
 {
 }
 
-pub trait GetOnceCellFn<'a, Drop: LiquidDrop, Value: ValueView + Clone + 'a>
+pub trait GetOnceCellFn<Drop: LiquidDrop, Value: ValueView + Clone>
 where
-  Self: Fn(&'a <Drop as LiquidDrop>::Cache) -> &'a OnceBox<DropResult<Value>> + Send + Sync,
-  <Drop as LiquidDrop>::Cache: 'a,
+  Self: for<'a> Fn(
+      MappedRwLockReadGuard<'a, <Drop as LiquidDrop>::Cache>,
+    ) -> MappedRwLockReadGuard<'a, OnceBox<DropResult<Value>>>
+    + Send
+    + Sync,
 {
 }
 
-impl<'a, Drop: LiquidDrop, Value: ValueView + Clone + 'a, T> GetOnceCellFn<'a, Drop, Value> for T
-where
-  T: Fn(&'a <Drop as LiquidDrop>::Cache) -> &'a OnceBox<DropResult<Value>> + Send + Sync,
-  <Drop as LiquidDrop>::Cache: 'a,
+impl<Drop: LiquidDrop, Value: ValueView + Clone, T> GetOnceCellFn<Drop, Value> for T where
+  T: for<'a> Fn(
+      MappedRwLockReadGuard<'a, <Drop as LiquidDrop>::Cache>,
+    ) -> MappedRwLockReadGuard<'a, OnceBox<DropResult<Value>>>
+    + Send
+    + Sync
 {
 }
 
-pub trait GetInverseOnceCellFn<'a, FromDrop: LiquidDrop, ToDrop: LiquidDrop + 'a>
+pub trait GetInverseOnceCellFn<FromDrop: LiquidDrop, ToDrop: LiquidDrop>
 where
-  Self: Fn(&'a ToDrop::Cache) -> &'a OnceBox<DropResult<FromDrop>> + Send + Sync,
-  FromDrop: 'a,
+  Self: Fn(MappedRwLockReadGuard<ToDrop::Cache>) -> MappedRwLockReadGuard<OnceBox<DropResult<FromDrop>>>
+    + Send
+    + Sync,
 {
 }
 
-impl<'a, FromDrop: LiquidDrop, ToDrop: LiquidDrop + 'a, T>
-  GetInverseOnceCellFn<'a, FromDrop, ToDrop> for T
-where
-  T: Fn(&'a ToDrop::Cache) -> &'a OnceBox<DropResult<FromDrop>> + Send + Sync,
-  FromDrop: 'a,
+impl<FromDrop: LiquidDrop, ToDrop: LiquidDrop, T> GetInverseOnceCellFn<FromDrop, ToDrop> for T where
+  T: Fn(MappedRwLockReadGuard<ToDrop::Cache>) -> MappedRwLockReadGuard<OnceBox<DropResult<FromDrop>>>
+    + Send
+    + Sync
 {
 }
 
@@ -88,41 +116,55 @@ pub trait PreloaderBuilder {
 
 #[async_trait]
 pub trait Preloader<
-  FromDrop: Send + Sync + LiquidDrop<ID = Id> + Clone + Into<DropResult<FromDrop>>,
-  ToDrop: Send + Sync + LiquidDrop<ID = Id> + Clone + 'static,
-  Id: Eq + Hash + Copy + Send + Sync + Display + Debug + 'static,
+  FromDrop: Send + Sync + LiquidDrop + Clone + Into<DropResult<FromDrop>>,
+  ToDrop: Send + Sync + LiquidDrop + Clone + 'static,
   V: ValueView + Clone + Send + Sync + DropResultTrait<V> + 'static,
-> where
-  i64: From<<ToDrop as LiquidDrop>::ID>,
+  StoreID: From<FromDrop::ID>
+    + From<ToDrop::ID>
+    + Eq
+    + Hash
+    + Copy
+    + Send
+    + Sync
+    + Display
+    + Debug
+    + 'static,
+>
 {
   type LoaderResult;
 
   fn loader_result_to_drops(
     &self,
     result: Option<Self::LoaderResult>,
-    drop: DropRef<FromDrop>,
+    drop: DropRef<FromDrop, StoreID>,
   ) -> Result<Vec<ToDrop>, DropError>;
-  fn with_drop_store<'store, R, F: FnOnce(&'store DropStore<Id>) -> R>(&self, f: F) -> R;
-  fn drops_to_value(&self, drops: Vec<DropRef<ToDrop>>) -> Result<DropResult<V>, DropError>;
-  fn get_once_cell<'a>(&'a self, cache: &'a FromDrop::Cache) -> &'a OnceBox<DropResult<V>>;
+  fn with_drop_store<'store, R, F: FnOnce(&'store DropStore<StoreID>) -> R>(&self, f: F) -> R
+  where
+    StoreID: 'store;
+  fn drops_to_value(
+    &self,
+    drops: Vec<DropRef<ToDrop, StoreID>>,
+  ) -> Result<DropResult<V>, DropError>;
+  fn get_once_cell<'a>(
+    &self,
+    cache: MappedRwLockReadGuard<'a, FromDrop::Cache>,
+  ) -> MappedRwLockReadGuard<'a, OnceBox<DropResult<V>>>;
   fn get_inverse_once_cell<'a>(
-    &'a self,
-    cache: &'a ToDrop::Cache,
-  ) -> Option<&'a OnceBox<DropResult<FromDrop>>>;
+    &self,
+    cache: MappedRwLockReadGuard<'a, ToDrop::Cache>,
+  ) -> Option<MappedRwLockReadGuard<'a, OnceBox<DropResult<FromDrop>>>>;
   async fn load_model_lists(
     &self,
     db: &ConnectionWrapper,
-    ids: &[Id],
-  ) -> Result<HashMap<Id, Self::LoaderResult>, DropError>;
+    ids: &[StoreID],
+  ) -> Result<HashMap<StoreID, Self::LoaderResult>, DropError>;
 
   async fn preload(
     &self,
     db: &ConnectionWrapper,
-    drops: &[DropRef<FromDrop>],
-  ) -> Result<PreloaderResult<Id, V>, DropError>
+    drops: &[DropRef<FromDrop, StoreID>],
+  ) -> Result<PreloaderResult<StoreID, V>, DropError>
   where
-    i64: From<FromDrop::ID>,
-    Id: From<FromDrop::ID>,
     FromDrop: 'static,
   {
     let span = info_span!(
@@ -133,45 +175,48 @@ pub trait Preloader<
 
     let _enter = span.enter();
 
-    let loaded_values_by_drop_id: HashMap<Id, DropResult<V>> = self.with_drop_store(|store| {
-      drops
-        .iter()
-        .cloned()
-        .filter_map(|drop| {
-          let cache = store.get_drop_cache::<FromDrop>(drop.id());
-          let once_cell = self.get_once_cell(&cache);
-          once_cell.get().map(|value| (drop.id(), value.clone()))
-        })
-        .collect()
-    });
+    let preloader_result = self
+      .with_drop_store(|store| {
+        let loaded_values_by_drop_id: HashMap<_, _> = drops
+          .iter()
+          .cloned()
+          .filter_map(|drop| {
+            let cache = store.get_drop_cache::<FromDrop>(drop.id());
+            let once_cell = self.get_once_cell(cache);
+            once_cell.get().map(|value| (drop.id(), value.clone()))
+          })
+          .collect();
 
-    let unloaded_drops = drops
-      .iter()
-      .cloned()
-      .filter(|drop| !loaded_values_by_drop_id.contains_key(&drop.id()));
+        let unloaded_drops = drops
+          .iter()
+          .cloned()
+          .filter(|drop| !loaded_values_by_drop_id.contains_key(&drop.id()));
 
-    let unloaded_drops_by_id = unloaded_drops
-      .map(|drop| (drop.id(), drop))
-      .collect::<HashMap<_, _>>();
+        let unloaded_drops_by_id = unloaded_drops
+          .map(|drop| (drop.id(), drop))
+          .collect::<HashMap<_, _>>();
 
-    let newly_loaded_drop_lists = self.load_drop_lists(&unloaded_drops_by_id, db).await?;
+        async move {
+          let newly_loaded_drop_lists = self.load_drop_lists(&unloaded_drops_by_id, db).await?;
 
-    let preloader_result = self.populate_db_preloader_results(
-      unloaded_drops_by_id,
-      newly_loaded_drop_lists,
-      loaded_values_by_drop_id,
-    )?;
+          self.populate_db_preloader_results(
+            unloaded_drops_by_id,
+            newly_loaded_drop_lists,
+            loaded_values_by_drop_id,
+          )
+        }
+      })
+      .await?;
 
     Ok(preloader_result)
   }
 
   async fn load_drop_lists(
     &self,
-    unloaded_drops_by_id: &HashMap<Id, DropRef<FromDrop>>,
+    unloaded_drops_by_id: &HashMap<StoreID, DropRef<FromDrop, StoreID>>,
     db: &ConnectionWrapper,
-  ) -> Result<HashMap<Id, Vec<DropRef<ToDrop>>>, DropError>
+  ) -> Result<HashMap<StoreID, Vec<DropRef<ToDrop, StoreID>>>, DropError>
   where
-    i64: From<FromDrop::ID>,
     FromDrop: 'static,
   {
     let span = info_span!(
@@ -204,7 +249,7 @@ pub trait Preloader<
         .map(|(id, drop)| {
           let result = model_lists.remove(id);
           let converted_drops = self.loader_result_to_drops(result, drop.clone())?;
-          let normalized_drops: Vec<DropRef<ToDrop, Id>> =
+          let normalized_drops: Vec<DropRef<ToDrop, StoreID>> =
             normalized_drop_cache.store_all(converted_drops);
           Ok((*id, normalized_drops))
         })
@@ -221,14 +266,11 @@ pub trait Preloader<
 
   fn populate_db_preloader_results(
     &self,
-    drops_by_id: HashMap<Id, DropRef<FromDrop>>,
-    newly_loaded_drop_lists: HashMap<Id, Vec<DropRef<ToDrop>>>,
-    loaded_values_by_drop_id: HashMap<Id, DropResult<V>>,
-  ) -> Result<PreloaderResult<Id, V>, DropError>
-  where
-    i64: From<FromDrop::ID>,
-  {
-    let mut values_by_id: HashMap<Id, DropResult<V>> =
+    drops_by_id: HashMap<StoreID, DropRef<FromDrop, StoreID>>,
+    newly_loaded_drop_lists: HashMap<StoreID, Vec<DropRef<ToDrop, StoreID>>>,
+    loaded_values_by_drop_id: HashMap<StoreID, DropResult<V>>,
+  ) -> Result<PreloaderResult<StoreID, V>, DropError> {
+    let mut values_by_id: HashMap<StoreID, DropResult<V>> =
       HashMap::with_capacity(newly_loaded_drop_lists.len() + loaded_values_by_drop_id.len());
 
     self.with_drop_store(|store| {
@@ -240,8 +282,8 @@ pub trait Preloader<
           values_by_id.insert(id, value.clone());
 
           let drop = drops_by_id.get(&id).unwrap().fetch();
-          let cache = store.get_drop_cache::<FromDrop>(drop.id());
-          let once_cell = self.get_once_cell(&cache);
+          let cache = store.get_drop_cache::<FromDrop>(drop.id().into());
+          let once_cell = self.get_once_cell(cache);
           once_cell.get_or_init(|| Box::new(value));
           Ok::<_, DropError>(())
         })
@@ -254,21 +296,20 @@ pub trait Preloader<
     Ok(PreloaderResult::new(values_by_id))
   }
 
-  fn populate_inverse_caches<'store>(
+  fn populate_inverse_caches(
     &self,
-    from_drop: DropRef<'store, FromDrop>,
-    drops: &Vec<DropRef<'store, ToDrop>>,
+    from_drop: DropRef<FromDrop, StoreID>,
+    drops: &Vec<DropRef<ToDrop, StoreID>>,
   ) where
     FromDrop: 'static,
   {
     self.with_drop_store(|store| {
       for to_drop in drops {
         let to_drop = to_drop.fetch();
-        let cache = store.get_drop_cache::<ToDrop>(to_drop.id());
-        let inverse_once_cell = self.get_inverse_once_cell(&cache);
+        let cache = store.get_drop_cache::<ToDrop>(to_drop.id().into());
+        let inverse_once_cell = self.get_inverse_once_cell(cache);
         if let Some(inverse_once_cell) = inverse_once_cell {
-          inverse_once_cell
-            .get_or_init(|| Box::new(DropResult::new(DropRef::new(from_drop.id(), store))));
+          inverse_once_cell.get_or_init(|| Box::new(from_drop.clone().into()));
         }
       }
     });
@@ -277,11 +318,11 @@ pub trait Preloader<
   async fn load_single(
     &self,
     db: &ConnectionWrapper,
-    drop: DropRef<'async_trait, FromDrop>,
+    drop: DropRef<FromDrop, StoreID>,
   ) -> Result<DropResult<OptionalValueView<V>>, DropError>
   where
-    i64: From<FromDrop::ID>,
     FromDrop: 'static,
+    StoreID: 'async_trait,
   {
     let span = warn_span!(
       "load_single",
@@ -299,17 +340,20 @@ pub trait Preloader<
       std::any::type_name::<V>()
     );
 
-    Ok(self.preload(db, &[drop.clone()]).await?.get(&drop.id()))
+    let preloader_result = self.preload(db, &[drop.clone()]).await?;
+    let single_value = preloader_result.get(drop.id());
+
+    Ok(single_value)
   }
 
   async fn expect_single(
     &self,
     db: &ConnectionWrapper,
-    drop: DropRef<'async_trait, FromDrop>,
+    drop: DropRef<FromDrop, StoreID>,
   ) -> Result<V, DropError>
   where
-    i64: From<FromDrop::ID>,
     FromDrop: 'static,
+    StoreID: 'async_trait,
   {
     let loaded = self.load_single(db, drop).await?;
 

@@ -1,18 +1,13 @@
 use async_graphql::{async_trait, dataloader::Loader};
 use sea_orm::{
   sea_query::{IntoValueTuple, ValueTuple},
-  DbErr, EntityTrait, FromQueryResult, Linked, PrimaryKeyToColumn, PrimaryKeyTrait, QuerySelect,
+  DbErr, EntityTrait, Linked, PrimaryKeyToColumn, PrimaryKeyTrait, QuerySelect, TryGetable,
 };
 use std::{collections::HashMap, sync::Arc};
 
-use crate::ConnectionWrapper;
+use crate::{loaders::parent_model_id_only::ParentModelIdOnly, ConnectionWrapper};
 
 use super::expect::ExpectModels;
-
-#[derive(FromQueryResult)]
-struct ParentModelIdOnly {
-  pub parent_model_id: i64,
-}
 
 pub async fn load_all_linked<
   From: EntityTrait,
@@ -28,8 +23,7 @@ pub async fn load_all_linked<
   DbErr,
 >
 where
-  <From::PrimaryKey as PrimaryKeyTrait>::ValueType:
-    Eq + std::hash::Hash + Clone + std::convert::From<i64>,
+  <From::PrimaryKey as PrimaryKeyTrait>::ValueType: Eq + std::hash::Hash + Clone + TryGetable,
 {
   use sea_orm::{ColumnTrait, QueryFilter};
 
@@ -45,29 +39,28 @@ where
     }
   });
 
-  let mut results = From::find()
-    .filter(pk_column.is_in(pk_values))
+  let mut results = QueryFilter::filter(From::find(), pk_column.is_in(pk_values))
     .select_only()
     .column_as(pk_column, "parent_model_id")
     .find_also_linked(link)
-    .into_model::<ParentModelIdOnly, To::Model>()
+    .into_model::<ParentModelIdOnly<<From::PrimaryKey as PrimaryKeyTrait>::ValueType>, To::Model>()
     .all(db)
     .await?
     .into_iter()
     .fold(
       HashMap::<<From::PrimaryKey as PrimaryKeyTrait>::ValueType, EntityLinkLoaderResult<From, To>>::new(),
       |mut acc: HashMap<<From::PrimaryKey as PrimaryKeyTrait>::ValueType, EntityLinkLoaderResult<From, To>>,
-       (from_model, to_model): (ParentModelIdOnly, Option<To::Model>)| {
+       (from_model, to_model): (ParentModelIdOnly<<From::PrimaryKey as PrimaryKeyTrait>::ValueType>, Option<To::Model>)| {
         if let Some(to_model) = to_model {
           let id = from_model.parent_model_id;
-          let result = acc.get_mut(&id.into());
+          let result = acc.get_mut(&id);
           if let Some(result) = result {
             result.models.push(to_model);
           } else {
             acc.insert(
-              id.into(),
+              id.clone(),
               EntityLinkLoaderResult::<From, To> {
-                from_id: id.into(),
+                from_id: id,
                 models: vec![to_model],
               },
             );
@@ -217,7 +210,7 @@ where
   Link: 'static + Send + Sync + Clone,
   <Link::FromEntity as EntityTrait>::PrimaryKey: PrimaryKeyToColumn,
   <<Link::FromEntity as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType:
-    Sync + Clone + Eq + std::hash::Hash + IntoValueTuple + std::convert::From<i64>,
+    Sync + Clone + Eq + std::hash::Hash + IntoValueTuple + TryGetable,
 {
   type Value = EntityLinkLoaderResult<Link::FromEntity, Link::ToEntity>;
   type Error = Arc<sea_orm::DbErr>;

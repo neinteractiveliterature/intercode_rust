@@ -1,7 +1,7 @@
 use intercode_entities::runs;
 use liquid::model::DateTime;
+use seawater::liquid_drop_impl;
 use seawater::{belongs_to_related, has_many_related, model_backed_drop, DropError};
-use seawater::{liquid_drop_impl, liquid_drop_struct};
 use time::Duration;
 
 use super::{
@@ -12,7 +12,7 @@ model_backed_drop!(RunDrop, runs::Model, DropContext);
 
 #[belongs_to_related(event, EventDrop, eager_load(event_category))]
 #[has_many_related(rooms, RoomDrop, serialize = true)]
-#[liquid_drop_impl(i64)]
+#[liquid_drop_impl(i64, DropContext)]
 impl RunDrop {
   fn id(&self) -> i64 {
     self.model.id

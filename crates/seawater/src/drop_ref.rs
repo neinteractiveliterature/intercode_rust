@@ -1,28 +1,40 @@
-use parking_lot::MappedRwLockReadGuard;
-
 use crate::DropStore;
+use crate::IntoDropResult;
 use crate::LiquidDrop;
 use std::fmt::Display;
 use std::hash::Hash;
+use std::sync::Weak;
 use std::{fmt::Debug, marker::PhantomData};
 
-pub struct DropRef<
-  'store,
-  D: LiquidDrop + Clone + 'static,
-  StoreID: From<D::ID> + Hash + Eq + Display + Copy + Debug = <D as LiquidDrop>::ID,
-> {
-  id: D::ID,
-  store: &'store DropStore<StoreID>,
+pub(crate) trait StoreRef {
+  type StoreID;
+
+  fn get<ID: Into<Self::StoreID>, D: LiquidDrop + 'static>(&self, id: ID) -> Option<D>;
+}
+
+impl<StoreID: Eq + Hash + Copy + Display + Debug> StoreRef for Weak<DropStore<StoreID>> {
+  type StoreID = StoreID;
+
+  fn get<ID: Into<Self::StoreID>, D: LiquidDrop + 'static>(&self, id: ID) -> Option<D> {
+    let arc = self.upgrade();
+    let store = arc.as_deref();
+    store
+      .and_then(|store| store.get::<D>(id.into()))
+      .map(|guard| guard.clone())
+  }
+}
+
+#[derive(Clone)]
+pub struct DropRef<D: LiquidDrop + Clone + 'static, StoreID: Eq + Hash + Copy + Display + Debug> {
+  id: StoreID,
+  store: Weak<DropStore<StoreID>>,
   _phantom: PhantomData<D>,
 }
 
-impl<
-    'store,
-    D: LiquidDrop + Clone + 'static,
-    StoreID: From<D::ID> + Hash + Eq + Display + Copy + Debug,
-  > DropRef<'store, D, StoreID>
+impl<D: LiquidDrop + Clone + 'static, StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug>
+  DropRef<D, StoreID>
 {
-  pub fn new(id: D::ID, store: &'store DropStore<StoreID>) -> Self {
+  pub fn new(id: StoreID, store: Weak<DropStore<StoreID>>) -> Self {
     DropRef {
       id,
       store,
@@ -30,41 +42,27 @@ impl<
     }
   }
 
-  pub fn fetch(&self) -> MappedRwLockReadGuard<D> {
+  pub fn fetch(&self) -> D {
     self.try_fetch().unwrap()
   }
 
-  pub fn try_fetch(&self) -> Option<MappedRwLockReadGuard<D>> {
-    self.store.get(self.id.into())
+  pub fn try_fetch(&self) -> Option<D> {
+    let arc = self.store.upgrade();
+    let store = arc.as_deref();
+    store
+      .and_then(|store| store.get::<D>(self.id))
+      .map(|guard| guard.clone())
   }
 
-  pub fn id(&self) -> D::ID {
+  pub fn id(&self) -> StoreID {
     self.id
   }
 }
 
-impl<
-    'store,
-    D: LiquidDrop + Clone + 'static,
-    StoreID: From<D::ID> + Hash + Eq + Display + Copy + Debug,
-  > Clone for DropRef<'store, D, StoreID>
-{
-  fn clone(&self) -> Self {
-    Self {
-      id: self.id,
-      store: self.store,
-      _phantom: Default::default(),
-    }
-  }
-}
-
-impl<
-    'store,
-    D: LiquidDrop + Clone + 'static,
-    StoreID: From<D::ID> + Hash + Eq + Display + Copy + Debug,
-  > Debug for DropRef<'store, D, StoreID>
+impl<D: LiquidDrop + Clone + 'static, StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug>
+  Debug for DropRef<D, StoreID>
 where
-  D::ID: Debug,
+  StoreID: Debug,
 {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("DropRef")
@@ -72,4 +70,11 @@ where
       .field("type", &std::any::type_name::<D>())
       .finish_non_exhaustive()
   }
+}
+
+impl<
+    D: LiquidDrop + Clone + Send + Sync + 'static,
+    StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug + 'static,
+  > IntoDropResult<D> for DropRef<D, StoreID>
+{
 }

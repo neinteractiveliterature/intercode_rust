@@ -4,24 +4,24 @@ use once_cell::race::OnceBox;
 use std::{
   borrow::Cow,
   fmt::{Debug, Display},
+  hash::Hash,
 };
 
 // Really I'd like this to be an enum but unfortunately DropRef only works with drops, and we need DropResult to
 // be able to wrap more or less anything that implements ValueView
 pub trait DropResultTrait<T: ValueView + Clone + ToOwned<Owned = T>>: Send + Sync {
   fn get_inner(&self) -> Cow<T>;
-
-  fn get_inner_owned(&self) -> T {
-    self.get_inner().into_owned()
-  }
 }
 
-impl<'store, D: LiquidDrop + Clone + Send + Sync> DropResultTrait<D> for DropRef<'store, D>
+impl<
+    D: LiquidDrop + Clone + Send + Sync,
+    StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug,
+  > DropResultTrait<D> for DropRef<D, StoreID>
 where
   D::ID: Display + Debug,
 {
   fn get_inner(&self) -> Cow<D> {
-    Cow::Owned(self.fetch().clone())
+    Cow::Owned(self.fetch())
   }
 }
 
@@ -44,6 +44,8 @@ impl<V: ValueView + Clone + Send + Sync> DropResultTrait<Vec<V>> for Vec<V> {
     Cow::Borrowed(self)
   }
 }
+
+pub trait IntoDropResult<V: ValueView + Clone = Self>: Into<DropResult<V>> {}
 
 pub struct DropResult<T: ValueView + Debug + Clone> {
   result: Box<dyn DropResultTrait<T>>,
@@ -225,6 +227,16 @@ impl From<&str> for DropResult<liquid::model::Value> {
 impl From<&serde_json::Value> for DropResult<liquid::model::Value> {
   fn from(value: &serde_json::Value) -> Self {
     DropResult::new(liquid::model::to_value(value).unwrap())
+  }
+}
+
+impl<
+    D: LiquidDrop + Send + Sync,
+    StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug + 'static,
+  > From<DropRef<D, StoreID>> for DropResult<D>
+{
+  fn from(value: DropRef<D, StoreID>) -> Self {
+    DropResult::new(value)
   }
 }
 

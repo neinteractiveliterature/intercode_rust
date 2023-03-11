@@ -1,4 +1,4 @@
-use crate::{DropResult, LiquidDrop};
+use crate::{IntoDropResult, LiquidDrop};
 use liquid::ValueView;
 use sea_orm::{EntityTrait, Linked, ModelTrait, PrimaryKeyTrait, Related};
 
@@ -18,7 +18,7 @@ where
   fn new(model: Self::Model, context: Self::Context) -> Self;
   fn get_model(&self) -> &Self::Model;
 
-  fn link_preloader<ToDrop: ModelBackedDrop, Value: ValueView>(
+  fn link_preloader<ToDrop: ModelBackedDrop, Value: ValueView + IntoDropResult>(
     link: impl Linked<FromEntity = DropEntity<Self>, ToEntity = DropEntity<ToDrop>>
       + Send
       + Sync
@@ -29,13 +29,13 @@ where
     Self: Send + Sync + Clone,
     ToDrop: Send + Sync + Clone,
     DropPrimaryKeyValue<Self>: Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
-    Value: Into<DropResult<Value>> + Clone,
+    Value: IntoDropResult<Self> + Clone,
     DropPrimaryKeyValue<Self>: Clone,
   {
     EntityLinkPreloaderBuilder::new(link, pk_column)
   }
 
-  fn relation_preloader<ToDrop: ModelBackedDrop, Value: ValueView>(
+  fn relation_preloader<ToDrop: ModelBackedDrop, Value: ValueView + IntoDropResult>(
     pk_column: DropPrimaryKey<Self>,
   ) -> EntityRelationPreloaderBuilder<Self, ToDrop, Value, Self::Context>
   where
@@ -43,7 +43,7 @@ where
     ToDrop: Send + Sync + Clone,
     DropEntity<Self>: Related<DropEntity<ToDrop>>,
     DropPrimaryKeyValue<Self>: Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
-    Value: Into<DropResult<Value>> + Clone,
+    Value: IntoDropResult<Self> + Clone,
     DropPrimaryKeyValue<Self>: Clone,
   {
     EntityRelationPreloaderBuilder::new(pk_column)
@@ -53,7 +53,7 @@ where
 #[macro_export]
 macro_rules! model_backed_drop {
   ($type_name: ident, $model_type: ty, $context_type: ty) => {
-    #[::seawater::liquid_drop_struct]
+    #[derive(Debug, Clone)]
     pub struct $type_name {
       model: $model_type,
       #[allow(dead_code)]
@@ -64,11 +64,7 @@ macro_rules! model_backed_drop {
       type Model = $model_type;
 
       fn new(model: $model_type, context: $context_type) -> Self {
-        $type_name {
-          model,
-          context,
-          drop_cache: ::std::default::Default::default(),
-        }
+        $type_name { model, context }
       }
 
       fn get_model(&self) -> &$model_type {

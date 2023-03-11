@@ -4,7 +4,7 @@ use crate::{serialization::SerializedScheduledValue, Timespan, TimespanWithValue
 use chrono::{DateTime, FixedOffset, TimeZone, Utc};
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Hash)]
 #[serde(
   from = "SerializedScheduledValue<V>",
   bound(

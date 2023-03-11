@@ -5,7 +5,7 @@ use seawater::model_backed_drop;
 
 model_backed_drop!(EventCategoryDrop, event_categories::Model, DropContext);
 
-#[liquid_drop_impl(i64)]
+#[liquid_drop_impl(i64, DropContext)]
 impl EventCategoryDrop {
   fn id(&self) -> i64 {
     self.model.id

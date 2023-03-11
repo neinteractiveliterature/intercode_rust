@@ -5,12 +5,12 @@ use super::LiquidDropImpl;
 
 pub fn implement_drop_cache(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTokens> {
   let methods = liquid_drop_impl.methods.iter().collect::<Vec<_>>();
-  let self_type_arguments = &liquid_drop_impl.self_type_arguments;
   let cache_struct_ident = &liquid_drop_impl.cache_struct_ident;
   let cache_struct_ident_litstr = LitStr::new(
     cache_struct_ident.to_string().as_str(),
     cache_struct_ident.span(),
   );
+  let self_type_arguments = &liquid_drop_impl.self_type_arguments;
   let generics = &liquid_drop_impl.generics;
 
   let cache_fields = methods.iter().map(|method| {

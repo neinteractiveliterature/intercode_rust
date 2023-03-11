@@ -7,7 +7,7 @@ use intercode_graphql::{
 use intercode_liquid::{build_liquid_parser, cms_parent_partial_source::PreloadPartialsStrategy};
 use intercode_policies::AuthorizationInfo;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-use seawater::{liquid_drop_impl, liquid_drop_struct, ArcValueView};
+use seawater::liquid_drop_impl;
 use seawater::{Context, DropError, DropStore, ModelBackedDrop};
 use std::{
   fmt::Debug,
@@ -16,7 +16,6 @@ use std::{
 
 use crate::drops::{ConventionDrop, DropContext, EventDrop, UserConProfileDrop};
 
-#[liquid_drop_struct]
 struct IntercodeGlobals {
   query_data: QueryData,
   drop_context: DropContext,
@@ -70,16 +69,14 @@ impl IntercodeGlobals {
     Ok(None)
   }
 
-  async fn user_con_profile(&self) -> Result<Option<ArcValueView<UserConProfileDrop>>, DropError> {
+  async fn user_con_profile(&self) -> Result<Option<DropRef<UserConProfileDrop>>, DropError> {
     let ucp = self.query_data.user_con_profile().map(|user_con_profile| {
       UserConProfileDrop::new(user_con_profile.clone(), self.drop_context.clone())
     });
 
     if let Some(ucp) = ucp {
-      let ucp = self.drop_context.with_drop_store(|drop_cache| {
-        drop_cache.normalize(ucp).map_err(|_| PoisonError::new(()))
-      })?;
-      let drops = vec![ucp.clone()];
+      let ucp = self.drop_context.with_drop_store(|store| store.store(ucp));
+      let drops = vec![ucp];
       try_join!(
         UserConProfileDrop::preload_signups(self.drop_context.clone(), &drops),
         UserConProfileDrop::preload_staff_positions(self.drop_context.clone(), &drops),

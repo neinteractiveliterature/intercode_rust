@@ -4,17 +4,17 @@ use std::{
   fmt::{Debug, Display},
   marker::PhantomData,
   pin::Pin,
-  sync::Arc,
 };
 
 use crate::{
   loaders::{load_all_linked, EntityLinkLoaderResult},
-  ConnectionWrapper, DropRef, DropResult, DropResultTrait, LiquidDrop,
+  ConnectionWrapper, DropRef, DropResult, DropResultTrait, IntoDropResult, LiquidDrop,
 };
 use async_trait::async_trait;
 use liquid::ValueView;
 use once_cell::race::OnceBox;
-use sea_orm::{EntityTrait, Linked, ModelTrait, PrimaryKeyToColumn, PrimaryKeyTrait};
+use parking_lot::MappedRwLockReadGuard;
+use sea_orm::{EntityTrait, Linked, ModelTrait, PrimaryKeyToColumn, PrimaryKeyTrait, TryGetable};
 
 use crate::{
   DropEntity, DropError, DropPrimaryKey, DropPrimaryKeyValue, DropStore, ModelBackedDrop,
@@ -34,17 +34,25 @@ pub struct EntityLinkPreloader<
   Value: ValueView + Clone,
   Context: crate::Context,
 > where
-  PK::ValueType: Eq + std::hash::Hash + Clone + std::convert::From<i64>,
-  Value: Into<DropResult<Value>>,
+  PK::ValueType: Eq + std::hash::Hash + Clone + std::convert::From<Context::StoreID>,
+  Value: IntoDropResult,
 {
   pk_column: PK::Column,
   link: BoxLink<From, To>,
   context: Context,
-  loader_result_to_drops:
-    Pin<Box<dyn LoaderResultToDropsFn<EntityLinkLoaderResult<From, To>, FromDrop, ToDrop>>>,
-  drops_to_value: Pin<Box<dyn DropsToValueFn<ToDrop, Value>>>,
-  get_once_cell: Pin<Box<dyn for<'a> GetOnceCellFn<'a, FromDrop, Value>>>,
-  get_inverse_once_cell: Option<Pin<Box<dyn for<'a> GetInverseOnceCellFn<'a, FromDrop, ToDrop>>>>,
+  loader_result_to_drops: Pin<
+    Box<
+      dyn LoaderResultToDropsFn<
+        EntityLinkLoaderResult<From, To>,
+        FromDrop,
+        ToDrop,
+        Context::StoreID,
+      >,
+    >,
+  >,
+  drops_to_value: Pin<Box<dyn DropsToValueFn<ToDrop, Value, Context::StoreID>>>,
+  get_once_cell: Pin<Box<dyn GetOnceCellFn<FromDrop, Value>>>,
+  get_inverse_once_cell: Option<Pin<Box<dyn GetInverseOnceCellFn<FromDrop, ToDrop>>>>,
   _phantom: PhantomData<(From, To, FromDrop, ToDrop)>,
 }
 
@@ -58,8 +66,8 @@ impl<
     Context: crate::Context,
   > Debug for EntityLinkPreloader<From, To, PK, FromDrop, ToDrop, Value, Context>
 where
-  PK::ValueType: Eq + std::hash::Hash + Clone + std::convert::From<i64>,
-  Value: Into<DropResult<Value>>,
+  PK::ValueType: Eq + std::hash::Hash + Clone + std::convert::From<Context::StoreID>,
+  Value: IntoDropResult,
 {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("EntityLinkPreloader")
@@ -78,28 +86,26 @@ impl<
     ToDrop: LiquidDrop<ID = PK::ValueType> + Send + Sync + Clone,
     Value: ValueView + Clone + Send + Sync + DropResultTrait<Value> + 'static,
     Context: crate::Context,
-  > Preloader<FromDrop, ToDrop, PK::ValueType, Value>
+  > Preloader<FromDrop, ToDrop, Value, Context::StoreID>
   for EntityLinkPreloader<From, To, PK, FromDrop, ToDrop, Value, Context>
 where
   PK::ValueType: Eq
     + std::hash::Hash
     + Clone
-    + std::convert::From<i64>
     + Send
     + Sync
-    + Into<i64>
     + Copy
-    + Display,
+    + Display
+    + TryGetable
+    + std::convert::From<Context::StoreID>,
   To::Model: Send + Sync,
-  <To::PrimaryKey as PrimaryKeyTrait>::ValueType:
-    Eq + std::hash::Hash + Clone + std::convert::Into<i64> + Send + Sync + Into<i64> + Copy,
-  Value: Into<DropResult<Value>>,
-  Arc<Value>: Into<DropResult<Value>>,
-  i64: std::convert::From<<ToDrop as LiquidDrop>::ID>,
+  <To::PrimaryKey as PrimaryKeyTrait>::ValueType: Eq + std::hash::Hash + Clone + Send + Sync + Copy,
+  Value: IntoDropResult,
+  Context::StoreID: std::convert::From<PK::ValueType>,
 {
   type LoaderResult = EntityLinkLoaderResult<From, To>;
 
-  fn with_drop_store<'store, R, F: FnOnce(&'store DropStore<PK::ValueType>) -> R>(
+  fn with_drop_store<'store, R, F: FnOnce(&'store DropStore<Context::StoreID>) -> R>(
     &self,
     f: F,
   ) -> R {
@@ -109,23 +115,29 @@ where
   fn loader_result_to_drops(
     &self,
     result: Option<Self::LoaderResult>,
-    drop: DropRef<FromDrop>,
+    drop: DropRef<FromDrop, Context::StoreID>,
   ) -> Result<Vec<ToDrop>, DropError> {
     (self.loader_result_to_drops)(result, drop)
   }
 
-  fn drops_to_value(&self, drops: Vec<DropRef<ToDrop>>) -> Result<DropResult<Value>, DropError> {
+  fn drops_to_value(
+    &self,
+    drops: Vec<DropRef<ToDrop, Context::StoreID>>,
+  ) -> Result<DropResult<Value>, DropError> {
     (self.drops_to_value)(drops)
   }
 
-  fn get_once_cell<'a>(&'a self, cache: &'a FromDrop::Cache) -> &'a OnceBox<DropResult<Value>> {
+  fn get_once_cell<'a>(
+    &self,
+    cache: MappedRwLockReadGuard<'a, FromDrop::Cache>,
+  ) -> MappedRwLockReadGuard<'a, OnceBox<DropResult<Value>>> {
     (self.get_once_cell)(cache)
   }
 
   fn get_inverse_once_cell<'a>(
-    &'a self,
-    cache: &'a ToDrop::Cache,
-  ) -> Option<&'a OnceBox<DropResult<FromDrop>>> {
+    &self,
+    cache: MappedRwLockReadGuard<'a, ToDrop::Cache>,
+  ) -> Option<MappedRwLockReadGuard<'a, OnceBox<DropResult<FromDrop>>>> {
     self
       .get_inverse_once_cell
       .as_ref()
@@ -135,10 +147,18 @@ where
   async fn load_model_lists(
     &self,
     db: &ConnectionWrapper,
-    ids: &[PK::ValueType],
-  ) -> Result<HashMap<PK::ValueType, Self::LoaderResult>, DropError> {
-    load_all_linked(self.pk_column, ids, &self.link, db)
+    ids: &[Context::StoreID],
+  ) -> Result<HashMap<Context::StoreID, Self::LoaderResult>, DropError> {
+    let ids_converted: Vec<<From::PrimaryKey as PrimaryKeyTrait>::ValueType> =
+      ids.iter().map(|id| (*id).into()).collect();
+    load_all_linked(self.pk_column, &ids_converted, &self.link, db)
       .await
+      .map(|result| {
+        result
+          .into_iter()
+          .map(|(id, value)| (id.into(), value))
+          .collect()
+      })
       .map_err(|err| err.into())
   }
 }
@@ -186,9 +206,8 @@ pub struct EntityLinkPreloaderBuilder<
 > where
   FromDrop: Send + Sync + Clone + 'static,
   ToDrop: Send + Sync + Clone + 'static,
-  DropPrimaryKeyValue<FromDrop>:
-    Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
-  Value: Into<DropResult<Value>>,
+  DropPrimaryKeyValue<FromDrop>: Eq + std::hash::Hash + Clone + Send + Sync,
+  Value: IntoDropResult,
   DropPrimaryKeyValue<FromDrop>: Clone,
 {
   link: ModelBackedDropLink<FromDrop, ToDrop>,
@@ -201,13 +220,14 @@ pub struct EntityLinkPreloaderBuilder<
           EntityLinkLoaderResult<DropEntity<FromDrop>, DropEntity<ToDrop>>,
           FromDrop,
           ToDrop,
+          Context::StoreID,
         >,
       >,
     >,
   >,
-  drops_to_value: Option<Pin<Box<dyn DropsToValueFn<ToDrop, Value>>>>,
-  get_once_cell: Option<Pin<Box<dyn for<'a> GetOnceCellFn<'a, FromDrop, Value>>>>,
-  get_inverse_once_cell: Option<Pin<Box<dyn for<'a> GetInverseOnceCellFn<'a, FromDrop, ToDrop>>>>,
+  drops_to_value: Option<Pin<Box<dyn DropsToValueFn<ToDrop, Value, Context::StoreID>>>>,
+  get_once_cell: Option<Pin<Box<dyn GetOnceCellFn<FromDrop, Value>>>>,
+  get_inverse_once_cell: Option<Pin<Box<dyn GetInverseOnceCellFn<FromDrop, ToDrop>>>>,
   _phantom: PhantomData<(FromDrop, ToDrop, Value)>,
 }
 
@@ -220,9 +240,9 @@ impl<
 where
   FromDrop: Send + Sync + Clone + 'static,
   ToDrop: Send + Sync + Clone + 'static,
-  Value: Into<DropResult<Value>>,
+  Value: IntoDropResult,
   DropPrimaryKeyValue<FromDrop>:
-    Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
+    Eq + std::hash::Hash + Clone + Send + Sync + std::convert::From<Context::StoreID>,
 {
   type Preloader = EntityLinkPreloader<
     DropEntity<FromDrop>,
@@ -272,9 +292,8 @@ impl<
 where
   FromDrop: Send + Sync + Clone + 'static,
   ToDrop: Send + Sync + Clone + 'static,
-  Value: Into<DropResult<Value>>,
-  DropPrimaryKeyValue<FromDrop>:
-    Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
+  Value: IntoDropResult,
+  DropPrimaryKeyValue<FromDrop>: Eq + std::hash::Hash + Clone + Send + Sync,
 {
   pub fn new(
     link: impl Linked<
@@ -311,6 +330,7 @@ where
         EntityLinkLoaderResult<DropEntity<FromDrop>, DropEntity<ToDrop>>,
         FromDrop,
         ToDrop,
+        Context::StoreID,
       > + 'static,
   {
     self.loader_result_to_drops = Some(Box::pin(loader_result_to_drops));
@@ -319,7 +339,7 @@ where
 
   pub fn with_drops_to_value<F>(mut self, drops_to_value: F) -> Self
   where
-    F: DropsToValueFn<ToDrop, Value> + 'static,
+    F: DropsToValueFn<ToDrop, Value, Context::StoreID> + 'static,
   {
     self.drops_to_value = Some(Box::pin(drops_to_value));
     self
@@ -327,7 +347,7 @@ where
 
   pub fn with_once_cell_getter<F>(mut self, get_once_cell: F) -> Self
   where
-    F: for<'a> GetOnceCellFn<'a, FromDrop, Value> + 'static,
+    F: GetOnceCellFn<FromDrop, Value> + 'static,
   {
     self.get_once_cell = Some(Box::pin(get_once_cell));
     self
@@ -335,7 +355,7 @@ where
 
   pub fn with_inverse_once_cell_getter<F>(mut self, get_inverse_once_cell: F) -> Self
   where
-    F: for<'a> GetInverseOnceCellFn<'a, FromDrop, ToDrop> + 'static,
+    F: GetInverseOnceCellFn<FromDrop, ToDrop> + 'static,
   {
     self.get_inverse_once_cell = Some(Box::pin(get_inverse_once_cell));
     self

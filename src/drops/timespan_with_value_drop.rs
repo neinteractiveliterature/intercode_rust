@@ -3,12 +3,12 @@ use std::fmt::Debug;
 use chrono::TimeZone;
 use intercode_timespan::TimespanWithValue;
 use liquid::model::DateTime;
-use seawater::{liquid_drop_impl, liquid_drop_struct};
+use seawater::liquid_drop_impl;
 use serde::Serialize;
 
 use super::{utils::date_time_to_liquid_date_time, DropContext};
 
-#[liquid_drop_struct]
+#[derive(Clone, Debug)]
 pub struct TimespanWithValueDrop<
   StartTz: TimeZone + Debug,
   FinishTz: TimeZone + Debug,
@@ -18,7 +18,7 @@ pub struct TimespanWithValueDrop<
   context: DropContext,
 }
 
-#[liquid_drop_impl]
+#[liquid_drop_impl(TimespanWithValue<StartTz, FinishTz, V>, DropContext)]
 impl<StartTz: TimeZone + Debug, FinishTz: TimeZone + Debug, V: Clone + Serialize + Debug>
   TimespanWithValueDrop<StartTz, FinishTz, V>
 {

@@ -1,9 +1,9 @@
 use intercode_entities::{links::SignupToEvent, signups};
 use liquid::model::DateTime;
+use seawater::liquid_drop_impl;
 use seawater::{
   belongs_to_linked, belongs_to_related, model_backed_drop, DropError, ModelBackedDrop,
 };
-use seawater::{liquid_drop_impl, liquid_drop_struct};
 
 use super::{drop_context::DropContext, EventDrop, RunDrop, UserConProfileDrop};
 
@@ -12,7 +12,7 @@ model_backed_drop!(SignupDrop, signups::Model, DropContext);
 #[belongs_to_related(run, RunDrop, serialize = true, eager_load(event))]
 #[belongs_to_linked(event, EventDrop, SignupToEvent, serialize = true, eager_load(runs))]
 #[belongs_to_related(user_con_profile, UserConProfileDrop)]
-#[liquid_drop_impl(i64)]
+#[liquid_drop_impl(i64, DropContext)]
 impl SignupDrop {
   fn id(&self) -> i64 {
     self.model.id
