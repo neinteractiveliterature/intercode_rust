@@ -7,21 +7,22 @@ use intercode_graphql::{
 use intercode_liquid::{build_liquid_parser, cms_parent_partial_source::PreloadPartialsStrategy};
 use intercode_policies::AuthorizationInfo;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-use seawater::liquid_drop_impl;
+use seawater::{liquid_drop_impl, DropPrimaryKeyValue, DropRef};
 use seawater::{Context, DropError, DropStore, ModelBackedDrop};
 use std::{
   fmt::Debug,
-  sync::{Arc, PoisonError, Weak},
+  sync::{Arc, Weak},
 };
 
 use crate::drops::{ConventionDrop, DropContext, EventDrop, UserConProfileDrop};
 
+#[derive(Debug, Clone)]
 struct IntercodeGlobals {
   query_data: QueryData,
-  drop_context: DropContext,
+  context: DropContext,
 }
 
-#[liquid_drop_impl]
+#[liquid_drop_impl(i64, DropContext)]
 impl IntercodeGlobals {
   pub fn new(
     query_data: QueryData,
@@ -30,7 +31,7 @@ impl IntercodeGlobals {
   ) -> Self {
     IntercodeGlobals {
       query_data: query_data.clone(),
-      drop_context: DropContext::new(schema_data, query_data, normalized_drop_cache),
+      context: DropContext::new(schema_data, query_data, normalized_drop_cache),
     }
   }
 
@@ -38,17 +39,17 @@ impl IntercodeGlobals {
     self
       .query_data
       .convention()
-      .map(|convention| ConventionDrop::new(convention.clone(), self.drop_context.clone()))
+      .map(|convention| ConventionDrop::new(convention.clone(), self.context.clone()))
   }
 
   async fn conventions(&self) -> Result<Vec<ConventionDrop>, DropError> {
     Ok(
       conventions::Entity::find()
         .filter(conventions::Column::Hidden.eq(false))
-        .all(self.drop_context.db())
+        .all(self.context.db())
         .await?
         .iter()
-        .map(|convention| ConventionDrop::new(convention.clone(), self.drop_context.clone()))
+        .map(|convention| ConventionDrop::new(convention.clone(), self.context.clone()))
         .collect(),
     )
   }
@@ -59,9 +60,9 @@ impl IntercodeGlobals {
         return Ok(
           events::Entity::find()
             .filter(events::Column::ConventionId.eq(convention.id))
-            .one(self.drop_context.db())
+            .one(self.context.db())
             .await?
-            .map(|event| EventDrop::new(event, self.drop_context.clone())),
+            .map(|event| EventDrop::new(event, self.context.clone())),
         );
       }
     }
@@ -69,19 +70,22 @@ impl IntercodeGlobals {
     Ok(None)
   }
 
-  async fn user_con_profile(&self) -> Result<Option<DropRef<UserConProfileDrop>>, DropError> {
+  async fn user_con_profile(
+    &self,
+  ) -> Result<Option<DropRef<UserConProfileDrop, DropPrimaryKeyValue<UserConProfileDrop>>>, DropError>
+  {
     let ucp = self.query_data.user_con_profile().map(|user_con_profile| {
-      UserConProfileDrop::new(user_con_profile.clone(), self.drop_context.clone())
+      UserConProfileDrop::new(user_con_profile.clone(), self.context.clone())
     });
 
     if let Some(ucp) = ucp {
-      let ucp = self.drop_context.with_drop_store(|store| store.store(ucp));
+      let ucp = self.context.with_drop_store(|store| store.store(ucp));
       let drops = vec![ucp];
       try_join!(
-        UserConProfileDrop::preload_signups(self.drop_context.clone(), &drops),
-        UserConProfileDrop::preload_staff_positions(self.drop_context.clone(), &drops),
-        UserConProfileDrop::preload_ticket(self.drop_context.clone(), &drops),
-        UserConProfileDrop::preload_user(self.drop_context.clone(), &drops),
+        UserConProfileDrop::preload_signups(self.context.clone(), &drops),
+        UserConProfileDrop::preload_staff_positions(self.context.clone(), &drops),
+        UserConProfileDrop::preload_ticket(self.context.clone(), &drops),
+        UserConProfileDrop::preload_user(self.context.clone(), &drops),
       )?;
       Ok(Some(ucp))
     } else {

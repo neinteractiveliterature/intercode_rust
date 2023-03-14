@@ -45,7 +45,15 @@ impl<V: ValueView + Clone + Send + Sync> DropResultTrait<Vec<V>> for Vec<V> {
   }
 }
 
+impl DropResultTrait<liquid::model::DateTime> for liquid::model::DateTime {
+  fn get_inner(&self) -> Cow<liquid::model::DateTime> {
+    Cow::Borrowed(self)
+  }
+}
+
 pub trait IntoDropResult<V: ValueView + Clone = Self>: Into<DropResult<V>> {}
+
+impl<V: ValueView + Clone + Send + Sync + 'static> IntoDropResult for Vec<V> {}
 
 pub struct DropResult<T: ValueView + Debug + Clone> {
   result: Box<dyn DropResultTrait<T>>,

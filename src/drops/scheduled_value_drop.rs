@@ -1,4 +1,7 @@
-use std::fmt::Debug;
+use std::{
+  fmt::Debug,
+  sync::atomic::{AtomicI64, Ordering},
+};
 
 use chrono::{TimeZone, Utc};
 use intercode_timespan::{ScheduledValue, TimespanWithValue};
@@ -9,17 +12,33 @@ use serde::Serialize;
 use super::{utils::date_time_to_liquid_date_time, DropContext, TimespanWithValueDrop};
 
 #[derive(Clone, Debug)]
-pub struct ScheduledValueDrop<Tz: TimeZone + Debug, V: Serialize + Debug + Clone + Default> {
+pub struct ScheduledValueDrop<
+  Tz: TimeZone + Debug,
+  V: Serialize + Debug + Clone + Default + Send + Sync,
+> where
+  Tz::Offset: Send + Sync,
+{
   scheduled_value: ScheduledValue<Tz, V>,
   context: DropContext,
+  id: i64,
 }
 
-#[liquid_drop_impl(ScheduledValue<Tz, V>, DropContext)]
-impl<Tz: TimeZone + Debug, V: Serialize + Debug + Clone + Default> ScheduledValueDrop<Tz, V> {
+static NEXT_ID: AtomicI64 = AtomicI64::new(0);
+
+#[liquid_drop_impl(i64, DropContext)]
+impl<
+    Tz: TimeZone + Debug + Eq + Send + Sync,
+    V: Serialize + Debug + Clone + Default + Send + Sync,
+  > ScheduledValueDrop<Tz, V>
+where
+  Tz::Offset: Send + Sync,
+{
   pub fn new(scheduled_value: ScheduledValue<Tz, V>, context: DropContext) -> Self {
+    let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
     Self {
       scheduled_value,
       context,
+      id,
     }
   }
 

@@ -6,6 +6,7 @@ pub fn implement_value_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
   let generics = &liquid_drop_impl.generics;
   let type_name = &liquid_drop_impl.type_name;
   let self_ty = &liquid_drop_impl.self_ty;
+  let where_clause = &generics.where_clause;
 
   let serializable_keys = liquid_drop_impl
     .methods
@@ -26,7 +27,7 @@ pub fn implement_value_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
   };
 
   Box::new(quote!(
-    impl #generics liquid::ValueView for #self_ty {
+    impl #generics liquid::ValueView for #self_ty #where_clause {
       fn as_debug(&self) -> &dyn std::fmt::Debug {
         self as &dyn std::fmt::Debug
       }

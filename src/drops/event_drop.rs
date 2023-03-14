@@ -57,7 +57,7 @@ impl EventDrop {
       "team_member".to_string().into()
     };
 
-    name.expect_inner().clone()
+    name.get_inner().into_owned()
   }
 
   fn title(&self) -> &str {

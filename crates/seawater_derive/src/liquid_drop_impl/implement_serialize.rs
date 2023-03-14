@@ -8,6 +8,7 @@ pub fn implement_serialize(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToken
   let type_name = &liquid_drop_impl.type_name;
   let method_count = liquid_drop_impl.methods.len();
   let methods = liquid_drop_impl.methods.iter().collect::<Vec<_>>();
+  let where_clause = &generics.where_clause;
 
   let get_all_blocking = implement_get_all_blocking(&methods);
 
@@ -21,7 +22,7 @@ pub fn implement_serialize(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToken
   });
 
   Box::new(quote!(
-    impl #generics serde::ser::Serialize for #self_ty {
+    impl #generics serde::ser::Serialize for #self_ty #where_clause {
       fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
       where
         S: serde::ser::Serializer,

@@ -192,9 +192,9 @@ impl DropGetterMethod {
       )),
       DropGetterMethodImplItem::Async(_) => Box::new(quote!(
         #caching_getter_sig {
-          use ::seawater::{Context, LiquidDrop};
+          use ::seawater::{Context, DropStore, LiquidDrop};
           self.get_context().with_drop_store(|store| {
-            let cache = store.get_drop_cache::<Self>(self.id());
+            let cache = DropStore::get_drop_cache::<Self>(store, self.id());
             cache.
               #cache_field_ident.
               get_or_init(
@@ -212,9 +212,9 @@ impl DropGetterMethod {
       )),
       _ => Box::new(quote!(
         #caching_getter_sig {
-          use ::seawater::{Context, LiquidDrop};
+          use ::seawater::{Context, DropStore, LiquidDrop};
           self.get_context().with_drop_store(|store| {
-            let cache = store.get_drop_cache::<Self>(self.id());
+            let cache = DropStore::get_drop_cache::<Self>(store, self.id());
             cache.
               #cache_field_ident.
               get_or_init(|| {

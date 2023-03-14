@@ -48,10 +48,7 @@ impl<ID: Eq + Hash + Copy + Display + Debug> DropStore<ID> {
   pub fn get_drop_cache<D: LiquidDrop + 'static>(
     &self,
     drop_id: ID,
-  ) -> MappedRwLockReadGuard<'_, D::Cache>
-  where
-    ID: Debug,
-  {
+  ) -> MappedRwLockReadGuard<'_, D::Cache> {
     let lock = self.storage.read();
     RwLockReadGuard::try_map(lock, |lock| {
       lock.get::<DropAndCache<D>>(drop_id).map(|dc| &dc.cache)

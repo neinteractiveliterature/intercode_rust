@@ -4,8 +4,8 @@ use intercode_entities::events;
 use intercode_liquid::liquid_datetime_to_chrono_datetime;
 use liquid::{ObjectView, ValueView};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Select};
-use seawater::DropResult;
 use seawater::{Context, DropError, ModelBackedDrop};
+use seawater::{DropResult, DropStore};
 
 use super::{drop_context::DropContext, EventDrop};
 
@@ -68,7 +68,9 @@ impl EventsCreatedSince {
       .map(|event| EventDrop::new(event, self.context.clone()))
       .collect::<Vec<_>>();
 
-    let drops = self.context.with_drop_store(|store| store.store_all(value));
+    let drops = self
+      .context
+      .with_drop_store(|store| DropStore::store_all(store, value));
 
     try_join![
       EventDrop::preload_runs(self.context.clone(), &drops),

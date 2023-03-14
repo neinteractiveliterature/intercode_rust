@@ -38,10 +38,10 @@ impl RunDrop {
       let event_length = self
         .event()
         .await
-        .expect_inner()
+        .get_inner()
         .length_seconds()
         .await
-        .expect_inner();
+        .get_inner();
       *starts_at += Duration::seconds((*event_length).into());
       Ok(Some(starts_at))
     } else {

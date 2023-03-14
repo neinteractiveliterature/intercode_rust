@@ -1,8 +1,5 @@
 use quote::{quote, ToTokens};
-use syn::{
-  parse::{Parse, Parser},
-  FieldValue, ImplItem, Path,
-};
+use syn::Path;
 
 use crate::helpers::build_generic_args;
 
@@ -13,14 +10,14 @@ pub fn implement_drop(
   id_type: &Path,
   context_type: &Path,
 ) -> Box<dyn ToTokens> {
-  let mut constructors = liquid_drop_impl.constructors.clone();
+  let constructors = &liquid_drop_impl.constructors;
   let generics = &liquid_drop_impl.generics;
   let methods = &liquid_drop_impl.methods;
   let self_ty = &liquid_drop_impl.self_ty;
   let other_items = &liquid_drop_impl.other_items;
   let cache_struct_ident = &liquid_drop_impl.cache_struct_ident;
+  let where_clause = &generics.where_clause;
 
-  add_drop_cache_to_constructors(&mut constructors);
   let generic_args = build_generic_args(generics.params.iter());
 
   let method_getters = methods.iter().map(|method| {
@@ -45,7 +42,7 @@ pub fn implement_drop(
     .collect::<Vec<_>>();
 
   Box::new(quote!(
-    impl #generics #self_ty {
+    impl #generics #self_ty #where_clause {
       #(#constructors)*
       #(#other_items)*
       #(#method_getters)*
@@ -58,7 +55,7 @@ pub fn implement_drop(
       }
     }
 
-    impl #generics ::seawater::LiquidDrop for #self_ty {
+    impl #generics ::seawater::LiquidDrop for #self_ty #where_clause {
       type Cache = #cache_struct_ident #generic_args;
       type ID = #id_type;
       type Context = #context_type;
@@ -70,24 +67,4 @@ pub fn implement_drop(
       }
     }
   ))
-}
-
-fn add_drop_cache_to_constructors(constructors: &mut Vec<ImplItem>) {
-  for constructor in constructors {
-    match constructor {
-      ImplItem::Method(method) => {
-        let last_stmt = method.block.stmts.iter_mut().last().unwrap();
-        if let syn::Stmt::Expr(syn::Expr::Struct(struct_expr)) = last_stmt {
-          let cache_field = FieldValue::parse
-            .parse2(quote!(drop_cache: Default::default()))
-            .unwrap();
-
-          struct_expr.fields.push(cache_field)
-        } else {
-          unimplemented!()
-        }
-      }
-      _ => unimplemented!(),
-    }
-  }
 }

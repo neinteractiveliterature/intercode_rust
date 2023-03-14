@@ -50,6 +50,48 @@ pub struct EntityRelationPreloader<
   _phantom: PhantomData<(From, To, FromDrop, ToDrop)>,
 }
 
+impl<
+    From: EntityTrait<PrimaryKey = PK> + Related<To>,
+    To: EntityTrait,
+    PK: PrimaryKeyTrait + PrimaryKeyToColumn<Column = From::Column>,
+    FromDrop: LiquidDrop + Send + Sync + Clone + 'static,
+    ToDrop: LiquidDrop + Send + Sync + Clone + 'static,
+    Value: ValueView + Clone + IntoDropResult,
+    Context: crate::Context,
+  > EntityRelationPreloader<From, To, PK, FromDrop, ToDrop, Value, Context>
+where
+  PK::Column: Send + Sync,
+  PK::ValueType: Eq + std::hash::Hash + Clone + Send + Sync,
+{
+  pub fn new(
+    pk_column: PK::Column,
+    context: Context,
+    loader_result_to_drops: Pin<
+      Box<
+        dyn LoaderResultToDropsFn<
+          EntityRelationLoaderResult<From, To>,
+          FromDrop,
+          ToDrop,
+          Context::StoreID,
+        >,
+      >,
+    >,
+    drops_to_value: Pin<Box<dyn DropsToValueFn<ToDrop, Value, Context::StoreID>>>,
+    get_once_cell: Pin<Box<dyn GetOnceCellFn<FromDrop, Value>>>,
+    get_inverse_once_cell: Option<Pin<Box<dyn GetInverseOnceCellFn<FromDrop, ToDrop>>>>,
+  ) -> Self {
+    Self {
+      pk_column,
+      context,
+      loader_result_to_drops,
+      drops_to_value,
+      get_once_cell,
+      get_inverse_once_cell,
+      _phantom: Default::default(),
+    }
+  }
+}
+
 #[async_trait]
 impl<
     From: EntityTrait<PrimaryKey = PK> + Related<To>,

@@ -53,10 +53,10 @@ impl UserConProfileDrop {
       self
         .user()
         .await
-        .expect_inner()
+        .get_inner()
         .privileges()
         .await
-        .expect_inner()
+        .get_inner()
         .iter()
         .map(|priv_name| inflector.humanize(priv_name))
         .collect::<Vec<_>>(),

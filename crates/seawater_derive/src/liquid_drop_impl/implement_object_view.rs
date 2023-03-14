@@ -7,6 +7,7 @@ pub fn implement_object_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTok
   let generics = &liquid_drop_impl.generics;
   let self_ty = &liquid_drop_impl.self_ty;
   let method_count = methods.len();
+  let where_clause = &generics.where_clause;
 
   let getter_values = methods.iter().map(|method| {
     let ident = method.caching_getter_ident();
@@ -39,7 +40,7 @@ pub fn implement_object_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTok
   });
 
   Box::new(quote!(
-    impl #generics liquid::ObjectView for #self_ty {
+    impl #generics liquid::ObjectView for #self_ty #where_clause {
       fn as_value(&self) -> &dyn liquid::ValueView {
         self as &dyn liquid::ValueView
       }

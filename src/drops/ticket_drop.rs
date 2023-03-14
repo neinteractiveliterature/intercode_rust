@@ -14,7 +14,7 @@ impl TicketDrop {
   }
 
   pub async fn allows_event_signups(&self) -> Result<bool, DropError> {
-    let ticket_type = self.ticket_type().await.expect_inner();
-    Ok(*ticket_type.allows_event_signups().await.expect_inner())
+    let ticket_type = self.ticket_type().await.get_inner();
+    Ok(*ticket_type.allows_event_signups().await.get_inner())
   }
 }

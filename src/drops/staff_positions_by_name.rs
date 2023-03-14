@@ -6,8 +6,8 @@ use liquid::{ObjectView, ValueView};
 use once_cell::{race::OnceBox, sync::Lazy};
 use regex::Regex;
 use sea_orm::ModelTrait;
-use seawater::DropResult;
 use seawater::{Context, DropError, ModelBackedDrop};
+use seawater::{DropResult, DropResultTrait};
 
 static NON_WHITESPACE_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("\\W").unwrap());
 
@@ -17,11 +17,26 @@ fn normalize_staff_position_name(name: &str) -> String {
     .to_string()
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct StaffPositionsByName {
   context: DropContext,
   convention: conventions::Model,
   staff_positions: OnceBox<HashMap<String, StaffPositionDrop>>,
+}
+
+impl Clone for StaffPositionsByName {
+  fn clone(&self) -> Self {
+    let staff_positions = OnceBox::new();
+    if let Some(my_staff_positions) = self.staff_positions.get() {
+      staff_positions.set(Box::new(my_staff_positions.clone()));
+    }
+
+    Self {
+      context: self.context.clone(),
+      convention: self.convention.clone(),
+      staff_positions,
+    }
+  }
 }
 
 impl StaffPositionsByName {
@@ -110,6 +125,8 @@ impl ObjectView for StaffPositionsByName {
       .blocking_get_all()
       .map(|staff_positions| staff_positions.len())
       .unwrap_or(0)
+      .try_into()
+      .unwrap()
   }
 
   fn keys<'k>(&'k self) -> Box<dyn Iterator<Item = liquid::model::KStringCow<'k>> + 'k> {
@@ -154,6 +171,12 @@ impl ObjectView for StaffPositionsByName {
         staff_positions.get(normalized_index.as_str())
       })
       .map(|drop| drop as &dyn ValueView)
+  }
+}
+
+impl DropResultTrait<StaffPositionsByName> for StaffPositionsByName {
+  fn get_inner(&self) -> std::borrow::Cow<StaffPositionsByName> {
+    std::borrow::Cow::Borrowed(self)
   }
 }
 
