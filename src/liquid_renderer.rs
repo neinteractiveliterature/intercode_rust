@@ -7,7 +7,7 @@ use intercode_graphql::{
 use intercode_liquid::{build_liquid_parser, cms_parent_partial_source::PreloadPartialsStrategy};
 use intercode_policies::AuthorizationInfo;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-use seawater::{liquid_drop_impl, DropPrimaryKeyValue, DropRef};
+use seawater::{liquid_drop_impl, DropPrimaryKeyValue, DropRef, DropResult, ExtendedDropResult};
 use seawater::{Context, DropError, DropStore, ModelBackedDrop};
 use std::{
   fmt::Debug,
@@ -80,7 +80,7 @@ impl IntercodeGlobals {
 
     if let Some(ucp) = ucp {
       let ucp = self.context.with_drop_store(|store| store.store(ucp));
-      let drops = vec![ucp];
+      let drops = vec![ucp.clone()];
       try_join!(
         UserConProfileDrop::preload_signups(self.context.clone(), &drops),
         UserConProfileDrop::preload_staff_positions(self.context.clone(), &drops),
@@ -164,12 +164,12 @@ impl LiquidRenderer for IntercodeLiquidRenderer {
       partial_compiler,
     )?;
 
-    let builtins = IntercodeGlobals::new(
+    let builtins = DropResult::new(IntercodeGlobals::new(
       query_data,
       schema_data,
       Arc::downgrade(&self.normalized_drop_cache),
-    );
-    let globals_with_builtins = builtins.extend(globals);
+    ));
+    let globals_with_builtins = ExtendedDropResult::new(&builtins, globals);
 
     let template = parser.parse(content)?;
     let result =

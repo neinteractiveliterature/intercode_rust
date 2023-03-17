@@ -259,6 +259,12 @@ impl From<&str> for DropResult<liquid::model::Value> {
   }
 }
 
+impl From<&str> for DropResult<String> {
+  fn from(string: &str) -> Self {
+    DropResult::new(string.to_owned())
+  }
+}
+
 impl From<&serde_json::Value> for DropResult<liquid::model::Value> {
   fn from(value: &serde_json::Value) -> Self {
     DropResult::new(liquid::model::to_value(value).unwrap())

@@ -4,7 +4,7 @@ use intercode_entities::events;
 use intercode_liquid::liquid_datetime_to_chrono_datetime;
 use liquid::{ObjectView, ValueView};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Select};
-use seawater::{Context, DropError, ModelBackedDrop};
+use seawater::{Context, DropError, DropResultTrait, ModelBackedDrop};
 use seawater::{DropResult, DropStore};
 
 use super::{drop_context::DropContext, EventDrop};
@@ -78,8 +78,13 @@ impl EventsCreatedSince {
       EventDrop::preload_event_category(self.context.clone(), &drops)
     ]?;
 
+    let drop_result: Vec<_> = drops
+      .into_iter()
+      .map(|drop| DropResult::new(drop))
+      .collect();
+
     let bump = self.herd.get();
-    Ok(bump.alloc(drops))
+    Ok(bump.alloc(drop_result))
   }
 }
 
@@ -159,6 +164,12 @@ impl ObjectView for EventsCreatedSince {
     .unwrap();
 
     Some(result)
+  }
+}
+
+impl DropResultTrait<EventsCreatedSince> for EventsCreatedSince {
+  fn get_inner(&self) -> std::borrow::Cow<EventsCreatedSince> {
+    std::borrow::Cow::Borrowed(self)
   }
 }
 

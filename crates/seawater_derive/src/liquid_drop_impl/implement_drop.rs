@@ -46,13 +46,6 @@ pub fn implement_drop(
       #(#constructors)*
       #(#other_items)*
       #(#method_getters)*
-
-      pub fn extend(&self, extensions: liquid::model::Object) -> ::seawater::ExtendedDropResult<#self_ty> {
-        ::seawater::ExtendedDropResult {
-          drop_result: self.into(),
-          extensions,
-        }
-      }
     }
 
     impl #generics ::seawater::LiquidDrop for #self_ty #where_clause {

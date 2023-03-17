@@ -31,7 +31,7 @@ pub fn implement_drop_cache(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
     )
   });
 
-  let cache_field_methods = methods.iter().filter(|method| !method.is_id).map(|method| {
+  let cache_field_methods = methods.iter().map(|method| {
     let ident = method.cache_field_ident();
     let get_or_init_ident = Ident::new(format!("get_or_init_{}", ident).as_str(), ident.span());
     let setter_ident = Ident::new(format!("set_{}", ident).as_str(), ident.span());

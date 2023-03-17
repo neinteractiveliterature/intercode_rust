@@ -11,7 +11,7 @@ pub fn implement_object_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTok
 
   let getter_values = methods.iter().map(|method| {
     let ident = method.caching_getter_ident();
-    quote!(#ident)
+    quote!(#ident.as_value())
   });
 
   let method_name_strings: Vec<syn::LitStr> = methods
@@ -26,7 +26,7 @@ pub fn implement_object_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTok
     let name_str = method.name_str();
 
     quote!(
-      (#name_str, #ident)
+      (#name_str, #ident.as_value())
     )
   });
 
@@ -66,7 +66,7 @@ pub fn implement_object_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTok
           #(#getter_values),*
         ];
 
-        Box::new(values.into_iter().map(|drop_result| drop_result as &dyn ::liquid::ValueView))
+        Box::new(values.into_iter())
       }
 
       fn iter<'k>(
@@ -81,7 +81,7 @@ pub fn implement_object_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTok
         Box::new(
           pairs
             .into_iter()
-            .map(|(key, value)| (key.into(), value as &dyn ::liquid::ValueView)),
+            .map(|(key, value)| (key.into(), value)),
         )
       }
 

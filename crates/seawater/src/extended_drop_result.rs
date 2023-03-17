@@ -10,6 +10,15 @@ pub struct ExtendedDropResult<'a, T: ValueView + Clone> {
   pub extensions: liquid::model::Object,
 }
 
+impl<'a, T: ValueView + Clone> ExtendedDropResult<'a, T> {
+  pub fn new(drop_result: &'a DropResult<T>, extensions: liquid::model::Object) -> Self {
+    ExtendedDropResult {
+      drop_result,
+      extensions,
+    }
+  }
+}
+
 impl<'a, T: ValueView + Clone> Debug for ExtendedDropResult<'a, T> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("ExtendedDropResult")

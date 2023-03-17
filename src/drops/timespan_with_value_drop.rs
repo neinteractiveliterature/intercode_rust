@@ -100,6 +100,9 @@ impl<
     V: Clone + Serialize + Debug + Send + Sync,
   > From<TimespanWithValueDrop<StartTz, FinishTz, Option<V>>>
   for Option<TimespanWithValueDrop<StartTz, FinishTz, V>>
+where
+  StartTz::Offset: Send + Sync,
+  FinishTz::Offset: Send + Sync,
 {
   fn from(drop: TimespanWithValueDrop<StartTz, FinishTz, Option<V>>) -> Self {
     match drop.timespan_with_value.value {
