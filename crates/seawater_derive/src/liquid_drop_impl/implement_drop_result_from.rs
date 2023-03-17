@@ -15,5 +15,11 @@ pub fn implement_drop_result_from(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn 
     }
 
     impl #generics ::seawater::IntoDropResult for #self_ty #where_clause {}
+
+    impl #generics ::seawater::DropResultTrait<#self_ty> for #self_ty #where_clause {
+      fn get_inner(&self) -> ::std::borrow::Cow<#self_ty> {
+        ::std::borrow::Cow::Borrowed(self)
+      }
+    }
   ))
 }

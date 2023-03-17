@@ -13,8 +13,8 @@ use super::{utils::date_time_to_liquid_date_time, DropContext, TimespanWithValue
 
 #[derive(Clone, Debug)]
 pub struct ScheduledValueDrop<
-  Tz: TimeZone + Debug,
-  V: Serialize + Debug + Clone + Default + Send + Sync,
+  Tz: TimeZone + Debug + Eq + Send + Sync + 'static,
+  V: Serialize + Debug + Clone + Default + Send + Sync + 'static,
 > where
   Tz::Offset: Send + Sync,
 {
@@ -27,8 +27,8 @@ static NEXT_ID: AtomicI64 = AtomicI64::new(0);
 
 #[liquid_drop_impl(i64, DropContext)]
 impl<
-    Tz: TimeZone + Debug + Eq + Send + Sync,
-    V: Serialize + Debug + Clone + Default + Send + Sync,
+    Tz: TimeZone + Debug + Eq + Send + Sync + 'static,
+    V: Serialize + Debug + Clone + Default + Send + Sync + 'static,
   > ScheduledValueDrop<Tz, V>
 where
   Tz::Offset: Send + Sync,
@@ -40,6 +40,10 @@ where
       context,
       id,
     }
+  }
+
+  fn id(&self) -> i64 {
+    self.id
   }
 
   pub fn now(&self) -> DateTime {

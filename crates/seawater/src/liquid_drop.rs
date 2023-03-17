@@ -1,4 +1,4 @@
-use crate::{Context, DropResult};
+use crate::{Context, DropResult, DropStore};
 use liquid::{ObjectView, ValueView};
 use std::{
   fmt::{Debug, Display},
@@ -11,7 +11,18 @@ pub trait LiquidDrop: ValueView + ObjectView + Clone + Into<DropResult<Self>> {
   type Context: Context;
 
   fn id(&self) -> Self::ID;
-  fn get_context(&self) -> Self::Context;
+  fn get_context(&self) -> &Self::Context;
+
+  fn with_drop_store<
+    'store,
+    R: 'store,
+    F: FnOnce(&'store DropStore<<Self::Context as Context>::StoreID>) -> R,
+  >(
+    &'store self,
+    f: F,
+  ) -> R {
+    self.get_context().with_drop_store(f)
+  }
 }
 
 pub trait LiquidDropCache: Send + Sync {

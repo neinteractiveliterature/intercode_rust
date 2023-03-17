@@ -24,6 +24,7 @@ pub use extended_drop_result::*;
 pub use liquid_drop::*;
 pub use model_backed_drop::*;
 use once_cell::sync::Lazy;
+pub use optional_value_view::*;
 use regex::Regex;
 pub use seawater_derive::*;
 

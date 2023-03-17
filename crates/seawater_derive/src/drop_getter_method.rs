@@ -176,50 +176,56 @@ impl DropGetterMethod {
 
   pub fn caching_getter(&self) -> Box<dyn ToTokens> {
     let cache_field_ident = self.cache_field_ident();
+    let get_or_init_ident = Ident::new(
+      format!("get_or_init_{}", cache_field_ident).as_str(),
+      cache_field_ident.span(),
+    );
     let caching_getter_ident = self.caching_getter_ident();
     let uncached_getter_ident = self.uncached_getter_ident();
     let return_type = self.cache_type();
 
-    let caching_getter_sig =
-      quote!(pub async fn #caching_getter_ident(&self) -> &::seawater::DropResult<#return_type>);
-
     match self.impl_item {
       DropGetterMethodImplItem::Uncached(_) => Box::new(quote!(
-        #caching_getter_sig {
+        pub async fn #caching_getter_ident(&self) -> &::seawater::DropResult<#return_type> {
           use ::seawater::LiquidDrop;
           self.#uncached_getter_ident().await.into()
         }
       )),
       DropGetterMethodImplItem::Async(_) => Box::new(quote!(
-        #caching_getter_sig {
+        pub async fn #caching_getter_ident(&self) -> ::parking_lot::MappedRwLockReadGuard<::seawater::DropResult<#return_type>> {
           use ::seawater::{Context, DropStore, LiquidDrop};
-          self.get_context().with_drop_store(|store| {
-            let cache = DropStore::get_drop_cache::<Self>(store, self.id());
-            cache.
-              #cache_field_ident.
-              get_or_init(
-                || Box::<::seawater::DropResult<#return_type>>::new(
-                  ::tokio::task::block_in_place(|| {
-                    ::tokio::runtime::Handle::current()
-                      .block_on(async move {
-                        self.#uncached_getter_ident().await.into()
+          self.with_drop_store(|store| {
+            ::parking_lot::MappedRwLockReadGuard::map(
+              DropStore::get_drop_cache::<Self>(store, self.id()),
+              |cache| {
+                cache.#get_or_init_ident(
+                  || Box::<::seawater::DropResult<#return_type>>::new(
+                    ::tokio::task::block_in_place(|| {
+                      ::tokio::runtime::Handle::current()
+                        .block_on(async move {
+                          self.#uncached_getter_ident().await.into()
+                        })
                       })
-                    })
+                    )
                   )
-                )
+              }
+            )
           })
         }
       )),
       _ => Box::new(quote!(
-        #caching_getter_sig {
+        pub async fn #caching_getter_ident(&self) -> ::parking_lot::MappedRwLockReadGuard<::seawater::DropResult<#return_type>> {
           use ::seawater::{Context, DropStore, LiquidDrop};
-          self.get_context().with_drop_store(|store| {
-            let cache = DropStore::get_drop_cache::<Self>(store, self.id());
-            cache.
-              #cache_field_ident.
-              get_or_init(|| {
-                Box::new(self.#uncached_getter_ident().into())
-              })
+          self.with_drop_store(|store| {
+            ::parking_lot::MappedRwLockReadGuard::map(
+              DropStore::get_drop_cache::<Self>(store, self.id()),
+              |cache| {
+                cache.
+                #get_or_init_ident(|| {
+                  Box::new(self.#uncached_getter_ident().into())
+                })
+              }
+            )
           })
         }
       )),

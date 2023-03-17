@@ -12,6 +12,7 @@ pub fn implement_drop_cache(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
   );
   let self_type_arguments = &liquid_drop_impl.self_type_arguments;
   let generics = &liquid_drop_impl.generics;
+  let where_clause = &generics.where_clause;
 
   let cache_fields = methods.iter().map(|method| {
     let ident = method.cache_field_ident();
@@ -30,8 +31,9 @@ pub fn implement_drop_cache(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
     )
   });
 
-  let cache_field_setters = methods.iter().filter(|method| !method.is_id).map(|method| {
+  let cache_field_methods = methods.iter().filter(|method| !method.is_id).map(|method| {
     let ident = method.cache_field_ident();
+    let get_or_init_ident = Ident::new(format!("get_or_init_{}", ident).as_str(), ident.span());
     let setter_ident = Ident::new(format!("set_{}", ident).as_str(), ident.span());
     let cache_type = method.cache_type();
 
@@ -41,6 +43,14 @@ pub fn implement_drop_cache(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
         value: ::seawater::DropResult<#cache_type>,
       ) -> Result<(), Box<::seawater::DropResult<#cache_type>>> {
         self.#ident.set(Box::new(value))
+      }
+
+      pub fn #get_or_init_ident<F>(
+        &self,
+        f: F
+      ) -> &::seawater::DropResult<#cache_type>
+      where F: FnOnce() -> Box<::seawater::DropResult<#cache_type>> {
+        self.#ident.get_or_init(f)
       }
     )
   });
@@ -68,27 +78,33 @@ pub fn implement_drop_cache(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToke
     .map(|_| quote!(_phantom: Default::default(),));
 
   Box::new(quote!(
-    pub struct #cache_struct_ident #generics {
+    pub struct #cache_struct_ident #generics #where_clause {
       #phantom_data
       #(#cache_fields,)*
     }
 
-    impl #generics #cache_struct_ident #self_type_arguments {
-      #(#cache_field_setters)*
+    impl #generics #cache_struct_ident #self_type_arguments #where_clause {
+      #(#cache_field_methods)*
     }
 
-    impl #generics ::std::fmt::Debug for #cache_struct_ident #self_type_arguments {
+    impl #generics ::std::fmt::Debug for #cache_struct_ident #self_type_arguments #where_clause {
       fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         f.debug_struct(#cache_struct_ident_litstr).#(#debug_fields.)*finish()
       }
     }
 
-    impl #generics Default for #cache_struct_ident #self_type_arguments {
+    impl #generics Default for #cache_struct_ident #self_type_arguments #where_clause {
       fn default() -> Self {
         Self {
           #phantom_default
           #(#default_fields,)*
         }
+      }
+    }
+
+    impl #generics ::seawater::LiquidDropCache for #cache_struct_ident #self_type_arguments #where_clause {
+      fn new() -> Self {
+        Self::default()
       }
     }
   ))

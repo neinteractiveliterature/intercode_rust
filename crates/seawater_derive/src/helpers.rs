@@ -143,12 +143,16 @@ pub fn get_drop_result_generic_arg(ty: Box<Type>) -> Box<Type> {
   if let Type::Path(path_type) = *deref_type.clone() {
     let normalized_path = path_without_generics(&path_type.path);
     if normalized_path == parse_quote!(Result)
-      || normalized_path == parse_quote!(Option)
       || normalized_path == parse_quote!(DropRef)
       || normalized_path == parse_quote!(seawater::DropRef)
     {
       if let Some(value) = extract_first_generic_arg(&path_type) {
         return get_drop_result_generic_arg(value);
+      }
+    } else if normalized_path == parse_quote!(Option) {
+      if let Some(value) = extract_first_generic_arg(&path_type) {
+        let non_optional_type = get_drop_result_generic_arg(value);
+        return parse_quote!(::seawater::OptionalValueView<#non_optional_type>);
       }
     }
   }

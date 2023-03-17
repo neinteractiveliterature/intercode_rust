@@ -1,4 +1,8 @@
-use std::fmt::Debug;
+use std::{
+  fmt::Debug,
+  hash::Hash,
+  sync::atomic::{AtomicI64, Ordering},
+};
 
 use chrono::TimeZone;
 use intercode_timespan::TimespanWithValue;
@@ -16,20 +20,35 @@ pub struct TimespanWithValueDrop<
 > {
   pub timespan_with_value: TimespanWithValue<StartTz, FinishTz, V>,
   context: DropContext,
+  id: i64,
 }
 
-#[liquid_drop_impl(TimespanWithValue<StartTz, FinishTz, V>, DropContext)]
-impl<StartTz: TimeZone + Debug, FinishTz: TimeZone + Debug, V: Clone + Serialize + Debug>
-  TimespanWithValueDrop<StartTz, FinishTz, V>
+static NEXT_ID: AtomicI64 = AtomicI64::new(0);
+
+#[liquid_drop_impl(i64, DropContext)]
+impl<
+    StartTz: TimeZone + Debug + Send + Sync + 'static,
+    FinishTz: TimeZone + Debug + Send + Sync + 'static,
+    V: Clone + Serialize + Debug + Send + Sync + 'static,
+  > TimespanWithValueDrop<StartTz, FinishTz, V>
+where
+  StartTz::Offset: Send + Sync,
+  FinishTz::Offset: Send + Sync,
 {
   pub fn new(
     timespan_with_value: TimespanWithValue<StartTz, FinishTz, V>,
     context: DropContext,
   ) -> Self {
+    let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
     TimespanWithValueDrop {
+      id,
       timespan_with_value,
       context,
     }
+  }
+
+  fn id(&self) -> i64 {
+    self.id
   }
 
   pub fn start(&self) -> Option<DateTime> {
@@ -75,8 +94,11 @@ impl<StartTz: TimeZone + Debug, FinishTz: TimeZone + Debug, V: Clone + Serialize
   }
 }
 
-impl<StartTz: TimeZone + Debug, FinishTz: TimeZone + Debug, V: Clone + Serialize + Debug>
-  From<TimespanWithValueDrop<StartTz, FinishTz, Option<V>>>
+impl<
+    StartTz: TimeZone + Debug + Send + Sync,
+    FinishTz: TimeZone + Debug + Send + Sync,
+    V: Clone + Serialize + Debug + Send + Sync,
+  > From<TimespanWithValueDrop<StartTz, FinishTz, Option<V>>>
   for Option<TimespanWithValueDrop<StartTz, FinishTz, V>>
 {
   fn from(drop: TimespanWithValueDrop<StartTz, FinishTz, Option<V>>) -> Self {

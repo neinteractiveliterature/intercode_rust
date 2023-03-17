@@ -118,8 +118,8 @@ where
     (self.loader_result_to_drops)(result, drop)
   }
 
-  fn with_drop_store<'store, R, F: FnOnce(&'store DropStore<Context::StoreID>) -> R>(
-    &self,
+  fn with_drop_store<'store, R: 'store, F: FnOnce(&'store DropStore<Context::StoreID>) -> R>(
+    &'store self,
     f: F,
   ) -> R {
     self.context.with_drop_store(f)
@@ -127,9 +127,10 @@ where
 
   fn drops_to_value(
     &self,
+    store: &DropStore<Context::StoreID>,
     drops: Vec<DropRef<ToDrop, Context::StoreID>>,
   ) -> Result<DropResult<Value>, DropError> {
-    (self.drops_to_value)(drops)
+    (self.drops_to_value)(store, drops)
   }
 
   fn get_once_cell<'a>(

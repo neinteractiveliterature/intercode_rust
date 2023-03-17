@@ -237,16 +237,20 @@ trait AssociationMacro {
     let to_drop = self.get_to();
 
     match self.get_target_type() {
-      TargetType::OneOptional => Box::new(quote!(|drops: Vec<::seawater::DropResult<#to_drop>>| {
+      TargetType::OneOptional => Box::new(quote!(
+        |store: &::seawater::DropStore<<<Self as ::seawater::LiquidDrop>::Context as ::seawater::Context>::StoreID>,
+         drops: Vec<::seawater::DropResult<#to_drop>>| {
         if drops.len() == 1 {
-          Ok(drops[0].into())
+          Ok(store.store(drops[0].into()))
         } else {
           Ok(None::<::seawater::DropResult<#to_drop>>.into())
         }
       })),
-      TargetType::OneRequired => Box::new(quote!(|drops: Vec<::seawater::DropResult<#to_drop>>| {
+      TargetType::OneRequired => Box::new(quote!(
+        |store: &::seawater::DropStore<<<Self as ::seawater::LiquidDrop>::Context as ::seawater::Context>::StoreID>,
+         drops: Vec<::seawater::DropResult<#to_drop>>| {
         if drops.len() == 1 {
-          Ok(drops[0].into())
+          Ok(store.store(drops[0].into()))
         } else {
           Err(::seawater::DropError::ExpectedEntityNotFound(format!(
             "Expected one {}, but there are {}",
@@ -255,11 +259,12 @@ trait AssociationMacro {
           )))
         }
       })),
-      TargetType::Many => Box::new(quote!(|drops: Vec<::seawater::DropResult<#to_drop>>| {
-        self.get_context().with_drop_store(|store| {
+      TargetType::Many => Box::new(quote!(
+        |store: &::seawater::DropStore<<<Self as ::seawater::LiquidDrop>::Context as ::seawater::Context>::StoreID>,
+         drops: Vec<::seawater::DropResult<#to_drop>>| {
           Ok(store.store_many(drops.into_iter()))
-        })
-      })),
+        }
+      )),
     }
   }
 }
@@ -317,11 +322,14 @@ impl AssociationMacro for RelatedAssociationMacro {
     let drops_to_value = self.drops_to_value();
     let once_cell_getter_ident = self.once_cell_getter_ident();
 
-    let inverse_once_cell_getter = self.inverse_once_cell_getter_ident().map(|ident| {
-      quote!(
-        Self::#ident
-      )
-    });
+    let inverse_once_cell_getter = self
+      .inverse_once_cell_getter_ident()
+      .map(|ident| {
+        quote!(
+          Some(Self::#ident)
+        )
+      })
+      .unwrap_or(quote!(None));
 
     parse_quote!(
       pub fn #preloader_ident(

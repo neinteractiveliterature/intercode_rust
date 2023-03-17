@@ -35,7 +35,7 @@ pub fn implement_object_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTok
     let name_str = method.name_str();
 
     quote!(
-      #name_str => Some(self.#ident().await as &dyn liquid::ValueView)
+      #name_str => Some(self.#ident().await.as_value())
     )
   });
 

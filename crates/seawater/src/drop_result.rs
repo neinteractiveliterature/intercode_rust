@@ -25,11 +25,25 @@ where
   }
 }
 
-impl DropResultTrait<liquid::model::Value> for liquid::model::Value {
-  fn get_inner(&self) -> Cow<liquid::model::Value> {
-    Cow::Borrowed(self)
-  }
+macro_rules! drop_result_trait_borrower {
+  ($t: ty) => {
+    impl DropResultTrait<$t> for $t {
+      fn get_inner(&self) -> Cow<$t> {
+        Cow::Borrowed(self)
+      }
+    }
+  };
 }
+
+drop_result_trait_borrower!(i32);
+drop_result_trait_borrower!(f32);
+drop_result_trait_borrower!(u32);
+drop_result_trait_borrower!(i64);
+drop_result_trait_borrower!(f64);
+drop_result_trait_borrower!(bool);
+drop_result_trait_borrower!(String);
+drop_result_trait_borrower!(liquid::model::Value);
+drop_result_trait_borrower!(liquid::model::DateTime);
 
 impl<V: ValueView + Clone + Send + Sync> DropResultTrait<OptionalValueView<V>>
   for OptionalValueView<V>
@@ -41,12 +55,6 @@ impl<V: ValueView + Clone + Send + Sync> DropResultTrait<OptionalValueView<V>>
 
 impl<V: ValueView + Clone + Send + Sync> DropResultTrait<Vec<V>> for Vec<V> {
   fn get_inner(&self) -> Cow<Vec<V>> {
-    Cow::Borrowed(self)
-  }
-}
-
-impl DropResultTrait<liquid::model::DateTime> for liquid::model::DateTime {
-  fn get_inner(&self) -> Cow<liquid::model::DateTime> {
     Cow::Borrowed(self)
   }
 }
@@ -207,6 +215,16 @@ impl<T: ValueView + Clone> ObjectView for DropResult<T> {
   }
 }
 
+macro_rules! drop_result_self_converter {
+  ($t: ty) => {
+    impl From<$t> for DropResult<$t> {
+      fn from(value: $t) -> Self {
+        DropResult::new(value)
+      }
+    }
+  };
+}
+
 macro_rules! drop_result_value_converter {
   ($t: ty) => {
     impl From<$t> for DropResult<::liquid::model::Value> {
@@ -225,6 +243,15 @@ drop_result_value_converter!(f64);
 drop_result_value_converter!(bool);
 drop_result_value_converter!(String);
 drop_result_value_converter!(liquid::model::DateTime);
+
+drop_result_self_converter!(i32);
+drop_result_self_converter!(f32);
+drop_result_self_converter!(u32);
+drop_result_self_converter!(i64);
+drop_result_self_converter!(f64);
+drop_result_self_converter!(bool);
+drop_result_self_converter!(String);
+drop_result_self_converter!(liquid::model::DateTime);
 
 impl From<&str> for DropResult<liquid::model::Value> {
   fn from(string: &str) -> Self {

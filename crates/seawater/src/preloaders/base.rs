@@ -58,7 +58,9 @@ pub trait DropsToValueFn<
   Value: ValueView + Clone,
   StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug,
 > where
-  Self: Fn(Vec<DropRef<Drop, StoreID>>) -> Result<DropResult<Value>, DropError> + Send + Sync,
+  Self: Fn(&DropStore<StoreID>, Vec<DropRef<Drop, StoreID>>) -> Result<DropResult<Value>, DropError>
+    + Send
+    + Sync,
 {
 }
 
@@ -69,7 +71,9 @@ impl<
     StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug,
   > DropsToValueFn<Drop, Value, StoreID> for T
 where
-  T: Fn(Vec<DropRef<Drop, StoreID>>) -> Result<DropResult<Value>, DropError> + Send + Sync,
+  T: Fn(&DropStore<StoreID>, Vec<DropRef<Drop, StoreID>>) -> Result<DropResult<Value>, DropError>
+    + Send
+    + Sync,
 {
 }
 
@@ -138,11 +142,15 @@ pub trait Preloader<
     result: Option<Self::LoaderResult>,
     drop: DropRef<FromDrop, StoreID>,
   ) -> Result<Vec<ToDrop>, DropError>;
-  fn with_drop_store<'store, R, F: FnOnce(&'store DropStore<StoreID>) -> R>(&self, f: F) -> R
+  fn with_drop_store<'store, R: 'store, F: FnOnce(&'store DropStore<StoreID>) -> R>(
+    &'store self,
+    f: F,
+  ) -> R
   where
     StoreID: 'store;
   fn drops_to_value(
     &self,
+    store: &DropStore<StoreID>,
     drops: Vec<DropRef<ToDrop, StoreID>>,
   ) -> Result<DropResult<V>, DropError>;
   fn get_once_cell<'a>(
@@ -277,7 +285,7 @@ pub trait Preloader<
       newly_loaded_drop_lists
         .into_iter()
         .try_for_each(|(id, drop_list)| {
-          let value = (self.drops_to_value(drop_list) as Result<DropResult<V>, DropError>)?;
+          let value = (self.drops_to_value(store, drop_list) as Result<DropResult<V>, DropError>)?;
 
           values_by_id.insert(id, value.clone());
 
