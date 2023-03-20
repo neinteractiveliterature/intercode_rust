@@ -8,7 +8,6 @@ use crate::{
 use async_trait::async_trait;
 use liquid::ValueView;
 use once_cell::race::OnceBox;
-use parking_lot::MappedRwLockReadGuard;
 use sea_orm::{EntityTrait, PrimaryKeyToColumn, PrimaryKeyTrait, Related, TryGetable};
 
 use crate::{
@@ -133,17 +132,14 @@ where
     (self.drops_to_value)(store, drops)
   }
 
-  fn get_once_cell<'a>(
-    &self,
-    cache: MappedRwLockReadGuard<'a, FromDrop::Cache>,
-  ) -> MappedRwLockReadGuard<'a, OnceBox<DropResult<Value>>> {
+  fn get_once_cell<'a>(&self, cache: &'a FromDrop::Cache) -> &'a OnceBox<DropResult<Value>> {
     (self.get_once_cell)(cache)
   }
 
   fn get_inverse_once_cell<'a>(
     &self,
-    cache: MappedRwLockReadGuard<'a, ToDrop::Cache>,
-  ) -> Option<MappedRwLockReadGuard<'a, OnceBox<DropResult<FromDrop>>>> {
+    cache: &'a ToDrop::Cache,
+  ) -> Option<&'a OnceBox<DropResult<FromDrop>>> {
     self
       .get_inverse_once_cell
       .as_ref()

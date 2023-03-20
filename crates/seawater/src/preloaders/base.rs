@@ -9,7 +9,6 @@ use crate::{optional_value_view::OptionalValueView, DropResult, DropResultTrait,
 use async_trait::async_trait;
 use liquid::ValueView;
 use once_cell::race::OnceBox;
-use parking_lot::MappedRwLockReadGuard;
 use tracing::{info_span, warn, warn_span};
 
 use crate::{ConnectionWrapper, DropError, DropRef, DropStore};
@@ -79,35 +78,23 @@ where
 
 pub trait GetOnceCellFn<Drop: LiquidDrop, Value: ValueView + Clone>
 where
-  Self: for<'a> Fn(
-      MappedRwLockReadGuard<'a, <Drop as LiquidDrop>::Cache>,
-    ) -> MappedRwLockReadGuard<'a, OnceBox<DropResult<Value>>>
-    + Send
-    + Sync,
+  Self: for<'a> Fn(&'a <Drop as LiquidDrop>::Cache) -> &'a OnceBox<DropResult<Value>> + Send + Sync,
 {
 }
 
 impl<Drop: LiquidDrop, Value: ValueView + Clone, T> GetOnceCellFn<Drop, Value> for T where
-  T: for<'a> Fn(
-      MappedRwLockReadGuard<'a, <Drop as LiquidDrop>::Cache>,
-    ) -> MappedRwLockReadGuard<'a, OnceBox<DropResult<Value>>>
-    + Send
-    + Sync
+  T: for<'a> Fn(&'a <Drop as LiquidDrop>::Cache) -> &'a OnceBox<DropResult<Value>> + Send + Sync
 {
 }
 
 pub trait GetInverseOnceCellFn<FromDrop: LiquidDrop, ToDrop: LiquidDrop>
 where
-  Self: Fn(MappedRwLockReadGuard<ToDrop::Cache>) -> MappedRwLockReadGuard<OnceBox<DropResult<FromDrop>>>
-    + Send
-    + Sync,
+  Self: Fn(&ToDrop::Cache) -> &OnceBox<DropResult<FromDrop>> + Send + Sync,
 {
 }
 
 impl<FromDrop: LiquidDrop, ToDrop: LiquidDrop, T> GetInverseOnceCellFn<FromDrop, ToDrop> for T where
-  T: Fn(MappedRwLockReadGuard<ToDrop::Cache>) -> MappedRwLockReadGuard<OnceBox<DropResult<FromDrop>>>
-    + Send
-    + Sync
+  T: Fn(&ToDrop::Cache) -> &OnceBox<DropResult<FromDrop>> + Send + Sync
 {
 }
 
@@ -153,14 +140,11 @@ pub trait Preloader<
     store: &DropStore<StoreID>,
     drops: Vec<DropRef<ToDrop, StoreID>>,
   ) -> Result<DropResult<V>, DropError>;
-  fn get_once_cell<'a>(
-    &self,
-    cache: MappedRwLockReadGuard<'a, FromDrop::Cache>,
-  ) -> MappedRwLockReadGuard<'a, OnceBox<DropResult<V>>>;
+  fn get_once_cell<'a>(&self, cache: &'a FromDrop::Cache) -> &'a OnceBox<DropResult<V>>;
   fn get_inverse_once_cell<'a>(
     &self,
-    cache: MappedRwLockReadGuard<'a, ToDrop::Cache>,
-  ) -> Option<MappedRwLockReadGuard<'a, OnceBox<DropResult<FromDrop>>>>;
+    cache: &'a ToDrop::Cache,
+  ) -> Option<&'a OnceBox<DropResult<FromDrop>>>;
   async fn load_model_lists(
     &self,
     db: &ConnectionWrapper,
@@ -190,7 +174,7 @@ pub trait Preloader<
           .cloned()
           .filter_map(|drop| {
             let cache = store.get_drop_cache::<FromDrop>(drop.id());
-            let once_cell = self.get_once_cell(cache);
+            let once_cell = self.get_once_cell(&cache);
             once_cell.get().map(|value| (drop.id(), value.clone()))
           })
           .collect();
@@ -291,7 +275,7 @@ pub trait Preloader<
 
           let drop = drops_by_id.get(&id).unwrap().fetch();
           let cache = store.get_drop_cache::<FromDrop>(drop.id().into());
-          let once_cell = self.get_once_cell(cache);
+          let once_cell = self.get_once_cell(&cache);
           once_cell.get_or_init(|| Box::new(value));
           Ok::<_, DropError>(())
         })
@@ -315,7 +299,7 @@ pub trait Preloader<
       for to_drop in drops {
         let to_drop = to_drop.fetch();
         let cache = store.get_drop_cache::<ToDrop>(to_drop.id().into());
-        let inverse_once_cell = self.get_inverse_once_cell(cache);
+        let inverse_once_cell = self.get_inverse_once_cell(&cache);
         if let Some(inverse_once_cell) = inverse_once_cell {
           inverse_once_cell.get_or_init(|| Box::new(from_drop.clone().into()));
         }
@@ -364,9 +348,9 @@ pub trait Preloader<
     StoreID: 'async_trait,
   {
     let loaded = self.load_single(db, drop).await?;
+    let inner = loaded.get_inner();
 
-    loaded
-      .get_inner()
+    inner
       .as_option()
       .cloned()
       .ok_or_else(|| DropError::ExpectedEntityNotFound(std::any::type_name::<V>().to_string()))

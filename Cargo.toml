@@ -27,6 +27,7 @@ async-graphql = {version = "~5.0", features = ["tracing", "dataloader", "chrono"
 async-graphql-value = {version = "~5.0"}
 async-trait = "*"
 axum = {version = "~0.6", features = ["multipart", "macros", "headers"]}
+bumpalo = "3.12.0"
 bumpalo-herd = "0.1.2"
 cached = "~0.42"
 chrono = "0.4"
@@ -37,6 +38,7 @@ html-escape = "0.2.13"
 http = "0.2.8"
 i18n-embed = {version = "0.13", features = ["fluent-system"]}
 i18n-embed-fl = "0.6"
+id-arena = "2.2.1"
 linkify = "~0.9"
 liquid = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
 liquid-core = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}

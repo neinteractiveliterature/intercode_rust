@@ -2,15 +2,15 @@ use crate::{optional_value_view::OptionalValueView, DropRef, ExtendedDropResult,
 use liquid::{ObjectView, ValueView};
 use once_cell::race::OnceBox;
 use std::{
-  borrow::Cow,
   fmt::{Debug, Display},
   hash::Hash,
+  ops::Deref,
 };
 
 // Really I'd like this to be an enum but unfortunately DropRef only works with drops, and we need DropResult to
 // be able to wrap more or less anything that implements ValueView
 pub trait DropResultTrait<T: ValueView + Clone + ToOwned<Owned = T>>: Send + Sync {
-  fn get_inner(&self) -> Cow<T>;
+  fn get_inner<'a>(&'a self) -> Box<dyn Deref<Target = T> + 'a>;
 }
 
 impl<
@@ -20,42 +20,42 @@ impl<
 where
   D::ID: Display + Debug,
 {
-  fn get_inner(&self) -> Cow<D> {
-    Cow::Owned(self.fetch())
+  fn get_inner(&self) -> Box<dyn Deref<Target = D>> {
+    Box::new(self.fetch())
   }
 }
 
-macro_rules! drop_result_trait_borrower {
+macro_rules! drop_result_trait_as_ref {
   ($t: ty) => {
     impl DropResultTrait<$t> for $t {
-      fn get_inner(&self) -> Cow<$t> {
-        Cow::Borrowed(self)
+      fn get_inner<'a>(&'a self) -> Box<dyn Deref<Target = $t> + 'a> {
+        Box::new(self)
       }
     }
   };
 }
 
-drop_result_trait_borrower!(i32);
-drop_result_trait_borrower!(f32);
-drop_result_trait_borrower!(u32);
-drop_result_trait_borrower!(i64);
-drop_result_trait_borrower!(f64);
-drop_result_trait_borrower!(bool);
-drop_result_trait_borrower!(String);
-drop_result_trait_borrower!(liquid::model::Value);
-drop_result_trait_borrower!(liquid::model::DateTime);
+drop_result_trait_as_ref!(i32);
+drop_result_trait_as_ref!(f32);
+drop_result_trait_as_ref!(u32);
+drop_result_trait_as_ref!(i64);
+drop_result_trait_as_ref!(f64);
+drop_result_trait_as_ref!(bool);
+drop_result_trait_as_ref!(String);
+drop_result_trait_as_ref!(liquid::model::Value);
+drop_result_trait_as_ref!(liquid::model::DateTime);
 
-impl<V: ValueView + Clone + Send + Sync> DropResultTrait<OptionalValueView<V>>
+impl<V: ValueView + Send + Sync + Clone + 'static> DropResultTrait<OptionalValueView<V>>
   for OptionalValueView<V>
 {
-  fn get_inner(&self) -> Cow<OptionalValueView<V>> {
-    Cow::Borrowed(self)
+  fn get_inner<'a>(&'a self) -> Box<dyn Deref<Target = OptionalValueView<V>> + 'a> {
+    Box::new(self)
   }
 }
 
-impl<V: ValueView + Clone + Send + Sync> DropResultTrait<Vec<V>> for Vec<V> {
-  fn get_inner(&self) -> Cow<Vec<V>> {
-    Cow::Borrowed(self)
+impl<V: ValueView + Send + Sync + Clone + 'static> DropResultTrait<Vec<V>> for Vec<V> {
+  fn get_inner<'a>(&'a self) -> Box<dyn Deref<Target = Vec<V>> + 'a> {
+    Box::new(self)
   }
 }
 
@@ -79,7 +79,7 @@ impl<T: ValueView + Clone> Debug for DropResult<T> {
 
 impl<T: ValueView + Clone + DropResultTrait<T> + Debug + 'static> Clone for DropResult<T> {
   fn clone(&self) -> Self {
-    let cloned = Self::new(self.result.get_inner().into_owned());
+    let cloned = Self::new(self.result.get_inner().clone());
     if let Some(value) = self.owned.get() {
       cloned.owned.set(Box::new(value.clone())).unwrap()
     }
@@ -96,7 +96,7 @@ impl<T: ValueView + Debug + Clone> DropResult<T> {
     }
   }
 
-  pub fn get_inner(&self) -> Cow<T> {
+  pub fn get_inner<'a>(&'a self) -> Box<dyn Deref<Target = T> + 'a> {
     self.result.get_inner()
   }
 
@@ -113,7 +113,7 @@ impl<T: ValueView + Debug + Clone> DropResult<T> {
   pub(crate) fn get_value(&self) -> &dyn ValueView {
     self
       .owned
-      .get_or_init(|| Box::new(self.result.get_inner().into_owned()))
+      .get_or_init(|| Box::new(self.result.get_inner().to_owned()))
   }
 }
 

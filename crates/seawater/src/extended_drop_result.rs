@@ -22,7 +22,7 @@ impl<'a, T: ValueView + Clone> ExtendedDropResult<'a, T> {
 impl<'a, T: ValueView + Clone> Debug for ExtendedDropResult<'a, T> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("ExtendedDropResult")
-      .field("drop_result", &self.drop_result.get_inner())
+      .field("drop_result", &self.drop_result.get_inner().deref())
       .field("extensions", &self.extensions)
       .finish()
   }

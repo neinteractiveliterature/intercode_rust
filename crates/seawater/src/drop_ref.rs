@@ -3,24 +3,29 @@ use crate::IntoDropResult;
 use crate::LiquidDrop;
 use std::fmt::Display;
 use std::hash::Hash;
+use std::sync::Arc;
 use std::sync::Weak;
 use std::{fmt::Debug, marker::PhantomData};
 
 pub(crate) trait StoreRef {
   type StoreID;
 
-  fn get<ID: Into<Self::StoreID>, D: LiquidDrop + 'static>(&self, id: ID) -> Option<D>;
+  fn get<ID: Into<Self::StoreID>, D: LiquidDrop + Send + Sync + 'static>(
+    &self,
+    id: ID,
+  ) -> Option<Arc<D>>;
 }
 
 impl<StoreID: Eq + Hash + Copy + Display + Debug> StoreRef for Weak<DropStore<StoreID>> {
   type StoreID = StoreID;
 
-  fn get<ID: Into<Self::StoreID>, D: LiquidDrop + 'static>(&self, id: ID) -> Option<D> {
+  fn get<ID: Into<Self::StoreID>, D: LiquidDrop + Send + Sync + 'static>(
+    &self,
+    id: ID,
+  ) -> Option<Arc<D>> {
     let arc = self.upgrade();
     let store = arc.as_deref();
-    store
-      .and_then(|store| store.get::<D>(id.into()))
-      .map(|guard| guard.clone())
+    store.and_then(|store| store.get::<D>(id.into()))
   }
 }
 
@@ -31,8 +36,10 @@ pub struct DropRef<D: LiquidDrop + Clone + 'static, StoreID: Eq + Hash + Copy + 
   _phantom: PhantomData<D>,
 }
 
-impl<D: LiquidDrop + Clone + 'static, StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug>
-  DropRef<D, StoreID>
+impl<
+    D: LiquidDrop + Clone + Send + Sync + 'static,
+    StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug,
+  > DropRef<D, StoreID>
 {
   pub fn new(id: StoreID, store: Weak<DropStore<StoreID>>) -> Self {
     DropRef {
@@ -42,16 +49,14 @@ impl<D: LiquidDrop + Clone + 'static, StoreID: Eq + Hash + Copy + Send + Sync + 
     }
   }
 
-  pub fn fetch(&self) -> D {
+  pub fn fetch(&self) -> Arc<D> {
     self.try_fetch().unwrap()
   }
 
-  pub fn try_fetch(&self) -> Option<D> {
+  pub fn try_fetch(&self) -> Option<Arc<D>> {
     let arc = self.store.upgrade();
     let store = arc.as_deref();
-    store
-      .and_then(|store| store.get::<D>(self.id))
-      .map(|guard| guard.clone())
+    store.and_then(|store| store.get::<D>(self.id))
   }
 
   pub fn id(&self) -> StoreID {

@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use bumpalo_herd::Herd;
 use futures::try_join;
 use intercode_entities::events;
@@ -168,8 +170,8 @@ impl ObjectView for EventsCreatedSince {
 }
 
 impl DropResultTrait<EventsCreatedSince> for EventsCreatedSince {
-  fn get_inner(&self) -> std::borrow::Cow<EventsCreatedSince> {
-    std::borrow::Cow::Borrowed(self)
+  fn get_inner<'a>(&'a self) -> Box<dyn Deref<Target = Self> + 'a> {
+    Box::new(self)
   }
 }
 

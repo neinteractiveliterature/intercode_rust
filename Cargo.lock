@@ -3818,6 +3818,8 @@ version = "0.1.0"
 dependencies = [
  "async-graphql",
  "async-trait",
+ "bumpalo",
+ "bumpalo-herd",
  "liquid",
  "liquid-core",
  "once_cell",
