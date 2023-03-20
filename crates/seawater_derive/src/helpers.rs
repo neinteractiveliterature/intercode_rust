@@ -113,16 +113,28 @@ pub fn eliminate_references(ty: Box<Type>) -> Box<Type> {
   }
 }
 
-pub fn extract_first_generic_arg(path_type: &syn::TypePath) -> Option<Box<Type>> {
+pub fn extract_generic_args(path_type: &syn::TypePath) -> Vec<Type> {
   if let Some(last_segment) = path_type.path.segments.last() {
     if let PathArguments::AngleBracketed(last_segment_args) = &last_segment.arguments {
-      let value_arg = last_segment_args.args.first().unwrap();
-      if let GenericArgument::Type(value_type) = value_arg {
-        return Some(Box::new(value_type.clone()));
-      }
+      return last_segment_args
+        .args
+        .iter()
+        .filter_map(|arg| {
+          if let GenericArgument::Type(value_type) = arg {
+            Some(value_type.clone())
+          } else {
+            None
+          }
+        })
+        .collect();
     }
   }
-  None
+
+  vec![]
+}
+
+pub fn extract_first_generic_arg(path_type: &syn::TypePath) -> Option<Type> {
+  extract_generic_args(path_type).first().cloned()
 }
 
 pub fn path_without_generics(path: &syn::Path) -> syn::Path {
@@ -142,18 +154,26 @@ pub fn get_drop_result_generic_arg(ty: Box<Type>) -> Box<Type> {
 
   if let Type::Path(path_type) = *deref_type.clone() {
     let normalized_path = path_without_generics(&path_type.path);
-    if normalized_path == parse_quote!(Result)
-      || normalized_path == parse_quote!(DropRef)
+    if normalized_path == parse_quote!(DropRef)
       || normalized_path == parse_quote!(seawater::DropRef)
     {
       if let Some(value) = extract_first_generic_arg(&path_type) {
-        return get_drop_result_generic_arg(value);
+        return get_drop_result_generic_arg(Box::new(value));
       }
     } else if normalized_path == parse_quote!(Option) {
       if let Some(value) = extract_first_generic_arg(&path_type) {
-        let non_optional_type = get_drop_result_generic_arg(value);
+        let non_optional_type = get_drop_result_generic_arg(Box::new(value));
         return parse_quote!(::seawater::OptionalValueView<#non_optional_type>);
       }
+    } else if normalized_path == parse_quote!(Result) {
+      let generics = extract_generic_args(&path_type);
+      if generics.len() != 2 {
+        panic!("Result requires exactly 2 type arguments");
+      }
+      let non_result_type =
+        get_drop_result_generic_arg(Box::new(generics.first().cloned().unwrap()));
+      let error_type = generics.last().unwrap();
+      return parse_quote!(::seawater::ResultValueView<#non_result_type, #error_type>);
     }
   }
 

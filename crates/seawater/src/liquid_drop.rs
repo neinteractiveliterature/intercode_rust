@@ -5,6 +5,11 @@ use std::{
   hash::Hash,
 };
 
+pub type DropID<D> = <D as LiquidDrop>::ID;
+pub type DropCache<D> = <D as LiquidDrop>::Cache;
+pub type DropContext<D> = <D as LiquidDrop>::Context;
+pub type DropStoreID<D> = <DropContext<D> as Context>::StoreID;
+
 pub trait LiquidDrop: ValueView + ObjectView + Clone + Into<DropResult<Self>> {
   type Cache: LiquidDropCache;
   type ID: Eq + Hash + Copy + Display + Send + Sync + Debug;

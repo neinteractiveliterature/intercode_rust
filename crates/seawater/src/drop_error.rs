@@ -4,7 +4,7 @@ use std::{
   sync::{Arc, PoisonError},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum DropError {
   GraphQLError(async_graphql::Error),
   LiquidError(liquid::Error),

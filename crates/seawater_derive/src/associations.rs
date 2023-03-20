@@ -225,7 +225,7 @@ trait AssociationMacro {
     let loader_result_type = self.loader_result_type();
 
     Box::new(quote!(
-      |result: Option<#loader_result_type>, from_drop: &Self| {
+      |result: Option<#loader_result_type>, from_drop: ::seawater::DropRef<Self, <Self as ::seawater::LiquidDrop>::ID>| {
         result.map(|result| {
           Ok(result.models.into_iter().map(|model| <#to_drop>::new(model, from_drop.context.clone())).collect())
         }).unwrap_or_else(|| Ok(vec![]))
@@ -238,19 +238,19 @@ trait AssociationMacro {
 
     match self.get_target_type() {
       TargetType::OneOptional => Box::new(quote!(
-        |store: &::seawater::DropStore<<<Self as ::seawater::LiquidDrop>::Context as ::seawater::Context>::StoreID>,
-         drops: Vec<::seawater::DropResult<#to_drop>>| {
+        |store: &::seawater::DropStore<::seawater::DropStoreID<Self>>,
+         drops: Vec<::seawater::DropRef<#to_drop, ::seawater::DropStoreID<#to_drop>>| {
         if drops.len() == 1 {
-          Ok(store.store(drops[0].into()))
+          Ok(drops[0].into())
         } else {
           Ok(None::<::seawater::DropResult<#to_drop>>.into())
         }
       })),
       TargetType::OneRequired => Box::new(quote!(
-        |store: &::seawater::DropStore<<<Self as ::seawater::LiquidDrop>::Context as ::seawater::Context>::StoreID>,
-         drops: Vec<::seawater::DropResult<#to_drop>>| {
+        |store: &::seawater::DropStore<::seawater::DropStoreID<Self>>,
+         drops: Vec<::seawater::DropRef<#to_drop, ::seawater::DropStoreID<#to_drop>>>| {
         if drops.len() == 1 {
-          Ok(store.store(drops[0].into()))
+          Ok(drops[0].into())
         } else {
           Err(::seawater::DropError::ExpectedEntityNotFound(format!(
             "Expected one {}, but there are {}",
@@ -261,8 +261,8 @@ trait AssociationMacro {
       })),
       TargetType::Many => Box::new(quote!(
         |store: &::seawater::DropStore<<<Self as ::seawater::LiquidDrop>::Context as ::seawater::Context>::StoreID>,
-         drops: Vec<::seawater::DropResult<#to_drop>>| {
-          Ok(store.store_many(drops.into_iter()))
+         drops: Vec<::seawater::DropRef<#to_drop, ::seawater::DropStoreID<#to_drop>>>| {
+          Ok(drops)
         }
       )),
     }

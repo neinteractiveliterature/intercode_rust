@@ -62,29 +62,29 @@ where
   PK::Column: Send + Sync,
   PK::ValueType: Eq + std::hash::Hash + Clone + Send + Sync,
 {
-  pub fn new(
-    pk_column: PK::Column,
+  pub fn new<
+    LRDF: LoaderResultToDropsFn<
+        EntityRelationLoaderResult<From, To>,
+        FromDrop,
+        ToDrop,
+        Context::StoreID,
+      > + 'static,
+    DVF: DropsToValueFn<ToDrop, Value, Context::StoreID> + 'static,
+    GOCF: GetOnceCellFn<FromDrop, Value> + 'static,
+  >(
+    pk: PK,
     context: Context,
-    loader_result_to_drops: Pin<
-      Box<
-        dyn LoaderResultToDropsFn<
-          EntityRelationLoaderResult<From, To>,
-          FromDrop,
-          ToDrop,
-          Context::StoreID,
-        >,
-      >,
-    >,
-    drops_to_value: Pin<Box<dyn DropsToValueFn<ToDrop, Value, Context::StoreID>>>,
-    get_once_cell: Pin<Box<dyn GetOnceCellFn<FromDrop, Value>>>,
+    loader_result_to_drops: LRDF,
+    drops_to_value: DVF,
+    get_once_cell: GOCF,
     get_inverse_once_cell: Option<Pin<Box<dyn GetInverseOnceCellFn<FromDrop, ToDrop>>>>,
   ) -> Self {
     Self {
-      pk_column,
+      pk_column: PrimaryKeyToColumn::into_column(pk),
       context,
-      loader_result_to_drops,
-      drops_to_value,
-      get_once_cell,
+      loader_result_to_drops: Box::pin(loader_result_to_drops),
+      drops_to_value: Box::pin(drops_to_value),
+      get_once_cell: Box::pin(get_once_cell),
       get_inverse_once_cell,
       _phantom: Default::default(),
     }
