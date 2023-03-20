@@ -186,47 +186,34 @@ impl DropGetterMethod {
 
     match self.impl_item {
       DropGetterMethodImplItem::Uncached(_) => Box::new(quote!(
-        pub async fn #caching_getter_ident(&self) -> &::seawater::DropResult<#return_type> {
+        pub async fn #caching_getter_ident(&self) -> ::seawater::DropResult<#return_type> {
           use ::seawater::LiquidDrop;
           self.#uncached_getter_ident().await.into()
         }
       )),
       DropGetterMethodImplItem::Async(_) => Box::new(quote!(
-        pub async fn #caching_getter_ident(&self) -> ::parking_lot::MappedRwLockReadGuard<::seawater::DropResult<#return_type>> {
+        pub async fn #caching_getter_ident(&self) -> ::seawater::DropResult<#return_type> {
           use ::seawater::{Context, DropStore, LiquidDrop};
-          self.with_drop_store(|store| {
-            ::parking_lot::MappedRwLockReadGuard::map(
-              DropStore::get_drop_cache::<Self>(store, self.id()),
-              |cache| {
-                cache.#get_or_init_ident(
-                  || Box::<::seawater::DropResult<#return_type>>::new(
-                    ::tokio::task::block_in_place(|| {
-                      ::tokio::runtime::Handle::current()
-                        .block_on(async move {
-                          self.#uncached_getter_ident().await.into()
-                        })
-                      })
-                    )
-                  )
-              }
-            )
-          })
+          let cache = self.with_drop_store(|store| store.get_drop_cache::<Self>(self.id()));
+          cache.#get_or_init_ident(|| {
+            Box::<::seawater::DropResult<#return_type>>::new(
+              ::tokio::task::block_in_place(|| {
+                ::tokio::runtime::Handle::current()
+                  .block_on(async move {
+                    self.#uncached_getter_ident().await.into()
+                  })
+                })
+              )
+            }).clone()
         }
       )),
       _ => Box::new(quote!(
-        pub async fn #caching_getter_ident(&self) -> ::parking_lot::MappedRwLockReadGuard<::seawater::DropResult<#return_type>> {
+        pub async fn #caching_getter_ident(&self) -> ::seawater::DropResult<#return_type> {
           use ::seawater::{Context, DropStore, LiquidDrop};
-          self.with_drop_store(|store| {
-            ::parking_lot::MappedRwLockReadGuard::map(
-              DropStore::get_drop_cache::<Self>(store, self.id()),
-              |cache| {
-                cache.
-                #get_or_init_ident(|| {
-                  Box::new(self.#uncached_getter_ident().into())
-                })
-              }
-            )
-          })
+          let cache = self.with_drop_store(|store| store.get_drop_cache::<Self>(self.id()));
+          cache.#get_or_init_ident(|| {
+            Box::new(self.#uncached_getter_ident().into())
+          }).clone()
         }
       )),
     }

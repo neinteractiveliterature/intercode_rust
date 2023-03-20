@@ -1,4 +1,6 @@
-use crate::{optional_value_view::OptionalValueView, DropRef, ExtendedDropResult, LiquidDrop};
+use crate::{
+  optional_value_view::OptionalValueView, DropRef, ExtendedDropResult, LiquidDrop, ResultValueView,
+};
 use liquid::{ObjectView, ValueView};
 use once_cell::race::OnceBox;
 use std::{
@@ -252,6 +254,7 @@ drop_result_self_converter!(f64);
 drop_result_self_converter!(bool);
 drop_result_self_converter!(String);
 drop_result_self_converter!(liquid::model::DateTime);
+drop_result_self_converter!(liquid::model::Value);
 
 impl From<&str> for DropResult<liquid::model::Value> {
   fn from(string: &str) -> Self {
@@ -289,11 +292,14 @@ impl<V: ValueView + Clone + Send + Sync + 'static, T: Into<V>> From<Option<T>>
   }
 }
 
-impl<V: ValueView + Clone + Send + Sync + 'static, T: Into<V>, E> From<Result<T, E>>
-  for DropResult<OptionalValueView<V>>
+impl<
+    V: ValueView + Clone + Send + Sync + 'static,
+    T: Into<V>,
+    E: Debug + Clone + Send + Sync + 'static,
+  > From<Result<T, E>> for DropResult<ResultValueView<V, E>>
 {
   fn from(result: Result<T, E>) -> Self {
-    result.ok().into()
+    DropResult::new(ResultValueView::new(result.map(|value| value.into())))
   }
 }
 

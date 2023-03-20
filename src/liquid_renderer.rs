@@ -35,6 +35,10 @@ impl IntercodeGlobals {
     }
   }
 
+  fn id(&self) -> i64 {
+    0
+  }
+
   fn convention(&self) -> Option<ConventionDrop> {
     self
       .query_data

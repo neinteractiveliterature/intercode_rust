@@ -20,7 +20,7 @@ impl<Id: Eq + Hash, Value: ValueView + Clone + Send + Sync + 'static> PreloaderR
       self
         .values_by_id
         .get(&id)
-        .map(|drop_result| drop_result.get_inner().deref().clone())
+        .map(|drop_result| drop_result.get_inner().clone())
         .into(),
     )
   }

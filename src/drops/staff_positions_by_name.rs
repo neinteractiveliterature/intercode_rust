@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::ops::Deref;
 
 use super::{DropContext, StaffPositionDrop};
 use intercode_entities::{conventions, links::ConventionToStaffPositions};
@@ -175,8 +176,8 @@ impl ObjectView for StaffPositionsByName {
 }
 
 impl DropResultTrait<StaffPositionsByName> for StaffPositionsByName {
-  fn get_inner(&self) -> std::borrow::Cow<StaffPositionsByName> {
-    std::borrow::Cow::Borrowed(self)
+  fn get_inner<'a>(&'a self) -> Box<dyn Deref<Target = StaffPositionsByName> + 'a> {
+    Box::new(self)
   }
 }
 

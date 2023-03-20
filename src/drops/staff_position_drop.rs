@@ -22,6 +22,7 @@ impl StaffPositionDrop {
       .email()
       .await
       .get_inner()
+      .as_option()
       .map(|email| format!("<a href=\"mailto:{}\">{}</a>", email, email))
   }
 
