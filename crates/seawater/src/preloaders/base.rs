@@ -5,7 +5,7 @@ use std::{
   hash::Hash,
 };
 
-use crate::{optional_value_view::OptionalValueView, DropResult, DropResultTrait, LiquidDrop};
+use crate::{DropResult, DropResultTrait, LiquidDrop};
 use async_trait::async_trait;
 use liquid::ValueView;
 use once_cell::race::OnceBox;
@@ -311,7 +311,7 @@ pub trait Preloader<
     &self,
     db: &ConnectionWrapper,
     drop: DropRef<FromDrop, StoreID>,
-  ) -> Result<DropResult<OptionalValueView<V>>, DropError>
+  ) -> Result<DropResult<V>, DropError>
   where
     FromDrop: 'static,
     StoreID: 'async_trait,
@@ -348,11 +348,8 @@ pub trait Preloader<
     StoreID: 'async_trait,
   {
     let loaded = self.load_single(db, drop).await?;
-    let inner = loaded.get_inner();
+    let inner = loaded.get_inner_cloned();
 
-    inner
-      .as_option()
-      .cloned()
-      .ok_or_else(|| DropError::ExpectedEntityNotFound(std::any::type_name::<V>().to_string()))
+    inner.ok_or_else(|| DropError::ExpectedEntityNotFound(std::any::type_name::<V>().to_string()))
   }
 }

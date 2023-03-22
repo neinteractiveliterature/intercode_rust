@@ -10,7 +10,6 @@ mod signup_drop;
 mod staff_position_drop;
 mod staff_positions_by_name;
 mod ticket_drop;
-mod ticket_drop2;
 mod ticket_type_drop;
 mod timespan_with_value_drop;
 mod user_con_profile_drop;

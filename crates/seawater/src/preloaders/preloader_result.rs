@@ -1,4 +1,4 @@
-use crate::{optional_value_view::OptionalValueView, DropError, DropResult};
+use crate::{DropError, DropResult};
 use liquid::ValueView;
 use std::{
   collections::{hash_map::IterMut, HashMap},
@@ -10,29 +10,29 @@ pub struct PreloaderResult<Id: Eq + Hash, Value: ValueView + Clone + Send + Sync
   values_by_id: HashMap<Id, DropResult<Value>>,
 }
 
-impl<Id: Eq + Hash, Value: ValueView + Clone + Send + Sync + 'static> PreloaderResult<Id, Value> {
+impl<Id: Eq + Hash, Value: ValueView + Clone + Send + Sync + 'static> PreloaderResult<Id, Value>
+where
+  DropResult<Value>: Clone,
+{
   pub fn new(values_by_id: HashMap<Id, DropResult<Value>>) -> Self {
     Self { values_by_id }
   }
 
-  pub fn get(&self, id: Id) -> DropResult<OptionalValueView<Value>> {
-    DropResult::new::<OptionalValueView<Value>>(
-      self
-        .values_by_id
-        .get(&id)
-        .map(|drop_result| drop_result.get_inner().clone())
-        .into(),
-    )
+  pub fn get(&self, id: Id) -> DropResult<Value> {
+    self
+      .values_by_id
+      .get(&id)
+      .and_then(|drop_result| drop_result.get_inner_cloned())
+      .into()
   }
 
   #[allow(dead_code)]
   pub fn expect_value(&self, id: Id) -> Result<Value, DropError> {
     self
-      .get(id)
-      .get_inner()
-      .as_option()
+      .values_by_id
+      .get(&id)
+      .and_then(|drop_result| drop_result.get_inner_cloned())
       .ok_or_else(|| DropError::ExpectedEntityNotFound(std::any::type_name::<Value>().to_string()))
-      .cloned()
   }
 
   pub fn all_values(&self) -> Box<dyn Iterator<Item = &DropResult<Value>> + '_> {
@@ -43,9 +43,13 @@ impl<Id: Eq + Hash, Value: ValueView + Clone + Send + Sync + 'static> PreloaderR
     self.values_by_id.iter_mut()
   }
 
-  // pub fn all_values_unwrapped<'a>(&'a self) -> Box<dyn Iterator<Item = &'a Value> + 'a> {
-  //   Box::new(self.all_values().into_iter().map(|value| value.get_value()))
-  // }
+  pub fn all_values_unwrapped<'a>(&'a self) -> Box<dyn Iterator<Item = Value> + 'a> {
+    Box::new(
+      self
+        .all_values()
+        .map(|value| value.get_inner_cloned().unwrap()),
+    )
+  }
 
   pub fn extend(&mut self, items: &mut dyn Iterator<Item = (Id, DropResult<Value>)>) {
     self.values_by_id.extend(items)

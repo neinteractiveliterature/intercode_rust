@@ -72,10 +72,13 @@ impl<V: ValueView, E: Debug> From<Result<V, E>> for ResultValueView<V, E> {
   }
 }
 
-impl<V: ValueView + Clone + Send + Sync, E: Debug + Send + Sync + Clone>
-  DropResultTrait<ResultValueView<V, E>> for ResultValueView<V, E>
+impl<V: ValueView + Clone + Send + Sync, E: Debug + Send + Sync + Clone> DropResultTrait<V>
+  for ResultValueView<V, E>
 {
-  fn get_inner<'a>(&'a self) -> Box<dyn std::ops::Deref<Target = ResultValueView<V, E>> + 'a> {
-    Box::new(self)
+  fn get_inner<'a>(&'a self) -> Option<Box<dyn std::ops::Deref<Target = V> + 'a>> {
+    match &self.result {
+      Ok(value) => Some(Box::new(value)),
+      Err(_) => None,
+    }
   }
 }

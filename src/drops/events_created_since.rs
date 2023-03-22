@@ -170,8 +170,8 @@ impl ObjectView for EventsCreatedSince {
 }
 
 impl DropResultTrait<EventsCreatedSince> for EventsCreatedSince {
-  fn get_inner<'a>(&'a self) -> Box<dyn Deref<Target = Self> + 'a> {
-    Box::new(self)
+  fn get_inner<'a>(&'a self) -> Option<Box<dyn Deref<Target = Self> + 'a>> {
+    Some(Box::new(self))
   }
 }
 

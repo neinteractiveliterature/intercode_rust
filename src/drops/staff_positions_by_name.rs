@@ -176,8 +176,8 @@ impl ObjectView for StaffPositionsByName {
 }
 
 impl DropResultTrait<StaffPositionsByName> for StaffPositionsByName {
-  fn get_inner<'a>(&'a self) -> Box<dyn Deref<Target = StaffPositionsByName> + 'a> {
-    Box::new(self)
+  fn get_inner<'a>(&'a self) -> Option<Box<dyn Deref<Target = StaffPositionsByName> + 'a>> {
+    Some(Box::new(self))
   }
 }
 

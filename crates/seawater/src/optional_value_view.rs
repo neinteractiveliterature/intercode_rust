@@ -2,6 +2,8 @@ use std::borrow::Cow;
 
 use liquid::ValueView;
 
+use crate::DropResultTrait;
+
 #[derive(Debug, Clone)]
 pub enum OptionalValueView<V: ValueView> {
   Some(V),
@@ -87,6 +89,15 @@ impl<V: ValueView + Clone> From<Option<Cow<'_, V>>> for OptionalValueView<V> {
     match value {
       Some(value) => OptionalValueView::Some(value.into_owned()),
       None => OptionalValueView::None,
+    }
+  }
+}
+
+impl<V: ValueView + Send + Sync + Clone> DropResultTrait<V> for OptionalValueView<V> {
+  fn get_inner<'a>(&'a self) -> Option<Box<dyn std::ops::Deref<Target = V> + 'a>> {
+    match self {
+      OptionalValueView::Some(value) => Some(Box::new(value)),
+      OptionalValueView::None => None,
     }
   }
 }
