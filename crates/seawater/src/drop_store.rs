@@ -36,6 +36,18 @@ impl<ID: Eq + Hash + Copy + Display + Debug> DropStore<ID> {
     lock.get::<D::Cache>(drop_id).unwrap()
   }
 
+  pub fn get_all<D: LiquidDrop + Send + Sync + 'static>(
+    &self,
+    ids: impl IntoIterator<Item = ID>,
+  ) -> Vec<D> {
+    let lock = self.drops_by_id.read();
+
+    ids
+      .into_iter()
+      .filter_map(|id| lock.get::<D>(id).as_deref().cloned())
+      .collect()
+  }
+
   pub fn store<D: LiquidDrop + Clone + Send + Sync + 'static>(&self, drop: D) -> DropRef<D, ID>
   where
     ID: From<D::ID> + Send + Sync,

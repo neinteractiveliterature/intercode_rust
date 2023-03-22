@@ -1,8 +1,5 @@
-use crate::{IntoDropResult, LiquidDrop};
-use liquid::ValueView;
-use sea_orm::{EntityTrait, Linked, ModelTrait, PrimaryKeyTrait, Related};
-
-use crate::preloaders::{EntityLinkPreloaderBuilder, EntityRelationPreloaderBuilder};
+use crate::LiquidDrop;
+use sea_orm::{EntityTrait, ModelTrait, PrimaryKeyTrait};
 
 pub type DropModel<D> = <D as ModelBackedDrop>::Model;
 pub type DropEntity<D> = <DropModel<D> as ModelTrait>::Entity;
@@ -17,37 +14,6 @@ where
 
   fn new(model: Self::Model, context: Self::Context) -> Self;
   fn get_model(&self) -> &Self::Model;
-
-  fn link_preloader<ToDrop: ModelBackedDrop, Value: ValueView + IntoDropResult>(
-    link: impl Linked<FromEntity = DropEntity<Self>, ToEntity = DropEntity<ToDrop>>
-      + Send
-      + Sync
-      + 'static,
-    pk_column: DropPrimaryKey<Self>,
-  ) -> EntityLinkPreloaderBuilder<Self, ToDrop, Value, Self::Context>
-  where
-    Self: Send + Sync + Clone,
-    ToDrop: Send + Sync + Clone,
-    DropPrimaryKeyValue<Self>: Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
-    Value: IntoDropResult<Self> + Clone,
-    DropPrimaryKeyValue<Self>: Clone,
-  {
-    EntityLinkPreloaderBuilder::new(link, pk_column)
-  }
-
-  fn relation_preloader<ToDrop: ModelBackedDrop, Value: ValueView + IntoDropResult>(
-    pk_column: DropPrimaryKey<Self>,
-  ) -> EntityRelationPreloaderBuilder<Self, ToDrop, Value, Self::Context>
-  where
-    Self: Send + Sync + Clone,
-    ToDrop: Send + Sync + Clone,
-    DropEntity<Self>: Related<DropEntity<ToDrop>>,
-    DropPrimaryKeyValue<Self>: Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
-    Value: IntoDropResult<Self> + Clone,
-    DropPrimaryKeyValue<Self>: Clone,
-  {
-    EntityRelationPreloaderBuilder::new(pk_column)
-  }
 }
 
 #[macro_export]

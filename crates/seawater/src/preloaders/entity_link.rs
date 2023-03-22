@@ -15,13 +15,10 @@ use liquid::ValueView;
 use once_cell::race::OnceBox;
 use sea_orm::{EntityTrait, Linked, ModelTrait, PrimaryKeyToColumn, PrimaryKeyTrait, TryGetable};
 
-use crate::{
-  DropEntity, DropError, DropPrimaryKey, DropPrimaryKeyValue, DropStore, ModelBackedDrop,
-};
+use crate::{DropEntity, DropError, DropStore, ModelBackedDrop};
 
 use super::{
-  DropsToValueFn, GetInverseOnceCellFn, GetOnceCellFn, IncompleteBuilderError,
-  LoaderResultToDropsFn, Preloader, PreloaderBuilder,
+  DropsToValueFn, GetInverseOnceCellFn, GetOnceCellFn, LoaderResultToDropsFn, Preloader,
 };
 
 pub struct EntityLinkPreloader<
@@ -73,6 +70,47 @@ where
       .field("pk_column", &self.pk_column)
       .field("_phantom", &self._phantom)
       .finish_non_exhaustive()
+  }
+}
+
+impl<
+    From: EntityTrait<PrimaryKey = PK>,
+    To: EntityTrait,
+    PK: PrimaryKeyTrait + PrimaryKeyToColumn<Column = From::Column>,
+    FromDrop: LiquidDrop + Clone + Send + Sync + 'static,
+    ToDrop: LiquidDrop + Clone + Send + Sync + 'static,
+    Value: ValueView + Clone,
+    Context: crate::Context,
+  > EntityLinkPreloader<From, To, PK, FromDrop, ToDrop, Value, Context>
+where
+  PK::ValueType: Eq + std::hash::Hash + Clone + std::convert::From<Context::StoreID>,
+  Value: IntoDropResult,
+{
+  pub fn new<
+    Link: Linked<FromEntity = From, ToEntity = To> + Send + Sync + 'static,
+    LRDF: LoaderResultToDropsFn<EntityLinkLoaderResult<From, To>, FromDrop, ToDrop, Context::StoreID>
+      + 'static,
+    DVF: DropsToValueFn<ToDrop, Value, Context::StoreID> + 'static,
+    GOCF: GetOnceCellFn<FromDrop, Value> + 'static,
+  >(
+    pk: PK,
+    link: Link,
+    context: Context,
+    loader_result_to_drops: LRDF,
+    drops_to_value: DVF,
+    get_once_cell: GOCF,
+    get_inverse_once_cell: Option<Pin<Box<dyn GetInverseOnceCellFn<FromDrop, ToDrop>>>>,
+  ) -> Self {
+    Self {
+      pk_column: pk.into_column(),
+      link: BoxLink(Box::new(link)),
+      context,
+      loader_result_to_drops: Box::pin(loader_result_to_drops),
+      drops_to_value: Box::pin(drops_to_value),
+      get_once_cell: Box::pin(get_once_cell),
+      get_inverse_once_cell,
+      _phantom: PhantomData,
+    }
   }
 }
 
@@ -192,169 +230,5 @@ impl<FromEntity: EntityTrait, ToEntity: EntityTrait> Linked for &BoxLink<FromEnt
 
   fn link(&self) -> Vec<sea_orm::LinkDef> {
     self.0.link()
-  }
-}
-
-pub struct EntityLinkPreloaderBuilder<
-  FromDrop: ModelBackedDrop,
-  ToDrop: ModelBackedDrop,
-  Value: ValueView + Clone,
-  Context: crate::Context,
-> where
-  FromDrop: Send + Sync + Clone + 'static,
-  ToDrop: Send + Sync + Clone + 'static,
-  DropPrimaryKeyValue<FromDrop>: Eq + std::hash::Hash + Clone + Send + Sync,
-  Value: IntoDropResult,
-  DropPrimaryKeyValue<FromDrop>: Clone,
-{
-  link: ModelBackedDropLink<FromDrop, ToDrop>,
-  context: Option<Context>,
-  pk_column: <<FromDrop::Model as ModelTrait>::Entity as EntityTrait>::PrimaryKey,
-  loader_result_to_drops: Option<
-    Pin<
-      Box<
-        dyn LoaderResultToDropsFn<
-          EntityLinkLoaderResult<DropEntity<FromDrop>, DropEntity<ToDrop>>,
-          FromDrop,
-          ToDrop,
-          Context::StoreID,
-        >,
-      >,
-    >,
-  >,
-  drops_to_value: Option<Pin<Box<dyn DropsToValueFn<ToDrop, Value, Context::StoreID>>>>,
-  get_once_cell: Option<Pin<Box<dyn GetOnceCellFn<FromDrop, Value>>>>,
-  get_inverse_once_cell: Option<Pin<Box<dyn GetInverseOnceCellFn<FromDrop, ToDrop>>>>,
-  _phantom: PhantomData<(FromDrop, ToDrop, Value)>,
-}
-
-impl<
-    FromDrop: ModelBackedDrop,
-    ToDrop: ModelBackedDrop,
-    Value: ValueView + Clone,
-    Context: crate::Context,
-  > PreloaderBuilder for EntityLinkPreloaderBuilder<FromDrop, ToDrop, Value, Context>
-where
-  FromDrop: Send + Sync + Clone + 'static,
-  ToDrop: Send + Sync + Clone + 'static,
-  Value: IntoDropResult,
-  DropPrimaryKeyValue<FromDrop>:
-    Eq + std::hash::Hash + Clone + Send + Sync + std::convert::From<Context::StoreID>,
-{
-  type Preloader = EntityLinkPreloader<
-    DropEntity<FromDrop>,
-    DropEntity<ToDrop>,
-    DropPrimaryKey<FromDrop>,
-    FromDrop,
-    ToDrop,
-    Value,
-    Context,
-  >;
-  type Error = IncompleteBuilderError;
-
-  fn finalize(self) -> Result<Self::Preloader, Self::Error> {
-    if let (
-      Some(context),
-      Some(loader_result_to_drops),
-      Some(drops_to_value),
-      Some(get_once_cell),
-    ) = (
-      self.context,
-      self.loader_result_to_drops,
-      self.drops_to_value,
-      self.get_once_cell,
-    ) {
-      Ok(EntityLinkPreloader {
-        pk_column: self.pk_column.into_column(),
-        link: BoxLink(Box::new(self.link)),
-        context,
-        loader_result_to_drops,
-        drops_to_value,
-        get_once_cell,
-        get_inverse_once_cell: self.get_inverse_once_cell,
-        _phantom: Default::default(),
-      })
-    } else {
-      Err(IncompleteBuilderError)
-    }
-  }
-}
-
-impl<
-    FromDrop: ModelBackedDrop,
-    ToDrop: ModelBackedDrop,
-    Value: ValueView + Clone,
-    Context: crate::Context,
-  > EntityLinkPreloaderBuilder<FromDrop, ToDrop, Value, Context>
-where
-  FromDrop: Send + Sync + Clone + 'static,
-  ToDrop: Send + Sync + Clone + 'static,
-  Value: IntoDropResult,
-  DropPrimaryKeyValue<FromDrop>: Eq + std::hash::Hash + Clone + Send + Sync,
-{
-  pub fn new(
-    link: impl Linked<
-        FromEntity = <FromDrop::Model as ModelTrait>::Entity,
-        ToEntity = <ToDrop::Model as ModelTrait>::Entity,
-      > + Send
-      + Sync
-      + 'static,
-    pk_column: <<FromDrop::Model as ModelTrait>::Entity as EntityTrait>::PrimaryKey,
-  ) -> Self {
-    EntityLinkPreloaderBuilder {
-      link: ModelBackedDropLink {
-        link: Box::new(link),
-        _phantom: Default::default(),
-      },
-      pk_column,
-      context: None,
-      loader_result_to_drops: None,
-      drops_to_value: None,
-      get_once_cell: None,
-      get_inverse_once_cell: None,
-      _phantom: Default::default(),
-    }
-  }
-
-  pub fn with_context(mut self, context: Context) -> Self {
-    self.context = Some(context);
-    self
-  }
-
-  pub fn with_loader_result_to_drops<F>(mut self, loader_result_to_drops: F) -> Self
-  where
-    F: LoaderResultToDropsFn<
-        EntityLinkLoaderResult<DropEntity<FromDrop>, DropEntity<ToDrop>>,
-        FromDrop,
-        ToDrop,
-        Context::StoreID,
-      > + 'static,
-  {
-    self.loader_result_to_drops = Some(Box::pin(loader_result_to_drops));
-    self
-  }
-
-  pub fn with_drops_to_value<F>(mut self, drops_to_value: F) -> Self
-  where
-    F: DropsToValueFn<ToDrop, Value, Context::StoreID> + 'static,
-  {
-    self.drops_to_value = Some(Box::pin(drops_to_value));
-    self
-  }
-
-  pub fn with_once_cell_getter<F>(mut self, get_once_cell: F) -> Self
-  where
-    F: GetOnceCellFn<FromDrop, Value> + 'static,
-  {
-    self.get_once_cell = Some(Box::pin(get_once_cell));
-    self
-  }
-
-  pub fn with_inverse_once_cell_getter<F>(mut self, get_inverse_once_cell: F) -> Self
-  where
-    F: GetInverseOnceCellFn<FromDrop, ToDrop> + 'static,
-  {
-    self.get_inverse_once_cell = Some(Box::pin(get_inverse_once_cell));
-    self
   }
 }

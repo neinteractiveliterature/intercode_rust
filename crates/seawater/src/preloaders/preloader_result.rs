@@ -56,18 +56,11 @@ where
   }
 }
 
-// impl<Id: Eq + Hash, InnerValue: ValueView + Clone + Send + Sync>
-//   PreloaderResult<Id, Vec<InnerValue>>
-// {
-//   pub fn all_values_flat<'a>(&'a self) -> Box<dyn Iterator<Item = &'a InnerValue> + 'a> {
-//     Box::new(self.all_values().flat_map(|v| v.get_inner().as_ref()))
-//   }
-// }
-
-// impl<Id: Eq + Hash, InnerValue: ValueView + Clone + Send + Sync>
-//   PreloaderResult<Id, Vec<ArcValueView<InnerValue>>>
-// {
-//   pub fn all_values_flat_unwrapped<'a>(&'a self) -> Box<dyn Iterator<Item = &'a InnerValue> + 'a> {
-//     Box::new(self.all_values_flat().map(|v| v.as_ref()))
-//   }
-// }
+impl<Id: Eq + Hash, InnerValue: ValueView + Clone + Send + Sync>
+  PreloaderResult<Id, Vec<InnerValue>>
+{
+  pub fn all_values_flat<'a>(&'a self) -> Box<dyn Iterator<Item = InnerValue> + 'a> {
+    let all_values = self.all_values();
+    Box::new(all_values.flat_map(|v| v.get_inner_cloned().unwrap_or_default()))
+  }
+}

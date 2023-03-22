@@ -47,10 +47,10 @@ trait AssociationMacro {
     let ident_str = LitStr::new(ident.to_string().as_str(), ident.span());
     let get_preloaded_drops = match self.get_target_type() {
       TargetType::Many => Box::new(quote!(
-        let preloaded_drops = preloader_result.all_values_flat().cloned().collect::<Vec<_>>();
+        let preloaded_drops = preloader_result.all_values_flat().collect::<Vec<_>>();
       )),
       TargetType::OneRequired => Box::new(quote!(
-        let preloaded_drops = preloader_result.all_values_unwrapped().cloned().collect::<Vec<_>>();
+        let preloaded_drops = preloader_result.all_values_unwrapped().collect::<Vec<_>>();
       )),
       TargetType::OneOptional => Box::new(quote!(
         let preloaded_drops = preloader_result.all_values().filter_map(|v| v.get_inner()).cloned().collect::<Vec<_>>();
@@ -179,8 +179,8 @@ trait AssociationMacro {
         );
 
         let drop_ref = self.context.with_drop_store(|store| {
-          store.store(self)
-        })?;
+          store.store(self.clone())
+        });
         let drop = Self::#preloader_ident(self.context.clone())
           .expect_single(self.context.db(), drop_ref)
           .await?;
@@ -227,7 +227,7 @@ trait AssociationMacro {
     Box::new(quote!(
       |result: Option<#loader_result_type>, from_drop: ::seawater::DropRef<Self, <Self as ::seawater::LiquidDrop>::ID>| {
         result.map(|result| {
-          Ok(result.models.into_iter().map(|model| <#to_drop>::new(model, from_drop.context.clone())).collect())
+          Ok(result.models.into_iter().map(|model| <#to_drop>::new(model, from_drop.fetch().context.clone())).collect())
         }).unwrap_or_else(|| Ok(vec![]))
       }
     ))
@@ -262,7 +262,7 @@ trait AssociationMacro {
       TargetType::Many => Box::new(quote!(
         |store: &::seawater::DropStore<<<Self as ::seawater::LiquidDrop>::Context as ::seawater::Context>::StoreID>,
          drops: Vec<::seawater::DropRef<#to_drop, ::seawater::DropStoreID<#to_drop>>>| {
-          Ok(drops)
+          Ok(store.get_all::<#to_drop>(drops.into_iter().map(|drop| drop.id())).into())
         }
       )),
     }
@@ -422,32 +422,40 @@ impl AssociationMacro for LinkedAssociationMacro {
     let link = &self.link;
     let once_cell_getter_ident = self.once_cell_getter_ident();
 
-    let with_inverse_once_cell_getter = self.inverse_once_cell_getter_ident().map(|ident| {
-      quote!(
-        .with_inverse_once_cell_getter(Self::#ident)
-      )
-    });
+    let inverse_once_cell_getter = self
+      .inverse_once_cell_getter_ident()
+      .map(|ident| {
+        quote!(
+          Some(Self::#ident)
+        )
+      })
+      .unwrap_or(quote!(None));
 
     parse_quote!(
       pub fn #preloader_ident(
         context: <Self as ::seawater::LiquidDrop>::Context
-      ) -> <::seawater::preloaders::EntityLinkPreloaderBuilder<Self, #to_drop, #target_path, <Self as ::seawater::LiquidDrop>::Context> as ::seawater::preloaders::PreloaderBuilder>::Preloader
+      ) -> ::seawater::preloaders::EntityLinkPreloader::<
+        ::seawater::DropEntity<Self>,
+        ::seawater::DropEntity<#to_drop>,
+        ::seawater::DropPrimaryKey<Self>,
+        Self,
+        #to_drop,
+        #target_path,
+        <Self as ::seawater::LiquidDrop>::Context,
+      >
       {
-        use ::seawater::preloaders::PreloaderBuilder;
         use ::seawater::ModelBackedDrop;
         use ::seawater::LiquidDrop;
 
-        Self::link_preloader::<#to_drop, #target_path>(
-          #link,
+        ::seawater::preloaders::EntityLinkPreloader::new(
           <<<Self as ::seawater::ModelBackedDrop>::Model as ::sea_orm::ModelTrait>::Entity as ::sea_orm::EntityTrait>::PrimaryKey::Id,
+          #link,
+          context,
+          #loader_result_to_drops,
+          #drops_to_value,
+          Self::#once_cell_getter_ident,
+          #inverse_once_cell_getter
         )
-        .with_context(context)
-        .with_loader_result_to_drops(#loader_result_to_drops)
-        .with_drops_to_value(#drops_to_value)
-        .with_once_cell_getter(Self::#once_cell_getter_ident)
-        #with_inverse_once_cell_getter
-        .finalize()
-        .unwrap()
       }
     )
   }
