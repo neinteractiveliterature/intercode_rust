@@ -36,17 +36,9 @@ pub struct EntityLinkPreloader<
   pk_column: PK::Column,
   link: BoxLink<From, To>,
   context: Context,
-  loader_result_to_drops: Pin<
-    Box<
-      dyn LoaderResultToDropsFn<
-        EntityLinkLoaderResult<From, To>,
-        FromDrop,
-        ToDrop,
-        Context::StoreID,
-      >,
-    >,
-  >,
-  drops_to_value: Pin<Box<dyn DropsToValueFn<ToDrop, Value, Context::StoreID>>>,
+  loader_result_to_drops:
+    Pin<Box<dyn LoaderResultToDropsFn<EntityLinkLoaderResult<From, To>, FromDrop, ToDrop>>>,
+  drops_to_value: Pin<Box<dyn DropsToValueFn<ToDrop, Value>>>,
   get_once_cell: Pin<Box<dyn GetOnceCellFn<FromDrop, Value>>>,
   get_inverse_once_cell: Option<Pin<Box<dyn GetInverseOnceCellFn<FromDrop, ToDrop>>>>,
   _phantom: PhantomData<(From, To, FromDrop, ToDrop)>,
@@ -88,9 +80,8 @@ where
 {
   pub fn new<
     Link: Linked<FromEntity = From, ToEntity = To> + Send + Sync + 'static,
-    LRDF: LoaderResultToDropsFn<EntityLinkLoaderResult<From, To>, FromDrop, ToDrop, Context::StoreID>
-      + 'static,
-    DVF: DropsToValueFn<ToDrop, Value, Context::StoreID> + 'static,
+    LRDF: LoaderResultToDropsFn<EntityLinkLoaderResult<From, To>, FromDrop, ToDrop> + 'static,
+    DVF: DropsToValueFn<ToDrop, Value> + 'static,
     GOCF: GetOnceCellFn<FromDrop, Value> + 'static,
   >(
     pk: PK,
@@ -119,11 +110,11 @@ impl<
     From: EntityTrait<PrimaryKey = PK>,
     To: EntityTrait,
     PK: PrimaryKeyTrait + PrimaryKeyToColumn<Column = From::Column>,
-    FromDrop: LiquidDrop<ID = PK::ValueType> + Send + Sync + Clone,
-    ToDrop: LiquidDrop<ID = PK::ValueType> + Send + Sync + Clone,
+    FromDrop: LiquidDrop<ID = PK::ValueType, Context = Context> + Send + Sync + Clone,
+    ToDrop: LiquidDrop<ID = PK::ValueType, Context = Context> + Send + Sync + Clone,
     Value: ValueView + Clone + Send + Sync + DropResultTrait<Value> + 'static,
     Context: crate::Context,
-  > Preloader<FromDrop, ToDrop, Value, Context::StoreID>
+  > Preloader<FromDrop, ToDrop, Value, Context>
   for EntityLinkPreloader<From, To, PK, FromDrop, ToDrop, Value, Context>
 where
   PK::ValueType: Eq
@@ -152,7 +143,7 @@ where
   fn loader_result_to_drops(
     &self,
     result: Option<Self::LoaderResult>,
-    drop: DropRef<FromDrop, Context::StoreID>,
+    drop: DropRef<FromDrop>,
   ) -> Result<Vec<ToDrop>, DropError> {
     (self.loader_result_to_drops)(result, drop)
   }
@@ -160,7 +151,7 @@ where
   fn drops_to_value(
     &self,
     store: &DropStore<Context::StoreID>,
-    drops: Vec<DropRef<ToDrop, Context::StoreID>>,
+    drops: Vec<DropRef<ToDrop>>,
   ) -> Result<DropResult<Value>, DropError> {
     (self.drops_to_value)(store, drops)
   }

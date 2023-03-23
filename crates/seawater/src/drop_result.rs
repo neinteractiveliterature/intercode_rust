@@ -5,7 +5,6 @@ use liquid::{ObjectView, ValueView};
 use once_cell::race::OnceBox;
 use std::{
   fmt::{Debug, Display},
-  hash::Hash,
   ops::Deref,
 };
 
@@ -15,10 +14,7 @@ pub trait DropResultTrait<T: ValueView + Clone + ToOwned<Owned = T>>: Send + Syn
   fn get_inner<'a>(&'a self) -> Option<Box<dyn Deref<Target = T> + 'a>>;
 }
 
-impl<
-    D: LiquidDrop + Clone + Send + Sync,
-    StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug,
-  > DropResultTrait<D> for DropRef<D, StoreID>
+impl<D: LiquidDrop + Clone + Send + Sync> DropResultTrait<D> for DropRef<D>
 where
   D::ID: Display + Debug,
 {
@@ -282,12 +278,8 @@ impl From<&serde_json::Value> for DropResult<liquid::model::Value> {
   }
 }
 
-impl<
-    D: LiquidDrop + Send + Sync,
-    StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug + 'static,
-  > From<DropRef<D, StoreID>> for DropResult<D>
-{
-  fn from(value: DropRef<D, StoreID>) -> Self {
+impl<D: LiquidDrop + Send + Sync> From<DropRef<D>> for DropResult<D> {
+  fn from(value: DropRef<D>) -> Self {
     DropResult::new(value)
   }
 }

@@ -22,7 +22,7 @@ model_backed_drop!(UserConProfileDrop, user_con_profiles::Model, DropContext);
   UserConProfileToStaffPositions,
   serialize = true
 )]
-// #[has_one_related(ticket, TicketDrop, serialize = true, eager_load(ticket_type))]
+#[has_one_related(ticket, TicketDrop, serialize = true, eager_load(ticket_type))]
 #[belongs_to_related(user, UserDrop, serialize = true)]
 #[liquid_drop_impl(i64, DropContext)]
 impl UserConProfileDrop {

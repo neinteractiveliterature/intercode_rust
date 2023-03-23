@@ -48,32 +48,48 @@ impl<ID: Eq + Hash + Copy + Display + Debug> DropStore<ID> {
       .collect()
   }
 
-  pub fn store<D: LiquidDrop + Clone + Send + Sync + 'static>(&self, drop: D) -> DropRef<D, ID>
+  pub fn store<
+    D: LiquidDrop<Context = Context> + Clone + Send + Sync + 'static,
+    Context: crate::Context<StoreID = ID>,
+  >(
+    &self,
+    drop: D,
+  ) -> DropRef<D>
   where
     ID: From<D::ID> + Send + Sync,
   {
     self.get_or_insert(drop)
   }
 
-  pub fn store_all<D: LiquidDrop + Clone + Send + Sync + 'static, I: IntoIterator<Item = D>>(
+  pub fn store_all<
+    D: LiquidDrop<Context = Context> + Clone + Send + Sync + 'static,
+    I: IntoIterator<Item = D>,
+    Context: crate::Context<StoreID = ID>,
+  >(
     &self,
     drops: I,
-  ) -> Vec<DropRef<D, ID>>
+  ) -> Vec<DropRef<D>>
   where
     ID: From<D::ID> + Send + Sync,
   {
     drops.into_iter().map(|drop| self.store(drop)).collect()
   }
 
-  fn get_or_insert<D: LiquidDrop + Clone + Send + Sync + 'static>(&self, value: D) -> DropRef<D, ID>
+  fn get_or_insert<
+    D: LiquidDrop<Context = Context> + Clone + Send + Sync + 'static,
+    Context: crate::Context<StoreID = ID>,
+  >(
+    &self,
+    value: D,
+  ) -> DropRef<D>
   where
     ID: From<D::ID> + Send + Sync,
   {
     let mut lock = self.drops_by_id.write();
-    let id = value.id();
-    lock.get_or_insert(id.into(), value);
-    lock.get_or_insert(id.into(), D::Cache::new());
+    let id: ID = value.id().into();
+    lock.get_or_insert(id, value);
+    lock.get_or_insert(id, D::Cache::new());
 
-    DropRef::new(id.into(), self.weak.clone())
+    DropRef::new(id, self.weak.clone())
   }
 }

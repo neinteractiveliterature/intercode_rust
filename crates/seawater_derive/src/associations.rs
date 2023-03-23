@@ -1,6 +1,6 @@
 use proc_macro::TokenStream;
 use quote::{quote, ToTokens};
-use syn::{parse_macro_input, parse_quote, Ident, ImplItem, ItemImpl, LitStr, Path};
+use syn::{parse, parse_macro_input, parse_quote, Ident, ImplItem, ItemImpl, LitStr, Path};
 
 use crate::attrs::{AssociationMacroArgs, LinkedAssociationMacroArgs, RelatedAssociationMacroArgs};
 
@@ -53,14 +53,14 @@ trait AssociationMacro {
         let preloaded_drops = preloader_result.all_values_unwrapped().collect::<Vec<_>>();
       )),
       TargetType::OneOptional => Box::new(quote!(
-        let preloaded_drops = preloader_result.all_values().filter_map(|v| v.get_inner()).cloned().collect::<Vec<_>>();
+        let preloaded_drops = preloader_result.all_values().filter_map(|v| v.get_inner_cloned()).collect::<Vec<_>>();
       )),
     };
 
     parse_quote!(
       pub fn #ident<'a>(
         context: <Self as ::seawater::LiquidDrop>::Context,
-        drops: &'a [::seawater::DropRef<Self, <<Self as ::seawater::LiquidDrop>::Context as ::seawater::Context>::StoreID>],
+        drops: &'a [::seawater::DropRef<Self>],
       ) -> ::futures::future::BoxFuture<'a, Result<::seawater::preloaders::PreloaderResult<<<<<Self as ::seawater::ModelBackedDrop>::Model as ::sea_orm::ModelTrait>::Entity as ::sea_orm::EntityTrait>::PrimaryKey as sea_orm::PrimaryKeyTrait>::ValueType, #target_path>, ::seawater::DropError>> {
         use ::futures::FutureExt;
 
@@ -221,9 +221,9 @@ trait AssociationMacro {
     let loader_result_type = self.loader_result_type();
 
     Box::new(quote!(
-      |result: Option<#loader_result_type>, from_drop: ::seawater::DropRef<Self, <Self as ::seawater::LiquidDrop>::ID>| {
+      |result: Option<#loader_result_type>, from_drop: ::seawater::DropRef<Self>| {
         result.map(|result| {
-          Ok(result.models.into_iter().map(|model| <#to_drop>::new(model, from_drop.fetch().context.clone())).collect())
+          Ok(result.models.into_iter().map(|model| #to_drop::new(model, from_drop.fetch().context.clone())).collect())
         }).unwrap_or_else(|| Ok(vec![]))
       }
     ))
@@ -235,16 +235,16 @@ trait AssociationMacro {
     match self.get_target_type() {
       TargetType::OneOptional => Box::new(quote!(
         |store: &::seawater::DropStore<::seawater::DropStoreID<Self>>,
-         drops: Vec<::seawater::DropRef<#to_drop, ::seawater::DropStoreID<#to_drop>>| {
+         drops: Vec<::seawater::DropRef<#to_drop>>| {
         if drops.len() == 1 {
           Ok(drops[0].into())
         } else {
-          Ok(None::<::seawater::DropResult<#to_drop>>.into())
+          Ok(None::<#to_drop>.into())
         }
       })),
       TargetType::OneRequired => Box::new(quote!(
         |store: &::seawater::DropStore<::seawater::DropStoreID<Self>>,
-         drops: Vec<::seawater::DropRef<#to_drop, ::seawater::DropStoreID<#to_drop>>>| {
+         drops: Vec<::seawater::DropRef<#to_drop>>| {
         if drops.len() == 1 {
           Ok(drops[0].into())
         } else {
@@ -257,7 +257,7 @@ trait AssociationMacro {
       })),
       TargetType::Many => Box::new(quote!(
         |store: &::seawater::DropStore<<<Self as ::seawater::LiquidDrop>::Context as ::seawater::Context>::StoreID>,
-         drops: Vec<::seawater::DropRef<#to_drop, ::seawater::DropStoreID<#to_drop>>>| {
+         drops: Vec<::seawater::DropRef<#to_drop>>| {
           Ok(store.get_all::<#to_drop>(drops.into_iter().map(|drop| drop.id())).into())
         }
       )),
@@ -304,8 +304,8 @@ impl AssociationMacro for RelatedAssociationMacro {
 
     parse_quote!(
       ::seawater::loaders::EntityRelationLoaderResult<
-        <<Self as ::seawater::ModelBackedDrop>::Model as ::sea_orm::ModelTrait>::Entity,
-        <<#to_drop as ::seawater::ModelBackedDrop>::Model as ::sea_orm::ModelTrait>::Entity,
+        ::seawater::DropEntity<Self>,
+        ::seawater::DropEntity<#to_drop>
       >
     )
   }
@@ -319,7 +319,7 @@ impl AssociationMacro for RelatedAssociationMacro {
     let once_cell_getter_ident = self.once_cell_getter_ident();
     let inverse_once_cell_getter = self.inverse_once_cell_getter();
 
-    parse_quote!(
+    let item = quote!(
       pub fn #preloader_ident(
         context: <Self as ::seawater::LiquidDrop>::Context
       ) -> ::seawater::preloaders::EntityRelationPreloader::<
@@ -351,7 +351,9 @@ impl AssociationMacro for RelatedAssociationMacro {
           #inverse_once_cell_getter
         )
       }
-    )
+    );
+
+    parse(item.into()).unwrap()
   }
 }
 
@@ -395,8 +397,8 @@ impl AssociationMacro for LinkedAssociationMacro {
 
     parse_quote!(
       ::seawater::loaders::EntityLinkLoaderResult<
-        <<Self as ::seawater::ModelBackedDrop>::Model as ::sea_orm::ModelTrait>::Entity,
-        <<#to_drop as ::seawater::ModelBackedDrop>::Model as ::sea_orm::ModelTrait>::Entity,
+        ::seawater::DropEntity<Self>,
+        ::seawater::DropEntity<#to_drop>
       >
     )
   }

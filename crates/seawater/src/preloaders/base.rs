@@ -2,10 +2,9 @@ use std::{
   collections::HashMap,
   error::Error,
   fmt::{Debug, Display},
-  hash::Hash,
 };
 
-use crate::{DropResult, DropResultTrait, LiquidDrop};
+use crate::{DropResult, DropResultTrait, DropStoreID, LiquidDrop};
 use async_trait::async_trait;
 use liquid::ValueView;
 use once_cell::race::OnceBox;
@@ -26,53 +25,31 @@ impl Display for IncompleteBuilderError {
 
 impl Error for IncompleteBuilderError {}
 
-pub trait LoaderResultToDropsFn<
-  LoaderResult,
-  FromDrop: LiquidDrop + 'static,
-  ToDrop,
-  StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug,
-> where
-  Self: Fn(Option<LoaderResult>, DropRef<FromDrop, StoreID>) -> Result<Vec<ToDrop>, DropError>
-    + Send
-    + Sync,
-{
-}
-
-impl<
-    LoaderResult,
-    FromDrop: LiquidDrop + 'static,
-    ToDrop,
-    T,
-    StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug,
-  > LoaderResultToDropsFn<LoaderResult, FromDrop, ToDrop, StoreID> for T
+pub trait LoaderResultToDropsFn<LoaderResult, FromDrop: LiquidDrop + 'static, ToDrop>
 where
-  T: Fn(Option<LoaderResult>, DropRef<FromDrop, StoreID>) -> Result<Vec<ToDrop>, DropError>
-    + Send
-    + Sync,
+  Self: Fn(Option<LoaderResult>, DropRef<FromDrop>) -> Result<Vec<ToDrop>, DropError> + Send + Sync,
 {
 }
 
-pub trait DropsToValueFn<
-  Drop: LiquidDrop + 'static,
-  Value: ValueView + Clone,
-  StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug,
-> where
-  Self: Fn(&DropStore<StoreID>, Vec<DropRef<Drop, StoreID>>) -> Result<DropResult<Value>, DropError>
-    + Send
-    + Sync,
-{
-}
-
-impl<
-    Drop: LiquidDrop + 'static,
-    Value: ValueView + Clone,
-    T,
-    StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug,
-  > DropsToValueFn<Drop, Value, StoreID> for T
+impl<LoaderResult, FromDrop: LiquidDrop + 'static, ToDrop, T>
+  LoaderResultToDropsFn<LoaderResult, FromDrop, ToDrop> for T
 where
-  T: Fn(&DropStore<StoreID>, Vec<DropRef<Drop, StoreID>>) -> Result<DropResult<Value>, DropError>
+  T: Fn(Option<LoaderResult>, DropRef<FromDrop>) -> Result<Vec<ToDrop>, DropError> + Send + Sync,
+{
+}
+
+pub trait DropsToValueFn<Drop: LiquidDrop + 'static, Value: ValueView + Clone>
+where
+  Self: Fn(&DropStore<DropStoreID<Drop>>, Vec<DropRef<Drop>>) -> Result<DropResult<Value>, DropError>
     + Send
     + Sync,
+{
+}
+
+impl<Drop: LiquidDrop + 'static, Value: ValueView + Clone, T> DropsToValueFn<Drop, Value> for T where
+  T: Fn(&DropStore<DropStoreID<Drop>>, Vec<DropRef<Drop>>) -> Result<DropResult<Value>, DropError>
+    + Send
+    + Sync
 {
 }
 
@@ -107,19 +84,10 @@ pub trait PreloaderBuilder {
 
 #[async_trait]
 pub trait Preloader<
-  FromDrop: Send + Sync + LiquidDrop + Clone + Into<DropResult<FromDrop>>,
-  ToDrop: Send + Sync + LiquidDrop + Clone + 'static,
+  FromDrop: Send + Sync + LiquidDrop<Context = Context> + Clone + Into<DropResult<FromDrop>>,
+  ToDrop: Send + Sync + LiquidDrop<Context = Context> + Clone + 'static,
   V: ValueView + Clone + Send + Sync + DropResultTrait<V> + 'static,
-  StoreID: From<FromDrop::ID>
-    + From<ToDrop::ID>
-    + Eq
-    + Hash
-    + Copy
-    + Send
-    + Sync
-    + Display
-    + Debug
-    + 'static,
+  Context: crate::Context,
 >
 {
   type LoaderResult;
@@ -127,18 +95,16 @@ pub trait Preloader<
   fn loader_result_to_drops(
     &self,
     result: Option<Self::LoaderResult>,
-    drop: DropRef<FromDrop, StoreID>,
+    drop: DropRef<FromDrop>,
   ) -> Result<Vec<ToDrop>, DropError>;
-  fn with_drop_store<'store, R: 'store, F: FnOnce(&'store DropStore<StoreID>) -> R>(
+  fn with_drop_store<'store, R: 'store, F: FnOnce(&'store DropStore<Context::StoreID>) -> R>(
     &'store self,
     f: F,
-  ) -> R
-  where
-    StoreID: 'store;
+  ) -> R;
   fn drops_to_value(
     &self,
-    store: &DropStore<StoreID>,
-    drops: Vec<DropRef<ToDrop, StoreID>>,
+    store: &DropStore<Context::StoreID>,
+    drops: Vec<DropRef<ToDrop>>,
   ) -> Result<DropResult<V>, DropError>;
   fn get_once_cell<'a>(&self, cache: &'a FromDrop::Cache) -> &'a OnceBox<DropResult<V>>;
   fn get_inverse_once_cell<'a>(
@@ -148,16 +114,17 @@ pub trait Preloader<
   async fn load_model_lists(
     &self,
     db: &ConnectionWrapper,
-    ids: &[StoreID],
-  ) -> Result<HashMap<StoreID, Self::LoaderResult>, DropError>;
+    ids: &[Context::StoreID],
+  ) -> Result<HashMap<Context::StoreID, Self::LoaderResult>, DropError>;
 
   async fn preload(
     &self,
     db: &ConnectionWrapper,
-    drops: &[DropRef<FromDrop, StoreID>],
-  ) -> Result<PreloaderResult<StoreID, V>, DropError>
+    drops: &[DropRef<FromDrop>],
+  ) -> Result<PreloaderResult<Context::StoreID, V>, DropError>
   where
     FromDrop: 'static,
+    Context::StoreID: From<FromDrop::ID> + From<ToDrop::ID>,
   {
     let span = info_span!(
       "preload",
@@ -205,11 +172,12 @@ pub trait Preloader<
 
   async fn load_drop_lists(
     &self,
-    unloaded_drops_by_id: &HashMap<StoreID, DropRef<FromDrop, StoreID>>,
+    unloaded_drops_by_id: &HashMap<Context::StoreID, DropRef<FromDrop>>,
     db: &ConnectionWrapper,
-  ) -> Result<HashMap<StoreID, Vec<DropRef<ToDrop, StoreID>>>, DropError>
+  ) -> Result<HashMap<Context::StoreID, Vec<DropRef<ToDrop>>>, DropError>
   where
     FromDrop: 'static,
+    Context::StoreID: From<ToDrop::ID>,
   {
     let span = info_span!(
       "load_drop_lists",
@@ -235,14 +203,13 @@ pub trait Preloader<
       )
       .await?;
 
-    let newly_loaded_drop_lists = self.with_drop_store(|normalized_drop_cache| {
+    let newly_loaded_drop_lists = self.with_drop_store(|store| {
       unloaded_drops_by_id
         .iter()
         .map(|(id, drop)| {
           let result = model_lists.remove(id);
           let converted_drops = self.loader_result_to_drops(result, drop.clone())?;
-          let normalized_drops: Vec<DropRef<ToDrop, StoreID>> =
-            normalized_drop_cache.store_all(converted_drops);
+          let normalized_drops: Vec<DropRef<ToDrop>> = store.store_all(converted_drops);
           Ok((*id, normalized_drops))
         })
         .collect::<Result<HashMap<_, _>, DropError>>()
@@ -258,11 +225,14 @@ pub trait Preloader<
 
   fn populate_db_preloader_results(
     &self,
-    drops_by_id: HashMap<StoreID, DropRef<FromDrop, StoreID>>,
-    newly_loaded_drop_lists: HashMap<StoreID, Vec<DropRef<ToDrop, StoreID>>>,
-    loaded_values_by_drop_id: HashMap<StoreID, DropResult<V>>,
-  ) -> Result<PreloaderResult<StoreID, V>, DropError> {
-    let mut values_by_id: HashMap<StoreID, DropResult<V>> =
+    drops_by_id: HashMap<Context::StoreID, DropRef<FromDrop>>,
+    newly_loaded_drop_lists: HashMap<Context::StoreID, Vec<DropRef<ToDrop>>>,
+    loaded_values_by_drop_id: HashMap<Context::StoreID, DropResult<V>>,
+  ) -> Result<PreloaderResult<Context::StoreID, V>, DropError>
+  where
+    Context::StoreID: From<FromDrop::ID>,
+  {
+    let mut values_by_id: HashMap<Context::StoreID, DropResult<V>> =
       HashMap::with_capacity(newly_loaded_drop_lists.len() + loaded_values_by_drop_id.len());
 
     self.with_drop_store(|store| {
@@ -288,12 +258,10 @@ pub trait Preloader<
     Ok(PreloaderResult::new(values_by_id))
   }
 
-  fn populate_inverse_caches(
-    &self,
-    from_drop: DropRef<FromDrop, StoreID>,
-    drops: &Vec<DropRef<ToDrop, StoreID>>,
-  ) where
+  fn populate_inverse_caches(&self, from_drop: DropRef<FromDrop>, drops: &Vec<DropRef<ToDrop>>)
+  where
     FromDrop: 'static,
+    Context::StoreID: From<ToDrop::ID>,
   {
     self.with_drop_store(|store| {
       for to_drop in drops {
@@ -310,11 +278,11 @@ pub trait Preloader<
   async fn load_single(
     &self,
     db: &ConnectionWrapper,
-    drop: DropRef<FromDrop, StoreID>,
+    drop: DropRef<FromDrop>,
   ) -> Result<DropResult<V>, DropError>
   where
     FromDrop: 'static,
-    StoreID: 'async_trait,
+    Context::StoreID: From<FromDrop::ID> + From<ToDrop::ID>,
   {
     let span = warn_span!(
       "load_single",
@@ -341,11 +309,11 @@ pub trait Preloader<
   async fn expect_single(
     &self,
     db: &ConnectionWrapper,
-    drop: DropRef<FromDrop, StoreID>,
+    drop: DropRef<FromDrop>,
   ) -> Result<V, DropError>
   where
     FromDrop: 'static,
-    StoreID: 'async_trait,
+    Context::StoreID: From<FromDrop::ID> + From<ToDrop::ID>,
   {
     let loaded = self.load_single(db, drop).await?;
     let inner = loaded.get_inner_cloned();

@@ -1,4 +1,5 @@
 use crate::DropStore;
+use crate::DropStoreID;
 use crate::IntoDropResult;
 use crate::LiquidDrop;
 use std::fmt::Display;
@@ -30,18 +31,14 @@ impl<StoreID: Eq + Hash + Copy + Display + Debug> StoreRef for Weak<DropStore<St
 }
 
 #[derive(Clone)]
-pub struct DropRef<D: LiquidDrop + Clone + 'static, StoreID: Eq + Hash + Copy + Display + Debug> {
-  id: StoreID,
-  store: Weak<DropStore<StoreID>>,
+pub struct DropRef<D: LiquidDrop + Clone + 'static> {
+  id: DropStoreID<D>,
+  store: Weak<DropStore<DropStoreID<D>>>,
   _phantom: PhantomData<D>,
 }
 
-impl<
-    D: LiquidDrop + Clone + Send + Sync + 'static,
-    StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug,
-  > DropRef<D, StoreID>
-{
-  pub fn new(id: StoreID, store: Weak<DropStore<StoreID>>) -> Self {
+impl<D: LiquidDrop + Clone + Send + Sync + 'static> DropRef<D> {
+  pub fn new(id: DropStoreID<D>, store: Weak<DropStore<DropStoreID<D>>>) -> Self {
     DropRef {
       id,
       store,
@@ -59,16 +56,12 @@ impl<
     store.and_then(|store| store.get::<D>(self.id))
   }
 
-  pub fn id(&self) -> StoreID {
+  pub fn id(&self) -> DropStoreID<D> {
     self.id
   }
 }
 
-impl<D: LiquidDrop + Clone + 'static, StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug>
-  Debug for DropRef<D, StoreID>
-where
-  StoreID: Debug,
-{
+impl<D: LiquidDrop + Clone + 'static> Debug for DropRef<D> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("DropRef")
       .field("id", &self.id)
@@ -77,9 +70,4 @@ where
   }
 }
 
-impl<
-    D: LiquidDrop + Clone + Send + Sync + 'static,
-    StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug + 'static,
-  > IntoDropResult<D> for DropRef<D, StoreID>
-{
-}
+impl<D: LiquidDrop + Clone + Send + Sync + 'static> IntoDropResult<D> for DropRef<D> {}

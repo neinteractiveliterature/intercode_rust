@@ -1,7 +1,7 @@
 use intercode_entities::runs;
 use liquid::model::DateTime;
 use seawater::liquid_drop_impl;
-use seawater::{belongs_to_related, has_many_related, model_backed_drop, DropError};
+use seawater::{belongs_to_related, has_many_related, model_backed_drop};
 use time::Duration;
 
 use super::{
@@ -32,9 +32,8 @@ impl RunDrop {
       .and_then(naive_date_time_to_liquid_date_time)
   }
 
-  pub async fn ends_at(&self) -> Result<Option<DateTime>, DropError> {
-    if let Some(starts_at) = self.starts_at().await.get_inner_cloned() {
-      let mut starts_at = *starts_at;
+  pub async fn ends_at(&self) -> Option<DateTime> {
+    if let Some(mut starts_at) = self.starts_at().await.get_inner_cloned() {
       let event_length = self
         .event()
         .await
@@ -44,10 +43,10 @@ impl RunDrop {
         .await
         .get_inner_cloned()
         .unwrap();
-      starts_at += Duration::seconds(event_length.into());
-      Ok(Some(liquid::model::DateTime::from(starts_at)))
+      *starts_at += Duration::seconds(event_length.into());
+      Some(starts_at)
     } else {
-      Ok(None)
+      None
     }
   }
 }
