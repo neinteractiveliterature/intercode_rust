@@ -1,7 +1,6 @@
 use chrono::Utc;
 use intercode_entities::{conventions, MaximumEventSignupsValue};
 use intercode_timespan::ScheduledValue;
-use sea_orm::JsonValue;
 use seawater::liquid_drop_impl;
 use seawater::{has_many_related, model_backed_drop};
 
@@ -33,8 +32,12 @@ impl ConventionDrop {
     EventsCreatedSince::new(self.model.id, self.context.clone())
   }
 
-  fn location(&self) -> Option<&JsonValue> {
-    self.model.location.as_ref()
+  fn location(&self) -> Option<liquid::model::Value> {
+    self
+      .model
+      .location
+      .as_ref()
+      .map(|loc| liquid::model::to_value(loc).unwrap())
   }
 
   fn maximum_event_signups(&self) -> ScheduledValueDrop<Utc, MaximumEventSignupsValue> {

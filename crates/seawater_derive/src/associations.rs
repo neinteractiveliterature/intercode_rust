@@ -102,7 +102,6 @@ trait AssociationMacro {
   fn generate_items(&self) -> Vec<ImplItem> {
     vec![
       Some(self.once_cell_getter()),
-      self.inverse_once_cell_getter(),
       Some(self.preloader_constructor()),
       Some(self.field_getter()),
       Some(self.imperative_preloader()),
@@ -122,25 +121,20 @@ trait AssociationMacro {
     Ident::new(format!("get_{}_once_cell", name).as_str(), name.span())
   }
 
-  fn inverse_once_cell_getter_ident(&self) -> Option<Ident> {
-    self.get_inverse().map(|name| {
-      Ident::new(
-        format!("get_{}_inverse_once_cell", name).as_str(),
-        name.span(),
-      )
-    })
-  }
-
-  fn inverse_once_cell_getter(&self) -> Option<ImplItem> {
-    self.get_inverse().map(|name| {
-      let ident = self.inverse_once_cell_getter_ident().unwrap();
-      let to_drop_ident = self.get_to();
-      parse_quote!(
-        fn #ident(drop: &#to_drop_ident) -> &::once_cell::race::OnceBox<::seawater::DropResult<Self>> {
-          &drop.drop_cache.#name
-        }
-      )
-    })
+  fn inverse_once_cell_getter(&self) -> Box<dyn ToTokens> {
+    Box::new(
+      self
+        .get_inverse()
+        .map(|name| {
+          let to_drop_ident = self.get_to();
+          quote!(
+            Some(Box::pin(|drop_cache: &<#to_drop_ident as ::seawater::LiquidDrop>::Cache| {
+              &drop_cache.#name
+            }))
+          )
+        })
+        .unwrap_or(quote!(None)),
+    )
   }
 
   fn field_getter(&self) -> ImplItem {
@@ -209,11 +203,13 @@ trait AssociationMacro {
           association_name.span(),
         );
         quote!(
-          #to_drop::#imperative_preload_ident(context.clone(), &preloaded_drops)
+          #to_drop::#imperative_preload_ident(context.clone(), &preloaded_drop_refs)
         )
       });
 
     Box::new(quote!(
+      let preloaded_drop_refs = context.with_drop_store(|store| store.store_all(preloaded_drops));
+
       ::futures::try_join!(
         #(#eager_loads,)*
       )?;
@@ -321,15 +317,7 @@ impl AssociationMacro for RelatedAssociationMacro {
     let loader_result_to_drops = self.loader_result_to_drops();
     let drops_to_value = self.drops_to_value();
     let once_cell_getter_ident = self.once_cell_getter_ident();
-
-    let inverse_once_cell_getter = self
-      .inverse_once_cell_getter_ident()
-      .map(|ident| {
-        quote!(
-          Some(Self::#ident)
-        )
-      })
-      .unwrap_or(quote!(None));
+    let inverse_once_cell_getter = self.inverse_once_cell_getter();
 
     parse_quote!(
       pub fn #preloader_ident(
@@ -421,15 +409,7 @@ impl AssociationMacro for LinkedAssociationMacro {
     let drops_to_value = self.drops_to_value();
     let link = &self.link;
     let once_cell_getter_ident = self.once_cell_getter_ident();
-
-    let inverse_once_cell_getter = self
-      .inverse_once_cell_getter_ident()
-      .map(|ident| {
-        quote!(
-          Some(Self::#ident)
-        )
-      })
-      .unwrap_or(quote!(None));
+    let inverse_once_cell_getter = self.inverse_once_cell_getter();
 
     parse_quote!(
       pub fn #preloader_ident(

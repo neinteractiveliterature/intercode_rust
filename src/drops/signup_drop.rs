@@ -19,23 +19,33 @@ impl SignupDrop {
   }
 
   async fn team_member(&self) -> bool {
-    let event = self.event().await.get_inner();
-    let team_member_profiles = event.team_member_user_con_profiles().await.get_inner();
+    let event = self.event().await.get_inner_cloned().unwrap();
+    let team_member_profiles = event
+      .team_member_user_con_profiles()
+      .await
+      .get_inner_cloned();
     team_member_profiles
       .iter()
       .any(|ucp| ucp.get_model().id == self.get_model().user_con_profile_id)
   }
 
-  async fn ends_at(&self) -> Result<Option<&DateTime>, DropError> {
-    let run = self.run().await.get_inner();
-    Ok(run.ends_at().await.get_inner())
+  async fn ends_at(&self) -> Option<DateTime> {
+    let run = self.run().await.get_inner_cloned().unwrap();
+    run.ends_at().await.get_inner_cloned()
   }
 
   fn state(&self) -> &str {
     &self.model.state
   }
 
-  async fn starts_at(&self) -> Result<Option<&DateTime>, DropError> {
-    Ok(self.run().await.get_inner().starts_at().await.get_inner())
+  async fn starts_at(&self) -> Option<DateTime> {
+    self
+      .run()
+      .await
+      .get_inner_cloned()
+      .unwrap()
+      .starts_at()
+      .await
+      .get_inner_cloned()
   }
 }

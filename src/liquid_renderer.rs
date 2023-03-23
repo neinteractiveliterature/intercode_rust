@@ -7,7 +7,7 @@ use intercode_graphql::{
 use intercode_liquid::{build_liquid_parser, cms_parent_partial_source::PreloadPartialsStrategy};
 use intercode_policies::AuthorizationInfo;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-use seawater::{liquid_drop_impl, DropPrimaryKeyValue, DropRef, DropResult, ExtendedDropResult};
+use seawater::{liquid_drop_impl, DropResult, ExtendedDropResult};
 use seawater::{Context, DropError, DropStore, ModelBackedDrop};
 use std::{
   fmt::Debug,
@@ -58,42 +58,41 @@ impl IntercodeGlobals {
     )
   }
 
-  async fn event(&self) -> Result<Option<EventDrop>, DropError> {
+  async fn event(&self) -> Option<EventDrop> {
     if let Some(convention) = self.query_data.convention() {
       if convention.site_mode == "single_event" {
-        return Ok(
-          events::Entity::find()
-            .filter(events::Column::ConventionId.eq(convention.id))
-            .one(self.context.db())
-            .await?
-            .map(|event| EventDrop::new(event, self.context.clone())),
-        );
+        return events::Entity::find()
+          .filter(events::Column::ConventionId.eq(convention.id))
+          .one(self.context.db())
+          .await
+          .ok()
+          .flatten()
+          .map(|event| EventDrop::new(event, self.context.clone()));
       }
     }
 
-    Ok(None)
+    None
   }
 
-  async fn user_con_profile(
-    &self,
-  ) -> Result<Option<DropRef<UserConProfileDrop, DropPrimaryKeyValue<UserConProfileDrop>>>, DropError>
-  {
+  async fn user_con_profile(&self) -> Option<UserConProfileDrop> {
     let ucp = self.query_data.user_con_profile().map(|user_con_profile| {
       UserConProfileDrop::new(user_con_profile.clone(), self.context.clone())
     });
 
     if let Some(ucp) = ucp {
-      let ucp = self.context.with_drop_store(|store| store.store(ucp));
-      let drops = vec![ucp.clone()];
+      let ucp_ref = self
+        .context
+        .with_drop_store(|store| store.store(ucp.clone()));
+      let drops = vec![ucp_ref];
       try_join!(
         UserConProfileDrop::preload_signups(self.context.clone(), &drops),
         UserConProfileDrop::preload_staff_positions(self.context.clone(), &drops),
         UserConProfileDrop::preload_ticket(self.context.clone(), &drops),
         UserConProfileDrop::preload_user(self.context.clone(), &drops),
-      )?;
-      Ok(Some(ucp))
+      );
+      Some(ucp)
     } else {
-      Ok(None)
+      None
     }
   }
 }

@@ -45,11 +45,9 @@ impl EventDrop {
   }
 
   async fn team_member_name(&self) -> String {
-    let name_future = self
-      .event_category()
-      .await
-      .get_inner()
-      .map(|event_category| event_category.team_member_name());
+    let event_category = self.event_category().await.get_inner_cloned();
+    let name_future = event_category
+      .map(|event_category| async move { event_category.team_member_name().await.clone() });
 
     let name = if let Some(name_future) = name_future {
       name_future.await.clone()
@@ -57,7 +55,7 @@ impl EventDrop {
       "team_member".to_string().into()
     };
 
-    name.get_inner().into_owned()
+    name.get_inner_cloned().unwrap()
   }
 
   fn title(&self) -> &str {
