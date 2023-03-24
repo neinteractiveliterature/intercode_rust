@@ -32,7 +32,7 @@ impl<StartTz: TimeZone + Debug, FinishTz: TimeZone + Debug, V: Clone + Serialize
     Self {
       timespan_with_value: self.timespan_with_value.clone(),
       context: self.context.clone(),
-      id: self.id.clone(),
+      id: self.id,
       _liquid_object_view_pairs: OnceBox::new(),
     }
   }

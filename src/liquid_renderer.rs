@@ -10,7 +10,7 @@ use intercode_policies::AuthorizationInfo;
 use liquid::ValueView;
 use once_cell::race::OnceBox;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-use seawater::{liquid_drop_impl, DropResult, ExtendedDropResult};
+use seawater::{liquid_drop_impl, DropResult};
 use seawater::{Context, DropError, DropStore, ModelBackedDrop};
 use std::{
   fmt::Debug,

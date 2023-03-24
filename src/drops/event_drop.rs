@@ -46,11 +46,11 @@ impl EventDrop {
 
   async fn team_member_name(&self) -> String {
     let event_category = self.event_category().await.get_inner_cloned();
-    let name_future = event_category
-      .map(|event_category| async move { event_category.team_member_name().await.clone() });
+    let name_future =
+      event_category.map(|event_category| async move { event_category.team_member_name().await });
 
     let name = if let Some(name_future) = name_future {
-      name_future.await.clone()
+      name_future.await
     } else {
       "team_member".to_string().into()
     };

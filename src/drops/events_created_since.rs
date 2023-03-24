@@ -80,10 +80,7 @@ impl EventsCreatedSince {
       EventDrop::preload_event_category(self.context.clone(), &drops)
     ]?;
 
-    let drop_result: Vec<_> = drops
-      .into_iter()
-      .map(|drop| DropResult::new(drop))
-      .collect();
+    let drop_result: Vec<_> = drops.into_iter().map(DropResult::new).collect();
 
     let bump = self.herd.get();
     Ok(bump.alloc(drop_result))
