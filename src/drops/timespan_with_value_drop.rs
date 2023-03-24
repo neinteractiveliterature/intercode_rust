@@ -3,15 +3,17 @@ use std::{
   sync::atomic::{AtomicI64, Ordering},
 };
 
+use async_graphql::indexmap::IndexMap;
 use chrono::TimeZone;
 use intercode_timespan::TimespanWithValue;
-use liquid::model::DateTime;
+use liquid::{model::DateTime, ValueView};
+use once_cell::race::OnceBox;
 use seawater::liquid_drop_impl;
 use serde::Serialize;
 
 use super::{utils::date_time_to_liquid_date_time, DropContext};
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct TimespanWithValueDrop<
   StartTz: TimeZone + Debug,
   FinishTz: TimeZone + Debug,
@@ -20,6 +22,20 @@ pub struct TimespanWithValueDrop<
   pub timespan_with_value: TimespanWithValue<StartTz, FinishTz, V>,
   context: DropContext,
   id: i64,
+  _liquid_object_view_pairs: OnceBox<IndexMap<String, Box<dyn ValueView + Send + Sync>>>,
+}
+
+impl<StartTz: TimeZone + Debug, FinishTz: TimeZone + Debug, V: Clone + Serialize + Debug> Clone
+  for TimespanWithValueDrop<StartTz, FinishTz, V>
+{
+  fn clone(&self) -> Self {
+    Self {
+      timespan_with_value: self.timespan_with_value.clone(),
+      context: self.context.clone(),
+      id: self.id.clone(),
+      _liquid_object_view_pairs: OnceBox::new(),
+    }
+  }
 }
 
 static NEXT_ID: AtomicI64 = AtomicI64::new(0);
@@ -43,6 +59,7 @@ where
       id,
       timespan_with_value,
       context,
+      _liquid_object_view_pairs: OnceBox::new(),
     }
   }
 

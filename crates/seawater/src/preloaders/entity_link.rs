@@ -133,7 +133,7 @@ where
 {
   type LoaderResult = EntityLinkLoaderResult<From, To>;
 
-  fn with_drop_store<'store, R: 'store, F: FnOnce(&'store DropStore<Context::StoreID>) -> R>(
+  fn with_drop_store<'store, R: 'store, F: FnOnce(&DropStore<Context::StoreID>) -> R>(
     &'store self,
     f: F,
   ) -> R {

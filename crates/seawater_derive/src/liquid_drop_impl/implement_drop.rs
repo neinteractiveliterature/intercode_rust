@@ -3,7 +3,7 @@ use syn::Path;
 
 use crate::helpers::build_generic_args;
 
-use super::LiquidDropImpl;
+use super::{implement_get_all_blocking::implement_get_all_blocking, LiquidDropImpl};
 
 pub fn implement_drop(
   liquid_drop_impl: &LiquidDropImpl,
@@ -41,11 +41,14 @@ pub fn implement_drop(
     .map(|method| method.uncached_getter())
     .collect::<Vec<_>>();
 
+  let get_all_blocking = implement_get_all_blocking(methods.iter().collect::<Vec<_>>().as_slice());
+
   Box::new(quote!(
     impl #generics #self_ty #where_clause {
       #(#constructors)*
       #(#other_items)*
       #(#method_getters)*
+      #get_all_blocking
     }
 
     impl #generics ::seawater::LiquidDrop for #self_ty #where_clause {

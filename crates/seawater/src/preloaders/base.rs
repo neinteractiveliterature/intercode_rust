@@ -97,7 +97,7 @@ pub trait Preloader<
     result: Option<Self::LoaderResult>,
     drop: DropRef<FromDrop>,
   ) -> Result<Vec<ToDrop>, DropError>;
-  fn with_drop_store<'store, R: 'store, F: FnOnce(&'store DropStore<Context::StoreID>) -> R>(
+  fn with_drop_store<'store, R: 'store, F: FnOnce(&DropStore<Context::StoreID>) -> R>(
     &'store self,
     f: F,
   ) -> R;

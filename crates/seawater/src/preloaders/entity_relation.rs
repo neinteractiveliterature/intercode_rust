@@ -101,7 +101,7 @@ where
     (self.loader_result_to_drops)(result, drop)
   }
 
-  fn with_drop_store<'store, R: 'store, F: FnOnce(&'store DropStore<Context::StoreID>) -> R>(
+  fn with_drop_store<'store, R: 'store, F: FnOnce(&DropStore<Context::StoreID>) -> R>(
     &'store self,
     f: F,
   ) -> R {

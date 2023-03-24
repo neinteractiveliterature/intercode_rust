@@ -11,15 +11,30 @@ pub fn implement_get_all_blocking(methods: &[&DropGetterMethod]) -> Box<dyn ToTo
 
   let getter_idents = methods.iter().map(|method| method.caching_getter_ident());
 
-  let destructure_var_names = getter_idents.clone();
+  let map_pairs = methods
+    .iter()
+    .map(|method| (method.name_str(), method.caching_getter_ident()))
+    .map(|(key, value)| {
+      quote!(
+        (
+          #key.to_string(),
+          Box::new(#value) as Box<dyn liquid::ValueView + Send + Sync>,
+        )
+      )
+    });
 
   Box::new(quote!(
-    let (#(#destructure_var_names ,)*) = tokio::task::block_in_place(move || {
-      tokio::runtime::Handle::current().block_on(async move {
-        futures::join!(
-          #(#getter_invocations,)*
+    fn get_all_blocking(&self) -> &::async_graphql::indexmap::IndexMap<String, Box<dyn liquid::ValueView + Send + Sync>> {
+      self._liquid_object_view_pairs.get_or_init(|| {
+        let (#(#getter_idents ,)*) = tokio::task::block_in_place(move || {
+          tokio::runtime::Handle::current()
+            .block_on(async move { ::futures::join![#(#getter_invocations ,)*] })
+        });
+
+        Box::new(
+          vec![#(#map_pairs ,)*].into_iter().collect(),
         )
       })
-    });
+    }
   ))
 }

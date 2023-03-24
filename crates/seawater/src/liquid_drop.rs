@@ -21,7 +21,7 @@ pub trait LiquidDrop: ValueView + ObjectView + Clone + Into<DropResult<Self>> {
   fn with_drop_store<
     'store,
     R: 'store,
-    F: FnOnce(&'store DropStore<<Self::Context as Context>::StoreID>) -> R,
+    F: FnOnce(&DropStore<<Self::Context as Context>::StoreID>) -> R,
   >(
     &'store self,
     f: F,

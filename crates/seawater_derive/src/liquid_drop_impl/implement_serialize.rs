@@ -1,6 +1,6 @@
 use quote::{quote, ToTokens};
 
-use super::{implement_get_all_blocking::implement_get_all_blocking, LiquidDropImpl};
+use super::LiquidDropImpl;
 
 pub fn implement_serialize(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTokens> {
   let generics = &liquid_drop_impl.generics;
@@ -10,14 +10,11 @@ pub fn implement_serialize(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToken
   let methods = liquid_drop_impl.methods.iter().collect::<Vec<_>>();
   let where_clause = &generics.where_clause;
 
-  let get_all_blocking = implement_get_all_blocking(&methods);
-
   let method_serializers = methods.iter().map(|method| {
-    let ident = method.caching_getter_ident();
     let name_str = method.name_str();
 
     quote!(
-      struct_serializer.serialize_field(#name_str, &#ident.to_value())?;
+      struct_serializer.serialize_field(#name_str, &index_map.get(#name_str).unwrap().as_ref().to_value())?;
     )
   });
 
@@ -32,7 +29,7 @@ pub fn implement_serialize(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToToken
         use ::seawater::LiquidDrop;
 
         let mut struct_serializer = serializer.serialize_struct(#type_name, #method_count)?;
-        #get_all_blocking
+        let index_map = self.get_all_blocking();
         #(#method_serializers)*
         struct_serializer.end()
       }

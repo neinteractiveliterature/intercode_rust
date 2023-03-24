@@ -1,6 +1,6 @@
 use quote::{quote, ToTokens};
 
-use super::{implement_get_all_blocking::implement_get_all_blocking, LiquidDropImpl};
+use super::LiquidDropImpl;
 
 pub fn implement_object_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTokens> {
   let methods = liquid_drop_impl.methods.iter().collect::<Vec<_>>();
@@ -9,26 +9,10 @@ pub fn implement_object_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTok
   let method_count = methods.len();
   let where_clause = &generics.where_clause;
 
-  let getter_values = methods.iter().map(|method| {
-    let ident = method.caching_getter_ident();
-    quote!(#ident.as_value())
-  });
-
   let method_name_strings: Vec<syn::LitStr> = methods
     .iter()
     .map(|getter_method| getter_method.name_str())
     .collect();
-
-  let get_all_blocking = implement_get_all_blocking(methods.as_slice());
-
-  let object_pairs = methods.iter().map(|method| {
-    let ident = method.caching_getter_ident();
-    let name_str = method.name_str();
-
-    quote!(
-      (#name_str, #ident.as_value())
-    )
-  });
 
   let object_getters = methods.iter().map(|method| {
     let ident = method.caching_getter_ident();
@@ -59,30 +43,24 @@ pub fn implement_object_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTok
         )
       }
 
-      fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn liquid::ValueView> + 'k> {
-        use ::seawater::LiquidDrop;
-        #get_all_blocking
-        let values: Vec<&dyn liquid::ValueView> = vec![
-          #(#getter_values),*
-        ];
-
-        Box::new(values.into_iter())
+      fn values<'k>(&'k self) -> Box<dyn Iterator<Item = &'k dyn ::liquid::ValueView> + 'k> {
+        Box::new(
+          self
+            .get_all_blocking()
+            .iter()
+            .map(|(_key, value)| value.as_ref() as &dyn liquid::ValueView),
+        )
       }
 
       fn iter<'k>(
         &'k self,
-      ) -> Box<dyn Iterator<Item = (liquid::model::KStringCow<'k>, &'k dyn liquid::ValueView)> + 'k> {
-        use ::seawater::LiquidDrop;
-        #get_all_blocking
-        let pairs: Vec<(&str, &dyn liquid::ValueView)> = vec![
-          #(#object_pairs ,)*
-        ];
-
-        Box::new(
-          pairs
-            .into_iter()
-            .map(|(key, value)| (key.into(), value)),
-        )
+      ) -> Box<dyn Iterator<Item = (::liquid::model::KStringCow<'k>, &'k dyn ::liquid::ValueView)> + 'k> {
+        Box::new(self.get_all_blocking().iter().map(|(key, value)| {
+          (
+            ::liquid::model::KStringCow::from_ref(key),
+            value.as_ref() as &dyn ::liquid::ValueView,
+          )
+        }))
       }
 
       fn contains_key(&self, index: &str) -> bool {

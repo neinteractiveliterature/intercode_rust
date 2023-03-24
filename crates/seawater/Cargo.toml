@@ -8,8 +8,6 @@ version = "0.1.0"
 [dependencies]
 async-graphql = {workspace = true, features = ["dataloader"]}
 async-trait = {workspace = true}
-bumpalo = {workspace = true, features = ["boxed"]}
-bumpalo-herd = {workspace = true}
 liquid = {workspace = true}
 liquid-core = {workspace = true}
 once_cell = {workspace = true}

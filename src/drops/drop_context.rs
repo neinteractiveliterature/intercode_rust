@@ -36,7 +36,7 @@ impl Debug for DropContext {
 impl seawater::Context for DropContext {
   type StoreID = i64;
 
-  fn with_drop_store<'store, R: 'store, F: FnOnce(&'store DropStore<i64>) -> R>(&self, f: F) -> R {
+  fn with_drop_store<'store, R: 'store, F: FnOnce(&DropStore<i64>) -> R>(&self, f: F) -> R {
     let arc = self.cache.upgrade().unwrap();
     f(arc.as_ref())
   }

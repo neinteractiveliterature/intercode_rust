@@ -1,4 +1,5 @@
 use async_graphql::async_trait::async_trait;
+use async_graphql::indexmap::IndexMap;
 use futures::try_join;
 use intercode_entities::{conventions, events};
 use intercode_graphql::{
@@ -6,6 +7,8 @@ use intercode_graphql::{
 };
 use intercode_liquid::{build_liquid_parser, cms_parent_partial_source::PreloadPartialsStrategy};
 use intercode_policies::AuthorizationInfo;
+use liquid::ValueView;
+use once_cell::race::OnceBox;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use seawater::{liquid_drop_impl, DropResult, ExtendedDropResult};
 use seawater::{Context, DropError, DropStore, ModelBackedDrop};
@@ -16,10 +19,21 @@ use std::{
 
 use crate::drops::{ConventionDrop, DropContext, EventDrop, UserConProfileDrop};
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct IntercodeGlobals {
   query_data: QueryData,
   context: DropContext,
+  _liquid_object_view_pairs: OnceBox<IndexMap<String, Box<dyn ValueView + Send + Sync>>>,
+}
+
+impl Clone for IntercodeGlobals {
+  fn clone(&self) -> Self {
+    Self {
+      query_data: self.query_data.clone(),
+      context: self.context.clone(),
+      _liquid_object_view_pairs: OnceBox::new(),
+    }
+  }
 }
 
 #[liquid_drop_impl(i64, DropContext)]
@@ -32,6 +46,7 @@ impl IntercodeGlobals {
     IntercodeGlobals {
       query_data: query_data.clone(),
       context: DropContext::new(schema_data, query_data, normalized_drop_cache),
+      _liquid_object_view_pairs: OnceBox::new(),
     }
   }
 
