@@ -237,7 +237,7 @@ trait AssociationMacro {
         |store: &::seawater::DropStore<::seawater::DropStoreID<Self>>,
          drops: Vec<::seawater::DropRef<#to_drop>>| {
         if drops.len() == 1 {
-          Ok(drops[0].into())
+          Ok(drops[0].clone().into())
         } else {
           Ok(None::<#to_drop>.into())
         }
@@ -246,7 +246,7 @@ trait AssociationMacro {
         |store: &::seawater::DropStore<::seawater::DropStoreID<Self>>,
          drops: Vec<::seawater::DropRef<#to_drop>>| {
         if drops.len() == 1 {
-          Ok(drops[0].into())
+          Ok(drops[0].clone().into())
         } else {
           Err(::seawater::DropError::ExpectedEntityNotFound(format!(
             "Expected one {}, but there are {}",

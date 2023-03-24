@@ -32,8 +32,8 @@ impl<ID: Eq + Hash + Copy + Display + Debug> DropStore<ID> {
     &self,
     drop_id: ID,
   ) -> Arc<D::Cache> {
-    let lock = self.drops_by_id.read();
-    lock.get::<D::Cache>(drop_id).unwrap()
+    let mut lock = self.drops_by_id.write();
+    lock.get_or_insert::<D::Cache>(drop_id, D::Cache::new())
   }
 
   pub fn get_all<D: LiquidDrop + Send + Sync + 'static>(
@@ -88,7 +88,6 @@ impl<ID: Eq + Hash + Copy + Display + Debug> DropStore<ID> {
     let mut lock = self.drops_by_id.write();
     let id: ID = value.id().into();
     lock.get_or_insert(id, value);
-    lock.get_or_insert(id, D::Cache::new());
 
     DropRef::new(id, self.weak.clone())
   }

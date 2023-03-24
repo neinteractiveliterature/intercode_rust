@@ -111,9 +111,10 @@ impl<T: ValueView + Debug + Clone> DropResult<T> {
   pub fn extend(&self, extensions: liquid::model::Object) -> ExtendedDropResult<T>
   where
     Self: Sized,
+    T: DropResultTrait<T> + 'static,
   {
     ExtendedDropResult {
-      drop_result: self,
+      drop_result: self.clone(),
       extensions,
     }
   }

@@ -38,14 +38,10 @@ impl Clone for IntercodeGlobals {
 
 #[liquid_drop_impl(i64, DropContext)]
 impl IntercodeGlobals {
-  pub fn new(
-    query_data: QueryData,
-    schema_data: SchemaData,
-    normalized_drop_cache: Weak<DropStore<i64>>,
-  ) -> Self {
+  pub fn new(query_data: QueryData, schema_data: SchemaData, store: Weak<DropStore<i64>>) -> Self {
     IntercodeGlobals {
       query_data: query_data.clone(),
-      context: DropContext::new(schema_data, query_data, normalized_drop_cache),
+      context: DropContext::new(schema_data, query_data, store),
       _liquid_object_view_pairs: OnceBox::new(),
     }
   }
@@ -117,7 +113,7 @@ pub struct IntercodeLiquidRenderer {
   query_data: QueryData,
   schema_data: SchemaData,
   authorization_info: AuthorizationInfo,
-  normalized_drop_cache: Arc<DropStore<i64>>,
+  store: Arc<DropStore<i64>>,
 }
 
 impl IntercodeLiquidRenderer {
@@ -130,7 +126,7 @@ impl IntercodeLiquidRenderer {
       query_data: query_data.clone(),
       schema_data: schema_data.clone(),
       authorization_info,
-      normalized_drop_cache: Default::default(),
+      store: Default::default(),
     }
   }
 }
@@ -145,7 +141,7 @@ impl LiquidRenderer for IntercodeLiquidRenderer {
     Ok(Box::new(IntercodeGlobals::new(
       query_data,
       schema_data,
-      Arc::downgrade(&self.normalized_drop_cache),
+      Arc::downgrade(&self.store),
     )))
   }
 
@@ -185,9 +181,9 @@ impl LiquidRenderer for IntercodeLiquidRenderer {
     let builtins = DropResult::new(IntercodeGlobals::new(
       query_data,
       schema_data,
-      Arc::downgrade(&self.normalized_drop_cache),
+      Arc::downgrade(&self.store),
     ));
-    let globals_with_builtins = ExtendedDropResult::new(&builtins, globals);
+    let globals_with_builtins = builtins.extend(globals);
 
     let template = parser.parse(content)?;
     let result =

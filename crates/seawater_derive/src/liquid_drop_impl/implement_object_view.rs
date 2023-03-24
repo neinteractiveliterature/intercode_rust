@@ -14,15 +14,6 @@ pub fn implement_object_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTok
     .map(|getter_method| getter_method.name_str())
     .collect();
 
-  let object_getters = methods.iter().map(|method| {
-    let ident = method.caching_getter_ident();
-    let name_str = method.name_str();
-
-    quote!(
-      #name_str => Some(self.#ident().await.as_value())
-    )
-  });
-
   Box::new(quote!(
     impl #generics liquid::ObjectView for #self_ty #where_clause {
       fn as_value(&self) -> &dyn liquid::ValueView {
@@ -71,15 +62,8 @@ pub fn implement_object_view(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn ToTok
       }
 
       fn get<'s>(&'s self, index: &str) -> Option<&'s dyn liquid::ValueView> {
-        use ::seawater::LiquidDrop;
-        tokio::task::block_in_place(move || {
-          tokio::runtime::Handle::current().block_on(async move {
-            match index {
-              #(#object_getters ,)*
-              _ => None,
-            }
-          })
-        })
+        let index_map = self.get_all_blocking();
+        index_map.get(index).map(|boxed| boxed.as_ref() as &dyn ::liquid::ValueView)
       }
     }
   ))

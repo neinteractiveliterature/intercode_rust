@@ -111,9 +111,9 @@ where
 }
 
 impl<
-    StartTz: TimeZone + Debug + Send + Sync,
-    FinishTz: TimeZone + Debug + Send + Sync,
-    V: Clone + Serialize + Debug + Send + Sync,
+    StartTz: TimeZone + Debug + Send + Sync + 'static,
+    FinishTz: TimeZone + Debug + Send + Sync + 'static,
+    V: Clone + Serialize + Debug + Send + Sync + 'static,
   > From<TimespanWithValueDrop<StartTz, FinishTz, Option<V>>>
   for Option<TimespanWithValueDrop<StartTz, FinishTz, V>>
 where
