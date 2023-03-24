@@ -37,7 +37,7 @@ where
     Self {
       scheduled_value: self.scheduled_value.clone(),
       context: self.context.clone(),
-      id: self.id.clone(),
+      id: self.id,
       _liquid_object_view_pairs: OnceBox::new(),
     }
   }

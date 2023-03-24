@@ -47,7 +47,9 @@ impl<D: LiquidDrop + Clone + Send + Sync + 'static> DropRef<D> {
   }
 
   pub fn fetch(&self) -> Arc<D> {
-    self.try_fetch().unwrap()
+    self
+      .try_fetch()
+      .unwrap_or_else(|| panic!("Couldn't fetch {:?} from drop store", self))
   }
 
   pub fn try_fetch(&self) -> Option<Arc<D>> {

@@ -10,7 +10,8 @@ pub fn implement_drop_result_from(liquid_drop_impl: &LiquidDropImpl) -> Box<dyn 
   Box::new(quote!(
     impl #generics From<#self_ty> for ::seawater::DropResult<#self_ty> #where_clause {
       fn from(drop: #self_ty) -> Self {
-        ::seawater::DropResult::new(drop.clone())
+        use ::seawater::LiquidDrop;
+        drop.with_drop_store(|store| store.store(drop.clone())).into()
       }
     }
 
