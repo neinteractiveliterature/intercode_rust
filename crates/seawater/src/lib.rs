@@ -12,6 +12,7 @@ pub mod loaders;
 mod model_backed_drop;
 mod optional_value_view;
 pub mod preloaders;
+mod renderer;
 mod result_value_view;
 
 pub use arc_value_view::*;
@@ -27,6 +28,7 @@ pub use model_backed_drop::*;
 use once_cell::sync::Lazy;
 pub use optional_value_view::*;
 use regex::Regex;
+pub use renderer::*;
 pub use result_value_view::*;
 pub use seawater_derive::*;
 

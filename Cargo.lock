@@ -3826,6 +3826,7 @@ dependencies = [
  "sea-orm",
  "seawater_derive",
  "serde_json",
+ "tokio",
  "tracing",
 ]
 

@@ -8,20 +8,24 @@ use seawater::{ConnectionWrapper, DropStore};
 pub struct DropContext {
   schema_data: SchemaData,
   query_data: QueryData,
-  cache: Weak<DropStore<i64>>,
+  store: Weak<DropStore<i64>>,
 }
 
 impl DropContext {
-  pub fn new(schema_data: SchemaData, query_data: QueryData, cache: Weak<DropStore<i64>>) -> Self {
+  pub fn new(schema_data: SchemaData, query_data: QueryData, store: Weak<DropStore<i64>>) -> Self {
     DropContext {
       schema_data,
       query_data,
-      cache,
+      store,
     }
   }
 
   pub fn language_loader(&self) -> &FluentLanguageLoader {
     self.schema_data.language_loader.as_ref()
+  }
+
+  pub fn query_data(&self) -> &QueryData {
+    &self.query_data
   }
 }
 
@@ -37,7 +41,7 @@ impl seawater::Context for DropContext {
   type StoreID = i64;
 
   fn with_drop_store<'store, R: 'store, F: FnOnce(&DropStore<i64>) -> R>(&self, f: F) -> R {
-    let arc = self.cache.upgrade().unwrap();
+    let arc = self.store.upgrade().unwrap();
     f(arc.as_ref())
   }
 

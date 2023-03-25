@@ -47,15 +47,18 @@ impl<D: LiquidDrop + Clone + Send + Sync + 'static> DropRef<D> {
   }
 
   pub fn fetch(&self) -> Arc<D> {
-    self
-      .try_fetch()
-      .unwrap_or_else(|| panic!("Couldn't fetch {:?} from drop store", self))
+    self.try_fetch().unwrap_or_else(|| {
+      // don't reformat plz
+      panic!("Couldn't fetch {:?} from drop store", self)
+    })
   }
 
   pub fn try_fetch(&self) -> Option<Arc<D>> {
     let arc = self.store.upgrade();
-    let store = arc.as_deref();
-    store.and_then(|store| store.get::<D>(self.id))
+    let store = arc
+      .as_deref()
+      .unwrap_or_else(|| panic!("Couldn't get drop store while trying to fetch {:?}", self));
+    store.get::<D>(self.id)
   }
 
   pub fn id(&self) -> DropStoreID<D> {
