@@ -1,18 +1,13 @@
 use async_graphql::{async_trait, dataloader::Loader};
 use sea_orm::{
   sea_query::{IntoValueTuple, ValueTuple},
-  DbErr, EntityTrait, FromQueryResult, Linked, PrimaryKeyToColumn, PrimaryKeyTrait, QuerySelect,
+  DbErr, EntityTrait, Linked, PrimaryKeyToColumn, PrimaryKeyTrait, QuerySelect, TryGetable,
 };
-use std::{collections::HashMap, marker::PhantomData, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
-use crate::ConnectionWrapper;
+use crate::{loaders::parent_model_id_only::ParentModelIdOnly, ConnectionWrapper};
 
 use super::expect::ExpectModels;
-
-#[derive(FromQueryResult)]
-struct ParentModelIdOnly {
-  pub parent_model_id: i64,
-}
 
 pub async fn load_all_linked<
   From: EntityTrait,
@@ -21,16 +16,14 @@ pub async fn load_all_linked<
 >(
   pk_column: <From::PrimaryKey as PrimaryKeyToColumn>::Column,
   keys: &[<From::PrimaryKey as PrimaryKeyTrait>::ValueType],
-  link: &Link,
+  link: Link,
   db: &ConnectionWrapper,
 ) -> Result<
   HashMap<<From::PrimaryKey as PrimaryKeyTrait>::ValueType, EntityLinkLoaderResult<From, To>>,
   DbErr,
 >
 where
-  Link: Clone,
-  <From::PrimaryKey as PrimaryKeyTrait>::ValueType:
-    Eq + std::hash::Hash + Clone + std::convert::From<i64>,
+  <From::PrimaryKey as PrimaryKeyTrait>::ValueType: Eq + std::hash::Hash + Clone + TryGetable,
 {
   use sea_orm::{ColumnTrait, QueryFilter};
 
@@ -46,29 +39,28 @@ where
     }
   });
 
-  let mut results = From::find()
-    .filter(pk_column.is_in(pk_values))
+  let mut results = QueryFilter::filter(From::find(), pk_column.is_in(pk_values))
     .select_only()
     .column_as(pk_column, "parent_model_id")
-    .find_also_linked(link.clone())
-    .into_model::<ParentModelIdOnly, To::Model>()
+    .find_also_linked(link)
+    .into_model::<ParentModelIdOnly<<From::PrimaryKey as PrimaryKeyTrait>::ValueType>, To::Model>()
     .all(db)
     .await?
     .into_iter()
     .fold(
       HashMap::<<From::PrimaryKey as PrimaryKeyTrait>::ValueType, EntityLinkLoaderResult<From, To>>::new(),
       |mut acc: HashMap<<From::PrimaryKey as PrimaryKeyTrait>::ValueType, EntityLinkLoaderResult<From, To>>,
-       (from_model, to_model): (ParentModelIdOnly, Option<To::Model>)| {
+       (from_model, to_model): (ParentModelIdOnly<<From::PrimaryKey as PrimaryKeyTrait>::ValueType>, Option<To::Model>)| {
         if let Some(to_model) = to_model {
           let id = from_model.parent_model_id;
-          let result = acc.get_mut(&id.into());
+          let result = acc.get_mut(&id);
           if let Some(result) = result {
             result.models.push(to_model);
           } else {
             acc.insert(
-              id.into(),
+              id.clone(),
               EntityLinkLoaderResult::<From, To> {
-                from_id: id.into(),
+                from_id: id,
                 models: vec![to_model],
               },
             );
@@ -188,59 +180,53 @@ where
 }
 
 #[derive(Debug)]
-pub struct EntityLinkLoader<
-  From: EntityTrait,
-  Link: Linked<FromEntity = From, ToEntity = To>,
-  To: EntityTrait,
-> {
+pub struct EntityLinkLoader<Link: Linked> {
   pub db: ConnectionWrapper,
-  pub primary_key: From::PrimaryKey,
+  pub primary_key: <Link::FromEntity as EntityTrait>::PrimaryKey,
   pub link: Link,
-  _from: PhantomData<From>,
-  _to: PhantomData<To>,
 }
 
-impl<From: EntityTrait, Link: Linked<FromEntity = From, ToEntity = To>, To: EntityTrait>
-  EntityLinkLoader<From, Link, To>
-{
+impl<Link: Linked> EntityLinkLoader<Link> {
   pub fn new(
     db: ConnectionWrapper,
     link: Link,
-    primary_key: From::PrimaryKey,
-  ) -> EntityLinkLoader<From, Link, To> {
-    EntityLinkLoader::<From, Link, To> {
+    primary_key: <Link::FromEntity as EntityTrait>::PrimaryKey,
+  ) -> EntityLinkLoader<Link> {
+    EntityLinkLoader {
       db,
       link,
       primary_key,
-      _from: PhantomData::<From>,
-      _to: PhantomData::<To>,
     }
   }
 }
 
 #[async_trait::async_trait]
-impl<From: EntityTrait, Link: Linked<FromEntity = From, ToEntity = To>, To: EntityTrait>
-  Loader<<From::PrimaryKey as PrimaryKeyTrait>::ValueType> for EntityLinkLoader<From, Link, To>
+impl<Link: Linked>
+  Loader<<<Link::FromEntity as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType>
+  for EntityLinkLoader<Link>
 where
-  <From as sea_orm::EntityTrait>::Model: Sync,
-  <To as sea_orm::EntityTrait>::Model: Sync,
+  <Link::FromEntity as EntityTrait>::Model: Sync,
+  <Link::ToEntity as EntityTrait>::Model: Sync,
   Link: 'static + Send + Sync + Clone,
-  From::PrimaryKey: PrimaryKeyToColumn,
-  <From::PrimaryKey as PrimaryKeyTrait>::ValueType:
-    Sync + Clone + Eq + std::hash::Hash + IntoValueTuple + std::convert::From<i64>,
+  <Link::FromEntity as EntityTrait>::PrimaryKey: PrimaryKeyToColumn,
+  <<Link::FromEntity as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType:
+    Sync + Clone + Eq + std::hash::Hash + IntoValueTuple + TryGetable,
 {
-  type Value = EntityLinkLoaderResult<From, To>;
+  type Value = EntityLinkLoaderResult<Link::FromEntity, Link::ToEntity>;
   type Error = Arc<sea_orm::DbErr>;
 
   async fn load(
     &self,
-    keys: &[<From::PrimaryKey as PrimaryKeyTrait>::ValueType],
+    keys: &[<<Link::FromEntity as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType],
   ) -> Result<
-    HashMap<<From::PrimaryKey as PrimaryKeyTrait>::ValueType, EntityLinkLoaderResult<From, To>>,
+    HashMap<
+      <<Link::FromEntity as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType,
+      EntityLinkLoaderResult<Link::FromEntity, Link::ToEntity>,
+    >,
     Self::Error,
   > {
     let pk_column = self.primary_key.into_column();
 
-    Ok(load_all_linked(pk_column, keys, &self.link, self.db.as_ref()).await?)
+    Ok(load_all_linked(pk_column, keys, self.link.clone(), self.db.as_ref()).await?)
   }
 }

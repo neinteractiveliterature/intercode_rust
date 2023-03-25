@@ -1,5 +1,4 @@
-use crate::DropError;
-use lazy_liquid_value_view::{ArcValueView, DropResult};
+use crate::{DropError, DropResult};
 use liquid::ValueView;
 use std::{
   collections::{hash_map::IterMut, HashMap},
@@ -7,29 +6,36 @@ use std::{
 };
 
 #[derive(Debug)]
-pub struct PreloaderResult<Id: Eq + Hash, Value: ValueView + Clone> {
+pub struct PreloaderResult<Id: Eq + Hash, Value: ValueView + Clone + Send + Sync + 'static> {
   values_by_id: HashMap<Id, DropResult<Value>>,
 }
 
-impl<Id: Eq + Hash, Value: ValueView + Clone> PreloaderResult<Id, Value> {
+impl<Id: Eq + Hash, Value: ValueView + Clone + Send + Sync + 'static> PreloaderResult<Id, Value>
+where
+  DropResult<Value>: Clone,
+{
   pub fn new(values_by_id: HashMap<Id, DropResult<Value>>) -> Self {
     Self { values_by_id }
   }
 
-  pub fn get(&self, id: &Id) -> DropResult<Value> {
-    self.values_by_id.get(id).cloned().unwrap_or_default()
+  pub fn get(&self, id: Id) -> DropResult<Value> {
+    self
+      .values_by_id
+      .get(&id)
+      .and_then(|drop_result| drop_result.get_inner_cloned())
+      .into()
   }
 
   #[allow(dead_code)]
-  pub fn expect_value(&self, id: &Id) -> Result<Value, DropError> {
+  pub fn expect_value(&self, id: Id) -> Result<Value, DropError> {
     self
-      .get(id)
-      .get_inner()
-      .cloned()
+      .values_by_id
+      .get(&id)
+      .and_then(|drop_result| drop_result.get_inner_cloned())
       .ok_or_else(|| DropError::ExpectedEntityNotFound(std::any::type_name::<Value>().to_string()))
   }
 
-  pub fn all_values<'a>(&'a self) -> Box<dyn Iterator<Item = &'a DropResult<Value>> + 'a> {
+  pub fn all_values(&self) -> Box<dyn Iterator<Item = &DropResult<Value>> + '_> {
     Box::new(self.values_by_id.values())
   }
 
@@ -37,12 +43,11 @@ impl<Id: Eq + Hash, Value: ValueView + Clone> PreloaderResult<Id, Value> {
     self.values_by_id.iter_mut()
   }
 
-  pub fn all_values_unwrapped<'a>(&'a self) -> Box<dyn Iterator<Item = &'a Value> + 'a> {
+  pub fn all_values_unwrapped<'a>(&'a self) -> Box<dyn Iterator<Item = Value> + 'a> {
     Box::new(
       self
         .all_values()
-        .into_iter()
-        .map(|value| value.get_inner().unwrap()),
+        .map(|value| value.get_inner_cloned().unwrap()),
     )
   }
 
@@ -51,16 +56,11 @@ impl<Id: Eq + Hash, Value: ValueView + Clone> PreloaderResult<Id, Value> {
   }
 }
 
-impl<Id: Eq + Hash, InnerValue: ValueView + Clone> PreloaderResult<Id, Vec<InnerValue>> {
-  pub fn all_values_flat<'a>(&'a self) -> Box<dyn Iterator<Item = &'a InnerValue> + 'a> {
-    Box::new(self.all_values().flat_map(|v| v.get_inner().unwrap()))
-  }
-}
-
-impl<Id: Eq + Hash, InnerValue: ValueView + Clone>
-  PreloaderResult<Id, Vec<ArcValueView<InnerValue>>>
+impl<Id: Eq + Hash, InnerValue: ValueView + Clone + Send + Sync>
+  PreloaderResult<Id, Vec<InnerValue>>
 {
-  pub fn all_values_flat_unwrapped<'a>(&'a self) -> Box<dyn Iterator<Item = &'a InnerValue> + 'a> {
-    Box::new(self.all_values_flat().map(|v| v.as_ref()))
+  pub fn all_values_flat<'a>(&'a self) -> Box<dyn Iterator<Item = InnerValue> + 'a> {
+    let all_values = self.all_values();
+    Box::new(all_values.flat_map(|v| v.get_inner_cloned().unwrap_or_default()))
   }
 }

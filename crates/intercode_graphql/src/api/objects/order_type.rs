@@ -15,7 +15,7 @@ impl OrderType {
 
   #[graphql(name = "order_entries")]
   async fn order_entries(&self, ctx: &Context<'_>) -> Result<Vec<OrderEntryType>, Error> {
-    let loader = &ctx.data::<QueryData>()?.loaders.order_order_entries;
+    let loader = &ctx.data::<QueryData>()?.loaders().order_order_entries();
 
     Ok(
       loader

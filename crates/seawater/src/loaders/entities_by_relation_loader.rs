@@ -1,19 +1,14 @@
 use async_graphql::{async_trait, dataloader::Loader};
 use sea_orm::{
   sea_query::{IntoValueTuple, ValueTuple},
-  DbErr, EntityTrait, FromQueryResult, PrimaryKeyToColumn, PrimaryKeyTrait, QuerySelect, Related,
-  RelationDef,
+  DbErr, EntityTrait, PrimaryKeyToColumn, PrimaryKeyTrait, QuerySelect, Related, RelationDef,
+  TryGetable,
 };
 use std::{collections::HashMap, marker::PhantomData, sync::Arc};
 
-use crate::ConnectionWrapper;
+use crate::{loaders::parent_model_id_only::ParentModelIdOnly, ConnectionWrapper};
 
 use super::expect::ExpectModels;
-
-#[derive(FromQueryResult, Debug)]
-struct ParentModelIdOnly {
-  pub parent_model_id: i64,
-}
 
 pub async fn load_all_related<From: EntityTrait + Related<To>, To: EntityTrait>(
   pk_column: <From::PrimaryKey as PrimaryKeyToColumn>::Column,
@@ -24,8 +19,7 @@ pub async fn load_all_related<From: EntityTrait + Related<To>, To: EntityTrait>(
   Arc<DbErr>,
 >
 where
-  <From::PrimaryKey as PrimaryKeyTrait>::ValueType:
-    Eq + std::hash::Hash + Clone + std::convert::From<i64>,
+  <From::PrimaryKey as PrimaryKeyTrait>::ValueType: Eq + std::hash::Hash + Clone + TryGetable,
 {
   use sea_orm::{ColumnTrait, QueryFilter};
 
@@ -41,12 +35,11 @@ where
     }
   });
 
-  let query_results = From::find()
-    .filter(pk_column.is_in(pk_values))
+  let query_results = QueryFilter::filter(From::find(), pk_column.is_in(pk_values))
     .select_only()
     .column_as(pk_column, "parent_model_id")
     .find_also_related(To::default())
-    .into_model::<ParentModelIdOnly, To::Model>()
+    .into_model::<ParentModelIdOnly<<From::PrimaryKey as PrimaryKeyTrait>::ValueType>, To::Model>()
     .all(db)
     .await?;
 
@@ -60,17 +53,20 @@ where
         <From::PrimaryKey as PrimaryKeyTrait>::ValueType,
         EntityRelationLoaderResult<From, To>,
       >,
-       (from_model, to_model): (ParentModelIdOnly, Option<To::Model>)| {
+       (from_model, to_model): (
+        ParentModelIdOnly<<From::PrimaryKey as PrimaryKeyTrait>::ValueType>,
+        Option<To::Model>,
+      )| {
         if let Some(to_model) = to_model {
           let id = from_model.parent_model_id;
-          let result = acc.get_mut(&id.into());
+          let result = acc.get_mut(&id);
           if let Some(result) = result {
             result.models.push(to_model);
           } else {
             acc.insert(
-              id.into(),
+              id.clone(),
               EntityRelationLoaderResult::<From, To> {
-                from_id: id.into(),
+                from_id: id,
                 models: vec![to_model],
               },
             );
@@ -222,7 +218,7 @@ where
   <From as sea_orm::EntityTrait>::Model: Sync,
   <To as sea_orm::EntityTrait>::Model: Sync,
   <From::PrimaryKey as PrimaryKeyTrait>::ValueType:
-    Sync + Clone + Eq + std::hash::Hash + IntoValueTuple + std::convert::From<i64>,
+    Sync + Clone + Eq + std::hash::Hash + IntoValueTuple + TryGetable,
 {
   type Value = EntityRelationLoaderResult<From, To>;
   type Error = Arc<sea_orm::DbErr>;

@@ -1,22 +1,17 @@
-use std::io::Write;
-use std::sync::Arc;
-
+use super::write_react_component_tag;
+use crate::dig::{get_array_from_value, get_datetime_from_value, get_scalar_from_value};
+use crate::invalid_argument;
 use liquid::Error;
 use liquid_core::{
   Expression, Language, ParseTag, Renderable, Result, Runtime, TagReflection, TagTokenIter,
   ValueView,
 };
 use serde_json::json;
-
-use crate::dig::{get_array_from_value, get_datetime_from_value, get_scalar_from_value};
-use crate::invalid_argument;
-use intercode_entities::conventions;
-
-use super::write_react_component_tag;
+use std::io::Write;
 
 #[derive(Clone, Debug, Default)]
 pub struct MaximumEventSignupsPreviewTag {
-  pub convention: Arc<Option<conventions::Model>>,
+  pub convention_timezone: Option<String>,
 }
 
 impl MaximumEventSignupsPreviewTag {
@@ -49,7 +44,7 @@ impl ParseTag for MaximumEventSignupsPreviewTag {
     arguments.expect_nothing()?;
 
     Ok(Box::new(MaximumEventSignupsPreview {
-      convention: self.convention.clone(),
+      convention_timezone: self.convention_timezone.clone(),
       scheduled_value,
     }))
   }
@@ -62,7 +57,7 @@ impl ParseTag for MaximumEventSignupsPreviewTag {
 #[derive(Debug)]
 struct MaximumEventSignupsPreview {
   scheduled_value: Expression,
-  convention: Arc<Option<conventions::Model>>,
+  convention_timezone: Option<String>,
 }
 
 impl Renderable for MaximumEventSignupsPreview {
@@ -114,12 +109,7 @@ impl Renderable for MaximumEventSignupsPreview {
       })
       .collect::<Result<Vec<serde_json::Value>, Error>>()?;
 
-    let timezone_name = self
-      .convention
-      .as_ref()
-      .as_ref()
-      .map(|c| c.timezone_name.as_ref())
-      .unwrap_or_default();
+    let timezone_name = self.convention_timezone.as_deref().unwrap_or_default();
 
     write_react_component_tag(
       writer,

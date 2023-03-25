@@ -24,14 +24,20 @@ mod implement_serialize;
 mod implement_value_view;
 
 struct LiquidDropImplArgs {
-  pub id_type: Option<Path>,
+  pub id_type: Path,
+  pub context_type: Path,
 }
 
 impl Parse for LiquidDropImplArgs {
   fn parse(input: ParseStream) -> parse::Result<Self> {
     let vars = Punctuated::<Path, Token![,]>::parse_terminated(input)?;
     let mut vars_iter = vars.iter();
-    let id_type = vars_iter.next();
+    let id_type = vars_iter
+      .next()
+      .expect("id type is required for liquid_drop_impl");
+    let context_type = vars_iter
+      .next()
+      .expect("context type is required for liquid_drop_impl");
 
     if vars_iter.next().is_some() {
       return Err(Error::new(
@@ -41,7 +47,8 @@ impl Parse for LiquidDropImplArgs {
     }
 
     Ok(LiquidDropImplArgs {
-      id_type: id_type.map(|path| path.to_owned()),
+      id_type: id_type.clone(),
+      context_type: context_type.clone(),
     })
   }
 }
@@ -49,7 +56,6 @@ impl Parse for LiquidDropImplArgs {
 pub struct LiquidDropImpl {
   self_ty: Type,
   self_type_arguments: Option<PathArguments>,
-  self_name: String,
   generics: Generics,
   type_name: syn::LitStr,
   cache_struct_ident: Ident,
@@ -59,7 +65,7 @@ pub struct LiquidDropImpl {
 }
 
 impl LiquidDropImpl {
-  fn new(input: ItemImpl, has_id_type: bool) -> Self {
+  fn new(input: ItemImpl) -> Self {
     let (self_ty, self_name, self_type_arguments) =
       get_type_path_and_name_and_arguments(&input.self_ty).unwrap();
     let generics = input.generics.clone();
@@ -128,7 +134,7 @@ impl LiquidDropImpl {
             return None;
           }
 
-          let is_id = has_id_type && method.sig.ident == "id";
+          let is_id = method.sig.ident == "id";
           Some(DropGetterMethod::new(method, serialize, is_id))
         }
         _ => None,
@@ -138,7 +144,6 @@ impl LiquidDropImpl {
     LiquidDropImpl {
       self_ty,
       self_type_arguments,
-      self_name,
       generics,
       type_name,
       cache_struct_ident,
@@ -155,10 +160,10 @@ impl LiquidDropImpl {
 pub fn eval_liquid_drop_impl_macro(args: TokenStream, input: TokenStream) -> TokenStream {
   let args = parse_macro_input!(args as LiquidDropImplArgs);
   let input = parse_macro_input!(input as ItemImpl);
-  let analyzed_impl = LiquidDropImpl::new(input, args.id_type.is_some());
+  let analyzed_impl = LiquidDropImpl::new(input);
 
   let drop_cache_struct = implement_drop_cache(&analyzed_impl);
-  let drop_impl = implement_drop(&analyzed_impl, args.id_type.as_ref());
+  let drop_impl = implement_drop(&analyzed_impl, &args.id_type, &args.context_type);
   let serialize_impl = implement_serialize(&analyzed_impl);
   let value_view_impl = implement_value_view(&analyzed_impl);
   let object_view_impl = implement_object_view(&analyzed_impl);

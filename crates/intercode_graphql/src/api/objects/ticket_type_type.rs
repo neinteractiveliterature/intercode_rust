@@ -13,6 +13,15 @@ impl TicketTypeType {
     self.model.id.into()
   }
 
+  async fn description(&self) -> Option<&str> {
+    self.model.description.as_deref()
+  }
+
+  #[graphql(name = "maximum_event_provided_tickets")]
+  async fn maximum_event_provided_tickets(&self) -> i32 {
+    self.model.maximum_event_provided_tickets
+  }
+
   async fn name(&self) -> &String {
     &self.model.name
   }
@@ -23,8 +32,8 @@ impl TicketTypeType {
 
     Ok(
       query_data
-        .loaders
-        .ticket_type_providing_products
+        .loaders()
+        .ticket_type_providing_products()
         .load_one(self.model.id)
         .await?
         .expect_models()?

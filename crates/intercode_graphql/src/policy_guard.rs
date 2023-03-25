@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use async_graphql::{Context, Guard, Result};
 use async_trait::async_trait;
 use intercode_policies::{AuthorizationInfo, Policy};
@@ -18,7 +16,7 @@ impl<'a, P: Policy<AuthorizationInfo, R>, R: Send + Sync> PolicyGuard<'a, P, R> 
 #[async_trait]
 impl<'a, P: Policy<AuthorizationInfo, R>, R: Send + Sync> Guard for PolicyGuard<'a, P, R> {
   async fn check(&self, ctx: &Context<'_>) -> Result<()> {
-    let principal = ctx.data::<Arc<AuthorizationInfo>>()?;
+    let principal = ctx.data::<AuthorizationInfo>()?;
     P::action_permitted(principal, &self.action, self.resource).await?;
     Ok(())
   }

@@ -25,8 +25,8 @@ impl RoomType {
     Ok(
       ctx
         .data::<QueryData>()?
-        .loaders
-        .room_runs
+        .loaders()
+        .room_runs()
         .load_one(self.model.id)
         .await?
         .expect_models()?

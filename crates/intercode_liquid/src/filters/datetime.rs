@@ -1,9 +1,8 @@
-use std::sync::Arc;
+use std::sync::Weak;
 
 use chrono_tz::Tz;
 use i18n_embed::fluent::FluentLanguageLoader;
 use i18n_embed_fl::fl;
-use intercode_entities::conventions;
 use liquid_core::{
   Display_filter, Expression, Filter, FilterParameters, FilterReflection, FromFilterParameters,
   ParseFilter, Result, Runtime, Value, ValueView,
@@ -14,11 +13,11 @@ use crate::invalid_input;
 use intercode_timespan::Timespan;
 
 fn find_effective_timezone(
-  timezone_name: Option<&String>,
-  convention: Option<&conventions::Model>,
+  timezone_name: Option<&str>,
+  convention_timezone: Option<&str>,
 ) -> Option<Tz> {
   timezone_name
-    .or_else(|| convention.and_then(|convention| convention.timezone_name.as_ref()))
+    .or(convention_timezone)
     .and_then(|timezone_name| timezone_name.parse::<Tz>().ok())
 }
 
@@ -80,7 +79,7 @@ struct DateWithLocalTimeArgs {
   parsed(DateWithLocalTimeFilter)
 )]
 pub struct DateWithLocalTime {
-  pub convention: Arc<Option<conventions::Model>>,
+  pub convention_timezone: Option<String>,
 }
 
 impl ParseFilter for DateWithLocalTime {
@@ -88,7 +87,7 @@ impl ParseFilter for DateWithLocalTime {
     let args = DateWithLocalTimeArgs::from_args(arguments)?;
     Ok(Box::new(DateWithLocalTimeFilter {
       args,
-      convention: self.convention.clone(),
+      convention_timezone: self.convention_timezone.clone(),
     }))
   }
 
@@ -100,7 +99,7 @@ impl ParseFilter for DateWithLocalTime {
 #[derive(Debug, FromFilterParameters, Display_filter)]
 #[name = "date_with_local_time"]
 struct DateWithLocalTimeFilter {
-  convention: Arc<Option<conventions::Model>>,
+  convention_timezone: Option<String>,
   #[parameters]
   args: DateWithLocalTimeArgs,
 }
@@ -117,9 +116,9 @@ impl Filter for DateWithLocalTimeFilter {
     let format = chrono::format::strftime::StrftimeItems::new(&format_str);
 
     let datetime = liquid_datetime_to_chrono_datetime(&input);
-    let timezone_name = args.timezone_name.as_ref().map(|expr| expr.to_string());
+    let timezone_name = args.timezone_name.as_ref().map(|expr| expr.as_str());
 
-    let tz = find_effective_timezone(timezone_name.as_ref(), self.convention.as_ref().as_ref());
+    let tz = find_effective_timezone(timezone_name, self.convention_timezone.as_deref());
 
     if let Some(tz) = tz {
       let datetime_in_tz = datetime.with_timezone(&tz);
@@ -163,8 +162,8 @@ struct TimespanWithLocalTimeArgs {
   parsed(TimespanWithLocalTimeFilter)
 )]
 pub struct TimespanWithLocalTime {
-  pub convention: Arc<Option<conventions::Model>>,
-  pub language_loader: Arc<FluentLanguageLoader>,
+  pub convention_timezone: Option<String>,
+  pub language_loader: Weak<FluentLanguageLoader>,
 }
 
 impl ParseFilter for TimespanWithLocalTime {
@@ -172,7 +171,7 @@ impl ParseFilter for TimespanWithLocalTime {
     let args = TimespanWithLocalTimeArgs::from_args(arguments)?;
     Ok(Box::new(TimespanWithLocalTimeFilter {
       args,
-      convention: self.convention.clone(),
+      convention_timezone: self.convention_timezone.clone(),
       language_loader: self.language_loader.clone(),
     }))
   }
@@ -185,8 +184,8 @@ impl ParseFilter for TimespanWithLocalTime {
 #[derive(Debug, Display_filter)]
 #[name = "timespan_with_local_time"]
 struct TimespanWithLocalTimeFilter {
-  convention: Arc<Option<conventions::Model>>,
-  language_loader: Arc<FluentLanguageLoader>,
+  convention_timezone: Option<String>,
+  language_loader: Weak<FluentLanguageLoader>,
 
   #[parameters]
   args: TimespanWithLocalTimeArgs,
@@ -219,17 +218,19 @@ impl Filter for TimespanWithLocalTimeFilter {
       .unwrap_or(Ok(None))?;
     let parsed_timespan = Timespan { start, finish };
 
+    let language_loader = self.language_loader.upgrade().unwrap();
+
     if parsed_timespan.start.is_none() && parsed_timespan.finish.is_none() {
       return Ok(Value::scalar(fl!(
-        self.language_loader,
+        language_loader,
         "start_and_finish_unbounded"
       )));
     }
 
     let args = self.args.evaluate(runtime)?;
     let format_str = args.format.to_string();
-    let timezone_name = args.timezone_name.as_ref().map(|expr| expr.to_string());
-    let tz = find_effective_timezone(timezone_name.as_ref(), self.convention.as_ref().as_ref());
+    let timezone_name = args.timezone_name.as_ref().map(|expr| expr.as_str());
+    let tz = find_effective_timezone(timezone_name, self.convention_timezone.as_deref());
 
     let start_desc: String;
     let finish_desc: String;
@@ -238,29 +239,29 @@ impl Filter for TimespanWithLocalTimeFilter {
       start_desc = if let Some(start) = converted_timespan.start {
         start.format(&format_str).to_string()
       } else {
-        fl!(self.language_loader, "start_unbounded")
+        fl!(language_loader, "start_unbounded")
       };
       finish_desc = if let Some(finish) = converted_timespan.finish {
         finish.format(&format_str).to_string()
       } else {
-        fl!(self.language_loader, "finish_unbounded")
+        fl!(language_loader, "finish_unbounded")
       };
     } else {
       start_desc = if let Some(start) = parsed_timespan.start {
         start.format(&format_str).to_string()
       } else {
-        fl!(self.language_loader, "start_unbounded")
+        fl!(language_loader, "start_unbounded")
       };
       finish_desc = if let Some(finish) = parsed_timespan.finish {
         finish.format(&format_str).to_string()
       } else {
-        fl!(self.language_loader, "finish_unbounded")
+        fl!(language_loader, "finish_unbounded")
       };
     }
 
     if parsed_timespan.finish.is_none() {
       Ok(Value::scalar(fl!(
-        self.language_loader,
+        language_loader,
         "timespan_with_unbounded_finish",
         start = start_desc
       )))
@@ -269,14 +270,14 @@ impl Filter for TimespanWithLocalTimeFilter {
 
       if deduped_start.trim().is_empty() || deduped_finish.trim().is_empty() {
         Ok(Value::scalar(fl!(
-          self.language_loader,
+          language_loader,
           "timespan_with_bounded_finish",
           start = start_desc,
           finish = finish_desc
         )))
       } else {
         Ok(Value::scalar(fl!(
-          self.language_loader,
+          language_loader,
           "timespan_with_bounded_finish",
           start = deduped_start,
           finish = deduped_finish

@@ -1,11 +1,15 @@
-use crate::{ConnectionWrapper, NormalizedDropCache};
-use std::fmt::Debug;
+use crate::{ConnectionWrapper, DropStore};
+use std::{
+  fmt::{Debug, Display},
+  hash::Hash,
+};
 
 pub trait Context: Send + Sync + Clone + Debug {
-  fn db(&self) -> &ConnectionWrapper;
-  fn drop_cache(&self) -> &NormalizedDropCache<i64>;
-}
+  type StoreID: Eq + Hash + Copy + Send + Sync + Display + Debug + 'static;
 
-pub trait ContextContainer {
-  type Context: crate::Context;
+  fn db(&self) -> &ConnectionWrapper;
+  fn with_drop_store<'store, R: 'store, F: FnOnce(&DropStore<Self::StoreID>) -> R>(
+    &'store self,
+    f: F,
+  ) -> R;
 }

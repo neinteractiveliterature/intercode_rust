@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, sync::Arc};
+use std::borrow::Borrow;
 
 use async_graphql::*;
 use intercode_entities::{conventions, events, rooms, runs, signups};
@@ -27,7 +27,7 @@ async fn model_action_permitted<
   action: &P::Action,
   get_model: impl FnOnce(&'a Context<'_>) -> Result<Option<R>, Error>,
 ) -> Result<bool, Error> {
-  let authorization_info = ctx.data::<Arc<AuthorizationInfo>>()?;
+  let authorization_info = ctx.data::<AuthorizationInfo>()?;
   let model_ref = get_model(ctx)?;
 
   if let Some(model_ref) = model_ref {
@@ -51,7 +51,7 @@ impl AbilityType {
   #[graphql(name = "can_read_schedule")]
   async fn can_read_schedule(&self, ctx: &Context<'_>) -> Result<bool, Error> {
     model_action_permitted(ConventionPolicy, ctx, &ConventionAction::Schedule, |ctx| {
-      Ok(ctx.data::<QueryData>()?.convention.as_ref().as_ref())
+      Ok(ctx.data::<QueryData>()?.convention())
     })
     .await
   }
@@ -62,7 +62,7 @@ impl AbilityType {
       ConventionPolicy,
       ctx,
       &ConventionAction::ScheduleWithCounts,
-      |ctx| Ok(ctx.data::<QueryData>()?.convention.as_ref().as_ref()),
+      |ctx| Ok(ctx.data::<QueryData>()?.convention()),
     )
     .await
   }
@@ -73,7 +73,7 @@ impl AbilityType {
       ConventionPolicy,
       ctx,
       &ConventionAction::ListEvents,
-      |ctx| Ok(ctx.data::<QueryData>()?.convention.as_ref().as_ref()),
+      |ctx| Ok(ctx.data::<QueryData>()?.convention()),
     )
     .await
   }
@@ -84,7 +84,7 @@ impl AbilityType {
       ConventionPolicy,
       ctx,
       &ConventionAction::ViewAttendees,
-      |ctx| Ok(ctx.data::<QueryData>()?.convention.as_ref().as_ref()),
+      |ctx| Ok(ctx.data::<QueryData>()?.convention()),
     )
     .await
   }
@@ -92,7 +92,7 @@ impl AbilityType {
   #[graphql(name = "can_update_convention")]
   async fn can_update_convention(&self, ctx: &Context<'_>) -> Result<bool, Error> {
     model_action_permitted(ConventionPolicy, ctx, &ConventionAction::Update, |ctx| {
-      Ok(ctx.data::<QueryData>()?.convention.as_ref().as_ref())
+      Ok(ctx.data::<QueryData>()?.convention())
     })
     .await
   }
@@ -107,7 +107,7 @@ impl AbilityType {
 
   #[graphql(name = "can_update_event")]
   async fn can_update_event(&self, ctx: &Context<'_>, event_id: ID) -> Result<bool, Error> {
-    let db = &ctx.data::<QueryData>()?.db;
+    let db = ctx.data::<QueryData>()?.db();
     let event = events::Entity::find_by_id(LaxId::parse(event_id)?)
       .one(db)
       .await?;
@@ -126,14 +126,14 @@ impl AbilityType {
       ConventionPolicy,
       ctx,
       &ConventionAction::ViewEventProposals,
-      |ctx| Ok(ctx.data::<QueryData>()?.convention.as_ref().as_ref()),
+      |ctx| Ok(ctx.data::<QueryData>()?.convention()),
     )
     .await
   }
 
   #[graphql(name = "can_read_event_signups")]
   async fn can_read_event_signups(&self, ctx: &Context<'_>, event_id: ID) -> Result<bool, Error> {
-    let db = &ctx.data::<QueryData>()?.db;
+    let db = ctx.data::<QueryData>()?.db();
     let event = events::Entity::find_by_id(LaxId::parse(event_id)?)
       .one(db)
       .await?;
@@ -171,7 +171,7 @@ impl AbilityType {
       ConventionPolicy,
       ctx,
       &ConventionAction::ViewReports,
-      |ctx| Ok(ctx.data::<QueryData>()?.convention.as_ref().as_ref()),
+      |ctx| Ok(ctx.data::<QueryData>()?.convention()),
     )
     .await
   }
@@ -180,12 +180,7 @@ impl AbilityType {
   async fn can_manage_rooms(&self, ctx: &Context<'_>) -> Result<bool, Error> {
     model_action_permitted(RoomPolicy, ctx, &ReadManageAction::Manage, |ctx| {
       Ok(Some(rooms::Model {
-        convention_id: ctx
-          .data::<QueryData>()?
-          .convention
-          .as_ref()
-          .as_ref()
-          .map(|con| con.id),
+        convention_id: ctx.data::<QueryData>()?.convention().map(|con| con.id),
         ..Default::default()
       }))
     })
@@ -276,14 +271,18 @@ impl AbilityType {
   ) -> Result<(events::Model, runs::Model, signups::Model), Error> {
     let query_data = ctx.data::<QueryData>()?;
     let signup = signups::Entity::find_by_id(signup_id.parse()?)
-      .one(&query_data.db)
+      .one(query_data.db())
       .await?
       .ok_or_else(|| Error::new("Signup not found"))?;
 
-    let run_result = query_data.loaders.signup_run.load_one(signup.id).await?;
+    let run_result = query_data
+      .loaders()
+      .signup_run()
+      .load_one(signup.id)
+      .await?;
     let run = run_result.expect_one()?;
 
-    let event_result = query_data.loaders.run_event.load_one(run.id).await?;
+    let event_result = query_data.loaders().run_event().load_one(run.id).await?;
     let event = event_result.expect_one()?;
 
     Ok((event.clone(), run.clone(), signup))

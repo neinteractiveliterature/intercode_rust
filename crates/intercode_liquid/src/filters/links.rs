@@ -1,7 +1,4 @@
-use std::sync::Arc;
-
 use crate::invalid_input;
-use intercode_entities::conventions;
 use liquid_core::{
   Display_filter, Filter, FilterReflection, ParseFilter, Result, Runtime, Value, ValueView,
 };
@@ -75,7 +72,7 @@ impl Filter for EmailLinkFilter {
     URL, changes the hostname to the current convention host."
 )]
 pub struct AbsoluteUrl {
-  pub convention: Arc<Option<conventions::Model>>,
+  pub convention_domain: Option<String>,
 }
 
 impl ParseFilter for AbsoluteUrl {
@@ -84,7 +81,7 @@ impl ParseFilter for AbsoluteUrl {
     _arguments: liquid_core::parser::FilterArguments,
   ) -> Result<Box<dyn liquid_core::Filter>> {
     Ok(Box::new(AbsoluteUrlFilter {
-      convention: self.convention.clone(),
+      convention_domain: self.convention_domain.clone(),
     }))
   }
 
@@ -96,26 +93,25 @@ impl ParseFilter for AbsoluteUrl {
 #[derive(Debug, Default, Display_filter)]
 #[name = "absolute_url"]
 struct AbsoluteUrlFilter {
-  convention: Arc<Option<conventions::Model>>,
+  convention_domain: Option<String>,
 }
 
 impl Filter for AbsoluteUrlFilter {
   fn evaluate(&self, input: &dyn ValueView, _runtime: &dyn Runtime) -> Result<Value> {
     let input = input.to_value();
-    let convention = &self.convention;
 
     match input {
       Value::Nil => Ok(Value::scalar("")),
-      Value::Scalar(url) => match convention.as_ref() {
+      Value::Scalar(url) => match &self.convention_domain {
         None => Ok(Value::Scalar(url)),
-        Some(convention) => {
+        Some(convention_domain) => {
           let options = Url::options();
-          let convention_base = Url::parse(&format!("http://{}", convention.domain)).ok();
+          let convention_base = Url::parse(&format!("http://{}", convention_domain)).ok();
           let base_url = options.base_url(convention_base.as_ref());
           let url = base_url.parse(&url.to_kstr().into_string());
           match url {
             Ok(mut parsed_url) => {
-              let set_host_result = parsed_url.set_host(Some(&convention.domain));
+              let set_host_result = parsed_url.set_host(Some(convention_domain));
               match set_host_result {
                 Ok(_) => Ok(Value::scalar(parsed_url.to_string())),
                 Err(error) => Err(invalid_input(format!("Can't set host on URL: {}", error))),

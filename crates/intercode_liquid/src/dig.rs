@@ -83,8 +83,8 @@ pub fn get_scalar_from_value<'a>(
     })
 }
 
-pub fn get_datetime_from_value<'a>(
-  value: &'a dyn ObjectView,
+pub fn get_datetime_from_value(
+  value: &dyn ObjectView,
   key: &str,
   tag_name: &'static str,
   source: &str,

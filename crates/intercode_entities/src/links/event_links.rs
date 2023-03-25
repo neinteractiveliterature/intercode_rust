@@ -1,5 +1,17 @@
-use crate::{events, team_members, user_con_profiles};
+use crate::{events, team_members, tickets, user_con_profiles};
 use sea_orm::{Linked, RelationDef, RelationTrait};
+
+#[derive(Debug, Clone)]
+pub struct EventToProvidedTickets;
+
+impl Linked for EventToProvidedTickets {
+  type FromEntity = events::Entity;
+  type ToEntity = tickets::Entity;
+
+  fn link(&self) -> Vec<sea_orm::LinkDef> {
+    vec![tickets::Relation::Events1.def().rev()]
+  }
+}
 
 #[derive(Debug, Clone)]
 pub struct EventToTeamMemberUserConProfiles;

@@ -10,6 +10,7 @@ use liquid_core::{
   Display_filter, Filter, FilterParameters, FilterReflection, FromFilterParameters, ParseFilter,
 };
 use liquid_core::{Value, ValueView};
+use once_cell::sync::Lazy;
 use regex::Regex;
 
 use intercode_inflector::IntercodeInflector;
@@ -224,6 +225,9 @@ impl Filter for TitleizeFilter {
 )]
 pub struct CondenseWhitespace;
 
+static WHITESPACE_REGEX: Lazy<Regex> =
+  Lazy::new(|| Regex::new(r"\s+").expect("Could not parse whitespace regular expression"));
+
 #[derive(Debug, Default, Display_filter)]
 #[name = "condense_whitespace"]
 struct CondenseWhitespaceFilter;
@@ -237,9 +241,7 @@ impl Filter for CondenseWhitespaceFilter {
       .to_kstr()
       .into_string();
 
-    let whitespace_regex =
-      Regex::new(r"\s+").expect("Could not parse whitespace regular expression");
-    let result = whitespace_regex.replace_all(input.trim(), " ");
+    let result = WHITESPACE_REGEX.replace_all(input.trim(), " ");
     Ok(Value::scalar(result.to_string()))
   }
 }

@@ -1,26 +1,70 @@
-use std::fmt::Debug;
+use std::{
+  fmt::Debug,
+  sync::atomic::{AtomicI64, Ordering},
+};
 
+use async_graphql::indexmap::IndexMap;
 use chrono::{TimeZone, Utc};
 use intercode_timespan::{ScheduledValue, TimespanWithValue};
-use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
-use liquid::model::DateTime;
+use liquid::{model::DateTime, ValueView};
+use once_cell::race::OnceBox;
+use seawater::liquid_drop_impl;
 use serde::Serialize;
 
 use super::{utils::date_time_to_liquid_date_time, DropContext, TimespanWithValueDrop};
 
-#[liquid_drop_struct]
-pub struct ScheduledValueDrop<Tz: TimeZone + Debug, V: Serialize + Debug + Clone + Default> {
+#[derive(Debug)]
+pub struct ScheduledValueDrop<
+  Tz: TimeZone + Debug + Eq + Send + Sync + 'static,
+  V: Serialize + Debug + Clone + Default + Send + Sync + 'static,
+> where
+  Tz::Offset: Send + Sync,
+{
   scheduled_value: ScheduledValue<Tz, V>,
   context: DropContext,
+  id: i64,
+  _liquid_object_view_pairs: OnceBox<IndexMap<String, Box<dyn ValueView + Send + Sync>>>,
 }
 
-#[liquid_drop_impl]
-impl<Tz: TimeZone + Debug, V: Serialize + Debug + Clone + Default> ScheduledValueDrop<Tz, V> {
+impl<
+    Tz: TimeZone + Debug + Eq + Send + Sync + 'static,
+    V: Serialize + Debug + Clone + Default + Send + Sync + 'static,
+  > Clone for ScheduledValueDrop<Tz, V>
+where
+  Tz::Offset: Send + Sync,
+{
+  fn clone(&self) -> Self {
+    Self {
+      scheduled_value: self.scheduled_value.clone(),
+      context: self.context.clone(),
+      id: self.id,
+      _liquid_object_view_pairs: OnceBox::new(),
+    }
+  }
+}
+
+static NEXT_ID: AtomicI64 = AtomicI64::new(0);
+
+#[liquid_drop_impl(i64, DropContext)]
+impl<
+    Tz: TimeZone + Debug + Eq + Send + Sync + 'static,
+    V: Serialize + Debug + Clone + Default + Send + Sync + 'static,
+  > ScheduledValueDrop<Tz, V>
+where
+  Tz::Offset: Send + Sync,
+{
   pub fn new(scheduled_value: ScheduledValue<Tz, V>, context: DropContext) -> Self {
+    let id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
     Self {
       scheduled_value,
       context,
+      id,
+      _liquid_object_view_pairs: OnceBox::new(),
     }
+  }
+
+  fn id(&self) -> i64 {
+    self.id
   }
 
   pub fn now(&self) -> DateTime {

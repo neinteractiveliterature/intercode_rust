@@ -1,5 +1,5 @@
 use intercode_entities::{links::StaffPositionToUserConProfiles, staff_positions};
-use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
+use seawater::liquid_drop_impl;
 use seawater::{has_many_linked, model_backed_drop};
 
 use super::{drop_context::DropContext, UserConProfileDrop};
@@ -7,7 +7,7 @@ use super::{drop_context::DropContext, UserConProfileDrop};
 model_backed_drop!(StaffPositionDrop, staff_positions::Model, DropContext);
 
 #[has_many_linked(user_con_profiles, UserConProfileDrop, StaffPositionToUserConProfiles)]
-#[liquid_drop_impl(i64)]
+#[liquid_drop_impl(i64, DropContext)]
 impl StaffPositionDrop {
   fn id(&self) -> i64 {
     self.model.id
@@ -21,7 +21,7 @@ impl StaffPositionDrop {
     self
       .email()
       .await
-      .get_inner()
+      .get_inner_cloned()
       .map(|email| format!("<a href=\"mailto:{}\">{}</a>", email, email))
   }
 

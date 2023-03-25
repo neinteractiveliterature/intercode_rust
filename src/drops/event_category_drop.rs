@@ -1,11 +1,11 @@
 use super::drop_context::DropContext;
 use intercode_entities::event_categories;
-use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
+use seawater::liquid_drop_impl;
 use seawater::model_backed_drop;
 
 model_backed_drop!(EventCategoryDrop, event_categories::Model, DropContext);
 
-#[liquid_drop_impl(i64)]
+#[liquid_drop_impl(i64, DropContext)]
 impl EventCategoryDrop {
   fn id(&self) -> i64 {
     self.model.id

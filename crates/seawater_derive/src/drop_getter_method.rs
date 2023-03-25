@@ -117,7 +117,7 @@ impl DropGetterMethod {
   // original name.
   //
   // For the ID field, this is reversed: we keep the original method name the same and put a caching_*
-  // method alongside it.  ID methods are expected to conform with LiquidDropWithID's id method.
+  // method alongside it.  ID methods are expected to conform with LiquidDrop's id method.
   pub fn caching_getter_ident(&self) -> Ident {
     if !self.is_id {
       return self.ident();
@@ -176,46 +176,44 @@ impl DropGetterMethod {
 
   pub fn caching_getter(&self) -> Box<dyn ToTokens> {
     let cache_field_ident = self.cache_field_ident();
+    let get_or_init_ident = Ident::new(
+      format!("get_or_init_{}", cache_field_ident).as_str(),
+      cache_field_ident.span(),
+    );
     let caching_getter_ident = self.caching_getter_ident();
     let uncached_getter_ident = self.uncached_getter_ident();
     let return_type = self.cache_type();
 
-    let caching_getter_sig = quote!(pub async fn #caching_getter_ident(&self) -> &::lazy_liquid_value_view::DropResult<#return_type>);
-
     match self.impl_item {
       DropGetterMethodImplItem::Uncached(_) => Box::new(quote!(
-        #caching_getter_sig {
-          use ::lazy_liquid_value_view::LiquidDropWithID;
+        pub async fn #caching_getter_ident(&self) -> ::seawater::DropResult<#return_type> {
+          use ::seawater::LiquidDrop;
           self.#uncached_getter_ident().await.into()
         }
       )),
       DropGetterMethodImplItem::Async(_) => Box::new(quote!(
-        #caching_getter_sig {
-          use ::lazy_liquid_value_view::LiquidDropWithID;
-          self
-            .drop_cache
-            .#cache_field_ident.
-            get_or_init(
-              || Box::<::lazy_liquid_value_view::DropResult<#return_type>>::new(
-                ::tokio::task::block_in_place(|| {
-                  ::tokio::runtime::Handle::current()
-                    .block_on(async move {
-                      self.#uncached_getter_ident().await.into()
-                    })
+        pub async fn #caching_getter_ident(&self) -> ::seawater::DropResult<#return_type> {
+          use ::seawater::{Context, DropStore, LiquidDrop};
+          let cache = self.with_drop_store(|store| store.get_drop_cache::<Self>(self.id()));
+          cache.#get_or_init_ident(|| {
+            Box::<::seawater::DropResult<#return_type>>::new(
+              ::tokio::task::block_in_place(|| {
+                ::tokio::runtime::Handle::current()
+                  .block_on(async move {
+                    self.#uncached_getter_ident().await.into()
                   })
-                )
+                })
               )
+            }).clone()
         }
       )),
       _ => Box::new(quote!(
-        #caching_getter_sig {
-          use ::lazy_liquid_value_view::LiquidDropWithID;
-          self
-            .drop_cache
-            .#cache_field_ident.
-            get_or_init(|| {
-              Box::new(self.#uncached_getter_ident().into())
-            })
+        pub async fn #caching_getter_ident(&self) -> ::seawater::DropResult<#return_type> {
+          use ::seawater::{Context, DropStore, LiquidDrop};
+          let cache = self.with_drop_store(|store| store.get_drop_cache::<Self>(self.id()));
+          cache.#get_or_init_ident(|| {
+            Box::new(self.#uncached_getter_ident().into())
+          }).clone()
         }
       )),
     }

@@ -6,6 +6,7 @@ mod form_links;
 mod signup_links;
 mod signup_request_links;
 mod staff_position_links;
+mod ticket_links;
 mod user_con_profile_links;
 
 pub use cms_navigation_item_links::*;
@@ -16,4 +17,5 @@ pub use form_links::*;
 pub use signup_links::*;
 pub use signup_request_links::*;
 pub use staff_position_links::*;
+pub use ticket_links::*;
 pub use user_con_profile_links::*;

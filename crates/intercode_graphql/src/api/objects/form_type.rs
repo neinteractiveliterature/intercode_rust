@@ -19,8 +19,8 @@ impl FormType {
 
     Ok(
       query_data
-        .loaders
-        .form_form_sections
+        .loaders()
+        .form_form_sections()
         .load_one(self.model.id)
         .await?
         .expect_models()?

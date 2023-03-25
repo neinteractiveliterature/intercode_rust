@@ -1,11 +1,13 @@
+use std::ops::Deref;
+
 use bumpalo_herd::Herd;
 use futures::try_join;
 use intercode_entities::events;
 use intercode_liquid::liquid_datetime_to_chrono_datetime;
-use lazy_liquid_value_view::DropResult;
 use liquid::{ObjectView, ValueView};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, Select};
-use seawater::{Context, DropError, ModelBackedDrop};
+use seawater::{Context, DropError, DropResultTrait, ModelBackedDrop};
+use seawater::{DropResult, DropStore};
 
 use super::{drop_context::DropContext, EventDrop};
 
@@ -68,7 +70,9 @@ impl EventsCreatedSince {
       .map(|event| EventDrop::new(event, self.context.clone()))
       .collect::<Vec<_>>();
 
-    let drops = value.iter().collect::<Vec<_>>();
+    let drops = self
+      .context
+      .with_drop_store(|store| DropStore::store_all(store, value));
 
     try_join![
       EventDrop::preload_runs(self.context.clone(), &drops),
@@ -76,8 +80,10 @@ impl EventsCreatedSince {
       EventDrop::preload_event_category(self.context.clone(), &drops)
     ]?;
 
+    let drop_result: Vec<_> = drops.into_iter().map(DropResult::new).collect();
+
     let bump = self.herd.get();
-    Ok(bump.alloc(value))
+    Ok(bump.alloc(drop_result))
   }
 }
 
@@ -157,6 +163,12 @@ impl ObjectView for EventsCreatedSince {
     .unwrap();
 
     Some(result)
+  }
+}
+
+impl DropResultTrait<EventsCreatedSince> for EventsCreatedSince {
+  fn get_inner<'a>(&'a self) -> Option<Box<dyn Deref<Target = Self> + 'a>> {
+    Some(Box::new(self))
   }
 }
 

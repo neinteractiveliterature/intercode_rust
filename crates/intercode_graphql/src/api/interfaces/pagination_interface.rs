@@ -59,22 +59,22 @@ pub trait PaginationImplementation<Item: SelectorTrait + Send + Sync> {
   ) -> (Paginator<'s, C, Item>, u64);
 
   async fn total_entries(&self, ctx: &Context) -> Result<u64, Error> {
-    let db = ctx.data::<QueryData>()?.db.as_ref();
+    let db = ctx.data::<QueryData>()?.db();
     Ok(self.paginator_and_page_size(db).0.num_items().await?)
   }
 
   async fn total_pages(&self, ctx: &Context) -> Result<u64, Error> {
-    let db = ctx.data::<QueryData>()?.db.as_ref();
+    let db = ctx.data::<QueryData>()?.db();
     Ok(self.paginator_and_page_size(db).0.num_pages().await?)
   }
 
   async fn current_page(&self, ctx: &Context) -> Result<u64, Error> {
-    let db = ctx.data::<QueryData>()?.db.as_ref();
+    let db = ctx.data::<QueryData>()?.db();
     Ok(self.paginator_and_page_size(db).0.cur_page())
   }
 
   async fn per_page(&self, ctx: &Context) -> Result<u64, Error> {
-    let db = ctx.data::<QueryData>()?.db.as_ref();
+    let db = ctx.data::<QueryData>()?.db();
     Ok(self.paginator_and_page_size(db).1)
   }
 }

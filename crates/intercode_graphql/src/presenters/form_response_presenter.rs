@@ -59,7 +59,7 @@ pub async fn attached_images_by_filename<E: EntityTrait>(
 ) -> Result<HashMap<String, active_storage_blobs::Model>, Error> {
   Ok(
     query_data
-      .loaders
+      .loaders()
       .event_attached_images
       .load_one(form_response.get_id())
       .await?

@@ -1,16 +1,27 @@
+use std::fmt::Debug;
+
 use liquid::ValueView;
 
-use crate::DropResult;
+use crate::{DropResult, DropResultTrait};
 
-#[derive(Debug, Clone)]
-pub struct ExtendedDropResult<T: liquid::model::ValueView> {
+#[derive(Clone, Debug)]
+pub struct ExtendedDropResult<T: ValueView + Clone + DropResultTrait<T> + 'static> {
   pub drop_result: DropResult<T>,
   pub extensions: liquid::model::Object,
 }
 
-impl<T: liquid::model::ValueView> liquid::ValueView for ExtendedDropResult<T> {
+impl<T: ValueView + Clone + DropResultTrait<T>> ExtendedDropResult<T> {
+  pub fn new(drop_result: DropResult<T>, extensions: liquid::model::Object) -> Self {
+    ExtendedDropResult {
+      drop_result,
+      extensions,
+    }
+  }
+}
+
+impl<T: ValueView + Clone + DropResultTrait<T>> ValueView for ExtendedDropResult<T> {
   fn as_debug(&self) -> &dyn std::fmt::Debug {
-    todo!()
+    self
   }
 
   fn as_object(&self) -> Option<&dyn liquid::ObjectView> {
@@ -18,31 +29,33 @@ impl<T: liquid::model::ValueView> liquid::ValueView for ExtendedDropResult<T> {
   }
 
   fn render(&self) -> liquid::model::DisplayCow<'_> {
-    self.drop_result.render()
+    self.drop_result.get_value().render()
   }
 
   fn source(&self) -> liquid::model::DisplayCow<'_> {
-    self.drop_result.source()
+    self.drop_result.get_value().source()
   }
 
   fn type_name(&self) -> &'static str {
-    self.drop_result.type_name()
+    self.drop_result.get_value().type_name()
   }
 
   fn query_state(&self, state: liquid::model::State) -> bool {
-    self.drop_result.query_state(state)
+    self.drop_result.get_value().query_state(state)
   }
 
   fn to_kstr(&self) -> liquid::model::KStringCow<'_> {
-    self.drop_result.to_kstr()
+    self.drop_result.get_value().to_kstr()
   }
 
   fn to_value(&self) -> liquid_core::Value {
-    todo!()
+    liquid::model::Value::Object(liquid::Object::from_iter(
+      liquid::ObjectView::iter(self).map(|(key, value)| (key.into(), value.to_value())),
+    ))
   }
 }
 
-impl<T: liquid::model::ValueView> liquid::ObjectView for ExtendedDropResult<T> {
+impl<T: ValueView + Clone + DropResultTrait<T>> liquid::ObjectView for ExtendedDropResult<T> {
   fn as_value(&self) -> &dyn ValueView {
     self
   }
@@ -97,13 +110,13 @@ impl<T: liquid::model::ValueView> liquid::ObjectView for ExtendedDropResult<T> {
   }
 }
 
-impl<T: liquid::model::ValueView> Extend<(liquid::model::KString, liquid::model::Value)>
-  for ExtendedDropResult<T>
+impl<T: ValueView + Clone + DropResultTrait<T>>
+  Extend<(liquid::model::KString, liquid::model::Value)> for ExtendedDropResult<T>
 {
   fn extend<I: IntoIterator<Item = (liquid::model::KString, liquid::model::Value)>>(
     &mut self,
     iter: I,
   ) {
-    self.extensions.extend(iter)
+    self.extensions.extend(liquid::Object::from_iter(iter));
   }
 }

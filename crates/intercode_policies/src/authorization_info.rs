@@ -7,7 +7,6 @@ use std::{
   collections::{HashMap, HashSet},
   fmt::Debug,
   hash::Hash,
-  sync::Arc,
 };
 
 use crate::{
@@ -19,15 +18,29 @@ use crate::{
 
 pub type SignupsByEventId = HashMap<i64, Vec<signups::Model>>;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct AuthorizationInfo {
   pub db: ConnectionWrapper,
-  pub user: Arc<Option<users::Model>>,
+  pub user: Option<users::Model>,
   pub oauth_scope: Option<Scope>,
-  pub assumed_identity_from_profile: Arc<Option<user_con_profiles::Model>>,
-  active_signups_by_convention_and_event: Arc<Mutex<UnboundCache<i64, SignupsByEventId>>>,
-  all_model_permissions_by_convention: Arc<Mutex<UnboundCache<i64, UserPermissionsMap>>>,
-  team_member_event_ids_by_convention_id: Arc<Mutex<UnboundCache<i64, HashSet<i64>>>>,
+  pub assumed_identity_from_profile: Option<user_con_profiles::Model>,
+  active_signups_by_convention_and_event: Mutex<UnboundCache<i64, SignupsByEventId>>,
+  all_model_permissions_by_convention: Mutex<UnboundCache<i64, UserPermissionsMap>>,
+  team_member_event_ids_by_convention_id: Mutex<UnboundCache<i64, HashSet<i64>>>,
+}
+
+impl Clone for AuthorizationInfo {
+  fn clone(&self) -> Self {
+    Self {
+      db: self.db.clone(),
+      user: self.user.clone(),
+      oauth_scope: self.oauth_scope.clone(),
+      assumed_identity_from_profile: self.assumed_identity_from_profile.clone(),
+      active_signups_by_convention_and_event: Mutex::new(UnboundCache::new()),
+      all_model_permissions_by_convention: Mutex::new(UnboundCache::new()),
+      team_member_event_ids_by_convention_id: Mutex::new(UnboundCache::new()),
+    }
+  }
 }
 
 impl Hash for AuthorizationInfo {
@@ -65,18 +78,18 @@ impl Eq for AuthorizationInfo {}
 impl AuthorizationInfo {
   pub fn new(
     db: ConnectionWrapper,
-    user: Arc<Option<users::Model>>,
+    user: Option<users::Model>,
     oauth_scope: Option<Scope>,
-    assumed_identity_from_profile: Arc<Option<user_con_profiles::Model>>,
+    assumed_identity_from_profile: Option<user_con_profiles::Model>,
   ) -> Self {
     Self {
       db,
       user,
       oauth_scope,
       assumed_identity_from_profile,
-      active_signups_by_convention_and_event: Arc::new(Mutex::new(UnboundCache::new())),
-      all_model_permissions_by_convention: Arc::new(Mutex::new(UnboundCache::new())),
-      team_member_event_ids_by_convention_id: Arc::new(Mutex::new(UnboundCache::new())),
+      active_signups_by_convention_and_event: Mutex::new(UnboundCache::new()),
+      all_model_permissions_by_convention: Mutex::new(UnboundCache::new()),
+      team_member_event_ids_by_convention_id: Mutex::new(UnboundCache::new()),
     }
   }
 
@@ -230,11 +243,6 @@ impl AuthorizationInfo {
     oauth_scope: Option<Scope>,
     assumed_identity_from_profile: Option<user_con_profiles::Model>,
   ) -> Self {
-    Self::new(
-      db,
-      Arc::new(user),
-      oauth_scope,
-      Arc::new(assumed_identity_from_profile),
-    )
+    Self::new(db, user, oauth_scope, assumed_identity_from_profile)
   }
 }

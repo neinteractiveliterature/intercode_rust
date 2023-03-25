@@ -1,28 +1,7 @@
-use quote::quote;
 use syn::{
-  parse::Parser, parse_quote, punctuated::Punctuated, token::Comma, Data, Error, Field,
-  GenericArgument, GenericParam, Path, PathArguments, PathSegment, Type, TypeGroup, TypeParamBound,
-  TypePath,
+  parse_quote, punctuated::Punctuated, token::Comma, Error, GenericArgument, GenericParam,
+  PathArguments, PathSegment, Type, TypeGroup, TypeParamBound, TypePath,
 };
-
-pub fn add_value_cell(data: &mut Data, value_type: &Path) {
-  match data {
-    Data::Struct(struct_data) => match &mut struct_data.fields {
-      syn::Fields::Named(named_fields) => {
-        named_fields.named.push(
-          Field::parse_named
-            .parse2(quote!(
-              value_cell: once_cell::race::OnceBox<#value_type>
-            ))
-            .unwrap(),
-        );
-      }
-      syn::Fields::Unnamed(_) => unimplemented!(),
-      syn::Fields::Unit => unimplemented!(),
-    },
-    Data::Enum(_) | Data::Union(_) => unimplemented!(),
-  }
-}
 
 // stolen from async_graphql_derive
 pub fn get_type_path_and_name_and_arguments(
@@ -134,28 +113,54 @@ pub fn eliminate_references(ty: Box<Type>) -> Box<Type> {
   }
 }
 
-pub fn extract_first_generic_arg(path_type: &syn::TypePath) -> Option<Box<Type>> {
+pub fn extract_generic_args(path_type: &syn::TypePath) -> Vec<Type> {
   if let Some(last_segment) = path_type.path.segments.last() {
     if let PathArguments::AngleBracketed(last_segment_args) = &last_segment.arguments {
-      let value_arg = last_segment_args.args.first().unwrap();
-      if let GenericArgument::Type(value_type) = value_arg {
-        return Some(Box::new(value_type.clone()));
-      }
+      return last_segment_args
+        .args
+        .iter()
+        .filter_map(|arg| {
+          if let GenericArgument::Type(value_type) = arg {
+            Some(value_type.clone())
+          } else {
+            None
+          }
+        })
+        .collect();
     }
   }
-  None
+
+  vec![]
+}
+
+pub fn extract_first_generic_arg(path_type: &syn::TypePath) -> Option<Type> {
+  extract_generic_args(path_type).first().cloned()
+}
+
+pub fn path_without_generics(path: &syn::Path) -> syn::Path {
+  let segments = path.segments.iter().map(|segment| PathSegment {
+    ident: segment.ident.clone(),
+    arguments: PathArguments::None,
+  });
+
+  syn::Path {
+    leading_colon: None,
+    segments: segments.collect(),
+  }
 }
 
 pub fn get_drop_result_generic_arg(ty: Box<Type>) -> Box<Type> {
   let deref_type = eliminate_references(ty);
 
   if let Type::Path(path_type) = *deref_type.clone() {
-    if path_type.path.segments.len() == 1 {
-      let segment = path_type.path.segments.first().unwrap();
-      if segment.ident == "Result" || segment.ident == "Option" {
-        if let Some(value) = extract_first_generic_arg(&path_type) {
-          return get_drop_result_generic_arg(value);
-        }
+    let normalized_path = path_without_generics(&path_type.path);
+    if normalized_path == parse_quote!(Option)
+      || normalized_path == parse_quote!(Result)
+      || normalized_path == parse_quote!(DropRef)
+      || normalized_path == parse_quote!(seawater::DropRef)
+    {
+      if let Some(value) = extract_first_generic_arg(&path_type) {
+        return get_drop_result_generic_arg(Box::new(value));
       }
     }
   }

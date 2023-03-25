@@ -15,6 +15,11 @@ impl EventCategoryType {
     self.model.id.into()
   }
 
+  #[graphql(name = "can_provide_tickets")]
+  async fn can_provide_tickets(&self) -> bool {
+    self.model.can_provide_tickets
+  }
+
   #[graphql(name = "default_color")]
   async fn default_color(&self) -> &str {
     &self.model.default_color
@@ -26,8 +31,8 @@ impl EventCategoryType {
 
     Ok(FormType::new(
       query_data
-        .loaders
-        .event_category_event_form
+        .loaders()
+        .event_category_event_form()
         .load_one(self.model.id)
         .await?
         .expect_one()?
@@ -41,8 +46,8 @@ impl EventCategoryType {
 
     Ok(
       query_data
-        .loaders
-        .event_category_event_proposal_form
+        .loaders()
+        .event_category_event_proposal_form()
         .load_one(self.model.id)
         .await?
         .try_one()

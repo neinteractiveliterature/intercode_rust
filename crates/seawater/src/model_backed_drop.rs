@@ -1,11 +1,5 @@
-use lazy_liquid_value_view::{DropResult, LiquidDrop};
-use liquid::ValueView;
-use sea_orm::{EntityTrait, Linked, ModelTrait, PrimaryKeyTrait, Related};
-
-use crate::{
-  preloaders::{EntityLinkPreloaderBuilder, EntityRelationPreloaderBuilder},
-  ContextContainer,
-};
+use crate::LiquidDrop;
+use sea_orm::{EntityTrait, ModelTrait, PrimaryKeyTrait};
 
 pub type DropModel<D> = <D as ModelBackedDrop>::Model;
 pub type DropEntity<D> = <DropModel<D> as ModelTrait>::Entity;
@@ -14,57 +8,35 @@ pub type DropPrimaryKeyValue<D> = <DropPrimaryKey<D> as PrimaryKeyTrait>::ValueT
 
 pub trait ModelBackedDrop
 where
-  Self: LiquidDrop + ContextContainer,
+  Self: LiquidDrop,
 {
   type Model: ModelTrait;
 
   fn new(model: Self::Model, context: Self::Context) -> Self;
   fn get_model(&self) -> &Self::Model;
-
-  fn link_preloader<ToDrop: ModelBackedDrop, Value: ValueView>(
-    link: impl Linked<FromEntity = DropEntity<Self>, ToEntity = DropEntity<ToDrop>>
-      + Send
-      + Sync
-      + 'static,
-    pk_column: DropPrimaryKey<Self>,
-  ) -> EntityLinkPreloaderBuilder<Self, ToDrop, Value, Self::Context>
-  where
-    Self: Send + Sync,
-    ToDrop: Send + Sync,
-    DropPrimaryKeyValue<Self>: Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
-    Value: Into<DropResult<Value>>,
-    DropPrimaryKeyValue<Self>: Clone,
-  {
-    EntityLinkPreloaderBuilder::new(link, pk_column)
-  }
-
-  fn relation_preloader<ToDrop: ModelBackedDrop, Value: ValueView>(
-    pk_column: DropPrimaryKey<Self>,
-  ) -> EntityRelationPreloaderBuilder<Self, ToDrop, Value, Self::Context>
-  where
-    Self: Send + Sync,
-    ToDrop: Send + Sync,
-    DropEntity<Self>: Related<DropEntity<ToDrop>>,
-    DropPrimaryKeyValue<Self>: Eq + std::hash::Hash + Clone + std::convert::From<i64> + Send + Sync,
-    Value: Into<DropResult<Value>>,
-    DropPrimaryKeyValue<Self>: Clone,
-  {
-    EntityRelationPreloaderBuilder::new(pk_column)
-  }
 }
 
 #[macro_export]
 macro_rules! model_backed_drop {
   ($type_name: ident, $model_type: ty, $context_type: ty) => {
-    #[liquid_drop_struct]
+    #[derive(Debug)]
     pub struct $type_name {
       model: $model_type,
       #[allow(dead_code)]
       context: $context_type,
+      _liquid_object_view_pairs: ::once_cell::race::OnceBox<
+        ::async_graphql::indexmap::IndexMap<String, Box<dyn ::liquid::ValueView + Send + Sync>>,
+      >,
     }
 
-    impl $crate::ContextContainer for $type_name {
-      type Context = $context_type;
+    impl Clone for $type_name {
+      fn clone(&self) -> Self {
+        Self {
+          model: self.model.clone(),
+          context: self.context.clone(),
+          _liquid_object_view_pairs: ::once_cell::race::OnceBox::new(),
+        }
+      }
     }
 
     impl $crate::ModelBackedDrop for $type_name {
@@ -74,7 +46,7 @@ macro_rules! model_backed_drop {
         $type_name {
           model,
           context,
-          drop_cache: ::std::default::Default::default(),
+          _liquid_object_view_pairs: ::once_cell::race::OnceBox::new(),
         }
       }
 

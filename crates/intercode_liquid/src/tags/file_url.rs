@@ -1,4 +1,4 @@
-use std::{io::Write, sync::Arc};
+use std::io::Write;
 
 use intercode_entities::cms_parent::{CmsParent, CmsParentTrait};
 use intercode_entities::{active_storage_attachments, active_storage_blobs, cms_files};
@@ -7,7 +7,7 @@ use liquid_core::{
   Expression, Language, ParseTag, Renderable, Result, Runtime, TagReflection, TagTokenIter,
   ValueView,
 };
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QuerySelect};
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QuerySelect, Select};
 use seawater::ConnectionWrapper;
 use tokio::runtime::Handle;
 
@@ -15,13 +15,16 @@ use crate::build_active_storage_blob_url;
 
 #[derive(Clone, Debug)]
 pub struct FileUrlTag {
-  cms_parent: Arc<CmsParent>,
+  cms_parent_file_scope: Select<cms_files::Entity>,
   db: ConnectionWrapper,
 }
 
 impl FileUrlTag {
-  pub fn new(cms_parent: Arc<CmsParent>, db: ConnectionWrapper) -> Self {
-    FileUrlTag { cms_parent, db }
+  pub fn new(cms_parent: &CmsParent, db: ConnectionWrapper) -> Self {
+    FileUrlTag {
+      cms_parent_file_scope: cms_parent.cms_files(),
+      db,
+    }
   }
 }
 
@@ -47,7 +50,7 @@ impl ParseTag for FileUrlTag {
     arguments.expect_nothing()?;
 
     Ok(Box::new(FileUrl {
-      cms_parent: self.cms_parent.clone(),
+      cms_parent_file_scope: self.cms_parent_file_scope.clone(),
       filename,
       db: self.db.clone(),
     }))
@@ -61,7 +64,7 @@ impl ParseTag for FileUrlTag {
 #[derive(Debug)]
 struct FileUrl {
   filename: Expression,
-  cms_parent: Arc<CmsParent>,
+  cms_parent_file_scope: Select<cms_files::Entity>,
   db: ConnectionWrapper,
 }
 
@@ -74,25 +77,16 @@ impl Renderable for FileUrl {
         .into_err();
     }
     let filename = filename.to_kstr().into_owned();
-    let cms_parent = self.cms_parent.clone();
     let db = self.db.clone();
+    let scope = self.cms_parent_file_scope.clone();
 
     let attachment_handle = tokio::spawn(async move {
       active_storage_attachments::Entity::find()
         .filter(active_storage_attachments::Column::RecordType.eq("CmsFile"))
         .filter(active_storage_attachments::Column::Name.eq("file"))
-        .filter(
-          active_storage_attachments::Column::RecordId.in_subquery(
-            QuerySelect::query(
-              &mut cms_parent
-                .as_ref()
-                .cms_files()
-                .select_only()
-                .column(cms_files::Column::Id),
-            )
-            .to_owned(),
-          ),
-        )
+        .filter(active_storage_attachments::Column::RecordId.in_subquery(
+          QuerySelect::query(&mut scope.select_only().column(cms_files::Column::Id)).to_owned(),
+        ))
         .find_also_related(active_storage_blobs::Entity)
         .one(db.as_ref())
         .await

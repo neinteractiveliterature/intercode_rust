@@ -1,6 +1,6 @@
 use intercode_entities::{links::UserConProfileToStaffPositions, user_con_profiles, UserNames};
 use intercode_inflector::IntercodeInflector;
-use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
+use seawater::liquid_drop_impl;
 use seawater::{
   belongs_to_related, has_many_linked, has_many_related, has_one_related, model_backed_drop,
   DropError,
@@ -24,7 +24,7 @@ model_backed_drop!(UserConProfileDrop, user_con_profiles::Model, DropContext);
 )]
 #[has_one_related(ticket, TicketDrop, serialize = true, eager_load(ticket_type))]
 #[belongs_to_related(user, UserDrop, serialize = true)]
-#[liquid_drop_impl(i64)]
+#[liquid_drop_impl(i64, DropContext)]
 impl UserConProfileDrop {
   fn id(&self) -> i64 {
     self.model.id
@@ -53,10 +53,12 @@ impl UserConProfileDrop {
       self
         .user()
         .await
-        .expect_inner()
+        .get_inner_cloned()
+        .unwrap()
         .privileges()
         .await
-        .expect_inner()
+        .get_inner_cloned()
+        .unwrap()
         .iter()
         .map(|priv_name| inflector.humanize(priv_name))
         .collect::<Vec<_>>(),

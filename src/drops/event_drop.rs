@@ -1,6 +1,6 @@
 use intercode_entities::{events, links::EventToTeamMemberUserConProfiles};
-use lazy_liquid_value_view::{liquid_drop_impl, liquid_drop_struct};
 use liquid::model::DateTime;
+use seawater::liquid_drop_impl;
 use seawater::{belongs_to_related, has_many_linked, has_many_related, model_backed_drop};
 
 use super::{
@@ -19,7 +19,7 @@ model_backed_drop!(EventDrop, events::Model, DropContext);
   serialize = true,
   eager_load(signups, staff_positions, ticket, user)
 )]
-#[liquid_drop_impl(i64)]
+#[liquid_drop_impl(i64, DropContext)]
 impl EventDrop {
   fn id(&self) -> i64 {
     self.model.id
@@ -45,19 +45,17 @@ impl EventDrop {
   }
 
   async fn team_member_name(&self) -> String {
-    let name_future = self
-      .event_category()
-      .await
-      .get_inner()
-      .map(|event_category| event_category.team_member_name());
+    let event_category = self.event_category().await.get_inner_cloned();
+    let name_future =
+      event_category.map(|event_category| async move { event_category.team_member_name().await });
 
     let name = if let Some(name_future) = name_future {
-      name_future.await.clone()
+      name_future.await
     } else {
       "team_member".to_string().into()
     };
 
-    name.expect_inner().clone()
+    name.get_inner_cloned().unwrap()
   }
 
   fn title(&self) -> &str {
