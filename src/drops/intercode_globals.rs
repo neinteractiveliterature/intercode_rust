@@ -6,6 +6,7 @@ use liquid::ValueView;
 use once_cell::race::OnceBox;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use seawater::{liquid_drop_impl, Context, DropError, ModelBackedDrop};
+use tracing::warn;
 
 use super::{ConventionDrop, DropContext, EventDrop, UserConProfileDrop};
 
@@ -85,12 +86,18 @@ impl IntercodeGlobals {
         .context
         .with_drop_store(|store| store.store(ucp.clone()));
       let drops = vec![ucp_ref];
-      try_join!(
-        UserConProfileDrop::preload_signups(self.context.clone(), &drops),
-        UserConProfileDrop::preload_staff_positions(self.context.clone(), &drops),
-        UserConProfileDrop::preload_ticket(self.context.clone(), &drops),
-        UserConProfileDrop::preload_user(self.context.clone(), &drops),
-      );
+
+      #[allow(unused_must_use)]
+      {
+        try_join!(
+          UserConProfileDrop::preload_signups(self.context.clone(), &drops),
+          UserConProfileDrop::preload_staff_positions(self.context.clone(), &drops),
+          UserConProfileDrop::preload_ticket(self.context.clone(), &drops),
+          UserConProfileDrop::preload_user(self.context.clone(), &drops),
+        )
+        .map_err(|err| warn!("Preloads on root user_con_profile failed: {:?}", err));
+      }
+
       Some(ucp)
     } else {
       None

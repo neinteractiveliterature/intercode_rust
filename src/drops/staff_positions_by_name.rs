@@ -29,7 +29,10 @@ impl Clone for StaffPositionsByName {
   fn clone(&self) -> Self {
     let staff_positions = OnceBox::new();
     if let Some(my_staff_positions) = self.staff_positions.get() {
-      staff_positions.set(Box::new(my_staff_positions.clone()));
+      #[allow(unused_must_use)]
+      {
+        staff_positions.set(Box::new(my_staff_positions.clone()));
+      }
     }
 
     Self {
