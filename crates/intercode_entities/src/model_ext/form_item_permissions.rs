@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
   Clone,
   Copy,
   Debug,
+  Default,
   PartialEq,
   Eq,
   PartialOrd,
@@ -20,6 +21,7 @@ use serde::{Deserialize, Serialize};
 pub enum FormItemRole {
   #[sea_orm(string_value = "normal")]
   #[graphql(name = "normal")]
+  #[default]
   Normal,
   #[sea_orm(string_value = "confirmed_attendee")]
   #[graphql(name = "confirmed_attendee")]
@@ -33,10 +35,4 @@ pub enum FormItemRole {
   #[sea_orm(string_value = "admin")]
   #[graphql(name = "admin")]
   Admin,
-}
-
-impl Default for FormItemRole {
-  fn default() -> Self {
-    FormItemRole::Normal
-  }
 }
