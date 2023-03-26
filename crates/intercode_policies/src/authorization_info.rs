@@ -1,13 +1,14 @@
 use cached::{async_sync::Mutex, CachedAsync, UnboundCache};
 use intercode_entities::{signups, user_con_profiles, users};
 use oxide_auth::endpoint::Scope;
-use sea_orm::DbErr;
+use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter};
 use seawater::ConnectionWrapper;
 use std::{
   collections::{HashMap, HashSet},
   fmt::Debug,
   hash::Hash,
 };
+use tokio::sync::OnceCell;
 
 use crate::{
   load_all_active_signups_in_convention_by_event_id, load_all_team_member_event_ids_in_convention,
@@ -26,6 +27,7 @@ pub struct AuthorizationInfo {
   pub assumed_identity_from_profile: Option<user_con_profiles::Model>,
   active_signups_by_convention_and_event: Mutex<UnboundCache<i64, SignupsByEventId>>,
   all_model_permissions_by_convention: Mutex<UnboundCache<i64, UserPermissionsMap>>,
+  user_con_profile_ids: OnceCell<HashSet<i64>>,
   team_member_event_ids_by_convention_id: Mutex<UnboundCache<i64, HashSet<i64>>>,
 }
 
@@ -38,6 +40,7 @@ impl Clone for AuthorizationInfo {
       assumed_identity_from_profile: self.assumed_identity_from_profile.clone(),
       active_signups_by_convention_and_event: Mutex::new(UnboundCache::new()),
       all_model_permissions_by_convention: Mutex::new(UnboundCache::new()),
+      user_con_profile_ids: OnceCell::new(),
       team_member_event_ids_by_convention_id: Mutex::new(UnboundCache::new()),
     }
   }
@@ -89,6 +92,7 @@ impl AuthorizationInfo {
       assumed_identity_from_profile,
       active_signups_by_convention_and_event: Mutex::new(UnboundCache::new()),
       all_model_permissions_by_convention: Mutex::new(UnboundCache::new()),
+      user_con_profile_ids: OnceCell::new(),
       team_member_event_ids_by_convention_id: Mutex::new(UnboundCache::new()),
     }
   }
@@ -139,6 +143,36 @@ impl AuthorizationInfo {
       .await?;
 
     Ok(event_ids.clone())
+  }
+
+  pub async fn user_con_profile_ids(&self) -> Result<&HashSet<i64>, DbErr> {
+    self
+      .user_con_profile_ids
+      .get_or_try_init(|| async {
+        let user_con_profile_ids = if let Some(user) = &self.user {
+          let mut scope =
+            user_con_profiles::Entity::find().filter(user_con_profiles::Column::UserId.eq(user.id));
+
+          if let Some(assumed_identity_from_profile) = &self.assumed_identity_from_profile {
+            scope = scope.filter(
+              user_con_profiles::Column::ConventionId
+                .eq(assumed_identity_from_profile.convention_id),
+            );
+          }
+
+          scope
+            .all(&self.db)
+            .await?
+            .into_iter()
+            .map(|user_con_profile| user_con_profile.id)
+            .collect()
+        } else {
+          vec![]
+        };
+
+        Ok(HashSet::from_iter(user_con_profile_ids.into_iter()))
+      })
+      .await
   }
 
   pub fn has_scope(&self, scope: &str) -> bool {

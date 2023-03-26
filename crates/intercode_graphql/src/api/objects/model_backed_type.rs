@@ -9,14 +9,17 @@ pub trait ModelBackedType {
   fn new(model: Self::Model) -> Self;
   fn get_model(&self) -> &Self::Model;
 
-  fn policy_guard<P: Policy<AuthorizationInfo, Self::Model>>(
+  fn simple_policy_guard<P: Policy<AuthorizationInfo, Self::Model>>(
     &self,
     action: P::Action,
-  ) -> PolicyGuard<P, Self::Model>
+  ) -> PolicyGuard<P, Self::Model, Self::Model>
   where
     Self::Model: std::marker::Sync,
   {
-    PolicyGuard::new(action, self.get_model())
+    PolicyGuard::new(action, self.get_model(), move |model, _ctx| {
+      let model = model.clone();
+      Box::pin(async { Ok(model) })
+    })
   }
 }
 

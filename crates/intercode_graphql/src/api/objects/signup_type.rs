@@ -1,9 +1,10 @@
 use async_graphql::{futures_util::try_join, *};
 use chrono::{Datelike, NaiveDate};
-use intercode_entities::signups;
+use intercode_entities::{events, runs, signups};
+use intercode_policies::policies::{SignupAction, SignupPolicy};
 use seawater::loaders::ExpectModels;
 
-use crate::{model_backed_type, QueryData};
+use crate::{model_backed_type, policy_guard::PolicyGuard, QueryData};
 
 use super::{ModelBackedType, RunType, UserConProfileType};
 
@@ -19,7 +20,33 @@ fn age_as_of(birth_date: NaiveDate, date: NaiveDate) -> i32 {
   date.year() - birth_date.year() - subtract_years
 }
 
-#[Object(name = "Signup")]
+impl SignupType {
+  fn policy_guard(
+    &self,
+    action: SignupAction,
+  ) -> PolicyGuard<'_, SignupPolicy, (events::Model, runs::Model, signups::Model), signups::Model>
+  {
+    PolicyGuard::new(action, &self.model, move |model, ctx| {
+      let model = model.clone();
+      let ctx = ctx;
+      let query_data = ctx.data::<QueryData>();
+
+      Box::pin(async {
+        let query_data = query_data?;
+        let signup_run_loader = query_data.loaders().signup_run();
+        let run_event_loader = query_data.loaders().run_event();
+        let run_result = signup_run_loader.load_one(model.id).await?;
+        let run = run_result.expect_one()?;
+        let event_result = run_event_loader.load_one(run.id).await?;
+        let event = event_result.expect_one()?;
+
+        Ok((event.clone(), run.clone(), model))
+      })
+    })
+  }
+}
+
+#[Object(name = "Signup", guard = "self.policy_guard(SignupAction::Read)")]
 impl SignupType {
   async fn id(&self) -> ID {
     self.model.id.into()

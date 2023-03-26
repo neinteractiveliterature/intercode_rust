@@ -10,7 +10,7 @@ model_backed_type!(RoomType, rooms::Model);
 
 #[Object(
   name = "Room",
-  guard = "self.policy_guard::<RoomPolicy>(ReadManageAction::Read)"
+  guard = "self.simple_policy_guard::<RoomPolicy>(ReadManageAction::Read)"
 )]
 impl RoomType {
   async fn id(&self) -> ID {
