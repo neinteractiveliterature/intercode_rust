@@ -234,6 +234,7 @@ loader_manager!(
   );
   entity_id(team_members_by_id, team_members);
   entity_link(ticket_provided_by_event, TicketToProvidedByEvent);
+  entity_relation(ticket_ticket_type, tickets, ticket_types);
   entity_relation(ticket_user_con_profile, tickets, user_con_profiles);
   entity_relation(ticket_type_providing_products, ticket_types, products);
   entity_relation(user_con_profile_signups, user_con_profiles, signups);
