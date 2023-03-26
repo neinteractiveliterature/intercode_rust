@@ -34,6 +34,7 @@ mod team_member_type;
 mod ticket_type;
 mod ticket_type_type;
 mod user_con_profile_type;
+mod user_con_profiles_pagination_type;
 mod user_type;
 
 pub use ability_type::AbilityType;
@@ -71,4 +72,5 @@ pub use team_member_type::TeamMemberType;
 pub use ticket_type::TicketType;
 pub use ticket_type_type::TicketTypeType;
 pub use user_con_profile_type::UserConProfileType;
+pub use user_con_profiles_pagination_type::UserConProfilesPaginationType;
 pub use user_type::UserType;

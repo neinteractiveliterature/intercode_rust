@@ -2,12 +2,12 @@ use super::{
   CmsContentGroupType, CmsContentType, CmsFileType, CmsGraphqlQueryType, CmsLayoutType,
   CmsNavigationItemType, CmsPartialType, CmsVariableType, EventCategoryType, EventType,
   EventsPaginationType, ModelBackedType, PageType, RoomType, SignupType, StaffPositionType,
-  TicketTypeType, UserConProfileType,
+  TicketTypeType, UserConProfileType, UserConProfilesPaginationType,
 };
 use crate::{
   api::{
     enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
-    inputs::{EventFiltersInput, SortInput},
+    inputs::{EventFiltersInput, SortInput, UserConProfileFiltersInput},
     interfaces::CmsParentImplementation,
     scalars::DateScalar,
   },
@@ -487,6 +487,50 @@ impl ConventionType {
         ))
       })
       .map(UserConProfileType::new)
+  }
+
+  #[graphql(name = "user_con_profiles_paginated")]
+  async fn user_con_profiles_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
+    filters: Option<UserConProfileFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<UserConProfilesPaginationType, Error> {
+    let mut scope = self.model.find_related(user_con_profiles::Entity);
+
+    if let Some(filters) = filters {
+      scope = filters.apply_filters(ctx, &scope)?;
+    }
+
+    if let Some(sort) = sort {
+      for sort_column in sort {
+        let _order = sort_column.query_order();
+
+        scope = match sort_column.field.as_str() {
+          "id" => todo!(),
+          "attending" => todo!(),
+          "email" => todo!(),
+          "first_name" => todo!(),
+          "is_team_member" => todo!(),
+          "last_name" => todo!(),
+          "payment_amount" => todo!(),
+          "privileges" => todo!(),
+          "name" => todo!(),
+          "ticket" => todo!(),
+          "ticket_type" => todo!(),
+          "user_id" => todo!(),
+          _ => scope,
+        }
+      }
+    }
+
+    Ok(UserConProfilesPaginationType::new(
+      Some(scope),
+      page,
+      per_page,
+    ))
   }
 
   // STUFF FOR IMPLEMENTING CMS_PARENT
