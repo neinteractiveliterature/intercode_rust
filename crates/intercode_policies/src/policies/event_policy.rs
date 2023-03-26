@@ -1,8 +1,10 @@
 use async_trait::async_trait;
-use intercode_entities::{events, model_ext::form_item_permissions::FormItemRole};
+use intercode_entities::{conventions, events, model_ext::form_item_permissions::FormItemRole};
 use sea_orm::DbErr;
 
 use crate::{AuthorizationInfo, FormResponsePolicy, Policy, ReadManageAction};
+
+use super::has_schedule_release_permissions;
 
 pub enum EventAction {
   Read,
@@ -14,6 +16,7 @@ pub enum EventAction {
   Create,
   Restore,
   Update,
+  ProvideTickets,
 }
 
 impl From<ReadManageAction> for EventAction {
@@ -28,33 +31,59 @@ impl From<ReadManageAction> for EventAction {
 pub struct EventPolicy;
 
 #[async_trait]
-impl Policy<AuthorizationInfo, events::Model> for EventPolicy {
+impl Policy<AuthorizationInfo, (conventions::Model, events::Model)> for EventPolicy {
   type Action = EventAction;
   type Error = DbErr;
 
   async fn action_permitted(
     principal: &AuthorizationInfo,
     action: &Self::Action,
-    resource: &events::Model,
+    (convention, event): &(conventions::Model, events::Model),
   ) -> Result<bool, Self::Error> {
     match action {
-      EventAction::Read => todo!(),
+      EventAction::Read => Ok(
+        (principal.has_scope("read_events")
+          && (convention.site_mode == "single_event"
+            || principal
+              .team_member_event_ids_in_convention(event.convention_id)
+              .await?
+              .contains(&event.id)
+            || (event.status == "active"
+              && has_schedule_release_permissions(
+                principal,
+                convention,
+                &convention.show_event_list,
+              )
+              .await)
+            || principal
+              .has_convention_permission("read_inactive_events", event.convention_id)
+              .await?
+            || principal
+              .has_convention_permission("update_events", event.convention_id)
+              .await?))
+          || principal.site_admin_read(),
+      ),
       EventAction::ReadSignups => {
-        Self::action_permitted(principal, &EventAction::ReadSignupDetails, resource).await
+        Self::action_permitted(
+          principal,
+          &EventAction::ReadSignupDetails,
+          &(convention.clone(), event.clone()),
+        )
+        .await
       }
       EventAction::ReadSignupDetails => Ok(
         principal
           .has_scope_and_convention_permission(
             "read_conventions",
             "read_signup_details",
-            resource.convention_id,
+            event.convention_id,
           )
           .await?
           || (principal.has_scope("read_events")
             && principal
-              .team_member_event_ids_in_convention(resource.convention_id)
+              .team_member_event_ids_in_convention(event.convention_id)
               .await?
-              .contains(&resource.convention_id))
+              .contains(&event.convention_id))
           || principal.site_admin_read(),
       ),
       EventAction::ReadAdminNotes => todo!(),
@@ -65,30 +94,31 @@ impl Policy<AuthorizationInfo, events::Model> for EventPolicy {
       EventAction::Update => Ok(
         principal.has_scope("manage_events")
           && (principal
-            .team_member_event_ids_in_convention(resource.convention_id)
+            .team_member_event_ids_in_convention(event.convention_id)
             .await?
-            .contains(&resource.id)
+            .contains(&event.id)
             || principal
               .has_event_category_permission(
                 "update_events",
-                resource.convention_id,
-                resource.event_category_id,
+                event.convention_id,
+                event.event_category_id,
               )
               .await?
             || principal
-              .has_convention_permission("update_events", resource.convention_id)
+              .has_convention_permission("update_events", event.convention_id)
               .await?
             || principal.site_admin_manage()),
       ),
+      EventAction::ProvideTickets => todo!(),
     }
   }
 }
 
 #[async_trait]
-impl FormResponsePolicy<AuthorizationInfo, events::Model> for EventPolicy {
+impl FormResponsePolicy<AuthorizationInfo, (conventions::Model, events::Model)> for EventPolicy {
   async fn form_item_viewer_role(
     principal: &AuthorizationInfo,
-    form_response: &events::Model,
+    (_convention, form_response): &(conventions::Model, events::Model),
   ) -> FormItemRole {
     if principal
       .has_convention_permission("update_events", form_response.convention_id)
@@ -124,8 +154,8 @@ impl FormResponsePolicy<AuthorizationInfo, events::Model> for EventPolicy {
 
   async fn form_item_writer_role(
     principal: &AuthorizationInfo,
-    form_response: &events::Model,
+    resource: &(conventions::Model, events::Model),
   ) -> FormItemRole {
-    Self::form_item_viewer_role(principal, form_response).await
+    Self::form_item_viewer_role(principal, resource).await
   }
 }

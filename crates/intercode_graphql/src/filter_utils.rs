@@ -5,7 +5,6 @@ use sea_orm::{
 
 pub fn numbered_placeholders(start: usize, count: usize) -> String {
   (start..(start + count))
-    .into_iter()
     .map(|index| format!("${}", index))
     .collect::<Vec<_>>()
     .join(", ")

@@ -26,7 +26,7 @@ impl From<ReadManageAction> for ConventionAction {
   }
 }
 
-async fn has_schedule_release_permissions(
+pub async fn has_schedule_release_permissions(
   authorization_info: &AuthorizationInfo,
   convention: &conventions::Model,
   schedule_release_value: &str,

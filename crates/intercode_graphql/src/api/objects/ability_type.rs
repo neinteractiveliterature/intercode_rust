@@ -112,7 +112,23 @@ impl AbilityType {
       .one(db)
       .await?;
 
-    model_action_permitted(EventPolicy, ctx, &EventAction::Update, |_ctx| Ok(event)).await
+    let resource = if let Some(event) = event {
+      Some((
+        ctx
+          .data::<QueryData>()?
+          .loaders()
+          .event_convention()
+          .load_one(event.id)
+          .await?
+          .expect_one()?
+          .clone(),
+        event,
+      ))
+    } else {
+      None
+    };
+
+    model_action_permitted(EventPolicy, ctx, &EventAction::Update, |_ctx| Ok(resource)).await
   }
 
   #[graphql(name = "can_update_event_categories")]
@@ -138,8 +154,24 @@ impl AbilityType {
       .one(db)
       .await?;
 
+    let resource = if let Some(event) = event {
+      Some((
+        ctx
+          .data::<QueryData>()?
+          .loaders()
+          .event_convention()
+          .load_one(event.id)
+          .await?
+          .expect_one()?
+          .clone(),
+        event,
+      ))
+    } else {
+      None
+    };
+
     model_action_permitted(EventPolicy, ctx, &EventAction::ReadSignups, |_ctx| {
-      Ok(event)
+      Ok(resource)
     })
     .await
   }

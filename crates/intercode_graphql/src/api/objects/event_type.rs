@@ -19,7 +19,7 @@ use seawater::loaders::{ExpectModel, ExpectModels};
 
 use super::{
   ConventionType, EventCategoryType, FormType, ModelBackedType, RegistrationPolicyType, RunType,
-  TeamMemberType,
+  TeamMemberType, TicketType,
 };
 use crate::model_backed_type;
 model_backed_type!(EventType, events::Model);
@@ -128,6 +128,16 @@ impl EventType {
   #[graphql(name = "private_signup_list")]
   async fn private_signup_list(&self) -> bool {
     self.model.private_signup_list
+  }
+
+  #[graphql(name = "provided_tickets")]
+  async fn provided_tickets(&self, ctx: &Context<'_>) -> Result<Vec<TicketType>> {
+    let loader = ctx.data::<QueryData>()?.loaders().event_provided_tickets();
+    loader
+      .load_one(self.model.id)
+      .await?
+      .expect_models()
+      .map(|models| models.iter().cloned().map(TicketType::new).collect())
   }
 
   #[graphql(name = "registration_policy")]
@@ -246,6 +256,19 @@ impl FormResponseImplementation<events::Model> for EventType {
 
   async fn get_viewer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole, Error> {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
-    Ok(EventPolicy::form_item_viewer_role(authorization_info, &self.model).await)
+    let convention_result = ctx
+      .data::<QueryData>()?
+      .loaders()
+      .event_convention()
+      .load_one(self.model.id)
+      .await?;
+    let convention = convention_result.expect_one()?;
+    Ok(
+      EventPolicy::form_item_viewer_role(
+        authorization_info,
+        &(convention.clone(), self.model.clone()),
+      )
+      .await,
+    )
   }
 }

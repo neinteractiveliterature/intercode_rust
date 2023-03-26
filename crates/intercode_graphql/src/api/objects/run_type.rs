@@ -58,11 +58,18 @@ impl RunType {
       .await?
       .expect_one()?
       .clone();
+    let convention = query_data
+      .loaders()
+      .event_convention()
+      .load_one(event.id)
+      .await?
+      .expect_one()?
+      .clone();
 
     RunPolicy::action_permitted(
       authorization_info,
       &RunAction::SignupSummary,
-      &(event, self.model.clone()),
+      &(convention, event, self.model.clone()),
     )
     .await
     .map_err(|err| err.into())

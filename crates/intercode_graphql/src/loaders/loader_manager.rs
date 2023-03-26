@@ -197,6 +197,7 @@ loader_manager!(
   entity_link(convention_staff_positions, ConventionToStaffPositions);
   entity_relation(convention_ticket_types, conventions, ticket_types);
   entity_id(conventions_by_id, conventions);
+  entity_relation(event_convention, events, conventions);
   entity_relation(event_event_category, events, event_categories);
   entity_link(event_provided_tickets, EventToProvidedTickets);
   entity_relation(event_runs, events, runs);
@@ -234,8 +235,10 @@ loader_manager!(
   );
   entity_id(team_members_by_id, team_members);
   entity_link(ticket_provided_by_event, TicketToProvidedByEvent);
+  entity_relation(ticket_ticket_type, tickets, ticket_types);
   entity_relation(ticket_user_con_profile, tickets, user_con_profiles);
   entity_relation(ticket_type_providing_products, ticket_types, products);
+  entity_relation(user_con_profile_convention, user_con_profiles, conventions);
   entity_relation(user_con_profile_signups, user_con_profiles, signups);
   entity_link(
     user_con_profile_staff_positions,

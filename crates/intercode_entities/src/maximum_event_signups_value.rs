@@ -3,9 +3,10 @@ use serde::{
   Deserialize, Deserializer, Serialize, Serializer,
 };
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub enum MaximumEventSignupsValue {
   Unlimited,
+  #[default]
   NotYet,
   NotNow,
   Limited(u16),
@@ -70,11 +71,5 @@ impl From<MaximumEventSignupsValue> for u16 {
       MaximumEventSignupsValue::NotNow => 0,
       MaximumEventSignupsValue::Limited(num) => num,
     }
-  }
-}
-
-impl Default for MaximumEventSignupsValue {
-  fn default() -> Self {
-    MaximumEventSignupsValue::NotYet
   }
 }

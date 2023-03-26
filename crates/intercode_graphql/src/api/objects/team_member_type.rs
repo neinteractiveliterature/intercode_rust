@@ -1,6 +1,7 @@
-use crate::QueryData;
+use crate::{policy_guard::PolicyGuard, QueryData};
 use async_graphql::*;
-use intercode_entities::team_members;
+use intercode_entities::{conventions, events, team_members};
+use intercode_policies::{policies::TeamMemberPolicy, ReadManageAction};
 use seawater::loaders::ExpectModels;
 
 use crate::model_backed_type;
@@ -8,7 +9,40 @@ use crate::model_backed_type;
 use super::{EventType, ModelBackedType, UserConProfileType};
 model_backed_type!(TeamMemberType, team_members::Model);
 
-#[Object(name = "TeamMember")]
+impl TeamMemberType {
+  fn policy_guard(
+    &self,
+    action: ReadManageAction,
+  ) -> PolicyGuard<
+    '_,
+    TeamMemberPolicy,
+    (conventions::Model, events::Model, team_members::Model),
+    team_members::Model,
+  > {
+    PolicyGuard::new(action, &self.model, move |model, ctx| {
+      let model = model.clone();
+      let ctx = ctx;
+      let query_data = ctx.data::<QueryData>();
+
+      Box::pin(async {
+        let query_data = query_data?;
+        let event_loader = query_data.loaders().team_member_event();
+        let convention_loader = query_data.loaders().event_convention();
+        let event_result = event_loader.load_one(model.id).await?;
+        let event = event_result.expect_one()?;
+        let convention_result = convention_loader.load_one(event.id).await?;
+        let convention = convention_result.expect_one()?;
+
+        Ok((convention.clone(), event.clone(), model))
+      })
+    })
+  }
+}
+
+#[Object(
+  name = "TeamMember",
+  guard = "self.policy_guard(ReadManageAction::Read)"
+)]
 impl TeamMemberType {
   async fn id(&self) -> ID {
     self.model.id.into()

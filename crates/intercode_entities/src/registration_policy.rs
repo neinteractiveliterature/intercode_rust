@@ -24,8 +24,9 @@ pub enum RegistrationPolicyError {
   InconsistentBucketState,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub enum SlotCount {
+  #[default]
   Unlimited,
   Limited(usize),
 }
@@ -72,12 +73,6 @@ impl<'de> Deserialize<'de> for SlotCount {
         .map(|count| SlotCount::Limited(count as usize))
         .unwrap_or(SlotCount::Unlimited),
     )
-  }
-}
-
-impl Default for SlotCount {
-  fn default() -> Self {
-    SlotCount::Unlimited
   }
 }
 
