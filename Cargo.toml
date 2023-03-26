@@ -62,7 +62,7 @@ flamegraph = ["dep:tracing-flame"]
 tokio-console = ["dep:console-subscriber", "tokio/full", "tokio/tracing"]
 
 [dependencies]
-anyhow = "1.0.68"
+anyhow = "1.0.70"
 async-graphql = {workspace = true}
 async-graphql-axum = "~5.0"
 async-stripe = {version = "0.15.1", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
