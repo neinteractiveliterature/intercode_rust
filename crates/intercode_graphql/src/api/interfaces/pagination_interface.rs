@@ -2,7 +2,7 @@ use async_graphql::{async_trait::async_trait, Context, Error, Interface};
 use sea_orm::{ConnectionTrait, Paginator, SelectorTrait};
 
 use crate::{
-  api::objects::{EventsPaginationType, SignupsPaginationType},
+  api::objects::{EventsPaginationType, SignupsPaginationType, UserConProfilesPaginationType},
   QueryData,
 };
 
@@ -49,6 +49,7 @@ use crate::{
 pub enum PaginationInterface {
   Events(EventsPaginationType),
   Signups(SignupsPaginationType),
+  UserConProfiles(UserConProfilesPaginationType),
 }
 
 #[async_trait]
