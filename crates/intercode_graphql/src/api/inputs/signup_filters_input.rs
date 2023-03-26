@@ -9,7 +9,7 @@ pub struct SignupFiltersInput {
   name: Option<String>,
   #[graphql(name = "event_title")]
   event_title: Option<String>,
-  bucket: Option<String>,
+  bucket: Option<Vec<String>>,
   email: Option<String>,
   state: Option<Vec<String>>,
 }
@@ -49,7 +49,7 @@ impl SignupFiltersInput {
     }
 
     if let Some(bucket) = &self.bucket {
-      scope = scope.filter(signups::Column::BucketKey.eq(bucket.as_str()));
+      scope = scope.filter(signups::Column::BucketKey.is_in(bucket.iter().map(|b| b.as_str())));
     }
 
     if let Some(email) = &self.email {
