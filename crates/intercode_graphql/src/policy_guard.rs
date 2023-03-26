@@ -1,8 +1,10 @@
 use std::{future::Future, pin::Pin};
 
-use async_graphql::{Context, Guard, Result};
+use async_graphql::{Context, ErrorExtensions, Guard, Result};
 use async_trait::async_trait;
 use intercode_policies::{AuthorizationInfo, Policy};
+
+use crate::QueryData;
 
 pub trait GetResourceFn<'a, M: Send + Sync + 'static, R: Send + Sync>:
   for<'b> Fn(&'a M, &'b Context<'_>) -> Pin<Box<dyn Future<Output = Result<R>> + Send + Sync + 'b>>
@@ -53,7 +55,29 @@ impl<'a, P: Policy<AuthorizationInfo, R>, R: Send + Sync, M: Send + Sync + 'stat
   async fn check(&self, ctx: &Context<'_>) -> Result<()> {
     let principal = ctx.data::<AuthorizationInfo>()?;
     let resource = (self.get_resource)(self.model, ctx).await?;
-    P::action_permitted(principal, &self.action, &resource).await?;
-    Ok(())
+    let permitted = P::action_permitted(principal, &self.action, &resource).await?;
+
+    match permitted {
+      true => Ok(()),
+      false => {
+        let error = async_graphql::Error::new("Permission denied").extend_with(|_err, ext| {
+          ext.set(
+            "code",
+            if ctx
+              .data::<QueryData>()
+              .ok()
+              .and_then(|qd| qd.current_user())
+              .is_none()
+            {
+              "NOT_AUTHENTICATED"
+            } else {
+              "NOT_AUTHORIZED"
+            },
+          )
+        });
+
+        Err(error)
+      }
+    }
   }
 }

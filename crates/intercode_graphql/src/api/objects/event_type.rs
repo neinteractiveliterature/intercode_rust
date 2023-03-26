@@ -256,6 +256,19 @@ impl FormResponseImplementation<events::Model> for EventType {
 
   async fn get_viewer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole, Error> {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
-    Ok(EventPolicy::form_item_viewer_role(authorization_info, &self.model).await)
+    let convention_result = ctx
+      .data::<QueryData>()?
+      .loaders()
+      .event_convention()
+      .load_one(self.model.id)
+      .await?;
+    let convention = convention_result.expect_one()?;
+    Ok(
+      EventPolicy::form_item_viewer_role(
+        authorization_info,
+        &(convention.clone(), self.model.clone()),
+      )
+      .await,
+    )
   }
 }

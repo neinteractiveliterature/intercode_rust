@@ -1,5 +1,5 @@
 use async_trait::async_trait;
-use intercode_entities::{events, runs};
+use intercode_entities::{conventions, events, runs};
 use sea_orm::DbErr;
 
 use crate::{AuthorizationInfo, Policy, ReadManageAction};
@@ -24,14 +24,14 @@ impl From<ReadManageAction> for RunAction {
 pub struct RunPolicy;
 
 #[async_trait]
-impl Policy<AuthorizationInfo, (events::Model, runs::Model)> for RunPolicy {
+impl Policy<AuthorizationInfo, (conventions::Model, events::Model, runs::Model)> for RunPolicy {
   type Action = RunAction;
   type Error = DbErr;
 
   async fn action_permitted(
     principal: &AuthorizationInfo,
     action: &Self::Action,
-    (event, run): &(events::Model, runs::Model),
+    (convention, event, run): &(conventions::Model, events::Model, runs::Model),
   ) -> Result<bool, Self::Error> {
     match action {
       RunAction::Read => todo!(),
@@ -41,7 +41,13 @@ impl Policy<AuthorizationInfo, (events::Model, runs::Model)> for RunPolicy {
           return Ok(false);
         }
 
-        if EventPolicy::action_permitted(principal, &EventAction::ReadSignups, event).await? {
+        if EventPolicy::action_permitted(
+          principal,
+          &EventAction::ReadSignups,
+          &(convention.clone(), event.clone()),
+        )
+        .await?
+        {
           return Ok(true);
         }
 
