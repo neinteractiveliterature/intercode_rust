@@ -23,7 +23,7 @@ members = [
 
 [workspace.dependencies]
 Inflector = "*"
-async-graphql = {version = "~5.0", features = ["tracing", "dataloader", "chrono"]}
+async-graphql = {version = "~5.0.7", features = ["tracing", "dataloader", "chrono"]}
 async-graphql-value = {version = "~5.0"}
 async-trait = "*"
 axum = {version = "~0.6", features = ["multipart", "macros", "headers"]}
