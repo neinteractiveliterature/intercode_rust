@@ -84,7 +84,7 @@ futures = {workspace = true}
 hex = "0.4.3"
 html-escape = {workspace = true}
 http = {workspace = true}
-hyper = "0.14.23"
+hyper = "0.14.25"
 i18n-embed = {workspace = true}
 i18n-embed-fl = {workspace = true}
 indicatif = {version = "0.17.3", features = ["improved_unicode"]}
