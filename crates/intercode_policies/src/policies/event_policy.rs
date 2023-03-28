@@ -17,6 +17,7 @@ pub enum EventAction {
   Restore,
   Update,
   ProvideTickets,
+  OverrideMaximumEventProvidedTickets,
 }
 
 impl From<ReadManageAction> for EventAction {
@@ -110,6 +111,20 @@ impl Policy<AuthorizationInfo, (conventions::Model, events::Model)> for EventPol
             || principal.site_admin_manage()),
       ),
       EventAction::ProvideTickets => todo!(),
+      EventAction::OverrideMaximumEventProvidedTickets => Ok(
+        principal.has_scope("manage_events")
+          && (principal
+            .has_convention_permission("override_event_tickets", convention.id)
+            .await?
+            || principal
+              .has_event_category_permission(
+                "override_event_tickets",
+                convention.id,
+                event.event_category_id,
+              )
+              .await?)
+          || principal.site_admin_manage(),
+      ),
     }
   }
 }

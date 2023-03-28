@@ -66,6 +66,7 @@ where
   async fn get_form(&self, ctx: &Context<'_>) -> Result<forms::Model, Error>;
   async fn get_team_member_name(&self, ctx: &Context<'_>) -> Result<String, Error>;
   async fn get_viewer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole, Error>;
+  async fn get_writer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole, Error>;
 
   async fn form_response_attrs_json(
     &self,
