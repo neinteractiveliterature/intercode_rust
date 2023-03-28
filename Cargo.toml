@@ -35,7 +35,7 @@ chrono-tz = "0.8"
 dyn-clone = "1.0.11"
 futures = "0.3.25"
 html-escape = "0.2.13"
-http = "0.2.8"
+http = "0.2.9"
 i18n-embed = {version = "0.13", features = ["fluent-system"]}
 i18n-embed-fl = "0.6"
 id-arena = "2.2.1"
