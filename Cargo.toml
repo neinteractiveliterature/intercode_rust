@@ -68,7 +68,7 @@ async-graphql-axum = "~5.0.7"
 async-stripe = {version = "0.15.1", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
 axum = {workspace = true}
 axum-extra = {version = "~0.4", features = ["cookie"]}
-axum-server = {version = "0.4.4", features = ["tls-rustls"]}
+axum-server = {version = "0.4.7", features = ["tls-rustls"]}
 axum-sessions = "~0.4"
 base64 = "0.13.1"
 bcrypt = "0.13.0"
