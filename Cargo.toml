@@ -65,7 +65,7 @@ tokio-console = ["dep:console-subscriber", "tokio/full", "tokio/tracing"]
 anyhow = "1.0.70"
 async-graphql = {workspace = true}
 async-graphql-axum = "~5.0.7"
-async-stripe = {version = "0.15.1", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
+async-stripe = {version = "0.18.4", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
 axum = {workspace = true}
 axum-extra = {version = "~0.4", features = ["cookie"]}
 axum-server = {version = "0.4.4", features = ["tls-rustls"]}
