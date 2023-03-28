@@ -199,6 +199,7 @@ loader_manager!(
   entity_id(conventions_by_id, conventions);
   entity_relation(event_convention, events, conventions);
   entity_relation(event_event_category, events, event_categories);
+  entity_relation(event_maximum_event_provided_tickets_overrides, events, maximum_event_provided_tickets_overrides);
   entity_link(event_provided_tickets, EventToProvidedTickets);
   entity_relation(event_runs, events, runs);
   entity_relation(event_team_members, events, team_members);
@@ -211,6 +212,12 @@ loader_manager!(
   entity_link(form_form_items, FormToFormItems);
   entity_relation(form_form_sections, forms, form_sections);
   entity_relation(form_section_form_items, form_sections, form_items);
+  entity_relation(maximum_event_provided_tickets_override_event, maximum_event_provided_tickets_overrides, events);
+  entity_relation(
+    maximum_event_provided_tickets_override_ticket_type,
+    maximum_event_provided_tickets_overrides,
+    ticket_types
+  );
   entity_relation(order_order_entries, orders, order_entries);
   entity_relation(room_runs, rooms, runs);
   entity_relation(run_event, runs, events);

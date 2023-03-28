@@ -2166,6 +2166,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "chrono-tz",
+ "futures",
  "html-escape",
  "http",
  "i18n-embed",

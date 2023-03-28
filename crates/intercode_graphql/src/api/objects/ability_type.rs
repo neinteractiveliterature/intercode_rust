@@ -131,6 +131,44 @@ impl AbilityType {
     model_action_permitted(EventPolicy, ctx, &EventAction::Update, |_ctx| Ok(resource)).await
   }
 
+  #[graphql(name = "can_delete_event")]
+  async fn can_delete_event(&self, _event_id: ID) -> Result<bool, Error> {
+    Ok(false)
+  }
+
+  #[graphql(name = "can_override_maximum_event_provided_tickets")]
+  async fn can_override_maximum_event_provided_tickets(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<bool, Error> {
+    let convention = ctx.data::<QueryData>()?.convention();
+    let Some(convention) = convention else {
+      return Ok(false);
+    };
+
+    let event = events::Model {
+      id: 0,
+      convention_id: convention.id,
+      event_category_id: 0,
+      can_play_concurrently: false,
+      private_signup_list: false,
+      length_seconds: 3600,
+      status: "active".to_string(),
+      title: "Null event".to_string(),
+      ..Default::default()
+    };
+
+    let resource = (convention.clone(), event);
+
+    model_action_permitted(
+      EventPolicy,
+      ctx,
+      &EventAction::OverrideMaximumEventProvidedTickets,
+      |_ctx| Ok(Some(resource)),
+    )
+    .await
+  }
+
   #[graphql(name = "can_update_event_categories")]
   async fn can_update_event_categories(&self) -> bool {
     false

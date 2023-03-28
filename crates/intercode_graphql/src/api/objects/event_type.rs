@@ -10,16 +10,21 @@ use crate::{
 use async_graphql::*;
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
+use futures::StreamExt;
 use intercode_entities::{
   events, forms, model_ext::form_item_permissions::FormItemRole, RegistrationPolicy,
 };
 use intercode_liquid::render_markdown;
-use intercode_policies::{policies::EventPolicy, AuthorizationInfo, FormResponsePolicy};
+use intercode_policies::{
+  policies::{EventPolicy, MaximumEventProvidedTicketsOverridePolicy},
+  AuthorizationInfo, FormResponsePolicy, Policy, ReadManageAction,
+};
 use seawater::loaders::{ExpectModel, ExpectModels};
 
 use super::{
-  ConventionType, EventCategoryType, FormType, ModelBackedType, RegistrationPolicyType, RunType,
-  TeamMemberType, TicketType,
+  active_storage_attachment_type::ActiveStorageAttachmentType, ConventionType, EventCategoryType,
+  FormType, MaximumEventProvidedTicketsOverrideType, ModelBackedType, RegistrationPolicyType,
+  RunType, TeamMemberType, TicketType,
 };
 use crate::model_backed_type;
 model_backed_type!(EventType, events::Model);
@@ -52,6 +57,16 @@ impl EventType {
   #[graphql(name = "created_at")]
   async fn created_at(&self) -> Option<NaiveDateTime> {
     self.model.created_at
+  }
+
+  #[graphql(name = "current_user_form_item_viewer_role")]
+  async fn current_user_form_item_viewer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole> {
+    self.get_viewer_role(ctx).await
+  }
+
+  #[graphql(name = "current_user_form_item_writer_role")]
+  async fn current_user_form_item_writer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole> {
+    self.get_writer_role(ctx).await
   }
 
   async fn email(&self) -> &Option<String> {
@@ -99,9 +114,61 @@ impl EventType {
     .await
   }
 
+  async fn images(&self, ctx: &Context<'_>) -> Result<Vec<ActiveStorageAttachmentType>> {
+    let blobs = ctx
+      .data::<QueryData>()?
+      .loaders()
+      .event_attached_images
+      .load_one(self.model.id)
+      .await?
+      .unwrap_or_default();
+
+    Ok(
+      blobs
+        .into_iter()
+        .map(ActiveStorageAttachmentType::new)
+        .collect(),
+    )
+  }
+
   #[graphql(name = "length_seconds")]
   async fn length_seconds(&self) -> i32 {
     self.model.length_seconds
+  }
+
+  #[graphql(name = "maximum_event_provided_tickets_overrides")]
+  async fn maximum_event_provided_tickets_overrides(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<MaximumEventProvidedTicketsOverrideType>> {
+    let loaders = ctx.data::<QueryData>()?.loaders();
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let convention_result = loaders.event_convention().load_one(self.model.id).await?;
+    let convention = convention_result.expect_one()?;
+    let meptos_result = loaders
+      .event_maximum_event_provided_tickets_overrides()
+      .load_one(self.model.id)
+      .await?;
+    let meptos = meptos_result.expect_models()?;
+
+    let meptos_stream = futures::stream::iter(meptos);
+    let readable_meptos = meptos_stream.filter(|mepto| {
+      let mepto = (*mepto).clone();
+      async {
+        MaximumEventProvidedTicketsOverridePolicy::action_permitted(
+          authorization_info,
+          &ReadManageAction::Read,
+          &(convention.clone(), self.model.clone(), mepto),
+        )
+        .await
+        .unwrap_or(false)
+      }
+    });
+    let mepto_objects = readable_meptos
+      .map(|mepto| MaximumEventProvidedTicketsOverrideType::new(mepto.clone()))
+      .collect()
+      .await;
+    Ok(mepto_objects)
   }
 
   #[graphql(name = "my_rating")]
@@ -265,6 +332,24 @@ impl FormResponseImplementation<events::Model> for EventType {
     let convention = convention_result.expect_one()?;
     Ok(
       EventPolicy::form_item_viewer_role(
+        authorization_info,
+        &(convention.clone(), self.model.clone()),
+      )
+      .await,
+    )
+  }
+
+  async fn get_writer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole, Error> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let convention_result = ctx
+      .data::<QueryData>()?
+      .loaders()
+      .event_convention()
+      .load_one(self.model.id)
+      .await?;
+    let convention = convention_result.expect_one()?;
+    Ok(
+      EventPolicy::form_item_writer_role(
         authorization_info,
         &(convention.clone(), self.model.clone()),
       )
