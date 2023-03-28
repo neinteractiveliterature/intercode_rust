@@ -1,3 +1,5 @@
+use std::env;
+
 use super::{
   CmsContentGroupType, CmsContentType, CmsFileType, CmsGraphqlQueryType, CmsLayoutType,
   CmsNavigationItemType, CmsPartialType, CmsVariableType, PageType,
@@ -5,6 +7,7 @@ use super::{
 use crate::{api::interfaces::CmsParentImplementation, model_backed_type};
 use async_graphql::*;
 use intercode_entities::root_sites;
+use url::Url;
 
 model_backed_type!(RootSiteType, root_sites::Model);
 
@@ -118,6 +121,11 @@ impl RootSiteType {
       self, ctx, name,
     )
     .await
+  }
+
+  async fn url(&self) -> Result<String> {
+    let host = env::var("INTERCODE_HOST")?;
+    Ok(Url::parse(format!("https://{}", host).as_str())?.to_string())
   }
 }
 

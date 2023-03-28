@@ -249,6 +249,7 @@ pub async fn check_liquid() -> Result<()> {
   let db = Arc::new(connect_database().await?);
   startup_bar.set_message("Loading translations...");
   let schema_data = SchemaData {
+    stripe_client: stripe::Client::new("sk_test_XXXXX"),
     language_loader: Arc::new(build_language_loader()?),
   };
   let connection_wrapper = ConnectionWrapper::from(db);

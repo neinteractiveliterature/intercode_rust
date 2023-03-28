@@ -2151,6 +2151,7 @@ name = "intercode_graphql"
 version = "0.1.0"
 dependencies = [
  "async-graphql",
+ "async-stripe",
  "async-trait",
  "chrono",
  "chrono-tz",
@@ -2163,6 +2164,7 @@ dependencies = [
  "intercode_inflector",
  "intercode_liquid",
  "intercode_policies",
+ "intercode_timespan",
  "liquid",
  "liquid-core",
  "md5",

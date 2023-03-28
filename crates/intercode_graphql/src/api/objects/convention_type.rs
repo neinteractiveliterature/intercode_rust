@@ -1,8 +1,11 @@
+use std::str::FromStr;
+
 use super::{
-  CmsContentGroupType, CmsContentType, CmsFileType, CmsGraphqlQueryType, CmsLayoutType,
-  CmsNavigationItemType, CmsPartialType, CmsVariableType, EventCategoryType, EventType,
-  EventsPaginationType, ModelBackedType, PageType, RoomType, SignupType, StaffPositionType,
-  TicketTypeType, UserConProfileType, UserConProfilesPaginationType,
+  stripe_account_type::StripeAccountType, CmsContentGroupType, CmsContentType, CmsFileType,
+  CmsGraphqlQueryType, CmsLayoutType, CmsNavigationItemType, CmsPartialType, CmsVariableType,
+  EventCategoryType, EventType, EventsPaginationType, ModelBackedType, PageType, RoomType,
+  ScheduledValueType, SignupType, StaffPositionType, TicketTypeType, UserConProfileType,
+  UserConProfilesPaginationType,
 };
 use crate::{
   api::{
@@ -13,7 +16,7 @@ use crate::{
   },
   cms_rendering_context::CmsRenderingContext,
   lax_id::LaxId,
-  LiquidRenderer, QueryData,
+  LiquidRenderer, QueryData, SchemaData,
 };
 use async_graphql::*;
 use chrono::{DateTime, Utc};
@@ -22,8 +25,9 @@ use intercode_entities::{
   cms_partials, conventions, events,
   links::{ConventionToSignups, ConventionToStaffPositions},
   model_ext::time_bounds::TimeBoundsSelectExt,
-  runs, signups, staff_positions, team_members, user_con_profiles, users,
+  runs, signups, staff_positions, team_members, user_con_profiles, users, MaximumEventSignupsValue,
 };
+use intercode_timespan::{ScheduledValue, TimespanWithValue};
 use liquid::object;
 use sea_orm::{
   sea_query::Expr, ColumnTrait, EntityTrait, JoinType, ModelTrait, QueryFilter, QueryOrder,
@@ -258,6 +262,32 @@ impl ConventionType {
     self.model.location.as_ref()
   }
 
+  #[graphql(name = "maximum_event_signups")]
+  async fn maximum_event_signups(&self) -> Result<Option<ScheduledValueType<Utc, String>>> {
+    let scheduled_value: Option<ScheduledValue<Utc, MaximumEventSignupsValue>> = self
+      .model
+      .maximum_event_signups
+      .clone()
+      .map(serde_json::from_value)
+      .transpose()?;
+
+    Ok(
+      scheduled_value
+        .map(|scheduled_value| {
+          scheduled_value
+            .into_iter()
+            .filter_map(|twv| {
+              twv.value.map(|value| TimespanWithValue {
+                timespan: twv.timespan,
+                value: serde_json::to_string(&value).unwrap(),
+              })
+            })
+            .collect::<ScheduledValue<Utc, String>>()
+        })
+        .map(ScheduledValueType::new),
+    )
+  }
+
   #[graphql(name = "maximum_tickets")]
   async fn maximum_tickets(&self) -> Option<i32> {
     self.model.maximum_tickets
@@ -414,9 +444,25 @@ impl ConventionType {
       .map(|t| DateTime::<Utc>::from_utc(t, Utc))
   }
 
+  #[graphql(name = "stripe_account")]
+  async fn stripe_account(&self, ctx: &Context<'_>) -> Result<Option<StripeAccountType>> {
+    if let Some(id) = &self.model.stripe_account_id {
+      let client = &ctx.data::<SchemaData>()?.stripe_client;
+      let acct = stripe::Account::retrieve(client, &stripe::AccountId::from_str(id)?, &[]).await?;
+      Ok(Some(StripeAccountType::new(acct)))
+    } else {
+      Ok(None)
+    }
+  }
+
   #[graphql(name = "stripe_account_id")]
   async fn stripe_account_id(&self) -> Option<&str> {
     self.model.stripe_account_id.as_deref()
+  }
+
+  #[graphql(name = "stripe_account_ready_to_charge")]
+  async fn stripe_account_ready_to_charge(&self) -> bool {
+    self.model.stripe_account_ready_to_charge
   }
 
   #[graphql(name = "stripe_publishable_key")]
