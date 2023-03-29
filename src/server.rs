@@ -299,6 +299,7 @@ where
 {
   let language_loader_arc = Arc::new(build_language_loader()?);
   let schema_data = SchemaData {
+    stripe_client: stripe::Client::new(env::var("STRIPE_SECRET_KEY")?),
     language_loader: language_loader_arc,
   };
   let graphql_schema = build_intercode_graphql_schema(schema_data.clone());

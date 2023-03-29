@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, fmt::Debug};
 
 use crate::{serialization::SerializedScheduledValue, Timespan, TimespanWithValue};
 use chrono::{DateTime, FixedOffset, TimeZone, Utc};
@@ -142,6 +142,20 @@ impl<Tz: TimeZone + From<Utc> + std::fmt::Debug, V: Clone + Default + std::fmt::
 {
   fn default() -> Self {
     ScheduledValue::new(Default::default(), Utc.into())
+  }
+}
+
+impl<StartTz: TimeZone + Debug, FinishTz: TimeZone + Debug, V: Clone + Default + Debug>
+  FromIterator<TimespanWithValue<StartTz, FinishTz, V>> for ScheduledValue<Utc, V>
+{
+  fn from_iter<T: IntoIterator<Item = TimespanWithValue<StartTz, FinishTz, V>>>(iter: T) -> Self {
+    ScheduledValue::from_timespans_with_values(
+      Utc,
+      &mut iter.into_iter().map(|twv| TimespanWithValue {
+        timespan: twv.timespan.with_timezone(&Utc),
+        value: twv.value,
+      }),
+    )
   }
 }
 

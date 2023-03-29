@@ -25,6 +25,7 @@ members = [
 Inflector = "*"
 async-graphql = {version = "~5.0.7", features = ["tracing", "dataloader", "chrono"]}
 async-graphql-value = {version = "~5.0.7"}
+async-stripe = {version = "0.18.4", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
 async-trait = "*"
 axum = {version = "~0.6.12", features = ["multipart", "macros", "headers"]}
 bumpalo = "3.12.0"
@@ -65,7 +66,7 @@ tokio-console = ["dep:console-subscriber", "tokio/full", "tokio/tracing"]
 anyhow = "1.0.70"
 async-graphql = {workspace = true}
 async-graphql-axum = "~5.0.7"
-async-stripe = {version = "0.18.4", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
+async-stripe = {workspace = true}
 axum = {workspace = true}
 axum-extra = {version = "~0.4", features = ["cookie"]}
 axum-server = {version = "0.4.7", features = ["tls-rustls"]}

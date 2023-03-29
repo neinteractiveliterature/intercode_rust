@@ -1,7 +1,7 @@
 use cached::{async_sync::Mutex, CachedAsync, UnboundCache};
-use intercode_entities::{signups, user_con_profiles, users};
+use intercode_entities::{cms_content_groups, signups, user_con_profiles, users};
 use oxide_auth::endpoint::Scope;
-use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter};
+use sea_orm::{ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, Select};
 use seawater::ConnectionWrapper;
 use std::{
   collections::{HashMap, HashSet},
@@ -173,6 +173,36 @@ impl AuthorizationInfo {
         Ok(HashSet::from_iter(user_con_profile_ids.into_iter()))
       })
       .await
+  }
+
+  pub async fn cms_content_group_ids_with_permission_in_convention(
+    &self,
+    convention_id: i64,
+    permission: &str,
+  ) -> Result<HashSet<i64>, DbErr> {
+    let perms = self
+      .all_model_permissions_in_convention(convention_id)
+      .await?;
+    Ok(perms.cms_content_group_ids_with_permission(permission))
+  }
+
+  pub async fn cms_content_group_scope_has_permission(
+    &self,
+    scope: Select<cms_content_groups::Entity>,
+    convention_id: i64,
+    permission: &str,
+  ) -> Result<bool, DbErr> {
+    let group_ids_with_permission = self
+      .cms_content_group_ids_with_permission_in_convention(convention_id, permission)
+      .await?;
+
+    Ok(
+      scope
+        .filter(cms_content_groups::Column::Id.is_in(group_ids_with_permission))
+        .count(&self.db)
+        .await?
+        > 0,
+    )
   }
 
   pub fn has_scope(&self, scope: &str) -> bool {

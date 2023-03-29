@@ -1,11 +1,11 @@
 use std::borrow::Borrow;
 
 use async_graphql::*;
-use intercode_entities::{conventions, events, rooms, runs, signups};
+use intercode_entities::{conventions, events, rooms, root_sites, runs, signups};
 use intercode_policies::{
   policies::{
-    ConventionAction, ConventionPolicy, EventAction, EventPolicy, RoomPolicy, SignupAction,
-    SignupPolicy,
+    CmsContentPolicy, ConventionAction, ConventionPolicy, EventAction, EventPolicy, RoomPolicy,
+    SignupAction, SignupPolicy,
   },
   AuthorizationInfo, Policy, ReadManageAction,
 };
@@ -87,6 +87,26 @@ impl AbilityType {
       |ctx| Ok(ctx.data::<QueryData>()?.convention()),
     )
     .await
+  }
+
+  #[graphql(name = "can_create_cms_files")]
+  async fn can_create_cms_files(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    let convention = ctx.data::<QueryData>()?.convention();
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+
+    Ok(if let Some(convention) = convention {
+      CmsContentPolicy::action_permitted(authorization_info, &ReadManageAction::Manage, convention)
+        .await?
+    } else {
+      CmsContentPolicy::action_permitted(
+        authorization_info,
+        &ReadManageAction::Manage,
+        &root_sites::Model {
+          ..Default::default()
+        },
+      )
+      .await?
+    })
   }
 
   #[graphql(name = "can_update_convention")]

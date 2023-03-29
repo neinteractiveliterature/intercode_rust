@@ -4,13 +4,15 @@ use std::time::Duration;
 use async_graphql::dataloader::DataLoader;
 
 use intercode_entities::links::{
-  CmsNavigationItemToCmsNavigationSection, ConventionToStaffPositions, EventCategoryToEventForm,
-  EventCategoryToEventProposalForm, EventToProvidedTickets, FormToFormItems,
-  SignupRequestToReplaceSignup, SignupRequestToResultSignup, StaffPositionToUserConProfiles,
-  TicketToProvidedByEvent, UserConProfileToStaffPositions,
+  CmsNavigationItemToCmsNavigationSection, ConventionToCatchAllStaffPosition,
+  ConventionToStaffPositions, EventCategoryToEventForm, EventCategoryToEventProposalForm,
+  EventToProvidedTickets, FormToFormItems, SignupRequestToReplaceSignup,
+  SignupRequestToResultSignup, StaffPositionToUserConProfiles, TicketToProvidedByEvent,
+  UserConProfileToStaffPositions,
 };
 use intercode_entities::model_ext::FormResponse;
 use intercode_entities::*;
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use seawater::loaders::{EntityIdLoader, EntityLinkLoader, EntityRelationLoader};
 use seawater::ConnectionWrapper;
 
@@ -44,6 +46,9 @@ macro_rules! loader_manager {
 
   (@fields $($tail:tt)*) => {
     pub struct LoaderManager {
+      pub cms_file_file: DataLoader<ActiveStorageAttachedBlobsLoader>,
+      pub convention_favicon: DataLoader<ActiveStorageAttachedBlobsLoader>,
+      pub convention_open_graph_image: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub event_attached_images: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub event_runs_filtered: LoaderSpawner<EventRunsLoaderFilter, i64, FilteredEventRunsLoader>,
       pub event_user_con_profile_event_ratings:
@@ -92,6 +97,24 @@ macro_rules! loader_manager {
 
   (@constructor $db: expr, $delay_millis: expr, $($tail:tt)*) => {
     LoaderManager {
+      cms_file_file: DataLoader::new(
+        ActiveStorageAttachedBlobsLoader::new($db.clone(), active_storage_attachments::Entity::find()
+          .filter(active_storage_attachments::Column::RecordType.eq("CmsFile"))
+          .filter(active_storage_attachments::Column::Name.eq("file"))),
+        tokio::spawn,
+      ).delay($delay_millis),
+      convention_favicon: DataLoader::new(
+        ActiveStorageAttachedBlobsLoader::new($db.clone(), active_storage_attachments::Entity::find()
+          .filter(active_storage_attachments::Column::RecordType.eq("Convention"))
+          .filter(active_storage_attachments::Column::Name.eq("favicon"))),
+        tokio::spawn,
+      ).delay($delay_millis),
+      convention_open_graph_image: DataLoader::new(
+        ActiveStorageAttachedBlobsLoader::new($db.clone(), active_storage_attachments::Entity::find()
+          .filter(active_storage_attachments::Column::RecordType.eq("Convention"))
+          .filter(active_storage_attachments::Column::Name.eq("open_graph_image"))),
+        tokio::spawn,
+      ).delay($delay_millis),
       event_attached_images: DataLoader::new(
         ActiveStorageAttachedBlobsLoader::new($db.clone(), events::Model::attached_images_scope()),
         tokio::spawn,
@@ -192,6 +215,7 @@ loader_manager!(
     cms_navigation_item_section,
     CmsNavigationItemToCmsNavigationSection
   );
+  entity_link(convention_catch_all_staff_position, ConventionToCatchAllStaffPosition);
   entity_relation(convention_event_categories, conventions, event_categories);
   entity_relation(convention_rooms, conventions, rooms);
   entity_link(convention_staff_positions, ConventionToStaffPositions);

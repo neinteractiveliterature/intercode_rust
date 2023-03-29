@@ -22,9 +22,18 @@ pub mod loaders;
 mod policy_guard;
 mod presenters;
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct SchemaData {
+  pub stripe_client: stripe::Client,
   pub language_loader: Arc<FluentLanguageLoader>,
+}
+
+impl Debug for SchemaData {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("SchemaData")
+      .field("language_loader", &self.language_loader)
+      .finish_non_exhaustive()
+  }
 }
 
 #[async_trait]
