@@ -1011,7 +1011,7 @@ dependencies = [
  "rand 0.8.5",
  "sha2 0.10.6",
  "subtle",
- "time 0.3.17",
+ "time 0.3.20",
  "version_check",
 ]
 
@@ -2294,7 +2294,7 @@ dependencies = [
  "serde_json",
  "sha1",
  "tikv-jemallocator",
- "time 0.3.17",
+ "time 0.3.20",
  "tokio",
  "tokio-stream",
  "tonic",
@@ -2456,7 +2456,7 @@ dependencies = [
  "pest_derive",
  "regex",
  "serde",
- "time 0.3.17",
+ "time 0.3.20",
 ]
 
 [[package]]
@@ -2480,7 +2480,7 @@ dependencies = [
  "once_cell",
  "percent-encoding",
  "regex",
- "time 0.3.17",
+ "time 0.3.20",
  "unicode-segmentation",
 ]
 
@@ -3679,7 +3679,7 @@ dependencies = [
  "serde_json",
  "sqlx",
  "thiserror",
- "time 0.3.17",
+ "time 0.3.20",
  "tracing",
  "url",
  "uuid",
@@ -3708,7 +3708,7 @@ dependencies = [
  "rust_decimal",
  "sea-query-derive",
  "serde_json",
- "time 0.3.17",
+ "time 0.3.20",
  "uuid",
 ]
 
@@ -3723,7 +3723,7 @@ dependencies = [
  "sea-query",
  "serde_json",
  "sqlx",
- "time 0.3.17",
+ "time 0.3.20",
  "uuid",
 ]
 
@@ -4084,7 +4084,7 @@ dependencies = [
  "sqlx-rt",
  "stringprep",
  "thiserror",
- "time 0.3.17",
+ "time 0.3.20",
  "tokio-stream",
  "url",
  "uuid",
@@ -4281,9 +4281,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.17"
+version = "0.3.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a561bf4617eebd33bca6434b988f39ed798e527f51a1e797d0ee4f61c0a38376"
+checksum = "cd0cbfecb4d19b5ea75bb31ad904eb5b9fa13f21079c3b92017ebdf4999a5890"
 dependencies = [
  "itoa",
  "serde",
@@ -4299,9 +4299,9 @@ checksum = "2e153e1f1acaef8acc537e68b44906d2db6436e2b35ac2c6b42640fff91f00fd"
 
 [[package]]
 name = "time-macros"
-version = "0.2.6"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d967f99f534ca7e495c575c62638eebc2898a8c84c119b89e250477bc4ba16b2"
+checksum = "fd80a657e71da814b8e5d60d3374fc6d35045062245d80224748ae522dd76f36"
 dependencies = [
  "time-core",
 ]
