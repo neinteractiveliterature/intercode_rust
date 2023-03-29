@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use super::{
+  active_storage_attachment_type::ActiveStorageAttachmentType,
   stripe_account_type::StripeAccountType, CmsContentGroupType, CmsContentType, CmsFileType,
   CmsGraphqlQueryType, CmsLayoutType, CmsNavigationItemType, CmsPartialType, CmsVariableType,
   EventCategoryType, EventType, EventsPaginationType, ModelBackedType, PageType, RoomType,
@@ -27,7 +28,7 @@ use intercode_entities::{
   model_ext::time_bounds::TimeBoundsSelectExt,
   runs, signups, staff_positions, team_members, user_con_profiles, users, MaximumEventSignupsValue,
 };
-use intercode_timespan::{ScheduledValue, TimespanWithValue};
+use intercode_timespan::ScheduledValue;
 use liquid::object;
 use sea_orm::{
   sea_query::Expr, ColumnTrait, EntityTrait, JoinType, ModelTrait, QueryFilter, QueryOrder,
@@ -82,6 +83,21 @@ impl ConventionType {
 
   async fn canceled(&self) -> bool {
     self.model.canceled
+  }
+
+  #[graphql(name = "catch_all_staff_position")]
+  async fn catch_all_staff_position(&self, ctx: &Context<'_>) -> Result<Option<StaffPositionType>> {
+    Ok(
+      ctx
+        .data::<QueryData>()?
+        .loaders()
+        .convention_catch_all_staff_position()
+        .load_one(self.model.id)
+        .await?
+        .try_one()
+        .cloned()
+        .map(StaffPositionType::new),
+    )
   }
 
   #[graphql(name = "clickwrap_agreement")]
@@ -250,6 +266,19 @@ impl ConventionType {
     Ok(EventsPaginationType::new(Some(scope), page, per_page))
   }
 
+  async fn favicon(&self, ctx: &Context<'_>) -> Result<Option<ActiveStorageAttachmentType>> {
+    Ok(
+      ctx
+        .data::<QueryData>()?
+        .loaders()
+        .convention_favicon
+        .load_one(self.model.id)
+        .await?
+        .and_then(|models| models.get(0).cloned())
+        .map(ActiveStorageAttachmentType::new),
+    )
+  }
+
   async fn hidden(&self) -> bool {
     self.model.hidden
   }
@@ -263,7 +292,9 @@ impl ConventionType {
   }
 
   #[graphql(name = "maximum_event_signups")]
-  async fn maximum_event_signups(&self) -> Result<Option<ScheduledValueType<Utc, String>>> {
+  async fn maximum_event_signups(
+    &self,
+  ) -> Result<Option<ScheduledValueType<Utc, MaximumEventSignupsValue>>> {
     let scheduled_value: Option<ScheduledValue<Utc, MaximumEventSignupsValue>> = self
       .model
       .maximum_event_signups
@@ -271,21 +302,7 @@ impl ConventionType {
       .map(serde_json::from_value)
       .transpose()?;
 
-    Ok(
-      scheduled_value
-        .map(|scheduled_value| {
-          scheduled_value
-            .into_iter()
-            .filter_map(|twv| {
-              twv.value.map(|value| TimespanWithValue {
-                timespan: twv.timespan,
-                value: serde_json::to_string(&value).unwrap(),
-              })
-            })
-            .collect::<ScheduledValue<Utc, String>>()
-        })
-        .map(ScheduledValueType::new),
-    )
+    Ok(scheduled_value.map(ScheduledValueType::new))
   }
 
   #[graphql(name = "maximum_tickets")]
@@ -319,6 +336,23 @@ impl ConventionType {
     } else {
       Ok(None)
     }
+  }
+
+  #[graphql(name = "open_graph_image")]
+  async fn open_graph_image(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Option<ActiveStorageAttachmentType>> {
+    Ok(
+      ctx
+        .data::<QueryData>()?
+        .loaders()
+        .convention_open_graph_image
+        .load_one(self.model.id)
+        .await?
+        .and_then(|models| models.get(0).cloned())
+        .map(ActiveStorageAttachmentType::new),
+    )
   }
 
   #[graphql(name = "pre_schedule_content_html")]

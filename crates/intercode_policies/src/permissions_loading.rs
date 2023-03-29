@@ -178,6 +178,26 @@ impl UserPermissionsMap {
       permission,
     )
   }
+
+  pub fn cms_content_group_ids_with_permission(&self, permission: &str) -> HashSet<i64> {
+    self
+      .permissions
+      .iter()
+      .filter_map(
+        |(permission_model_id, permissions)| match permission_model_id {
+          PermissionModelId::CmsContentGroup(id) => {
+            if permissions.contains(permission) {
+              Some(id)
+            } else {
+              None
+            }
+          }
+          _ => None,
+        },
+      )
+      .copied()
+      .collect()
+  }
 }
 
 pub async fn load_all_permissions_in_convention_with_model_type_and_id(

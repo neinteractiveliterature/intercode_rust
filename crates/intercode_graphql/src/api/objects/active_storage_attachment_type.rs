@@ -25,6 +25,16 @@ impl ActiveStorageAttachmentType {
     &self.model.filename
   }
 
+  #[graphql(name = "resized_url")]
+  async fn resized_url(
+    &self,
+    #[graphql(name = "maxWidth")] _max_width: u64,
+    #[graphql(name = "maxHeight")] _max_height: u64,
+  ) -> &str {
+    // TODO
+    "TODO"
+  }
+
   async fn url(&self) -> &str {
     // TODO
     "TODO"

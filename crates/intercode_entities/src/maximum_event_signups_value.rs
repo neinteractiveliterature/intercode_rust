@@ -12,6 +12,17 @@ pub enum MaximumEventSignupsValue {
   Limited(u16),
 }
 
+impl From<MaximumEventSignupsValue> for String {
+  fn from(value: MaximumEventSignupsValue) -> Self {
+    match value {
+      MaximumEventSignupsValue::Unlimited => "unlimited".to_string(),
+      MaximumEventSignupsValue::NotYet => "not_yet".to_string(),
+      MaximumEventSignupsValue::NotNow => "not_now".to_string(),
+      MaximumEventSignupsValue::Limited(value) => value.to_string(),
+    }
+  }
+}
+
 impl Serialize for MaximumEventSignupsValue {
   fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
   where
