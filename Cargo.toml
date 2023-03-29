@@ -113,7 +113,7 @@ seawater = {path = "./crates/seawater"}
 serde = {workspace = true}
 serde_json = {workspace = true}
 sha1 = "0.10.5"
-time = "0.3.17"
+time = "0.3.20"
 tokio = {workspace = true}
 tokio-stream = {version = "0.1.11", features = ["net"]}
 tonic = "~0.8.3"
