@@ -34,6 +34,9 @@ impl<'currency> MoneyType<'currency> {
   }
 
   pub async fn fractional(&self) -> Result<i64> {
-    Ok((self.money.amount() * (Decimal::new(10, self.money.currency().exponent()))).try_into()?)
+    Ok(
+      (self.money.amount() * (Decimal::new(10_i64.pow(self.money.currency().exponent()), 0)))
+        .try_into()?,
+    )
   }
 }
