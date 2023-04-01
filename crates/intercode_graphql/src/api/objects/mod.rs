@@ -18,6 +18,7 @@ mod form_type;
 mod liquid_assign_type;
 mod maximum_event_provided_tickets_override_type;
 pub mod model_backed_type;
+mod money_type;
 mod order_entry_type;
 mod order_type;
 mod page_type;

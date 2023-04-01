@@ -11,6 +11,11 @@ impl FormItemType {
     self.model.id.into()
   }
 
+  #[graphql(name = "admin_description")]
+  async fn admin_description(&self) -> Option<&str> {
+    self.model.admin_description.as_deref()
+  }
+
   #[graphql(name = "default_value")]
   async fn default_value(&self) -> Result<Option<String>, Error> {
     self

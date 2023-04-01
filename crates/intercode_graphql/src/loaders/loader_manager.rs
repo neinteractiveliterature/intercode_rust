@@ -220,6 +220,7 @@ loader_manager!(
   entity_relation(convention_rooms, conventions, rooms);
   entity_link(convention_staff_positions, ConventionToStaffPositions);
   entity_relation(convention_ticket_types, conventions, ticket_types);
+  entity_relation(convention_user_con_profile_form, conventions, forms);
   entity_id(conventions_by_id, conventions);
   entity_relation(event_convention, events, conventions);
   entity_relation(event_event_category, events, event_categories);
@@ -243,6 +244,8 @@ loader_manager!(
     ticket_types
   );
   entity_relation(order_order_entries, orders, order_entries);
+  entity_relation(order_entry_product, order_entries, products);
+  entity_relation(order_entry_product_variant, order_entries, product_variants);
   entity_relation(room_runs, rooms, runs);
   entity_relation(run_event, runs, events);
   entity_relation(run_rooms, runs, rooms);
@@ -265,11 +268,13 @@ loader_manager!(
     user_con_profiles
   );
   entity_id(team_members_by_id, team_members);
+  entity_relation(ticket_order_entry, tickets, order_entries);
   entity_link(ticket_provided_by_event, TicketToProvidedByEvent);
   entity_relation(ticket_ticket_type, tickets, ticket_types);
   entity_relation(ticket_user_con_profile, tickets, user_con_profiles);
   entity_relation(ticket_type_providing_products, ticket_types, products);
   entity_relation(user_con_profile_convention, user_con_profiles, conventions);
+  entity_relation(user_con_profile_orders, user_con_profiles, orders);
   entity_relation(user_con_profile_signups, user_con_profiles, signups);
   entity_link(
     user_con_profile_staff_positions,

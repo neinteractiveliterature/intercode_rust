@@ -1,11 +1,12 @@
 use async_graphql::*;
+use chrono::NaiveDateTime;
 use intercode_entities::{conventions, tickets, user_con_profiles};
 use intercode_policies::{policies::TicketPolicy, ReadManageAction};
 use seawater::loaders::ExpectModels;
 
 use crate::{model_backed_type, policy_guard::PolicyGuard, QueryData};
 
-use super::{EventType, ModelBackedType, TicketTypeType, UserConProfileType};
+use super::{EventType, ModelBackedType, OrderEntryType, TicketTypeType, UserConProfileType};
 model_backed_type!(TicketType, tickets::Model);
 
 impl TicketType {
@@ -47,6 +48,21 @@ impl TicketType {
     self.model.id.into()
   }
 
+  #[graphql(name = "order_entry")]
+  async fn order_entry(&self, ctx: &Context<'_>) -> Result<Option<OrderEntryType>> {
+    Ok(
+      ctx
+        .data::<QueryData>()?
+        .loaders()
+        .ticket_order_entry()
+        .load_one(self.model.id)
+        .await?
+        .try_one()
+        .cloned()
+        .map(OrderEntryType::new),
+    )
+  }
+
   #[graphql(name = "provided_by_event")]
   async fn provided_by_event(&self, ctx: &Context<'_>) -> Result<Option<EventType>> {
     let loader = ctx
@@ -71,6 +87,11 @@ impl TicketType {
       .await?
       .expect_one()
       .map(|ticket_type| TicketTypeType::new(ticket_type.clone()))
+  }
+
+  #[graphql(name = "updated_at")]
+  async fn updated_at(&self) -> NaiveDateTime {
+    self.model.updated_at
   }
 
   #[graphql(name = "user_con_profile")]
