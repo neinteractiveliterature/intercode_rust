@@ -1,9 +1,12 @@
 use async_graphql::*;
 use intercode_entities::order_entries;
+use seawater::loaders::ExpectModels;
 
-use crate::model_backed_type;
+use crate::{
+  model_backed_type, presenters::order_summary_presenter::load_and_describe_order_entry, QueryData,
+};
 
-use super::money_type::MoneyType;
+use super::{money_type::MoneyType, ModelBackedType, ProductType, ProductVariantType};
 model_backed_type!(OrderEntryType, order_entries::Model);
 
 #[Object(name = "OrderEntry")]
@@ -12,12 +15,42 @@ impl OrderEntryType {
     self.model.id.into()
   }
 
+  #[graphql(name = "describe_products")]
+  async fn describe_products(&self, ctx: &Context<'_>) -> Result<String> {
+    load_and_describe_order_entry(&self.model, ctx, false).await
+  }
+
   #[graphql(name = "price_per_item")]
   async fn price_per_item(&self) -> Option<MoneyType<'_>> {
     MoneyType::from_cents_and_currency(
       self.model.price_per_item_cents.map(|cents| cents.into()),
       self.model.price_per_item_currency.as_deref(),
     )
+  }
+
+  async fn product(&self, ctx: &Context<'_>) -> Result<ProductType> {
+    let product_result = ctx
+      .data::<QueryData>()?
+      .loaders()
+      .order_entry_product()
+      .load_one(self.model.id)
+      .await?;
+
+    Ok(ProductType::new(product_result.expect_one()?.clone()))
+  }
+
+  #[graphql(name = "product_variant")]
+  async fn product_variant(&self, ctx: &Context<'_>) -> Result<ProductVariantType> {
+    let product_variant_result = ctx
+      .data::<QueryData>()?
+      .loaders()
+      .order_entry_product_variant()
+      .load_one(self.model.id)
+      .await?;
+
+    Ok(ProductVariantType::new(
+      product_variant_result.expect_one()?.clone(),
+    ))
   }
 
   async fn quantity(&self) -> Option<i32> {

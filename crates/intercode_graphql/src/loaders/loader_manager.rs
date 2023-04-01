@@ -246,6 +246,7 @@ loader_manager!(
   entity_relation(order_order_entries, orders, order_entries);
   entity_relation(order_entry_product, order_entries, products);
   entity_relation(order_entry_product_variant, order_entries, product_variants);
+  entity_relation(product_product_variants, products, product_variants);
   entity_relation(room_runs, rooms, runs);
   entity_relation(run_event, runs, events);
   entity_relation(run_rooms, runs, rooms);

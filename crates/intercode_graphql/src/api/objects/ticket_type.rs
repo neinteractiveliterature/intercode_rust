@@ -48,6 +48,11 @@ impl TicketType {
     self.model.id.into()
   }
 
+  #[graphql(name = "created_at")]
+  async fn created_at(&self) -> NaiveDateTime {
+    self.model.created_at
+  }
+
   #[graphql(name = "order_entry")]
   async fn order_entry(&self, ctx: &Context<'_>) -> Result<Option<OrderEntryType>> {
     Ok(
