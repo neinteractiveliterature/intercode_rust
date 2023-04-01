@@ -4,8 +4,8 @@ use super::{
   active_storage_attachment_type::ActiveStorageAttachmentType,
   stripe_account_type::StripeAccountType, CmsContentGroupType, CmsContentType, CmsFileType,
   CmsGraphqlQueryType, CmsLayoutType, CmsNavigationItemType, CmsPartialType, CmsVariableType,
-  EventCategoryType, EventType, EventsPaginationType, ModelBackedType, PageType, RoomType,
-  ScheduledValueType, SignupType, StaffPositionType, TicketTypeType, UserConProfileType,
+  EventCategoryType, EventType, EventsPaginationType, FormType, ModelBackedType, PageType,
+  RoomType, ScheduledValueType, SignupType, StaffPositionType, TicketTypeType, UserConProfileType,
   UserConProfilesPaginationType,
 };
 use crate::{
@@ -567,6 +567,20 @@ impl ConventionType {
         ))
       })
       .map(UserConProfileType::new)
+  }
+
+  #[graphql(name = "user_con_profile_form")]
+  async fn user_con_profile_form(&self, ctx: &Context<'_>) -> Result<FormType> {
+    Ok(FormType::new(
+      ctx
+        .data::<QueryData>()?
+        .loaders()
+        .convention_user_con_profile_form()
+        .load_one(self.model.id)
+        .await?
+        .expect_one()?
+        .clone(),
+    ))
   }
 
   #[graphql(name = "user_con_profiles_paginated")]

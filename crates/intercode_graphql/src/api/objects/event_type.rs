@@ -86,34 +86,6 @@ impl EventType {
     ))
   }
 
-  #[graphql(name = "form_response_attrs_json")]
-  async fn form_response_attrs_json(
-    &self,
-    ctx: &Context<'_>,
-    item_identifiers: Option<Vec<String>>,
-  ) -> Result<JsonScalar, Error> {
-    <Self as FormResponseImplementation<events::Model>>::form_response_attrs_json(
-      self,
-      ctx,
-      item_identifiers,
-    )
-    .await
-  }
-
-  #[graphql(name = "form_response_attrs_json_with_rendered_markdown")]
-  async fn form_response_attrs_json_with_rendered_markdown(
-    &self,
-    ctx: &Context<'_>,
-    item_identifiers: Option<Vec<String>>,
-  ) -> Result<JsonScalar, Error> {
-    <Self as FormResponseImplementation<events::Model>>::form_response_attrs_json_with_rendered_markdown(
-      self,
-      ctx,
-      item_identifiers,
-    )
-    .await
-  }
-
   async fn images(&self, ctx: &Context<'_>) -> Result<Vec<ActiveStorageAttachmentType>> {
     let blobs = ctx
       .data::<QueryData>()?
@@ -284,6 +256,36 @@ impl EventType {
 
   async fn title(&self) -> &String {
     &self.model.title
+  }
+
+  // STUFF FOR FORM_RESPONSE_INTERFACE
+
+  #[graphql(name = "form_response_attrs_json")]
+  async fn form_response_attrs_json(
+    &self,
+    ctx: &Context<'_>,
+    item_identifiers: Option<Vec<String>>,
+  ) -> Result<JsonScalar, Error> {
+    <Self as FormResponseImplementation<events::Model>>::form_response_attrs_json(
+      self,
+      ctx,
+      item_identifiers,
+    )
+    .await
+  }
+
+  #[graphql(name = "form_response_attrs_json_with_rendered_markdown")]
+  async fn form_response_attrs_json_with_rendered_markdown(
+    &self,
+    ctx: &Context<'_>,
+    item_identifiers: Option<Vec<String>>,
+  ) -> Result<JsonScalar, Error> {
+    <Self as FormResponseImplementation<events::Model>>::form_response_attrs_json_with_rendered_markdown(
+      self,
+      ctx,
+      item_identifiers,
+    )
+    .await
   }
 }
 

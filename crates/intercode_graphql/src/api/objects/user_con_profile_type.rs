@@ -1,15 +1,20 @@
-use crate::QueryData;
-use async_graphql::*;
-use chrono::NaiveDate;
-use intercode_entities::{order_entries, orders, user_con_profiles, UserNames};
-use pulldown_cmark::{html, Options, Parser};
-use sea_orm::{sea_query::Expr, ColumnTrait, EntityTrait, QueryFilter};
-use seawater::loaders::{ExpectModel, ExpectModels};
-
 use super::{
   ConventionType, ModelBackedType, OrderType, StaffPositionType, TeamMemberType, TicketType,
 };
+use crate::api::scalars::JsonScalar;
 use crate::model_backed_type;
+use crate::presenters::order_summary_presenter::load_and_describe_order_summary_for_user_con_profile;
+use crate::{api::interfaces::FormResponseImplementation, QueryData};
+use async_graphql::*;
+use async_trait::async_trait;
+use chrono::NaiveDate;
+use intercode_entities::model_ext::form_item_permissions::FormItemRole;
+use intercode_entities::{forms, order_entries, orders, user_con_profiles, UserNames};
+use intercode_policies::policies::UserConProfilePolicy;
+use intercode_policies::{AuthorizationInfo, FormResponsePolicy};
+use pulldown_cmark::{html, Options, Parser};
+use sea_orm::{sea_query::Expr, ColumnTrait, EntityTrait, QueryFilter};
+use seawater::loaders::{ExpectModel, ExpectModels};
 model_backed_type!(UserConProfileType, user_con_profiles::Model);
 
 #[Object(name = "UserConProfile")]
@@ -178,6 +183,30 @@ impl UserConProfileType {
     self.model.nickname.as_deref()
   }
 
+  #[graphql(name = "order_summary")]
+  async fn order_summary(&self, ctx: &Context<'_>) -> Result<String> {
+    let orders = ctx
+      .data::<QueryData>()?
+      .loaders()
+      .user_con_profile_orders()
+      .load_one(self.model.id)
+      .await?;
+
+    load_and_describe_order_summary_for_user_con_profile(orders.expect_models()?, ctx, true).await
+  }
+
+  #[graphql(name = "site_admin")]
+  async fn site_admin(&self, ctx: &Context<'_>) -> Result<bool> {
+    let user = ctx
+      .data::<QueryData>()?
+      .loaders()
+      .user_con_profile_user()
+      .load_one(self.model.id)
+      .await?;
+
+    Ok(user.expect_one()?.site_admin.unwrap_or(false))
+  }
+
   #[graphql(name = "staff_positions")]
   async fn staff_positions(&self, ctx: &Context<'_>) -> Result<Vec<StaffPositionType>, Error> {
     let loader = &ctx
@@ -230,7 +259,70 @@ impl UserConProfileType {
     )
   }
 
+  #[graphql(name = "user_id")]
+  async fn user_id(&self) -> ID {
+    self.model.user_id.into()
+  }
+
   async fn zipcode(&self) -> Option<&str> {
     self.model.zipcode.as_deref()
+  }
+
+  // STUFF FOR FORM_RESPONSE_INTERFACE
+
+  #[graphql(name = "form_response_attrs_json")]
+  async fn form_response_attrs_json(
+    &self,
+    ctx: &Context<'_>,
+    item_identifiers: Option<Vec<String>>,
+  ) -> Result<JsonScalar, Error> {
+    <Self as FormResponseImplementation<user_con_profiles::Model>>::form_response_attrs_json(
+      self,
+      ctx,
+      item_identifiers,
+    )
+    .await
+  }
+
+  #[graphql(name = "form_response_attrs_json_with_rendered_markdown")]
+  async fn form_response_attrs_json_with_rendered_markdown(
+    &self,
+    ctx: &Context<'_>,
+    item_identifiers: Option<Vec<String>>,
+  ) -> Result<JsonScalar, Error> {
+    <Self as FormResponseImplementation<user_con_profiles::Model>>::form_response_attrs_json_with_rendered_markdown(
+      self,
+      ctx,
+      item_identifiers,
+    )
+    .await
+  }
+}
+
+#[async_trait]
+impl FormResponseImplementation<user_con_profiles::Model> for UserConProfileType {
+  async fn get_form(&self, ctx: &Context<'_>) -> Result<forms::Model, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+    query_data
+      .loaders()
+      .convention_user_con_profile_form()
+      .load_one(self.model.convention_id)
+      .await?
+      .expect_one()
+      .cloned()
+  }
+
+  async fn get_team_member_name(&self, _ctx: &Context<'_>) -> Result<String, Error> {
+    Ok("team member".to_string())
+  }
+
+  async fn get_viewer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole, Error> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    Ok(UserConProfilePolicy::form_item_viewer_role(authorization_info, &self.model).await)
+  }
+
+  async fn get_writer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole, Error> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    Ok(UserConProfilePolicy::form_item_writer_role(authorization_info, &self.model).await)
   }
 }

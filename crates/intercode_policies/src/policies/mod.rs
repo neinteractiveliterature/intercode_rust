@@ -7,6 +7,7 @@ mod run_policy;
 mod signup_policy;
 mod team_member_policy;
 mod ticket_policy;
+mod user_con_profile_policy;
 
 pub use cms_content_policy::*;
 pub use convention_policy::*;
@@ -17,3 +18,4 @@ pub use run_policy::*;
 pub use signup_policy::*;
 pub use team_member_policy::*;
 pub use ticket_policy::*;
+pub use user_con_profile_policy::*;

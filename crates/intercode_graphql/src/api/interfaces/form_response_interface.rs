@@ -8,7 +8,7 @@ use intercode_entities::{form_items, forms};
 use intercode_inflector::IntercodeInflector;
 use seawater::loaders::ExpectModels;
 
-use crate::api::objects::{EventType, ModelBackedType};
+use crate::api::objects::{EventType, ModelBackedType, UserConProfileType};
 use crate::api::scalars::JsonScalar;
 use crate::presenters::form_response_presenter::{
   attached_images_by_filename, form_response_as_json, FormResponsePresentationFormat,
@@ -55,6 +55,7 @@ async fn load_filtered_form_items(
 ))]
 pub enum FormResponseInterface {
   Event(EventType),
+  UserConProfile(UserConProfileType),
 }
 
 #[async_trait]

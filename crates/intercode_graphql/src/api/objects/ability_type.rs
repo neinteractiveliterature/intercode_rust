@@ -1,11 +1,13 @@
 use std::borrow::Borrow;
 
 use async_graphql::*;
-use intercode_entities::{conventions, events, rooms, root_sites, runs, signups};
+use intercode_entities::{
+  conventions, events, rooms, root_sites, runs, signups, user_con_profiles,
+};
 use intercode_policies::{
   policies::{
     CmsContentPolicy, ConventionAction, ConventionPolicy, EventAction, EventPolicy, RoomPolicy,
-    SignupAction, SignupPolicy,
+    SignupAction, SignupPolicy, UserConProfileAction, UserConProfilePolicy,
   },
   AuthorizationInfo, Policy, ReadManageAction,
 };
@@ -107,6 +109,26 @@ impl AbilityType {
       )
       .await?
     })
+  }
+
+  #[graphql(name = "can_create_user_con_profiles")]
+  async fn can_create_user_con_profiles(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    let convention = ctx.data::<QueryData>()?.convention();
+
+    let Some(convention) = convention else { return Ok(false); };
+
+    let user_con_profile = user_con_profiles::Model {
+      convention_id: convention.id,
+      ..Default::default()
+    };
+
+    model_action_permitted(
+      UserConProfilePolicy,
+      ctx,
+      &UserConProfileAction::Create,
+      |_ctx| Ok(Some(user_con_profile)),
+    )
+    .await
   }
 
   #[graphql(name = "can_update_convention")]
