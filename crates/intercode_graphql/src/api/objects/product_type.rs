@@ -2,7 +2,7 @@ use async_graphql::*;
 use intercode_entities::products;
 use seawater::loaders::ExpectModels;
 
-use crate::{model_backed_type, QueryData};
+use crate::{api::scalars::JsonScalar, model_backed_type, QueryData};
 
 use super::{ModelBackedType, ProductVariantType};
 model_backed_type!(ProductType, products::Model);
@@ -23,6 +23,11 @@ impl ProductType {
 
   async fn name(&self) -> &Option<String> {
     &self.model.name
+  }
+
+  #[graphql(name = "payment_options")]
+  async fn payment_options(&self) -> Option<JsonScalar> {
+    self.model.payment_options.clone().map(JsonScalar)
   }
 
   #[graphql(name = "product_variants")]

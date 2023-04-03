@@ -5,7 +5,9 @@ use seawater::loaders::ExpectModels;
 
 use crate::{model_backed_type, QueryData};
 
-use super::{money_type::MoneyType, ModelBackedType, OrderEntryType};
+use super::{
+  money_type::MoneyType, CouponApplicationType, ModelBackedType, OrderEntryType, UserConProfileType,
+};
 model_backed_type!(OrderType, orders::Model);
 
 #[Object(name = "Order")]
@@ -17,6 +19,25 @@ impl OrderType {
   #[graphql(name = "charge_id")]
   async fn charge_id(&self) -> Option<&str> {
     self.model.charge_id.as_deref()
+  }
+
+  #[graphql(name = "coupon_applications")]
+  async fn coupon_applications(&self, ctx: &Context<'_>) -> Result<Vec<CouponApplicationType>> {
+    let loader_result = ctx
+      .data::<QueryData>()?
+      .loaders()
+      .order_coupon_applications()
+      .load_one(self.model.id)
+      .await?;
+
+    Ok(
+      loader_result
+        .expect_models()?
+        .iter()
+        .cloned()
+        .map(CouponApplicationType::new)
+        .collect(),
+    )
   }
 
   #[graphql(name = "order_entries")]
@@ -54,5 +75,17 @@ impl OrderType {
   #[graphql(name = "submitted_at")]
   async fn submitted_at(&self) -> Option<&NaiveDateTime> {
     self.model.submitted_at.as_ref()
+  }
+
+  #[graphql(name = "user_con_profile")]
+  async fn user_con_profile(&self, ctx: &Context<'_>) -> Result<UserConProfileType> {
+    let loader_result = ctx
+      .data::<QueryData>()?
+      .loaders()
+      .order_user_con_profile()
+      .load_one(self.model.id)
+      .await?;
+
+    Ok(UserConProfileType::new(loader_result.expect_one()?.clone()))
   }
 }

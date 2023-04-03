@@ -6,7 +6,7 @@ use crate::{
   model_backed_type, presenters::order_summary_presenter::load_and_describe_order_entry, QueryData,
 };
 
-use super::{money_type::MoneyType, ModelBackedType, ProductType, ProductVariantType};
+use super::{money_type::MoneyType, ModelBackedType, OrderType, ProductType, ProductVariantType};
 model_backed_type!(OrderEntryType, order_entries::Model);
 
 #[Object(name = "OrderEntry")]
@@ -18,6 +18,17 @@ impl OrderEntryType {
   #[graphql(name = "describe_products")]
   async fn describe_products(&self, ctx: &Context<'_>) -> Result<String> {
     load_and_describe_order_entry(&self.model, ctx, false).await
+  }
+
+  async fn order(&self, ctx: &Context<'_>) -> Result<OrderType> {
+    let loader_result = ctx
+      .data::<QueryData>()?
+      .loaders()
+      .order_entry_order()
+      .load_one(self.model.id)
+      .await?;
+
+    Ok(OrderType::new(loader_result.expect_one()?.clone()))
   }
 
   #[graphql(name = "price_per_item")]

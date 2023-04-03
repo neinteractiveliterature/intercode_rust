@@ -222,6 +222,7 @@ loader_manager!(
   entity_relation(convention_ticket_types, conventions, ticket_types);
   entity_relation(convention_user_con_profile_form, conventions, forms);
   entity_id(conventions_by_id, conventions);
+  entity_relation(coupon_application_coupon, coupon_applications, coupons);
   entity_relation(event_convention, events, conventions);
   entity_relation(event_event_category, events, event_categories);
   entity_relation(event_maximum_event_provided_tickets_overrides, events, maximum_event_provided_tickets_overrides);
@@ -243,7 +244,10 @@ loader_manager!(
     maximum_event_provided_tickets_overrides,
     ticket_types
   );
+  entity_relation(order_coupon_applications, orders, coupon_applications);
   entity_relation(order_order_entries, orders, order_entries);
+  entity_relation(order_user_con_profile, orders, user_con_profiles);
+  entity_relation(order_entry_order, order_entries, orders);
   entity_relation(order_entry_product, order_entries, products);
   entity_relation(order_entry_product_variant, order_entries, product_variants);
   entity_relation(product_product_variants, products, product_variants);
