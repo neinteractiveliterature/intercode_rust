@@ -4,7 +4,7 @@ use seawater::loaders::ExpectModels;
 
 use crate::{api::scalars::JsonScalar, model_backed_type, QueryData};
 
-use super::{ModelBackedType, ProductVariantType};
+use super::{pricing_structure_type::PricingStructureType, ModelBackedType, ProductVariantType};
 model_backed_type!(ProductType, products::Model);
 
 #[Object(name = "Product")]
@@ -28,6 +28,13 @@ impl ProductType {
   #[graphql(name = "payment_options")]
   async fn payment_options(&self) -> Option<JsonScalar> {
     self.model.payment_options.clone().map(JsonScalar)
+  }
+
+  #[graphql(name = "pricing_structure")]
+  async fn pricing_structure(&self) -> Result<PricingStructureType> {
+    Ok(PricingStructureType::new(serde_json::from_value(
+      self.model.pricing_structure.clone(),
+    )?))
   }
 
   #[graphql(name = "product_variants")]

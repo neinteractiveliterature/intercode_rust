@@ -2213,9 +2213,11 @@ dependencies = [
  "async-trait",
  "chrono",
  "indexmap",
+ "intercode_timespan",
  "once_cell",
  "paste",
  "regex",
+ "rusty-money",
  "sea-orm",
  "serde",
 ]

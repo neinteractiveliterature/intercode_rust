@@ -24,6 +24,7 @@ mod money_type;
 mod order_entry_type;
 mod order_type;
 mod page_type;
+mod pricing_structure_type;
 mod product_type;
 mod product_variant_type;
 mod registration_policy_bucket_type;
