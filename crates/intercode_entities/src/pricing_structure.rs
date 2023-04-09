@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use chrono::Utc;
+use chrono::{DateTime, TimeZone, Utc};
 use intercode_timespan::{ScheduledValue, TimespanWithValue};
 use rusty_money::{
   iso::{self, Currency},
@@ -157,4 +157,21 @@ pub enum PricingStructure {
   )]
   Scheduled(ScheduledValue<Utc, Option<Money<'static, Currency>>>),
   PayWhatYouWant(PayWhatYouWantValue),
+}
+
+impl PricingStructure {
+  pub fn price<Tz: TimeZone>(&self, time: DateTime<Tz>) -> Option<Money<'static, Currency>> {
+    match self {
+      PricingStructure::Fixed(value) => Some(value.to_owned()),
+      PricingStructure::Scheduled(scheduled_value) => scheduled_value.value_at(time).flatten(),
+      PricingStructure::PayWhatYouWant(value) => Some(
+        value
+          .suggested_amount
+          .as_ref()
+          .or(value.minimum_amount.as_ref())
+          .cloned()
+          .unwrap_or_else(|| Money::from_minor(0, iso::USD)),
+      ),
+    }
+  }
 }

@@ -5,6 +5,7 @@ use rusty_money::{
 };
 use sea_orm::prelude::Decimal;
 
+#[derive(Clone, Debug)]
 pub struct MoneyType<'currency> {
   money: Money<'currency, Currency>,
 }
