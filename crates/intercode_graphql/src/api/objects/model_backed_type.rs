@@ -44,3 +44,53 @@ macro_rules! model_backed_type {
     }
   };
 }
+
+#[macro_export]
+macro_rules! load_one_by_id {
+  ($loader: ident, $ctx: ident, $id: expr) => {
+    $ctx
+      .data::<QueryData>()?
+      .loaders()
+      .$loader()
+      .load_one($id)
+      .await
+  };
+}
+
+#[macro_export]
+macro_rules! load_one_by_model_id {
+  ($loader: ident, $ctx: ident, $self: expr) => {
+    $ctx
+      .data::<QueryData>()?
+      .loaders()
+      .$loader()
+      .load_one($self.model.id)
+      .await
+  };
+}
+
+#[macro_export]
+macro_rules! loader_result_to_optional_single {
+  ($loader_result: ident, $type: ty) => {
+    $loader_result.try_one().cloned().map(<$type>::new)
+  };
+}
+
+#[macro_export]
+macro_rules! loader_result_to_required_single {
+  ($loader_result: ident, $type: ty) => {
+    <$type>::new($loader_result.expect_one()?.clone())
+  };
+}
+
+#[macro_export]
+macro_rules! loader_result_to_many {
+  ($loader_result: ident, $type: ty) => {
+    $loader_result
+      .expect_models()?
+      .iter()
+      .cloned()
+      .map(<$type>::new)
+      .collect()
+  };
+}

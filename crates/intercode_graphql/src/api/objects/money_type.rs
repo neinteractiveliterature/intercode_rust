@@ -15,12 +15,12 @@ impl<'currency> MoneyType<'currency> {
     Self { money }
   }
 
-  pub fn from_cents_and_currency(
-    cents: Option<i64>,
+  pub fn from_cents_and_currency<CentsType: Into<i64>>(
+    cents: Option<CentsType>,
     currency: Option<&str>,
   ) -> Option<MoneyType<'currency>> {
     if let (Some(cents), Some(currency)) = (cents, currency) {
-      iso::find(currency).map(|currency| MoneyType::new(Money::from_minor(cents, currency)))
+      iso::find(currency).map(|currency| MoneyType::new(Money::from_minor(cents.into(), currency)))
     } else {
       None
     }

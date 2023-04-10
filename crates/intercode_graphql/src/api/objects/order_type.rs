@@ -58,7 +58,7 @@ impl OrderType {
   #[graphql(name = "payment_amount")]
   async fn payment_amount(&self) -> Option<MoneyType> {
     MoneyType::from_cents_and_currency(
-      self.model.payment_amount_cents.map(|cents| cents.into()),
+      self.model.payment_amount_cents,
       self.model.payment_amount_currency.as_deref(),
     )
   }

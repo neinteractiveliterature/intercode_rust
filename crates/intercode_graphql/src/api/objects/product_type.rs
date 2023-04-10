@@ -2,9 +2,14 @@ use async_graphql::*;
 use intercode_entities::products;
 use seawater::loaders::ExpectModels;
 
-use crate::{api::scalars::JsonScalar, model_backed_type, QueryData};
+use crate::{
+  api::scalars::JsonScalar, load_one_by_model_id, loader_result_to_many,
+  loader_result_to_optional_single, model_backed_type, QueryData,
+};
 
-use super::{pricing_structure_type::PricingStructureType, ModelBackedType, ProductVariantType};
+use super::{
+  pricing_structure_type::PricingStructureType, ModelBackedType, ProductVariantType, TicketTypeType,
+};
 model_backed_type!(ProductType, products::Model);
 
 #[Object(name = "Product")]
@@ -39,19 +44,18 @@ impl ProductType {
 
   #[graphql(name = "product_variants")]
   async fn product_variants(&self, ctx: &Context<'_>) -> Result<Vec<ProductVariantType>> {
-    let loader_result = ctx
-      .data::<QueryData>()?
-      .loaders()
-      .product_product_variants()
-      .load_one(self.model.id)
-      .await?;
+    let loader_result = load_one_by_model_id!(product_product_variants, ctx, self)?;
 
-    Ok(
-      loader_result
-        .expect_models()?
-        .iter()
-        .map(|model| ProductVariantType::new(model.clone()))
-        .collect(),
-    )
+    Ok(loader_result_to_many!(loader_result, ProductVariantType))
+  }
+
+  #[graphql(name = "provides_ticket_type")]
+  async fn provides_ticket_type(&self, ctx: &Context<'_>) -> Result<Option<TicketTypeType>> {
+    let loader_result = load_one_by_model_id!(product_provides_ticket_type, ctx, self)?;
+
+    Ok(loader_result_to_optional_single!(
+      loader_result,
+      TicketTypeType
+    ))
   }
 }

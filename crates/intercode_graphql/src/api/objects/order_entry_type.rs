@@ -34,7 +34,7 @@ impl OrderEntryType {
   #[graphql(name = "price_per_item")]
   async fn price_per_item(&self) -> Option<MoneyType<'_>> {
     MoneyType::from_cents_and_currency(
-      self.model.price_per_item_cents.map(|cents| cents.into()),
+      self.model.price_per_item_cents,
       self.model.price_per_item_currency.as_deref(),
     )
   }
