@@ -49,7 +49,7 @@ macro_rules! model_backed_type {
 macro_rules! load_one_by_id {
   ($loader: ident, $ctx: ident, $id: expr) => {
     $ctx
-      .data::<QueryData>()?
+      .data::<$crate::QueryData>()?
       .loaders()
       .$loader()
       .load_one($id)
@@ -60,12 +60,7 @@ macro_rules! load_one_by_id {
 #[macro_export]
 macro_rules! load_one_by_model_id {
   ($loader: ident, $ctx: ident, $self: expr) => {
-    $ctx
-      .data::<QueryData>()?
-      .loaders()
-      .$loader()
-      .load_one($self.model.id)
-      .await
+    $crate::load_one_by_id!($loader, $ctx, $self.model.id)
   };
 }
 

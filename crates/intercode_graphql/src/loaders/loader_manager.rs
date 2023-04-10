@@ -53,6 +53,8 @@ macro_rules! loader_manager {
       pub event_runs_filtered: LoaderSpawner<EventRunsLoaderFilter, i64, FilteredEventRunsLoader>,
       pub event_user_con_profile_event_ratings:
         LoaderSpawner<i64, i64, EventUserConProfileEventRatingLoader>,
+      pub product_image: DataLoader<ActiveStorageAttachedBlobsLoader>,
+      pub product_variant_image: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub run_signup_counts: DataLoader<SignupCountLoader>,
       pub run_user_con_profile_signups: LoaderSpawner<i64, i64, RunUserConProfileSignupsLoader>,
       pub run_user_con_profile_signup_requests:
@@ -130,6 +132,18 @@ macro_rules! loader_manager {
         $delay_millis,
         EventUserConProfileEventRatingLoader::new,
       ),
+      product_image: DataLoader::new(
+        ActiveStorageAttachedBlobsLoader::new($db.clone(), active_storage_attachments::Entity::find()
+          .filter(active_storage_attachments::Column::RecordType.eq("Product"))
+          .filter(active_storage_attachments::Column::Name.eq("image"))),
+        tokio::spawn,
+      ).delay($delay_millis),
+      product_variant_image: DataLoader::new(
+        ActiveStorageAttachedBlobsLoader::new($db.clone(), active_storage_attachments::Entity::find()
+          .filter(active_storage_attachments::Column::RecordType.eq("ProductVariant"))
+          .filter(active_storage_attachments::Column::Name.eq("image"))),
+        tokio::spawn,
+      ).delay($delay_millis),
       run_signup_counts: DataLoader::new(SignupCountLoader::new($db.clone()), tokio::spawn)
         .delay($delay_millis),
       run_user_con_profile_signups: LoaderSpawner::new(
@@ -195,6 +209,14 @@ macro_rules! loader_manager {
         loader_manager! {
           @constructor db, delay_millis, $($tail)*
         }
+      }
+
+      pub fn product_image(&self) -> &DataLoader<ActiveStorageAttachedBlobsLoader> {
+        &self.product_image
+      }
+
+      pub fn product_variant_image(&self) -> &DataLoader<ActiveStorageAttachedBlobsLoader> {
+        &self.product_variant_image
       }
 
       loader_manager! {

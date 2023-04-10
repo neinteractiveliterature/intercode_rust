@@ -1,14 +1,19 @@
+use std::collections::HashMap;
+
 use async_graphql::*;
 use intercode_entities::products;
+use intercode_liquid::render_markdown;
 use seawater::loaders::ExpectModels;
 
 use crate::{
   api::scalars::JsonScalar, load_one_by_model_id, loader_result_to_many,
-  loader_result_to_optional_single, model_backed_type, QueryData,
+  loader_result_to_optional_single, model_backed_type,
 };
 
 use super::{
-  pricing_structure_type::PricingStructureType, ModelBackedType, ProductVariantType, TicketTypeType,
+  active_storage_attachment_type::ActiveStorageAttachmentType,
+  pricing_structure_type::PricingStructureType, ModelBackedType, ProductVariantType,
+  TicketTypeType,
 };
 model_backed_type!(ProductType, products::Model);
 
@@ -24,6 +29,24 @@ impl ProductType {
 
   async fn description(&self) -> Option<&str> {
     self.model.description.as_deref()
+  }
+
+  #[graphql(name = "description_html")]
+  async fn description_html(&self) -> String {
+    render_markdown(
+      self.model.description.as_deref().unwrap_or(""),
+      &HashMap::default(),
+    )
+  }
+
+  async fn image(&self, ctx: &Context<'_>) -> Result<Option<ActiveStorageAttachmentType>> {
+    let loader_result = load_one_by_model_id!(product_image, ctx, self)?;
+
+    Ok(
+      loader_result
+        .and_then(|blobs| blobs.get(0).cloned())
+        .map(ActiveStorageAttachmentType::new),
+    )
   }
 
   async fn name(&self) -> &Option<String> {

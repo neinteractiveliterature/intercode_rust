@@ -1,5 +1,10 @@
-use super::pricing_structure_type::PricingStructureType;
-use crate::model_backed_type;
+use super::{
+  active_storage_attachment_type::ActiveStorageAttachmentType,
+  pricing_structure_type::PricingStructureType,
+};
+use crate::{
+  api::objects::model_backed_type::ModelBackedType, load_one_by_model_id, model_backed_type,
+};
 use async_graphql::*;
 use intercode_entities::product_variants;
 
@@ -13,6 +18,16 @@ impl ProductVariantType {
 
   async fn description(&self) -> Option<&str> {
     self.model.description.as_deref()
+  }
+
+  async fn image(&self, ctx: &Context<'_>) -> Result<Option<ActiveStorageAttachmentType>> {
+    let loader_result = load_one_by_model_id!(product_variant_image, ctx, self)?;
+
+    Ok(
+      loader_result
+        .and_then(|blobs| blobs.get(0).cloned())
+        .map(ActiveStorageAttachmentType::new),
+    )
   }
 
   async fn name(&self) -> Option<&str> {
