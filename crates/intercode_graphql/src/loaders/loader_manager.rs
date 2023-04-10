@@ -245,6 +245,7 @@ loader_manager!(
   entity_relation(convention_user_con_profile_form, conventions, forms);
   entity_id(conventions_by_id, conventions);
   entity_relation(coupon_application_coupon, coupon_applications, coupons);
+  entity_relation(coupon_application_order, coupon_applications, orders);
   entity_relation(coupon_provides_product, coupons, products);
   entity_relation(event_convention, events, conventions);
   entity_relation(event_event_category, events, event_categories);
