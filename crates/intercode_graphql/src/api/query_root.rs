@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use super::interfaces::CmsParentInterface;
 use super::objects::{
   AbilityType, ConventionType, EventType, RootSiteType, UserConProfileType, UserType,
@@ -9,6 +11,7 @@ use async_graphql::connection::{query, Connection};
 use async_graphql::*;
 use intercode_entities::cms_parent::CmsParent;
 use intercode_entities::{events, oauth_applications, root_sites};
+use intercode_policies::AuthorizationInfo;
 use liquid::object;
 use sea_orm::{EntityTrait, PaginatorTrait};
 
@@ -61,8 +64,9 @@ impl QueryRoot {
     }
   }
 
-  async fn current_ability(&self) -> AbilityType {
-    AbilityType {}
+  async fn current_ability<'a>(&'a self, ctx: &'a Context<'a>) -> Result<AbilityType<'a>> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    Ok(AbilityType::new(Cow::Borrowed(authorization_info)))
   }
 
   async fn current_user(&self, ctx: &Context<'_>) -> Result<Option<UserType>, Error> {

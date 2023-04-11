@@ -1,14 +1,16 @@
-use std::{collections::BTreeMap, fmt::Debug};
+use std::{collections::BTreeMap, fmt::Debug, fmt::Display};
 
 use crate::{serialization::SerializedScheduledValue, Timespan, TimespanWithValue};
 use chrono::{DateTime, FixedOffset, TimeZone, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(
   from = "SerializedScheduledValue<V>",
+  into = "SerializedScheduledValue<V>",
   bound(
-    deserialize = "V: Deserialize<'de> + std::fmt::Debug, Tz: From<Utc> + std::fmt::Debug, DateTime<Tz>: From<DateTime<FixedOffset>>"
+    deserialize = "V: Deserialize<'de> + std::fmt::Debug, Tz: From<Utc> + std::fmt::Debug, DateTime<Tz>: From<DateTime<FixedOffset>>",
+    serialize = "Tz: From<Utc>, Tz::Offset: Display, V: Serialize"
   )
 )]
 pub struct ScheduledValue<Tz: TimeZone, V: Clone + Default> {

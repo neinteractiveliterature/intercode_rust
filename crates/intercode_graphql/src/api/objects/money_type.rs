@@ -1,10 +1,9 @@
 use async_graphql::{Object, Result};
-use rusty_money::{
-  iso::{self, Currency},
-  FormattableCurrency, Money,
-};
+use intercode_entities::model_ext::orders::money_from_cents_and_currency;
+use rusty_money::{iso::Currency, FormattableCurrency, Money};
 use sea_orm::prelude::Decimal;
 
+#[derive(Clone, Debug)]
 pub struct MoneyType<'currency> {
   money: Money<'currency, Currency>,
 }
@@ -14,15 +13,11 @@ impl<'currency> MoneyType<'currency> {
     Self { money }
   }
 
-  pub fn from_cents_and_currency(
-    cents: Option<i64>,
+  pub fn from_cents_and_currency<CentsType: Into<i64>>(
+    cents: Option<CentsType>,
     currency: Option<&str>,
   ) -> Option<MoneyType<'currency>> {
-    if let (Some(cents), Some(currency)) = (cents, currency) {
-      iso::find(currency).map(|currency| MoneyType::new(Money::from_minor(cents, currency)))
-    } else {
-      None
-    }
+    money_from_cents_and_currency(cents, currency).map(MoneyType::new)
   }
 }
 
@@ -34,6 +29,9 @@ impl<'currency> MoneyType<'currency> {
   }
 
   pub async fn fractional(&self) -> Result<i64> {
-    Ok((self.money.amount() * (Decimal::new(10, self.money.currency().exponent()))).try_into()?)
+    Ok(
+      (self.money.amount() * (Decimal::new(10_i64.pow(self.money.currency().exponent()), 0)))
+        .try_into()?,
+    )
   }
 }

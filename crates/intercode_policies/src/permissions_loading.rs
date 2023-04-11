@@ -4,6 +4,7 @@ use intercode_entities::{
   cms_content_groups, event_categories, events, organization_roles_users, permissions, runs,
   signups, staff_positions, staff_positions_user_con_profiles, team_members, user_con_profiles,
 };
+use itertools::Itertools;
 use sea_orm::{
   sea_query::{Alias, Expr},
   ColumnTrait, Condition, DbErr, EntityTrait, FromQueryResult, JoinType, QueryFilter, QuerySelect,
@@ -93,9 +94,11 @@ pub enum PermissionModelId {
   CmsContentGroup(i64),
 }
 
+#[derive(Clone)]
 pub struct UserPermission {
   pub permission: String,
   pub model_id: PermissionModelId,
+  pub convention_id: Option<i64>,
 }
 
 impl FromQueryResult for UserPermission {
@@ -119,6 +122,7 @@ impl FromQueryResult for UserPermission {
     Ok(Self {
       permission,
       model_id,
+      convention_id,
     })
   }
 }
@@ -126,11 +130,13 @@ impl FromQueryResult for UserPermission {
 #[derive(Debug, Clone, Default)]
 pub struct UserPermissionsMap {
   permissions: HashMap<PermissionModelId, HashSet<String>>,
+  event_category_permissions_by_convention_id: HashMap<i64, HashSet<String>>,
 }
 
 impl UserPermissionsMap {
   pub fn from_user_permissions(iter: &mut dyn Iterator<Item = UserPermission>) -> Self {
-    let permissions = iter
+    let (permissions_iter, event_category_permissions_iter) = iter.tee();
+    let permissions = permissions_iter
       .map(|user_permission| (user_permission.model_id, user_permission.permission))
       .fold(HashMap::new(), |mut acc, (model_id, permission)| {
         let entry = acc.entry(model_id);
@@ -139,7 +145,24 @@ impl UserPermissionsMap {
         acc
       });
 
-    Self { permissions }
+    let event_category_permissions_by_convention_id = event_category_permissions_iter
+      .filter_map(|user_permission| match user_permission.model_id {
+        PermissionModelId::EventCategory(_) => user_permission
+          .convention_id
+          .map(|convention_id| (convention_id, user_permission.permission)),
+        _ => None,
+      })
+      .fold(HashMap::new(), |mut acc, (convention_id, permission)| {
+        let entry = acc.entry(convention_id);
+        let permissions: &mut HashSet<String> = entry.or_default();
+        permissions.insert(permission);
+        acc
+      });
+
+    Self {
+      permissions,
+      event_category_permissions_by_convention_id,
+    }
   }
 
   pub fn has_permission(&self, model_id: &PermissionModelId, permission: &str) -> bool {
@@ -166,6 +189,18 @@ impl UserPermissionsMap {
       &PermissionModelId::EventCategory(event_category_id),
       permission,
     )
+  }
+
+  pub fn has_event_category_permission_in_convention(
+    &self,
+    convention_id: i64,
+    permission: &str,
+  ) -> bool {
+    self
+      .event_category_permissions_by_convention_id
+      .get(&convention_id)
+      .map(|perm_set| perm_set.contains(permission))
+      .unwrap_or(false)
   }
 
   pub fn has_cms_content_group_permission(

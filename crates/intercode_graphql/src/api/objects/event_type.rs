@@ -238,6 +238,10 @@ impl EventType {
     ))
   }
 
+  async fn status(&self) -> &str {
+    &self.model.status
+  }
+
   #[graphql(name = "team_members")]
   async fn team_members(&self, ctx: &Context<'_>) -> Result<Vec<TeamMemberType>, Error> {
     let query_data = ctx.data::<QueryData>()?;

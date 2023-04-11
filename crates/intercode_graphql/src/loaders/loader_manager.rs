@@ -53,6 +53,8 @@ macro_rules! loader_manager {
       pub event_runs_filtered: LoaderSpawner<EventRunsLoaderFilter, i64, FilteredEventRunsLoader>,
       pub event_user_con_profile_event_ratings:
         LoaderSpawner<i64, i64, EventUserConProfileEventRatingLoader>,
+      pub product_image: DataLoader<ActiveStorageAttachedBlobsLoader>,
+      pub product_variant_image: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub run_signup_counts: DataLoader<SignupCountLoader>,
       pub run_user_con_profile_signups: LoaderSpawner<i64, i64, RunUserConProfileSignupsLoader>,
       pub run_user_con_profile_signup_requests:
@@ -130,6 +132,18 @@ macro_rules! loader_manager {
         $delay_millis,
         EventUserConProfileEventRatingLoader::new,
       ),
+      product_image: DataLoader::new(
+        ActiveStorageAttachedBlobsLoader::new($db.clone(), active_storage_attachments::Entity::find()
+          .filter(active_storage_attachments::Column::RecordType.eq("Product"))
+          .filter(active_storage_attachments::Column::Name.eq("image"))),
+        tokio::spawn,
+      ).delay($delay_millis),
+      product_variant_image: DataLoader::new(
+        ActiveStorageAttachedBlobsLoader::new($db.clone(), active_storage_attachments::Entity::find()
+          .filter(active_storage_attachments::Column::RecordType.eq("ProductVariant"))
+          .filter(active_storage_attachments::Column::Name.eq("image"))),
+        tokio::spawn,
+      ).delay($delay_millis),
       run_signup_counts: DataLoader::new(SignupCountLoader::new($db.clone()), tokio::spawn)
         .delay($delay_millis),
       run_user_con_profile_signups: LoaderSpawner::new(
@@ -197,6 +211,14 @@ macro_rules! loader_manager {
         }
       }
 
+      pub fn product_image(&self) -> &DataLoader<ActiveStorageAttachedBlobsLoader> {
+        &self.product_image
+      }
+
+      pub fn product_variant_image(&self) -> &DataLoader<ActiveStorageAttachedBlobsLoader> {
+        &self.product_variant_image
+      }
+
       loader_manager! {
         @getters $($tail)*
       }
@@ -222,6 +244,9 @@ loader_manager!(
   entity_relation(convention_ticket_types, conventions, ticket_types);
   entity_relation(convention_user_con_profile_form, conventions, forms);
   entity_id(conventions_by_id, conventions);
+  entity_relation(coupon_application_coupon, coupon_applications, coupons);
+  entity_relation(coupon_application_order, coupon_applications, orders);
+  entity_relation(coupon_provides_product, coupons, products);
   entity_relation(event_convention, events, conventions);
   entity_relation(event_event_category, events, event_categories);
   entity_relation(event_maximum_event_provided_tickets_overrides, events, maximum_event_provided_tickets_overrides);
@@ -243,9 +268,14 @@ loader_manager!(
     maximum_event_provided_tickets_overrides,
     ticket_types
   );
+  entity_relation(order_coupon_applications, orders, coupon_applications);
   entity_relation(order_order_entries, orders, order_entries);
+  entity_relation(order_user_con_profile, orders, user_con_profiles);
+  entity_relation(order_entry_order, order_entries, orders);
   entity_relation(order_entry_product, order_entries, products);
   entity_relation(order_entry_product_variant, order_entries, product_variants);
+  entity_relation(product_product_variants, products, product_variants);
+  entity_relation(product_provides_ticket_type, products, ticket_types);
   entity_relation(room_runs, rooms, runs);
   entity_relation(run_event, runs, events);
   entity_relation(run_rooms, runs, rooms);
@@ -273,6 +303,7 @@ loader_manager!(
   entity_relation(ticket_ticket_type, tickets, ticket_types);
   entity_relation(ticket_user_con_profile, tickets, user_con_profiles);
   entity_relation(ticket_type_providing_products, ticket_types, products);
+  entity_id(user_con_profiles_by_id, user_con_profiles);
   entity_relation(user_con_profile_convention, user_con_profiles, conventions);
   entity_relation(user_con_profile_orders, user_con_profiles, orders);
   entity_relation(user_con_profile_signups, user_con_profiles, signups);

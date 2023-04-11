@@ -1,16 +1,19 @@
+use std::borrow::Cow;
+
 use super::{
-  ConventionType, ModelBackedType, OrderType, StaffPositionType, TeamMemberType, TicketType,
+  AbilityType, ConventionType, ModelBackedType, OrderType, SignupType, StaffPositionType,
+  TeamMemberType, TicketType,
 };
 use crate::api::scalars::JsonScalar;
-use crate::model_backed_type;
 use crate::presenters::order_summary_presenter::load_and_describe_order_summary_for_user_con_profile;
 use crate::{api::interfaces::FormResponseImplementation, QueryData};
+use crate::{load_one_by_model_id, loader_result_to_many, model_backed_type};
 use async_graphql::*;
 use async_trait::async_trait;
 use chrono::NaiveDate;
 use intercode_entities::model_ext::form_item_permissions::FormItemRole;
 use intercode_entities::{forms, order_entries, orders, user_con_profiles, UserNames};
-use intercode_policies::policies::UserConProfilePolicy;
+use intercode_policies::policies::{UserConProfileAction, UserConProfilePolicy};
 use intercode_policies::{AuthorizationInfo, FormResponsePolicy};
 use pulldown_cmark::{html, Options, Parser};
 use sea_orm::{sea_query::Expr, ColumnTrait, EntityTrait, QueryFilter};
@@ -21,6 +24,15 @@ model_backed_type!(UserConProfileType, user_con_profiles::Model);
 impl UserConProfileType {
   async fn id(&self) -> ID {
     self.model.id.into()
+  }
+
+  async fn ability(&self, ctx: &Context<'_>) -> Result<AbilityType> {
+    let query_data = ctx.data::<QueryData>()?;
+    let user = load_one_by_model_id!(user_con_profile_user, ctx, self)?;
+    let authorization_info =
+      AuthorizationInfo::new(query_data.db().clone(), user.try_one().cloned(), None, None);
+
+    Ok(AbilityType::new(Cow::Owned(authorization_info)))
   }
 
   #[graphql(name = "accepted_clickwrap_agreement")]
@@ -155,6 +167,14 @@ impl UserConProfileType {
     }
   }
 
+  #[graphql(
+    name = "ical_secret",
+    guard = "self.simple_policy_guard::<UserConProfilePolicy>(UserConProfileAction::ReadPersonalInfo)"
+  )]
+  async fn ical_secret(&self) -> &str {
+    &self.model.ical_secret
+  }
+
   #[graphql(name = "last_name")]
   async fn last_name(&self) -> &str {
     self.model.last_name.as_str()
@@ -193,6 +213,11 @@ impl UserConProfileType {
       .await?;
 
     load_and_describe_order_summary_for_user_con_profile(orders.expect_models()?, ctx, true).await
+  }
+
+  async fn signups(&self, ctx: &Context<'_>) -> Result<Vec<SignupType>> {
+    let signups_result = load_one_by_model_id!(user_con_profile_signups, ctx, self)?;
+    Ok(loader_result_to_many!(signups_result, SignupType))
   }
 
   #[graphql(name = "site_admin")]

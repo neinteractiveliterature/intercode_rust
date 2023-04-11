@@ -5,8 +5,8 @@ use super::{
   stripe_account_type::StripeAccountType, CmsContentGroupType, CmsContentType, CmsFileType,
   CmsGraphqlQueryType, CmsLayoutType, CmsNavigationItemType, CmsPartialType, CmsVariableType,
   EventCategoryType, EventType, EventsPaginationType, FormType, ModelBackedType, PageType,
-  RoomType, ScheduledValueType, SignupType, StaffPositionType, TicketTypeType, UserConProfileType,
-  UserConProfilesPaginationType,
+  RoomType, ScheduledStringableValueType, SignupType, StaffPositionType, TicketTypeType,
+  UserConProfileType, UserConProfilesPaginationType,
 };
 use crate::{
   api::{
@@ -294,7 +294,7 @@ impl ConventionType {
   #[graphql(name = "maximum_event_signups")]
   async fn maximum_event_signups(
     &self,
-  ) -> Result<Option<ScheduledValueType<Utc, MaximumEventSignupsValue>>> {
+  ) -> Result<Option<ScheduledStringableValueType<Utc, MaximumEventSignupsValue>>> {
     let scheduled_value: Option<ScheduledValue<Utc, MaximumEventSignupsValue>> = self
       .model
       .maximum_event_signups
@@ -302,7 +302,7 @@ impl ConventionType {
       .map(serde_json::from_value)
       .transpose()?;
 
-    Ok(scheduled_value.map(ScheduledValueType::new))
+    Ok(scheduled_value.map(ScheduledStringableValueType::new))
   }
 
   #[graphql(name = "maximum_tickets")]

@@ -11,6 +11,7 @@ pub enum UserConProfileAction {
   ReadPersonalInfo,
   Create,
   Update,
+  Delete,
   Become,
   WithdrawAllSignups,
 }
@@ -22,6 +23,25 @@ impl From<ReadManageAction> for UserConProfileAction {
       ReadManageAction::Manage => Self::Update,
     }
   }
+}
+
+fn profile_is_user_or_identity_assumer(
+  principal: &AuthorizationInfo,
+  user_con_profile: &user_con_profiles::Model,
+) -> bool {
+  if let Some(user) = &principal.user {
+    if user.id == user_con_profile.user_id {
+      return true;
+    }
+  }
+
+  if let Some(assumed_identity_from_profile) = &principal.assumed_identity_from_profile {
+    if assumed_identity_from_profile.convention_id == user_con_profile.convention_id {
+      return true;
+    }
+  }
+
+  false
 }
 
 pub struct UserConProfilePolicy;
@@ -36,12 +56,36 @@ impl Policy<AuthorizationInfo, user_con_profiles::Model> for UserConProfilePolic
     action: &Self::Action,
     user_con_profile: &user_con_profiles::Model,
   ) -> Result<bool, Self::Error> {
+    if !principal.can_act_in_convention(user_con_profile.convention_id) {
+      return Ok(false);
+    }
+
     match action {
       UserConProfileAction::Read => todo!(),
       UserConProfileAction::ReadEmail => todo!(),
       UserConProfileAction::ReadBirthDate => todo!(),
-      UserConProfileAction::ReadPersonalInfo => todo!(),
-      UserConProfileAction::Create => {
+      UserConProfileAction::ReadPersonalInfo => Ok(
+        (principal.has_scope("read_profile")
+          && profile_is_user_or_identity_assumer(principal, user_con_profile))
+          || (principal.has_scope("read_conventions")
+            && (principal
+              .has_convention_permission(
+                "read_user_con_profile_personal_info",
+                user_con_profile.convention_id,
+              )
+              .await?
+              || principal
+                .has_event_category_permission_in_convention(
+                  "read_event_proposals",
+                  user_con_profile.convention_id,
+                )
+                .await?
+              || principal
+                .team_member_in_convention(user_con_profile.convention_id)
+                .await?))
+          || principal.site_admin_read(),
+      ),
+      UserConProfileAction::Update | UserConProfileAction::Create => {
         if !principal.can_act_in_convention(user_con_profile.convention_id) {
           return Ok(false);
         }
@@ -54,12 +98,14 @@ impl Policy<AuthorizationInfo, user_con_profiles::Model> for UserConProfilePolic
 
         UserConProfilePolicy::action_permitted(
           principal,
-          &UserConProfileAction::Update,
+          &UserConProfileAction::Delete,
           user_con_profile,
         )
         .await
       }
-      UserConProfileAction::Update => {
+      UserConProfileAction::Delete
+      | UserConProfileAction::WithdrawAllSignups
+      | UserConProfileAction::Become => {
         if !principal.can_act_in_convention(user_con_profile.convention_id) {
           return Ok(false);
         }
@@ -77,8 +123,6 @@ impl Policy<AuthorizationInfo, user_con_profiles::Model> for UserConProfilePolic
 
         Ok(principal.site_admin_manage())
       }
-      UserConProfileAction::Become => todo!(),
-      UserConProfileAction::WithdrawAllSignups => todo!(),
     }
   }
 }
