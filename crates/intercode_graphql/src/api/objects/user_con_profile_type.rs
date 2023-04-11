@@ -1,10 +1,13 @@
+use std::borrow::Cow;
+
 use super::{
-  ConventionType, ModelBackedType, OrderType, StaffPositionType, TeamMemberType, TicketType,
+  AbilityType, ConventionType, ModelBackedType, OrderType, StaffPositionType, TeamMemberType,
+  TicketType,
 };
 use crate::api::scalars::JsonScalar;
-use crate::model_backed_type;
 use crate::presenters::order_summary_presenter::load_and_describe_order_summary_for_user_con_profile;
 use crate::{api::interfaces::FormResponseImplementation, QueryData};
+use crate::{load_one_by_model_id, model_backed_type};
 use async_graphql::*;
 use async_trait::async_trait;
 use chrono::NaiveDate;
@@ -21,6 +24,15 @@ model_backed_type!(UserConProfileType, user_con_profiles::Model);
 impl UserConProfileType {
   async fn id(&self) -> ID {
     self.model.id.into()
+  }
+
+  async fn ability(&self, ctx: &Context<'_>) -> Result<AbilityType> {
+    let query_data = ctx.data::<QueryData>()?;
+    let user = load_one_by_model_id!(user_con_profile_user, ctx, self)?;
+    let authorization_info =
+      AuthorizationInfo::new(query_data.db().clone(), user.try_one().cloned(), None, None);
+
+    Ok(AbilityType::new(Cow::Owned(authorization_info)))
   }
 
   #[graphql(name = "accepted_clickwrap_agreement")]

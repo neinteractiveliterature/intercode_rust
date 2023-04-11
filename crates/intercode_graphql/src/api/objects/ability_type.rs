@@ -1,4 +1,4 @@
-use std::borrow::Borrow;
+use std::borrow::{Borrow, Cow};
 
 use async_graphql::*;
 use intercode_entities::{
@@ -16,7 +16,9 @@ use seawater::loaders::ExpectModels;
 
 use crate::{lax_id::LaxId, QueryData};
 
-pub struct AbilityType;
+pub struct AbilityType<'a> {
+  authorization_info: Cow<'a, AuthorizationInfo>,
+}
 
 async fn model_action_permitted<
   'a,
@@ -24,12 +26,12 @@ async fn model_action_permitted<
   M: Send + Sync + 'a,
   R: Borrow<M>,
 >(
+  authorization_info: &AuthorizationInfo,
   _policy: P,
   ctx: &'a Context<'_>,
   action: &P::Action,
   get_model: impl FnOnce(&'a Context<'_>) -> Result<Option<R>, Error>,
 ) -> Result<bool, Error> {
-  let authorization_info = ctx.data::<AuthorizationInfo>()?;
   let model_ref = get_model(ctx)?;
 
   if let Some(model_ref) = model_ref {
@@ -39,28 +41,43 @@ async fn model_action_permitted<
   }
 }
 
+impl<'a> AbilityType<'a> {
+  pub fn new(authorization_info: Cow<'a, AuthorizationInfo>) -> Self {
+    Self { authorization_info }
+  }
+}
+
 // TODO all the methods stubbed out with just "false"
 #[Object(name = "Ability")]
-impl AbilityType {
+impl<'a> AbilityType<'a> {
   #[graphql(name = "can_manage_conventions")]
   async fn can_manage_conventions(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    model_action_permitted(ConventionPolicy, ctx, &ConventionAction::Update, |_ctx| {
-      Ok(Some(conventions::Model::default()))
-    })
+    model_action_permitted(
+      self.authorization_info.as_ref(),
+      ConventionPolicy,
+      ctx,
+      &ConventionAction::Update,
+      |_ctx| Ok(Some(conventions::Model::default())),
+    )
     .await
   }
 
   #[graphql(name = "can_read_schedule")]
   async fn can_read_schedule(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    model_action_permitted(ConventionPolicy, ctx, &ConventionAction::Schedule, |ctx| {
-      Ok(ctx.data::<QueryData>()?.convention())
-    })
+    model_action_permitted(
+      self.authorization_info.as_ref(),
+      ConventionPolicy,
+      ctx,
+      &ConventionAction::Schedule,
+      |ctx| Ok(ctx.data::<QueryData>()?.convention()),
+    )
     .await
   }
 
   #[graphql(name = "can_read_schedule_with_counts")]
   async fn can_read_schedule_with_counts(&self, ctx: &Context<'_>) -> Result<bool, Error> {
     model_action_permitted(
+      self.authorization_info.as_ref(),
       ConventionPolicy,
       ctx,
       &ConventionAction::ScheduleWithCounts,
@@ -72,6 +89,7 @@ impl AbilityType {
   #[graphql(name = "can_list_events")]
   async fn can_list_events(&self, ctx: &Context<'_>) -> Result<bool, Error> {
     model_action_permitted(
+      self.authorization_info.as_ref(),
       ConventionPolicy,
       ctx,
       &ConventionAction::ListEvents,
@@ -83,6 +101,7 @@ impl AbilityType {
   #[graphql(name = "can_read_user_con_profiles")]
   async fn can_read_user_con_profiles(&self, ctx: &Context<'_>) -> Result<bool, Error> {
     model_action_permitted(
+      self.authorization_info.as_ref(),
       ConventionPolicy,
       ctx,
       &ConventionAction::ViewAttendees,
@@ -94,14 +113,17 @@ impl AbilityType {
   #[graphql(name = "can_create_cms_files")]
   async fn can_create_cms_files(&self, ctx: &Context<'_>) -> Result<bool, Error> {
     let convention = ctx.data::<QueryData>()?.convention();
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
 
     Ok(if let Some(convention) = convention {
-      CmsContentPolicy::action_permitted(authorization_info, &ReadManageAction::Manage, convention)
-        .await?
+      CmsContentPolicy::action_permitted(
+        self.authorization_info.as_ref(),
+        &ReadManageAction::Manage,
+        convention,
+      )
+      .await?
     } else {
       CmsContentPolicy::action_permitted(
-        authorization_info,
+        self.authorization_info.as_ref(),
         &ReadManageAction::Manage,
         &root_sites::Model {
           ..Default::default()
@@ -123,6 +145,7 @@ impl AbilityType {
     };
 
     model_action_permitted(
+      self.authorization_info.as_ref(),
       UserConProfilePolicy,
       ctx,
       &UserConProfileAction::Create,
@@ -133,9 +156,13 @@ impl AbilityType {
 
   #[graphql(name = "can_update_convention")]
   async fn can_update_convention(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    model_action_permitted(ConventionPolicy, ctx, &ConventionAction::Update, |ctx| {
-      Ok(ctx.data::<QueryData>()?.convention())
-    })
+    model_action_permitted(
+      self.authorization_info.as_ref(),
+      ConventionPolicy,
+      ctx,
+      &ConventionAction::Update,
+      |ctx| Ok(ctx.data::<QueryData>()?.convention()),
+    )
     .await
   }
   #[graphql(name = "can_update_departments")]
@@ -170,7 +197,14 @@ impl AbilityType {
       None
     };
 
-    model_action_permitted(EventPolicy, ctx, &EventAction::Update, |_ctx| Ok(resource)).await
+    model_action_permitted(
+      self.authorization_info.as_ref(),
+      EventPolicy,
+      ctx,
+      &EventAction::Update,
+      |_ctx| Ok(resource),
+    )
+    .await
   }
 
   #[graphql(name = "can_delete_event")]
@@ -203,6 +237,7 @@ impl AbilityType {
     let resource = (convention.clone(), event);
 
     model_action_permitted(
+      self.authorization_info.as_ref(),
       EventPolicy,
       ctx,
       &EventAction::OverrideMaximumEventProvidedTickets,
@@ -219,6 +254,7 @@ impl AbilityType {
   #[graphql(name = "can_read_event_proposals")]
   async fn can_read_event_proposals(&self, ctx: &Context<'_>) -> Result<bool, Error> {
     model_action_permitted(
+      self.authorization_info.as_ref(),
       ConventionPolicy,
       ctx,
       &ConventionAction::ViewEventProposals,
@@ -250,9 +286,13 @@ impl AbilityType {
       None
     };
 
-    model_action_permitted(EventPolicy, ctx, &EventAction::ReadSignups, |_ctx| {
-      Ok(resource)
-    })
+    model_action_permitted(
+      self.authorization_info.as_ref(),
+      EventPolicy,
+      ctx,
+      &EventAction::ReadSignups,
+      |_ctx| Ok(resource),
+    )
     .await
   }
 
@@ -280,6 +320,7 @@ impl AbilityType {
   #[graphql(name = "can_read_reports")]
   async fn can_read_reports(&self, ctx: &Context<'_>) -> Result<bool, Error> {
     model_action_permitted(
+      self.authorization_info.as_ref(),
       ConventionPolicy,
       ctx,
       &ConventionAction::ViewReports,
@@ -290,12 +331,18 @@ impl AbilityType {
 
   #[graphql(name = "can_manage_rooms")]
   async fn can_manage_rooms(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    model_action_permitted(RoomPolicy, ctx, &ReadManageAction::Manage, |ctx| {
-      Ok(Some(rooms::Model {
-        convention_id: ctx.data::<QueryData>()?.convention().map(|con| con.id),
-        ..Default::default()
-      }))
-    })
+    model_action_permitted(
+      self.authorization_info.as_ref(),
+      RoomPolicy,
+      ctx,
+      &ReadManageAction::Manage,
+      |ctx| {
+        Ok(Some(rooms::Model {
+          convention_id: ctx.data::<QueryData>()?.convention().map(|con| con.id),
+          ..Default::default()
+        }))
+      },
+    )
     .await
   }
 
@@ -340,9 +387,13 @@ impl AbilityType {
   ) -> Result<bool, Error> {
     let policy_model = self.get_signup_policy_model(ctx, signup_id).await?;
 
-    model_action_permitted(SignupPolicy, ctx, &SignupAction::ForceConfirm, |_ctx| {
-      Ok(Some(&policy_model))
-    })
+    model_action_permitted(
+      self.authorization_info.as_ref(),
+      SignupPolicy,
+      ctx,
+      &SignupAction::ForceConfirm,
+      |_ctx| Ok(Some(&policy_model)),
+    )
     .await
   }
 
@@ -354,9 +405,13 @@ impl AbilityType {
   ) -> Result<bool, Error> {
     let policy_model = self.get_signup_policy_model(ctx, signup_id).await?;
 
-    model_action_permitted(SignupPolicy, ctx, &SignupAction::UpdateBucket, |_ctx| {
-      Ok(Some(&policy_model))
-    })
+    model_action_permitted(
+      self.authorization_info.as_ref(),
+      SignupPolicy,
+      ctx,
+      &SignupAction::UpdateBucket,
+      |_ctx| Ok(Some(&policy_model)),
+    )
     .await
   }
 
@@ -368,14 +423,18 @@ impl AbilityType {
   ) -> Result<bool, Error> {
     let policy_model = self.get_signup_policy_model(ctx, signup_id).await?;
 
-    model_action_permitted(SignupPolicy, ctx, &SignupAction::UpdateCounted, |_ctx| {
-      Ok(Some(&policy_model))
-    })
+    model_action_permitted(
+      self.authorization_info.as_ref(),
+      SignupPolicy,
+      ctx,
+      &SignupAction::UpdateCounted,
+      |_ctx| Ok(Some(&policy_model)),
+    )
     .await
   }
 }
 
-impl AbilityType {
+impl<'a> AbilityType<'a> {
   async fn get_signup_policy_model(
     &self,
     ctx: &Context<'_>,
