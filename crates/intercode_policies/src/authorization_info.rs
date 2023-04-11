@@ -257,6 +257,22 @@ impl AuthorizationInfo {
     Ok(perms.has_event_category_permission(event_category_id, permission))
   }
 
+  pub async fn has_event_category_permission_in_convention(
+    &self,
+    permission: &str,
+    convention_id: i64,
+  ) -> Result<bool, DbErr> {
+    if !self.can_act_in_convention(convention_id) {
+      return Ok(false);
+    }
+
+    let perms = self
+      .all_model_permissions_in_convention(convention_id)
+      .await?;
+
+    Ok(perms.has_event_category_permission_in_convention(convention_id, permission))
+  }
+
   pub async fn has_scope_and_convention_permission(
     &self,
     scope: &str,

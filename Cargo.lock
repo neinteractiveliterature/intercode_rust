@@ -2307,6 +2307,7 @@ dependencies = [
  "cached",
  "futures",
  "intercode_entities",
+ "itertools",
  "oxide-auth",
  "sea-orm",
  "seawater",

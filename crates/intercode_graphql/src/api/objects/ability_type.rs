@@ -71,6 +71,34 @@ impl<'a> AbilityType<'a> {
     Ok((event.clone(), run.clone(), signup))
   }
 
+  async fn get_ticket_policy_model(
+    &self,
+    ctx: &Context<'_>,
+    ticket_id: ID,
+  ) -> Result<(conventions::Model, user_con_profiles::Model, tickets::Model), Error> {
+    let query_data = ctx.data::<QueryData>()?;
+    let ticket = tickets::Entity::find_by_id(ticket_id.parse()?)
+      .one(query_data.db())
+      .await?
+      .ok_or_else(|| Error::new("Ticket not found"))?;
+
+    let user_con_profile_result = query_data
+      .loaders()
+      .ticket_user_con_profile()
+      .load_one(ticket.id)
+      .await?;
+    let user_con_profile = user_con_profile_result.expect_one()?;
+
+    let convention_result = query_data
+      .loaders()
+      .user_con_profile_convention()
+      .load_one(user_con_profile.id)
+      .await?;
+    let convention = convention_result.expect_one()?;
+
+    Ok((convention.clone(), user_con_profile.clone(), ticket))
+  }
+
   async fn can_perform_user_con_profile_action(
     &self,
     ctx: &Context<'_>,
@@ -234,6 +262,21 @@ impl<'a> AbilityType<'a> {
   ) -> Result<bool, Error> {
     self
       .can_perform_user_con_profile_action(ctx, user_con_profile_id, &UserConProfileAction::Update)
+      .await
+  }
+
+  #[graphql(name = "can_withdraw_all_user_con_profile_signups")]
+  async fn can_withdraw_all_user_con_profile_signups(
+    &self,
+    ctx: &Context<'_>,
+    user_con_profile_id: ID,
+  ) -> Result<bool, Error> {
+    self
+      .can_perform_user_con_profile_action(
+        ctx,
+        user_con_profile_id,
+        &UserConProfileAction::WithdrawAllSignups,
+      )
       .await
   }
 
@@ -507,6 +550,30 @@ impl<'a> AbilityType<'a> {
     } else {
       Ok(false)
     }
+  }
+
+  #[graphql(name = "can_delete_ticket")]
+  async fn can_delete_ticket(&self, ctx: &Context<'_>, ticket_id: ID) -> Result<bool> {
+    Ok(
+      TicketPolicy::action_permitted(
+        &self.authorization_info,
+        &TicketAction::Manage,
+        &(self.get_ticket_policy_model(ctx, ticket_id).await?),
+      )
+      .await?,
+    )
+  }
+
+  #[graphql(name = "can_update_ticket")]
+  async fn can_update_ticket(&self, ctx: &Context<'_>, ticket_id: ID) -> Result<bool> {
+    Ok(
+      TicketPolicy::action_permitted(
+        &self.authorization_info,
+        &TicketAction::Manage,
+        &(self.get_ticket_policy_model(ctx, ticket_id).await?),
+      )
+      .await?,
+    )
   }
 
   #[graphql(name = "can_read_users")]

@@ -40,6 +40,7 @@ http = "0.2.9"
 i18n-embed = {version = "0.13", features = ["fluent-system"]}
 i18n-embed-fl = "0.6"
 id-arena = "2.2.1"
+itertools = "0.10.5"
 linkify = "~0.9"
 liquid = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
 liquid-core = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
@@ -96,7 +97,7 @@ intercode_inflector = {path = "./crates/intercode_inflector"}
 intercode_liquid = {path = "./crates/intercode_liquid"}
 intercode_policies = {path = "./crates/intercode_policies"}
 intercode_timespan = {path = "./crates/intercode_timespan"}
-itertools = "0.10.5"
+itertools = {workspace = true}
 liquid = {workspace = true}
 liquid-core = {workspace = true}
 md5 = {workspace = true}
