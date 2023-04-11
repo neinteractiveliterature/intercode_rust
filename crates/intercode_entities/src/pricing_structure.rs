@@ -153,7 +153,8 @@ pub enum PricingStructure {
   Fixed(Money<'static, Currency>),
   #[serde(
     serialize_with = "serialize_scheduled_money_value",
-    deserialize_with = "deserialize_scheduled_money_value"
+    deserialize_with = "deserialize_scheduled_money_value",
+    alias = "scheduled_value"
   )]
   Scheduled(ScheduledValue<Utc, Option<Money<'static, Currency>>>),
   PayWhatYouWant(PayWhatYouWantValue),

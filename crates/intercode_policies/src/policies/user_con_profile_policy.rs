@@ -42,7 +42,7 @@ impl Policy<AuthorizationInfo, user_con_profiles::Model> for UserConProfilePolic
       UserConProfileAction::ReadEmail => todo!(),
       UserConProfileAction::ReadBirthDate => todo!(),
       UserConProfileAction::ReadPersonalInfo => todo!(),
-      UserConProfileAction::Create => {
+      UserConProfileAction::Update | UserConProfileAction::Create => {
         if !principal.can_act_in_convention(user_con_profile.convention_id) {
           return Ok(false);
         }
@@ -55,12 +55,14 @@ impl Policy<AuthorizationInfo, user_con_profiles::Model> for UserConProfilePolic
 
         UserConProfilePolicy::action_permitted(
           principal,
-          &UserConProfileAction::Update,
+          &UserConProfileAction::Delete,
           user_con_profile,
         )
         .await
       }
-      UserConProfileAction::Update | UserConProfileAction::Delete => {
+      UserConProfileAction::Delete
+      | UserConProfileAction::WithdrawAllSignups
+      | UserConProfileAction::Become => {
         if !principal.can_act_in_convention(user_con_profile.convention_id) {
           return Ok(false);
         }
@@ -78,8 +80,6 @@ impl Policy<AuthorizationInfo, user_con_profiles::Model> for UserConProfilePolic
 
         Ok(principal.site_admin_manage())
       }
-      UserConProfileAction::Become => todo!(),
-      UserConProfileAction::WithdrawAllSignups => todo!(),
     }
   }
 }
