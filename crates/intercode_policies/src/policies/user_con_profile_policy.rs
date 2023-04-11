@@ -11,6 +11,7 @@ pub enum UserConProfileAction {
   ReadPersonalInfo,
   Create,
   Update,
+  Delete,
   Become,
   WithdrawAllSignups,
 }
@@ -59,7 +60,7 @@ impl Policy<AuthorizationInfo, user_con_profiles::Model> for UserConProfilePolic
         )
         .await
       }
-      UserConProfileAction::Update => {
+      UserConProfileAction::Update | UserConProfileAction::Delete => {
         if !principal.can_act_in_convention(user_con_profile.convention_id) {
           return Ok(false);
         }

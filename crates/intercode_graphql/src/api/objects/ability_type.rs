@@ -12,7 +12,7 @@ use intercode_policies::{
   AuthorizationInfo, Policy, ReadManageAction,
 };
 use sea_orm::EntityTrait;
-use seawater::loaders::ExpectModels;
+use seawater::loaders::{ExpectModel, ExpectModels};
 
 use crate::{lax_id::LaxId, QueryData};
 
@@ -44,6 +44,55 @@ async fn model_action_permitted<
 impl<'a> AbilityType<'a> {
   pub fn new(authorization_info: Cow<'a, AuthorizationInfo>) -> Self {
     Self { authorization_info }
+  }
+
+  async fn get_signup_policy_model(
+    &self,
+    ctx: &Context<'_>,
+    signup_id: ID,
+  ) -> Result<(events::Model, runs::Model, signups::Model), Error> {
+    let query_data = ctx.data::<QueryData>()?;
+    let signup = signups::Entity::find_by_id(signup_id.parse()?)
+      .one(query_data.db())
+      .await?
+      .ok_or_else(|| Error::new("Signup not found"))?;
+
+    let run_result = query_data
+      .loaders()
+      .signup_run()
+      .load_one(signup.id)
+      .await?;
+    let run = run_result.expect_one()?;
+
+    let event_result = query_data.loaders().run_event().load_one(run.id).await?;
+    let event = event_result.expect_one()?;
+
+    Ok((event.clone(), run.clone(), signup))
+  }
+
+  async fn can_perform_user_con_profile_action(
+    &self,
+    ctx: &Context<'_>,
+    user_con_profile_id: ID,
+    action: &UserConProfileAction,
+  ) -> Result<bool> {
+    let loader_result = ctx
+      .data::<QueryData>()?
+      .loaders()
+      .user_con_profiles_by_id()
+      .load_one(LaxId::parse(user_con_profile_id)?)
+      .await?;
+
+    let user_con_profile = loader_result.expect_model()?;
+
+    model_action_permitted(
+      self.authorization_info.as_ref(),
+      UserConProfilePolicy,
+      ctx,
+      action,
+      |_ctx| Ok(Some(user_con_profile)),
+    )
+    .await
   }
 }
 
@@ -152,6 +201,39 @@ impl<'a> AbilityType<'a> {
       |_ctx| Ok(Some(user_con_profile)),
     )
     .await
+  }
+
+  #[graphql(name = "can_become_user_con_profile")]
+  async fn can_become_user_con_profile(
+    &self,
+    ctx: &Context<'_>,
+    user_con_profile_id: ID,
+  ) -> Result<bool, Error> {
+    self
+      .can_perform_user_con_profile_action(ctx, user_con_profile_id, &UserConProfileAction::Become)
+      .await
+  }
+
+  #[graphql(name = "can_delete_user_con_profile")]
+  async fn can_delete_user_con_profile(
+    &self,
+    ctx: &Context<'_>,
+    user_con_profile_id: ID,
+  ) -> Result<bool, Error> {
+    self
+      .can_perform_user_con_profile_action(ctx, user_con_profile_id, &UserConProfileAction::Delete)
+      .await
+  }
+
+  #[graphql(name = "can_update_user_con_profile")]
+  async fn can_update_user_con_profile(
+    &self,
+    ctx: &Context<'_>,
+    user_con_profile_id: ID,
+  ) -> Result<bool, Error> {
+    self
+      .can_perform_user_con_profile_action(ctx, user_con_profile_id, &UserConProfileAction::Update)
+      .await
   }
 
   #[graphql(name = "can_update_convention")]
@@ -374,6 +456,32 @@ impl<'a> AbilityType<'a> {
   async fn can_read_organizations(&self) -> bool {
     false
   }
+
+  #[graphql(name = "can_read_signups")]
+  async fn can_read_signups(&self, ctx: &Context<'_>) -> Result<bool> {
+    let convention_id = ctx.data::<QueryData>()?.convention().map(|c| c.id);
+
+    if let Some(convention_id) = convention_id {
+      let event = events::Model {
+        convention_id,
+        ..Default::default()
+      };
+      let run = runs::Model::default();
+      let signup = signups::Model::default();
+
+      model_action_permitted(
+        &self.authorization_info,
+        SignupPolicy,
+        ctx,
+        &SignupAction::Read,
+        |_ctx| Ok(Some((event, run, signup))),
+      )
+      .await
+    } else {
+      Ok(false)
+    }
+  }
+
   #[graphql(name = "can_read_users")]
   async fn can_read_users(&self) -> bool {
     false
@@ -431,31 +539,5 @@ impl<'a> AbilityType<'a> {
       |_ctx| Ok(Some(&policy_model)),
     )
     .await
-  }
-}
-
-impl<'a> AbilityType<'a> {
-  async fn get_signup_policy_model(
-    &self,
-    ctx: &Context<'_>,
-    signup_id: ID,
-  ) -> Result<(events::Model, runs::Model, signups::Model), Error> {
-    let query_data = ctx.data::<QueryData>()?;
-    let signup = signups::Entity::find_by_id(signup_id.parse()?)
-      .one(query_data.db())
-      .await?
-      .ok_or_else(|| Error::new("Signup not found"))?;
-
-    let run_result = query_data
-      .loaders()
-      .signup_run()
-      .load_one(signup.id)
-      .await?;
-    let run = run_result.expect_one()?;
-
-    let event_result = query_data.loaders().run_event().load_one(run.id).await?;
-    let event = event_result.expect_one()?;
-
-    Ok((event.clone(), run.clone(), signup))
   }
 }

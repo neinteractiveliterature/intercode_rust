@@ -303,6 +303,7 @@ loader_manager!(
   entity_relation(ticket_ticket_type, tickets, ticket_types);
   entity_relation(ticket_user_con_profile, tickets, user_con_profiles);
   entity_relation(ticket_type_providing_products, ticket_types, products);
+  entity_id(user_con_profiles_by_id, user_con_profiles);
   entity_relation(user_con_profile_convention, user_con_profiles, conventions);
   entity_relation(user_con_profile_orders, user_con_profiles, orders);
   entity_relation(user_con_profile_signups, user_con_profiles, signups);
