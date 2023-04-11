@@ -51,7 +51,7 @@ impl OrderEntryType {
   }
 
   #[graphql(name = "product_variant")]
-  async fn product_variant(&self, ctx: &Context<'_>) -> Result<ProductVariantType> {
+  async fn product_variant(&self, ctx: &Context<'_>) -> Result<Option<ProductVariantType>> {
     let product_variant_result = ctx
       .data::<QueryData>()?
       .loaders()
@@ -59,9 +59,12 @@ impl OrderEntryType {
       .load_one(self.model.id)
       .await?;
 
-    Ok(ProductVariantType::new(
-      product_variant_result.expect_one()?.clone(),
-    ))
+    Ok(
+      product_variant_result
+        .try_one()
+        .cloned()
+        .map(ProductVariantType::new),
+    )
   }
 
   async fn quantity(&self) -> Option<i32> {

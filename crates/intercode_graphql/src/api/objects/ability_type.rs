@@ -2,12 +2,13 @@ use std::borrow::{Borrow, Cow};
 
 use async_graphql::*;
 use intercode_entities::{
-  conventions, events, rooms, root_sites, runs, signups, user_con_profiles,
+  conventions, events, rooms, root_sites, runs, signups, tickets, user_con_profiles,
 };
 use intercode_policies::{
   policies::{
     CmsContentPolicy, ConventionAction, ConventionPolicy, EventAction, EventPolicy, RoomPolicy,
-    SignupAction, SignupPolicy, UserConProfileAction, UserConProfilePolicy,
+    SignupAction, SignupPolicy, TicketAction, TicketPolicy, UserConProfileAction,
+    UserConProfilePolicy,
   },
   AuthorizationInfo, Policy, ReadManageAction,
 };
@@ -475,6 +476,32 @@ impl<'a> AbilityType<'a> {
         ctx,
         &SignupAction::Read,
         |_ctx| Ok(Some((event, run, signup))),
+      )
+      .await
+    } else {
+      Ok(false)
+    }
+  }
+
+  #[graphql(name = "can_create_tickets")]
+  async fn can_create_tickets(&self, ctx: &Context<'_>) -> Result<bool> {
+    let convention = ctx.data::<QueryData>()?.convention();
+
+    if let Some(convention) = convention {
+      let user_con_profile = user_con_profiles::Model {
+        convention_id: convention.id,
+        ..Default::default()
+      };
+      let ticket = tickets::Model {
+        ..Default::default()
+      };
+
+      model_action_permitted(
+        &self.authorization_info,
+        TicketPolicy,
+        ctx,
+        &TicketAction::Manage,
+        |_ctx| Ok(Some((convention.clone(), user_con_profile, ticket))),
       )
       .await
     } else {

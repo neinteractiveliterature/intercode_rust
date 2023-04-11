@@ -1,7 +1,7 @@
 use async_graphql::*;
 use chrono::NaiveDateTime;
 use intercode_entities::{conventions, tickets, user_con_profiles};
-use intercode_policies::{policies::TicketPolicy, ReadManageAction};
+use intercode_policies::policies::{TicketAction, TicketPolicy};
 use seawater::loaders::ExpectModels;
 
 use crate::{model_backed_type, policy_guard::PolicyGuard, QueryData};
@@ -12,7 +12,7 @@ model_backed_type!(TicketType, tickets::Model);
 impl TicketType {
   fn policy_guard(
     &self,
-    action: ReadManageAction,
+    action: TicketAction,
   ) -> PolicyGuard<
     '_,
     TicketPolicy,
@@ -42,7 +42,7 @@ impl TicketType {
   }
 }
 
-#[Object(name = "Ticket", guard = "self.policy_guard(ReadManageAction::Read)")]
+#[Object(name = "Ticket", guard = "self.policy_guard(TicketAction::Read)")]
 impl TicketType {
   async fn id(&self) -> ID {
     self.model.id.into()

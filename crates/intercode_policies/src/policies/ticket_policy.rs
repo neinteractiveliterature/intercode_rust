@@ -4,18 +4,33 @@ use sea_orm::DbErr;
 
 use crate::{AuthorizationInfo, Policy, ReadManageAction};
 
+pub enum TicketAction {
+  Read,
+  Manage,
+  Provide,
+}
+
+impl From<ReadManageAction> for TicketAction {
+  fn from(action: ReadManageAction) -> Self {
+    match action {
+      ReadManageAction::Read => Self::Read,
+      ReadManageAction::Manage => Self::Manage,
+    }
+  }
+}
+
 pub struct TicketPolicy;
 
 #[async_trait]
 impl Policy<AuthorizationInfo, (conventions::Model, user_con_profiles::Model, tickets::Model)>
   for TicketPolicy
 {
-  type Action = ReadManageAction;
+  type Action = TicketAction;
   type Error = DbErr;
 
   async fn action_permitted(
     principal: &AuthorizationInfo,
-    action: &ReadManageAction,
+    action: &TicketAction,
     (convention, user_con_profile, _ticket): &(
       conventions::Model,
       user_con_profiles::Model,
@@ -27,7 +42,7 @@ impl Policy<AuthorizationInfo, (conventions::Model, user_con_profiles::Model, ti
     }
 
     match action {
-      ReadManageAction::Read => Ok(
+      TicketAction::Read => Ok(
         (principal
           .has_scope_and_convention_permission("read_conventions", "read_tickets", convention.id)
           .await?)
@@ -43,7 +58,16 @@ impl Policy<AuthorizationInfo, (conventions::Model, user_con_profiles::Model, ti
           }
           || principal.site_admin_read(),
       ),
-      ReadManageAction::Manage => todo!(),
+      TicketAction::Manage => {
+        principal
+          .has_scope_and_convention_permission(
+            "manage_conventions",
+            "update_tickets",
+            convention.id,
+          )
+          .await
+      }
+      TicketAction::Provide => todo!(),
     }
   }
 }
