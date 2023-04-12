@@ -295,6 +295,22 @@ impl UserConProfileType {
 
   // STUFF FOR FORM_RESPONSE_INTERFACE
 
+  #[graphql(name = "current_user_form_item_viewer_role")]
+  async fn form_item_viewer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole> {
+    <Self as FormResponseImplementation<user_con_profiles::Model>>::current_user_form_item_viewer_role(
+      self, ctx,
+    )
+    .await
+  }
+
+  #[graphql(name = "current_user_form_item_writer_role")]
+  async fn form_item_writer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole> {
+    <Self as FormResponseImplementation<user_con_profiles::Model>>::current_user_form_item_writer_role(
+      self, ctx,
+    )
+    .await
+  }
+
   #[graphql(name = "form_response_attrs_json")]
   async fn form_response_attrs_json(
     &self,
@@ -341,12 +357,18 @@ impl FormResponseImplementation<user_con_profiles::Model> for UserConProfileType
     Ok("team member".to_string())
   }
 
-  async fn get_viewer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole, Error> {
+  async fn current_user_form_item_viewer_role(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<FormItemRole, Error> {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
     Ok(UserConProfilePolicy::form_item_viewer_role(authorization_info, &self.model).await)
   }
 
-  async fn get_writer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole, Error> {
+  async fn current_user_form_item_writer_role(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<FormItemRole, Error> {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
     Ok(UserConProfilePolicy::form_item_writer_role(authorization_info, &self.model).await)
   }

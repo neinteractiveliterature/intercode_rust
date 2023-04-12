@@ -59,16 +59,6 @@ impl EventType {
     self.model.created_at
   }
 
-  #[graphql(name = "current_user_form_item_viewer_role")]
-  async fn current_user_form_item_viewer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole> {
-    self.get_viewer_role(ctx).await
-  }
-
-  #[graphql(name = "current_user_form_item_writer_role")]
-  async fn current_user_form_item_writer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole> {
-    self.get_writer_role(ctx).await
-  }
-
   async fn email(&self) -> &Option<String> {
     &self.model.email
   }
@@ -264,6 +254,22 @@ impl EventType {
 
   // STUFF FOR FORM_RESPONSE_INTERFACE
 
+  #[graphql(name = "current_user_form_item_viewer_role")]
+  async fn form_item_viewer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole> {
+    <Self as FormResponseImplementation<events::Model>>::current_user_form_item_viewer_role(
+      self, ctx,
+    )
+    .await
+  }
+
+  #[graphql(name = "current_user_form_item_writer_role")]
+  async fn form_item_writer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole> {
+    <Self as FormResponseImplementation<events::Model>>::current_user_form_item_writer_role(
+      self, ctx,
+    )
+    .await
+  }
+
   #[graphql(name = "form_response_attrs_json")]
   async fn form_response_attrs_json(
     &self,
@@ -327,7 +333,10 @@ impl FormResponseImplementation<events::Model> for EventType {
     Ok(event_category.team_member_name.clone())
   }
 
-  async fn get_viewer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole, Error> {
+  async fn current_user_form_item_viewer_role(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<FormItemRole, Error> {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
     let convention_result = ctx
       .data::<QueryData>()?
@@ -345,7 +354,10 @@ impl FormResponseImplementation<events::Model> for EventType {
     )
   }
 
-  async fn get_writer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole, Error> {
+  async fn current_user_form_item_writer_role(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<FormItemRole, Error> {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
     let convention_result = ctx
       .data::<QueryData>()?

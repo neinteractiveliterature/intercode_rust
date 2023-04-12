@@ -48,11 +48,26 @@ async fn load_filtered_form_items(
 }
 
 #[derive(Interface)]
-#[graphql(field(
-  name = "form_response_attrs_json_with_rendered_markdown",
-  type = "JsonScalar",
-  arg(name = "itemIdentifiers", type = "Option<Vec<String>>")
-))]
+#[graphql(
+  field(
+    name = "current_user_form_item_viewer_role",
+    type = "Result<FormItemRole, Error>",
+  ),
+  field(
+    name = "current_user_form_item_writer_role",
+    type = "Result<FormItemRole, Error>",
+  ),
+  field(
+    name = "form_response_attrs_json",
+    type = "JsonScalar",
+    arg(name = "itemIdentifiers", type = "Option<Vec<String>>")
+  ),
+  field(
+    name = "form_response_attrs_json_with_rendered_markdown",
+    type = "JsonScalar",
+    arg(name = "itemIdentifiers", type = "Option<Vec<String>>")
+  )
+)]
 pub enum FormResponseInterface {
   Event(EventType),
   UserConProfile(UserConProfileType),
@@ -66,8 +81,16 @@ where
 {
   async fn get_form(&self, ctx: &Context<'_>) -> Result<forms::Model, Error>;
   async fn get_team_member_name(&self, ctx: &Context<'_>) -> Result<String, Error>;
-  async fn get_viewer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole, Error>;
-  async fn get_writer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole, Error>;
+
+  async fn current_user_form_item_viewer_role(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<FormItemRole, Error>;
+
+  async fn current_user_form_item_writer_role(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<FormItemRole, Error>;
 
   async fn form_response_attrs_json(
     &self,
@@ -81,7 +104,7 @@ where
     let model = self.get_model();
     let attached_images = attached_images_by_filename(model, query_data).await?;
 
-    let viewer_role = self.get_viewer_role(ctx).await?;
+    let viewer_role = self.current_user_form_item_viewer_role(ctx).await?;
 
     let form_items = load_filtered_form_items(query_data, form.id, item_identifiers).await?;
 
@@ -108,7 +131,7 @@ where
     let model = self.get_model();
     let attached_images = attached_images_by_filename(model, query_data).await?;
 
-    let viewer_role = self.get_viewer_role(ctx).await?;
+    let viewer_role = self.current_user_form_item_viewer_role(ctx).await?;
 
     let form_items = load_filtered_form_items(query_data, form.id, item_identifiers).await?;
 
