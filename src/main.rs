@@ -5,6 +5,7 @@ extern crate chrono_tz;
 extern crate dotenv;
 extern crate tracing;
 
+mod actions;
 mod check_liquid;
 mod csrf;
 mod db_sessions;
