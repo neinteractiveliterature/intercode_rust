@@ -3966,7 +3966,7 @@ name = "seawater_derive"
 version = "0.1.0"
 dependencies = [
  "quote",
- "syn 1.0.109",
+ "syn 2.0.15",
 ]
 
 [[package]]
