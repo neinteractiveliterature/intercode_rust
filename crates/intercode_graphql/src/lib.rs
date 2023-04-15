@@ -21,6 +21,7 @@ mod lax_id;
 pub mod loaders;
 mod policy_guard;
 mod presenters;
+pub mod rendering_utils;
 
 #[derive(Clone)]
 pub struct SchemaData {

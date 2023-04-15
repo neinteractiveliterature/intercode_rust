@@ -1,0 +1,26 @@
+<div class="page-break-after">
+  <h1>{{ user_con_profile.name_inverted() }}</h1>
+  {% if active_signups.len() > 0 %}
+  <section>
+    <p class="fw-bold mb-0">Events You're Signed Up For:</p>
+    <table class="table table-striped" style="width: auto">
+      {% for signup in active_signups %}
+      <tr>
+        <td>
+          {{ self.run_starts_at(signup.run_id) | format_run_day_and_time }}
+        </td>
+        <td>
+          {{ self.room_names_for_run(signup.run_id) }}
+        </td>
+        <td>
+          {{ self.title_for_run(signup.run_id) }}
+        </td>
+        <td>
+          {{ self.titleized_state(signup.state) }}
+        </td>
+      </tr>
+      {% endfor %}
+    </table>
+  </section>
+  {% endif %}
+</div>

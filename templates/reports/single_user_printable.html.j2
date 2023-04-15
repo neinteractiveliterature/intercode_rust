@@ -1,0 +1,9 @@
+{% extends "print_reports.html.j2" %}
+
+{% block content %}
+{% include "reports/per_user_single.html.j2" %}
+
+{% for event in team_member_events %}
+{% include "reports/per_event_single.html.j2" %}
+{% endfor %}
+{% endblock %}

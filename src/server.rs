@@ -129,6 +129,10 @@ where
       get(actions::authenticity_tokens::authenticity_tokens),
     )
     .route("/users/sign_in", post(actions::authentication::sign_in))
+    .route(
+      "/reports/user_con_profiles/:user_con_profile_id",
+      get(actions::reports::single_user_printable),
+    )
     .fallback(actions::single_page_app_entry::single_page_app_entry)
     .layer(axum::middleware::from_fn(csrf_middleware))
     .layer(Extension(csrf_config))
