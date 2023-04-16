@@ -18,17 +18,17 @@
   <section>
     <div class="d-flex">
       <div class="me-1">
-        {# <strong>
-          <%= event.event_category.team_member_name.titleize.pluralize %>:
-        </strong> #}
+        <strong>
+          {{ self.plural_team_member_name_for_event(event) }}:
+        </strong>
       </div>
       <div>
         <ul class="list-unstyled">
-          {# <% event.team_members.each do |team_member| %>
-            <li>
-              <%= team_member.name %>
-            </li>
-            <% end %> #}
+          {% for team_member in self.team_member_profiles_for_event(event) %}
+          <li>
+            {{ team_member.name() }}
+          </li>
+          {% endfor %}
         </ul>
       </div>
     </div>

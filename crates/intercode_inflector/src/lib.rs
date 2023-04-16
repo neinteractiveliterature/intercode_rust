@@ -1,5 +1,5 @@
 pub use inflector;
-use inflector::string::pluralize;
+use inflector::{cases::titlecase, string::pluralize};
 use once_cell::sync::Lazy;
 use regex::{Captures, Regex, RegexBuilder};
 use serde::{Deserialize, Serialize};
@@ -76,6 +76,10 @@ impl IntercodeInflector {
 
   pub fn pluralize(&self, input: &str) -> String {
     pluralize::to_plural(input)
+  }
+
+  pub fn titleize(&self, input: &str) -> String {
+    titlecase::to_title_case(input)
   }
 }
 
