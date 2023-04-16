@@ -4,7 +4,7 @@ use paste::paste;
 use regex::Regex;
 use serde::{de::Visitor, ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
-  fmt::{self, Debug},
+  fmt::{self, Debug, Display},
   iter::Sum,
   ops::Add,
 };
@@ -24,7 +24,7 @@ pub enum RegistrationPolicyError {
   InconsistentBucketState,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum SlotCount {
   #[default]
   Unlimited,
@@ -41,6 +41,15 @@ impl Add for SlotCount {
         SlotCount::Unlimited => SlotCount::Unlimited,
         SlotCount::Limited(rhs_count) => SlotCount::Limited(count + rhs_count),
       },
+    }
+  }
+}
+
+impl Display for SlotCount {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      SlotCount::Unlimited => f.write_fmt(format_args!("unlimited")),
+      SlotCount::Limited(count) => f.write_fmt(format_args!("{}", count)),
     }
   }
 }

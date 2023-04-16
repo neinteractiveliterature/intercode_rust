@@ -11,7 +11,8 @@ use axum::{
 use chrono::NaiveDateTime;
 use http::StatusCode;
 use intercode_entities::{
-  events, rooms, rooms_runs, runs, signups, team_members, user_con_profiles, UserNames,
+  events, rooms, rooms_runs, runs, signups, team_members, user_con_profiles, RegistrationPolicy,
+  UserNames,
 };
 use intercode_graphql::rendering_utils::url_with_possible_host;
 use itertools::Itertools;
@@ -86,6 +87,14 @@ impl SingleUserPrintableTemplate {
 
   fn titleized_state(&self, state: &str) -> String {
     inflector::cases::titlecase::to_title_case(state)
+  }
+
+  fn event_registration_policy(&self, event: &events::Model) -> RegistrationPolicy {
+    event
+      .registration_policy
+      .clone()
+      .map(|json| serde_json::from_value::<RegistrationPolicy>(json).unwrap_or_default())
+      .unwrap_or_default()
   }
 }
 

@@ -1,0 +1,19 @@
+{% set registration_policy = self.event_registration_policy(event) %}
+<ul class="list-inline">
+  {% for bucket in registration_policy.all_buckets() %}
+  <li class="list-inline-item me-4">
+    <strong>
+      {{ bucket.name }}:
+    </strong>
+    {% if bucket.slots_limited() %}
+    {% if bucket.minimum_slots == bucket.total_slots %}
+    {{ bucket.total_slots }}
+    {% else %}
+    {{ bucket.minimum_slots }}-{{ bucket.total_slots }}
+    {% endif %}
+    {% else %}
+    unlimited
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
