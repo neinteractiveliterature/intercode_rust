@@ -21,6 +21,7 @@ intercode_inflector = {path = "../intercode_inflector"}
 intercode_liquid = {path = "../intercode_liquid"}
 intercode_policies = {path = "../intercode_policies"}
 intercode_timespan = {path = "../intercode_timespan"}
+itertools = {workspace = true}
 liquid = {workspace = true}
 liquid-core = {workspace = true}
 md5 = {workspace = true}

@@ -2,12 +2,18 @@ use std::{collections::HashMap, env};
 
 use askama::Template;
 use axum::{
+  debug_handler,
   extract::Path,
   response::{Html, IntoResponse},
 };
 use http::StatusCode;
-use intercode_entities::{event_categories, events, runs, team_members, user_con_profiles};
-use intercode_graphql::rendering_utils::url_with_possible_host;
+use intercode_entities::{
+  event_categories, events, runs, signups, team_members, user_con_profiles,
+};
+use intercode_graphql::{
+  presenters::signup_count_presenter::{load_signup_count_data_for_run_ids, RunSignupCounts},
+  rendering_utils::url_with_possible_host,
+};
 use itertools::Itertools;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use tracing::log::error;
@@ -27,6 +33,9 @@ struct SingleUserPrintableTemplate {
   runs_by_event_id: HashMap<i64, Vec<runs::Model>>,
   team_member_name_by_event_category_id: HashMap<i64, String>,
   team_member_profiles_by_event_id: HashMap<i64, Vec<user_con_profiles::Model>>,
+  run_signup_counts_by_run_id: HashMap<i64, RunSignupCounts>,
+  signups_by_run_id: HashMap<i64, Vec<signups::Model>>,
+  user_con_profiles_by_id: HashMap<i64, user_con_profiles::Model>,
 }
 
 impl SingleUserPrintableTemplate {
@@ -43,12 +52,16 @@ impl SingleUserPrintableTemplate {
       event.clone(),
       self.team_member_name_by_event_category_id.clone(),
       self.team_member_profiles_by_event_id.clone(),
+      self.run_signup_counts_by_run_id.clone(),
+      self.signups_by_run_id.clone(),
+      self.user_con_profiles_by_id.clone(),
     );
 
     per_event_single.render().unwrap()
   }
 }
 
+#[debug_handler]
 pub async fn single_user_printable(
   QueryDataFromRequest(query_data): QueryDataFromRequest,
   Path(user_con_profile_id): Path<i64>,
@@ -106,6 +119,45 @@ pub async fn single_user_printable(
     .filter_map(|(team_member, profile)| profile.map(|p| (team_member.event_id.unwrap(), p)))
     .into_group_map();
 
+  let run_signup_counts_by_run_id =
+    load_signup_count_data_for_run_ids(query_data.db(), per_user_single.runs_by_id.keys().copied())
+      .await
+      .map_err(|err| {
+        error!("{}", err);
+        StatusCode::INTERNAL_SERVER_ERROR
+      })?;
+
+  let signups_by_run_id = signups::Entity::find()
+    .filter(signups::Column::RunId.is_in(per_user_single.runs_by_id.keys().copied()))
+    .all(query_data.db())
+    .await
+    .map_err(|err| {
+      error!("{}", err);
+      StatusCode::INTERNAL_SERVER_ERROR
+    })?
+    .into_iter()
+    .map(|signup| (signup.run_id, signup))
+    .into_group_map();
+
+  let user_con_profiles_by_id = user_con_profiles::Entity::find()
+    .filter(
+      user_con_profiles::Column::Id.is_in(
+        signups_by_run_id
+          .values()
+          .flat_map(|signups| signups.iter().map(|signup| &signup.user_con_profile_id))
+          .copied(),
+      ),
+    )
+    .all(query_data.db())
+    .await
+    .map_err(|err| {
+      error!("{}", err);
+      StatusCode::INTERNAL_SERVER_ERROR
+    })?
+    .into_iter()
+    .map(|user_con_profile| (user_con_profile.id, user_con_profile))
+    .collect::<HashMap<_, _>>();
+
   let template = SingleUserPrintableTemplate {
     application_styles_js_url: url_with_possible_host(
       "/packs/application-styles.js",
@@ -122,6 +174,9 @@ pub async fn single_user_printable(
     runs_by_event_id,
     team_member_name_by_event_category_id,
     team_member_profiles_by_event_id,
+    run_signup_counts_by_run_id,
+    signups_by_run_id,
+    user_con_profiles_by_id,
   };
 
   template

@@ -2299,6 +2299,7 @@ dependencies = [
  "intercode_liquid",
  "intercode_policies",
  "intercode_timespan",
+ "itertools",
  "liquid",
  "liquid-core",
  "md5",

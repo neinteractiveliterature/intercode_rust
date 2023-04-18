@@ -122,7 +122,7 @@ impl PerUserSingleTemplate {
       .map(|(signup, _run)| signup.clone())
       .collect::<Vec<_>>();
     active_signups
-      .sort_by_key(|signup| runs_by_id.get(&signup.run_id).and_then(|run| run.starts_at));
+      .sort_by_cached_key(|signup| runs_by_id.get(&signup.run_id).and_then(|run| run.starts_at));
 
     Ok(Self {
       inflector: IntercodeInflector::new(),

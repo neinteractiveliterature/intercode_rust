@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 
 use askama::Template;
-use intercode_entities::{events, rooms, runs, user_con_profiles, RegistrationPolicy};
+use intercode_entities::{
+  events, rooms, runs, signups, user_con_profiles, RegistrationPolicy, UserNames,
+};
+use intercode_graphql::presenters::signup_count_presenter::RunSignupCounts;
 use intercode_inflector::IntercodeInflector;
 
 use crate::actions::reports::filters;
@@ -19,6 +22,9 @@ pub struct PerEventSingleTemplate {
   event: events::Model,
   team_member_name_by_event_category_id: HashMap<i64, String>,
   team_member_profiles_by_event_id: HashMap<i64, Vec<user_con_profiles::Model>>,
+  run_signup_counts_by_run_id: HashMap<i64, RunSignupCounts>,
+  signups_by_run_id: HashMap<i64, Vec<signups::Model>>,
+  user_con_profiles_by_id: HashMap<i64, user_con_profiles::Model>,
 }
 
 impl EventRunHelpers for PerEventSingleTemplate {
@@ -44,6 +50,9 @@ impl PerEventSingleTemplate {
     event: events::Model,
     team_member_name_by_event_category_id: HashMap<i64, String>,
     team_member_profiles_by_event_id: HashMap<i64, Vec<user_con_profiles::Model>>,
+    run_signup_counts_by_run_id: HashMap<i64, RunSignupCounts>,
+    signups_by_run_id: HashMap<i64, Vec<signups::Model>>,
+    user_con_profiles_by_id: HashMap<i64, user_con_profiles::Model>,
   ) -> Self {
     Self {
       inflector: IntercodeInflector::new(),
@@ -54,6 +63,9 @@ impl PerEventSingleTemplate {
       event,
       team_member_name_by_event_category_id,
       team_member_profiles_by_event_id,
+      run_signup_counts_by_run_id,
+      signups_by_run_id,
+      user_con_profiles_by_id,
     }
   }
 
@@ -83,5 +95,47 @@ impl PerEventSingleTemplate {
       .get(&event.id)
       .map(|vec| vec.as_slice())
       .unwrap_or_default()
+  }
+
+  fn run_signup_counts_for_run(&self, run: &runs::Model) -> RunSignupCounts {
+    self
+      .run_signup_counts_by_run_id
+      .get(&run.id)
+      .cloned()
+      .unwrap_or_default()
+  }
+
+  fn signed_up_user_con_profiles_with_state_for_run(
+    &self,
+    run: &runs::Model,
+    state: &str,
+  ) -> Vec<(signups::Model, user_con_profiles::Model)> {
+    let signups_by_user_con_profile_id = self
+      .signups_by_run_id
+      .get(&run.id)
+      .cloned()
+      .unwrap_or_default()
+      .into_iter()
+      .filter(|signup| signup.state == state)
+      .map(|signup| (signup.user_con_profile_id, signup))
+      .collect::<HashMap<_, _>>();
+
+    let mut user_con_profiles = signups_by_user_con_profile_id
+      .keys()
+      .filter_map(|user_con_profile_id| self.user_con_profiles_by_id.get(&user_con_profile_id))
+      .cloned()
+      .collect::<Vec<_>>();
+
+    user_con_profiles.sort_by_cached_key(|ucp| ucp.name_inverted());
+
+    user_con_profiles
+      .into_iter()
+      .map(|ucp| {
+        (
+          signups_by_user_con_profile_id.get(&ucp.id).unwrap().clone(),
+          ucp,
+        )
+      })
+      .collect()
   }
 }
