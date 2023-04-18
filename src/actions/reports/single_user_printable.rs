@@ -1,4 +1,7 @@
-use std::{collections::HashMap, env};
+use std::{
+  collections::{HashMap, HashSet},
+  env,
+};
 
 use askama::Template;
 use axum::{
@@ -139,15 +142,18 @@ pub async fn single_user_printable(
     .map(|signup| (signup.run_id, signup))
     .into_group_map();
 
+  let user_con_profile_ids = signups_by_run_id
+    .values()
+    .flat_map(|signups| {
+      signups
+        .iter()
+        .map(|signup| &signup.user_con_profile_id)
+        .copied()
+    })
+    .collect::<HashSet<_>>();
+
   let user_con_profiles_by_id = user_con_profiles::Entity::find()
-    .filter(
-      user_con_profiles::Column::Id.is_in(
-        signups_by_run_id
-          .values()
-          .flat_map(|signups| signups.iter().map(|signup| &signup.user_con_profile_id))
-          .copied(),
-      ),
-    )
+    .filter(user_con_profiles::Column::Id.is_in(user_con_profile_ids))
     .all(query_data.db())
     .await
     .map_err(|err| {
