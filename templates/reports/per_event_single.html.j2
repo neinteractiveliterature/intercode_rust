@@ -34,7 +34,9 @@
       </div>
     </div>
   </section>
+
   {% set signup_counts = self.run_signup_counts_for_run(run) %}
+
   <section>
     <p class="fw-bold mb-0">
       {{ signup_counts.counted_signups_by_state("confirmed") | pluralize(" Confirmed Signup", inflector) }}
@@ -55,34 +57,40 @@
       {% endfor %}
     </ul>
   </section>
-  {# <% if signup_counts.waitlist_count> 0 %>
-    <section>
-      <p class="fw-bold mb-0">
-        <%= pluralize signup_counts.waitlist_count, 'Waitlisted Signup' %>
-          <%= '- In signup order' %>
-      </p>
-      <ol>
-        <% waitlist_signups=signup_counts.signups_by_state_and_bucket_key['waitlisted'].values.flatten %>
-          <% waitlist_signups.sort_by(&:created_at).each do |signup| %>
-            <li>
-              <%= signup.user_con_profile.name_inverted %>
-                <% if event.registration_policy.buckets.size> 0 %>
-                  (<%= event.registration_policy.bucket_with_key(signup.requested_bucket_key)&.name ||
-                    signup.requested_bucket_key %>)
-                    <% end %>
-            </li>
-            <% end %>
-      </ol>
-    </section>
-    <% end %> #}
 
-      {# <% available_slots=run.available_slots_by_bucket_key.values.compact.sum %>
-        <% if available_slots> 0 %>
-          <section>
-            <p class="fw-bold">
-              <%= pluralize available_slots, 'Available Slot' %>
-            </p>
-          </section>
-          <% end %> #}
+  {% set waitlist_signups = self.signed_up_user_con_profiles_with_state_for_run(run, "waitlisted") %}
+  {% if waitlist_signups.len() > 0 %}
+  <section>
+    <p class="fw-bold mb-0">
+      {{ signup_counts.counted_signups_by_state("waitlisted") | pluralize(" Waitlisted Signup", inflector) }}
+      - In signup order
+    </p>
+    <ol>
+      {% for (signup, user_con_profile) in waitlist_signups %}
+      <li>
+        {{ user_con_profile.name_inverted() }}
+        {% if registration_policy.all_buckets().count() > 0 %}
+        ({{ self.requested_bucket_name_for_signup(signup) }})
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+  </section>
+  {% endif %}
+
+  {% set available_slots = self.available_slot_count(run) %}
+  {% if available_slots > SlotCount::Limited(0) %}
+  <section>
+    <p class="fw-bold">
+
+      {{ available_slots }}
+      {% if available_slots == SlotCount::Limited(1) %}
+      Available Slot
+      {% else %}
+      Available Slots
+      {% endif %}
+    </p>
+  </section>
+  {% endif %}
 </div>
 {% endfor %}

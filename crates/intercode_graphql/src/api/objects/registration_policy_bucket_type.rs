@@ -23,7 +23,7 @@ impl RegistrationPolicyBucketType {
   }
 
   #[graphql(name = "minimum_slots")]
-  async fn minimum_slots(&self) -> Option<i32> {
+  async fn minimum_slots(&self) -> Option<u32> {
     self.0.minimum_slots.into()
   }
 
@@ -42,7 +42,7 @@ impl RegistrationPolicyBucketType {
   }
 
   #[graphql(name = "total_slots")]
-  async fn total_slots(&self) -> Option<i32> {
+  async fn total_slots(&self) -> Option<u32> {
     self.0.total_slots.into()
   }
 }

@@ -16,12 +16,12 @@ impl RegistrationPolicyType {
   }
 
   #[graphql(name = "minimum_slots")]
-  async fn minimum_slots(&self) -> Option<i32> {
+  async fn minimum_slots(&self) -> Option<u32> {
     self.0.minimum_slots().into()
   }
 
   #[graphql(name = "minimum_slots_including_not_counted")]
-  async fn minimum_slots_including_not_counted(&self) -> Option<i32> {
+  async fn minimum_slots_including_not_counted(&self) -> Option<u32> {
     self.0.minimum_slots_including_not_counted().into()
   }
 
@@ -31,12 +31,12 @@ impl RegistrationPolicyType {
   }
 
   #[graphql(name = "preferred_slots")]
-  async fn preferred_slots(&self) -> Option<i32> {
+  async fn preferred_slots(&self) -> Option<u32> {
     self.0.preferred_slots().into()
   }
 
   #[graphql(name = "preferred_slots_including_not_counted")]
-  async fn preferred_slots_including_not_counted(&self) -> Option<i32> {
+  async fn preferred_slots_including_not_counted(&self) -> Option<u32> {
     self.0.preferred_slots_including_not_counted().into()
   }
 
@@ -51,12 +51,12 @@ impl RegistrationPolicyType {
   }
 
   #[graphql(name = "total_slots")]
-  async fn total_slots(&self) -> Option<i32> {
+  async fn total_slots(&self) -> Option<u32> {
     self.0.total_slots().into()
   }
 
   #[graphql(name = "total_slots_including_not_counted")]
-  async fn total_slots_including_not_counted(&self) -> Option<i32> {
+  async fn total_slots_including_not_counted(&self) -> Option<u32> {
     self.0.total_slots_including_not_counted().into()
   }
 }

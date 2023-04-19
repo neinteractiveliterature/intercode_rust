@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use askama::Template;
 use intercode_entities::{
-  events, rooms, runs, signups, user_con_profiles, RegistrationPolicy, UserNames,
+  events, rooms, runs, signups, user_con_profiles, RegistrationPolicy, SlotCount, UserNames,
 };
 use intercode_graphql::presenters::signup_count_presenter::RunSignupCounts;
 use intercode_inflector::IntercodeInflector;
@@ -122,7 +122,7 @@ impl PerEventSingleTemplate {
 
     let mut user_con_profiles = signups_by_user_con_profile_id
       .keys()
-      .filter_map(|user_con_profile_id| self.user_con_profiles_by_id.get(&user_con_profile_id))
+      .filter_map(|user_con_profile_id| self.user_con_profiles_by_id.get(user_con_profile_id))
       .cloned()
       .collect::<Vec<_>>();
 
@@ -137,5 +137,47 @@ impl PerEventSingleTemplate {
         )
       })
       .collect()
+  }
+
+  fn bucket_name_for_key(&self, bucket_key: &str) -> String {
+    self
+      .event
+      .registration_policy
+      .as_ref()
+      .map(|json| serde_json::from_value::<RegistrationPolicy>(json.clone()).unwrap())
+      .and_then(|policy| {
+        policy
+          .bucket_with_key(bucket_key)
+          .map(|bucket| bucket.name.clone())
+      })
+      .unwrap_or_else(|| bucket_key.to_string())
+  }
+
+  fn requested_bucket_name_for_signup(&self, signup: &signups::Model) -> String {
+    match signup.requested_bucket_key.as_deref() {
+      Some(requested_bucket_key) => self.bucket_name_for_key(requested_bucket_key),
+      None => "No preference".to_string(),
+    }
+  }
+
+  fn available_slot_count(&self, run: &runs::Model) -> SlotCount {
+    let event = self.events_by_id.get(&run.event_id);
+    let registration_policy = event
+      .map(|event| self.event_registration_policy(event))
+      .unwrap_or_default();
+    let signups = self
+      .signups_by_run_id
+      .get(&run.id)
+      .cloned()
+      .unwrap_or_default();
+    let signup_refs = signups.iter().collect::<Vec<_>>();
+    registration_policy
+      .all_buckets()
+      .fold(SlotCount::Limited(0), |acc, bucket| {
+        acc
+          + bucket
+            .available_slots(&signup_refs)
+            .unwrap_or(SlotCount::Limited(0))
+      })
   }
 }
