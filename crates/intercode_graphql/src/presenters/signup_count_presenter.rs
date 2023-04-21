@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use intercode_entities::signups;
+use futures::try_join;
+use intercode_entities::{events, runs, signups, RegistrationPolicy};
 use sea_orm::{
   sea_query::Expr, ColumnTrait, DbErr, EntityTrait, FromQueryResult, QueryFilter, QuerySelect,
 };
@@ -46,6 +47,7 @@ struct SignupCountDataRow {
 
 #[derive(Default, Clone, Debug)]
 pub struct RunSignupCounts {
+  pub registration_policy: RegistrationPolicy,
   pub count_by_state_and_bucket_key_and_counted:
     HashMap<String, HashMap<String, HashMap<SignupCountDataCountedStatus, i64>>>,
 }
@@ -65,66 +67,141 @@ impl RunSignupCounts {
       .or_insert(count);
   }
 
-  pub fn counted_signups_by_state(&self, state: &str) -> i64 {
-    let count_by_bucket_key_and_counted = self.count_by_state_and_bucket_key_and_counted.get(state);
+  pub fn signup_count(
+    &self,
+    state: &str,
+    bucket_key: &str,
+    counted: SignupCountDataCountedStatus,
+  ) -> i64 {
+    let Some(count_by_bucket_key_and_counted) = self.count_by_state_and_bucket_key_and_counted.get(state) else {
+      return 0;
+    };
 
-    if let Some(count_by_bucket_key_and_counted) = count_by_bucket_key_and_counted {
-      count_by_bucket_key_and_counted
-        .values()
-        .fold(0, |acc, count_by_counted| {
-          acc
-            + count_by_counted
-              .get(&SignupCountDataCountedStatus::Counted)
-              .unwrap_or(&0)
-        })
-    } else {
-      0
-    }
+    let Some(count_by_counted) = count_by_bucket_key_and_counted.get(bucket_key) else {
+      return 0;
+    };
+
+    count_by_counted.get(&counted).copied().unwrap_or(0)
+  }
+
+  pub fn counted_signups_by_state(&self, state: &str) -> i64 {
+    self
+      .registration_policy
+      .all_buckets()
+      .fold(0, |acc, bucket| {
+        acc + self.signup_count(state, &bucket.key, SignupCountDataCountedStatus::Counted)
+      })
   }
 
   pub fn not_counted_signups_by_state(&self, state: &str) -> i64 {
-    let count_by_bucket_key_and_counted = self.count_by_state_and_bucket_key_and_counted.get(state);
+    self
+      .registration_policy
+      .all_buckets()
+      .fold(0, |acc, bucket| {
+        acc + self.signup_count(state, &bucket.key, SignupCountDataCountedStatus::NotCounted)
+      })
+  }
 
-    if let Some(count_by_bucket_key_and_counted) = count_by_bucket_key_and_counted {
-      count_by_bucket_key_and_counted
-        .values()
-        .fold(0, |acc, count_by_counted| {
-          acc
-            + count_by_counted
-              .get(&SignupCountDataCountedStatus::NotCounted)
-              .unwrap_or(&0)
-        })
+  pub fn counted_key_for_state(&self, state: &str) -> SignupCountDataCountedStatus {
+    if state != "confirmed" || self.registration_policy.only_uncounted() {
+      SignupCountDataCountedStatus::NotCounted
     } else {
-      0
+      SignupCountDataCountedStatus::Counted
     }
+  }
+
+  pub fn bucket_description_for_state(&self, bucket_key: &str, state: &str) -> String {
+    let Some(bucket) = self.registration_policy.bucket_with_key(bucket_key) else {
+      return "".to_string();
+    };
+
+    let counted = if bucket.is_not_counted() {
+      SignupCountDataCountedStatus::NotCounted
+    } else {
+      self.counted_key_for_state(state)
+    };
+
+    let count = self.signup_count(state, bucket_key, counted);
+    if self.registration_policy.all_buckets().count() == 1 {
+      count.to_string()
+    } else {
+      format!("{}: {}", bucket.name.trim(), count)
+    }
+  }
+
+  pub fn all_bucket_descriptions_for_state(&self, state: &str) -> String {
+    let buckets = self.registration_policy.all_buckets().collect::<Vec<_>>();
+    let mut bucket_texts = Vec::<String>::with_capacity(buckets.len() + 1);
+
+    for bucket in buckets {
+      bucket_texts.push(self.bucket_description_for_state(&bucket.key, state));
+    }
+
+    let no_preference_waitlist_count =
+      self.signup_count("waitlisted", "", SignupCountDataCountedStatus::NotCounted);
+    if state == "waitlisted" && no_preference_waitlist_count > 0 {
+      bucket_texts.push(format!("No preference: {}", no_preference_waitlist_count));
+    }
+
+    bucket_texts.join(", ")
   }
 }
 
-pub async fn load_signup_count_data_for_run_ids<I: IntoIterator<Item = i64>>(
+pub async fn load_signup_count_data_for_run_ids<I: Iterator<Item = i64>>(
   db: &ConnectionWrapper,
   run_ids: I,
 ) -> Result<HashMap<i64, RunSignupCounts>, DbErr> {
-  let count_data = signups::Entity::find()
-    .filter(signups::Column::RunId.is_in(run_ids))
-    .select_only()
-    .column(signups::Column::RunId)
-    .column(signups::Column::State)
-    .column(signups::Column::BucketKey)
-    .column(signups::Column::RequestedBucketKey)
-    .column(signups::Column::Counted)
-    .column_as(Expr::col(signups::Column::Id).count(), "count")
-    .group_by(signups::Column::RunId)
-    .group_by(signups::Column::State)
-    .group_by(signups::Column::BucketKey)
-    .group_by(signups::Column::RequestedBucketKey)
-    .group_by(signups::Column::Counted)
-    .into_model::<SignupCountDataRow>()
-    .all(db)
-    .await?;
+  let run_ids = run_ids.collect::<Vec<_>>();
+
+  let (registration_policy_by_run_id, count_data) = try_join!(
+    async {
+      Ok(
+        runs::Entity::find()
+          .filter(runs::Column::Id.is_in(run_ids.clone()))
+          .find_also_related(events::Entity)
+          .all(db)
+          .await?
+          .into_iter()
+          .filter_map(|(run, event)| {
+            event.and_then(|event| {
+              event.registration_policy.map(|json| {
+                (
+                  run.id,
+                  serde_json::from_value::<RegistrationPolicy>(json).unwrap(),
+                )
+              })
+            })
+          })
+          .collect::<HashMap<_, _>>(),
+      )
+    },
+    signups::Entity::find()
+      .filter(signups::Column::RunId.is_in(run_ids.clone()))
+      .select_only()
+      .column(signups::Column::RunId)
+      .column(signups::Column::State)
+      .column(signups::Column::BucketKey)
+      .column(signups::Column::RequestedBucketKey)
+      .column(signups::Column::Counted)
+      .column_as(Expr::col(signups::Column::Id).count(), "count")
+      .group_by(signups::Column::RunId)
+      .group_by(signups::Column::State)
+      .group_by(signups::Column::BucketKey)
+      .group_by(signups::Column::RequestedBucketKey)
+      .group_by(signups::Column::Counted)
+      .into_model::<SignupCountDataRow>()
+      .all(db)
+  )?;
 
   Ok(count_data.iter().fold(Default::default(), |mut acc, row| {
     let entry = acc.entry(row.run_id);
-    let run_counts = entry.or_insert_with(Default::default);
+    let run_counts = entry.or_insert_with(|| RunSignupCounts {
+      registration_policy: registration_policy_by_run_id
+        .get(&row.run_id)
+        .cloned()
+        .unwrap_or_default(),
+      count_by_state_and_bucket_key_and_counted: Default::default(),
+    });
 
     let effective_bucket_key = effective_bucket_key(
       &row.state,

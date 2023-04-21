@@ -4,10 +4,11 @@ name = "intercode_rust"
 version = "0.1.0"
 
 [profile.release]
-debug = 1
+# debug = 1
+lto = true
 
-[target.'cfg(not(target_env = "msvc"))'.dependencies]
-tikv-jemallocator = {version = "0.5", features = ["profiling"]}
+# [target.'cfg(not(target_env = "msvc"))'.dependencies]
+# tikv-jemallocator = {version = "0.5", features = ["profiling"]}
 
 [workspace]
 members = [
@@ -65,7 +66,10 @@ flamegraph = ["dep:tracing-flame"]
 tokio-console = ["dep:console-subscriber", "tokio/full", "tokio/tracing"]
 
 [dependencies]
+Inflector = {workspace = true}
 anyhow = "1.0.70"
+askama = {version = "0.12.0", features = ["with-axum"]}
+askama_axum = "0.3.0"
 async-graphql = {workspace = true}
 async-graphql-axum = "~5.0.7"
 async-stripe = {workspace = true}
@@ -90,6 +94,7 @@ http = {workspace = true}
 hyper = "0.14.25"
 i18n-embed = {workspace = true}
 i18n-embed-fl = {workspace = true}
+ics = "0.5.8"
 indicatif = {version = "0.17.3", features = ["improved_unicode"]}
 intercode_entities = {path = "./crates/intercode_entities"}
 intercode_graphql = {path = "./crates/intercode_graphql"}

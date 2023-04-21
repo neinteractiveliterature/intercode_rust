@@ -192,3 +192,11 @@ pub async fn csrf_middleware<B: Send>(
   let cookie = token.build_cookie();
   Ok((jar.add(cookie), response).into_response())
 }
+
+pub fn enforce_csrf(token: CsrfData) -> Result<(), StatusCode> {
+  if token.verified {
+    Ok(())
+  } else {
+    Err(StatusCode::FORBIDDEN)
+  }
+}

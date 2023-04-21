@@ -4,7 +4,7 @@ use paste::paste;
 use regex::Regex;
 use serde::{de::Visitor, ser::SerializeSeq, Deserialize, Deserializer, Serialize, Serializer};
 use std::{
-  fmt::{self, Debug},
+  fmt::{self, Debug, Display},
   iter::Sum,
   ops::Add,
 };
@@ -24,11 +24,20 @@ pub enum RegistrationPolicyError {
   InconsistentBucketState,
 }
 
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum SlotCount {
   #[default]
   Unlimited,
   Limited(usize),
+}
+
+impl SlotCount {
+  pub fn is_unlimited(&self) -> bool {
+    match self {
+      SlotCount::Unlimited => true,
+      SlotCount::Limited(_) => false,
+    }
+  }
 }
 
 impl Add for SlotCount {
@@ -41,6 +50,39 @@ impl Add for SlotCount {
         SlotCount::Unlimited => SlotCount::Unlimited,
         SlotCount::Limited(rhs_count) => SlotCount::Limited(count + rhs_count),
       },
+    }
+  }
+}
+
+impl PartialOrd for SlotCount {
+  fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    match self {
+      SlotCount::Unlimited => {
+        if other.is_unlimited() {
+          Some(std::cmp::Ordering::Equal)
+        } else {
+          Some(std::cmp::Ordering::Greater)
+        }
+      }
+      SlotCount::Limited(count) => match other {
+        SlotCount::Unlimited => Some(std::cmp::Ordering::Less),
+        SlotCount::Limited(other_count) => count.partial_cmp(other_count),
+      },
+    }
+  }
+}
+
+impl Ord for SlotCount {
+  fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    self.partial_cmp(other).unwrap()
+  }
+}
+
+impl Display for SlotCount {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      SlotCount::Unlimited => f.write_fmt(format_args!("unlimited")),
+      SlotCount::Limited(count) => f.write_fmt(format_args!("{}", count)),
     }
   }
 }
@@ -76,12 +118,18 @@ impl<'de> Deserialize<'de> for SlotCount {
   }
 }
 
-impl From<SlotCount> for Option<i32> {
+impl From<SlotCount> for Option<u32> {
   fn from(slot_count: SlotCount) -> Self {
     match slot_count {
       SlotCount::Unlimited => None,
-      SlotCount::Limited(count) => Some(count as i32),
+      SlotCount::Limited(count) => Some(count as u32),
     }
+  }
+}
+
+impl<N: Into<usize>> From<N> for SlotCount {
+  fn from(value: N) -> Self {
+    SlotCount::Limited(value.into())
   }
 }
 

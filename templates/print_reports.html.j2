@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+    <title>{{ page_title }}</title>
+    <script
+      src="{{ application_styles_js_url }}"
+      type="application/javascript"
+    ></script>
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+  </head>
+  <body>
+    <div class="no-print">
+      <div class="alert alert-success">
+        <h1>{{ convention_name }} - {{ report_type }} report</h1>
+        <p>This report will automatically paginate when printed.</p>
+      </div>
+    </div>
+    {% block content %}{% endblock %}
+  </body>
+</html>

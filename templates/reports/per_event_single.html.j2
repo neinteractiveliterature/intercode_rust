@@ -1,0 +1,96 @@
+{% for run in runs_by_event_id.get(event.id).cloned().unwrap_or_default() %}
+{% set registration_policy = self.event_registration_policy(event) %}
+<div class="page-break-after">
+  <section>
+    <div class="d-flex">
+      <div class="col ps-0">
+        <h1>
+          {{ self.title_for_run(run.id) }}
+        </h1>
+        {% include "event_capacity.html.j2" %}
+      </div>
+      <div class="text-end fw-bold mt-2">
+        {{ self.run_starts_at(run.id) | format_run_day_and_time }}
+        <br />
+        {{ self.room_names_for_run(run.id) }}
+      </div>
+    </div>
+  </section>
+  <section>
+    <div class="d-flex">
+      <div class="me-1">
+        <strong>
+          {{ self.plural_team_member_name_for_event(event) }}:
+        </strong>
+      </div>
+      <div>
+        <ul class="list-unstyled">
+          {% for team_member in self.team_member_profiles_for_event(event) %}
+          <li>
+            {{ team_member.name() }}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  {% set signup_counts = self.run_signup_counts_for_run(run) %}
+
+  <section>
+    <p class="fw-bold mb-0">
+      {{ signup_counts.counted_signups_by_state("confirmed") | pluralize(" Confirmed Signup", inflector) }}
+
+      {% if registration_policy.all_buckets().count() > 1 %}
+      &mdash;
+      {{ signup_counts.all_bucket_descriptions_for_state("confirmed") }}
+      {% endif %}
+    </p>
+    <ul class="list-unstyled" style="columns: 2 auto">
+      {% for (signup, user_con_profile) in self.signed_up_user_con_profiles_with_state_for_run(run, "confirmed") %}
+      <li>
+        {{ user_con_profile.name_inverted() }}
+        {% if !signup.counted.unwrap_or(false) %}
+        (not counted)
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  {% set waitlist_signups = self.signed_up_user_con_profiles_with_state_for_run(run, "waitlisted") %}
+  {% if waitlist_signups.len() > 0 %}
+  <section>
+    <p class="fw-bold mb-0">
+      {{ signup_counts.counted_signups_by_state("waitlisted") | pluralize(" Waitlisted Signup", inflector) }}
+      - In signup order
+    </p>
+    <ol>
+      {% for (signup, user_con_profile) in waitlist_signups %}
+      <li>
+        {{ user_con_profile.name_inverted() }}
+        {% if registration_policy.all_buckets().count() > 0 %}
+        ({{ self.requested_bucket_name_for_signup(signup) }})
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+  </section>
+  {% endif %}
+
+  {% set available_slots = self.available_slot_count(run) %}
+  {% if available_slots > SlotCount::Limited(0) %}
+  <section>
+    <p class="fw-bold">
+
+      {{ available_slots }}
+      {% if available_slots == SlotCount::Limited(1) %}
+      Available Slot
+      {% else %}
+      Available Slots
+      {% endif %}
+    </p>
+  </section>
+  {% endif %}
+</div>
+{% endfor %}

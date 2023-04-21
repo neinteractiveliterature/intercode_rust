@@ -1,0 +1,9 @@
+{% extends "print_reports.html.j2" %}
+
+{% block content %}
+{{ self.render_per_user_single() | safe }}
+
+{% for event in per_user_single.team_member_events %}
+{{ self.render_per_event_single(event) | safe }}
+{% endfor %}
+{% endblock %}
