@@ -42,6 +42,7 @@ impl EventRunHelpers for PerEventSingleTemplate {
 }
 
 impl PerEventSingleTemplate {
+  #[allow(clippy::too_many_arguments)]
   pub fn new(
     runs_by_id: HashMap<i64, runs::Model>,
     rooms_by_run_id: HashMap<i64, Vec<rooms::Model>>,
