@@ -4,7 +4,7 @@ use intercode_entities::{events, runs, signups};
 use intercode_policies::policies::{SignupAction, SignupPolicy};
 use seawater::loaders::ExpectModels;
 
-use crate::{model_backed_type, policy_guard::PolicyGuard, QueryData};
+use crate::{api::enums::SignupState, model_backed_type, policy_guard::PolicyGuard, QueryData};
 
 use super::{ModelBackedType, RunType, UserConProfileType};
 
@@ -130,8 +130,8 @@ impl SignupType {
     ))
   }
 
-  async fn state(&self) -> &str {
-    &self.model.state
+  async fn state(&self) -> Result<SignupState> {
+    SignupState::try_from(self.model.state.as_str())
   }
 
   #[graphql(name = "user_con_profile")]

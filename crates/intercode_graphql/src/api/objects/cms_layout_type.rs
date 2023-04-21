@@ -21,7 +21,11 @@ impl CmsLayoutType {
 
   #[graphql(name = "content_html")]
   #[allow(unused_variables)]
-  async fn content_html(&self, ctx: &Context<'_>, path: Option<String>) -> Result<String, Error> {
+  async fn content_html(
+    &self,
+    ctx: &Context<'_>,
+    path: Option<String>,
+  ) -> Result<Option<String>, Error> {
     let schema_data = ctx.data::<SchemaData>()?;
     let query_data = ctx.data::<QueryData>()?;
     let liquid_renderer = ctx.data::<Box<dyn LiquidRenderer>>()?;
@@ -44,6 +48,7 @@ impl CmsLayoutType {
         Some(PreloadPartialsStrategy::ByLayout(&self.model)),
       )
       .await
+      .map(Some)
   }
 
   async fn name(&self) -> Option<&str> {

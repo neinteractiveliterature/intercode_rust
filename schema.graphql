@@ -14,7 +14,7 @@ type Ability {
 	can_update_departments: Boolean!
 	can_manage_email_routes: Boolean!
 	can_update_event(eventId: ID!): Boolean!
-	can_delete_event(eventId: ID!): Boolean!
+	can_delete_event(eventId: ID!): Boolean! @deprecated(reason: "Deleting events is never allowed; this always returns false")
 	can_override_maximum_event_provided_tickets: Boolean!
 	can_update_event_categories: Boolean!
 	can_read_event_proposals: Boolean!
@@ -51,16 +51,16 @@ type ActiveStorageAttachment {
 	byte_size: Int!
 	content_type: String
 	filename: String!
-	resized_url(maxWidth: Int!, maxHeight: Int!): String!
+	resized_url(maxWidth: Int!, maxHeight: Int!): String
 	url: String!
 }
 
 
+union CmsContent = Page | CmsPartial | CmsLayout
+
 type CmsContentGroup {
 	id: ID!
 }
-
-union CmsContentType = Page | CmsPartial | CmsLayout
 
 type CmsFile {
 	id: ID!
@@ -74,7 +74,7 @@ type CmsGraphqlQuery {
 
 type CmsLayout {
 	id: ID!
-	content_html(path: String): String!
+	content_html(path: String): String
 	name: String
 }
 
@@ -114,7 +114,7 @@ interface CmsParent {
 	previewMarkdown(markdown: String!, eventId: ID, eventProposalId: ID): String!
 	previewLiquid(content: String!): String!
 	rootPage: Page!
-	typeaheadSearchCmsContent(name: String): [CmsContentType!]!
+	typeaheadSearchCmsContent(name: String): [CmsContent!]!
 }
 
 type CmsPartial {
@@ -195,7 +195,7 @@ type Convention implements CmsParent {
 	defaultLayout: CmsLayout!
 	effectiveCmsLayout(path: String!): CmsLayout!
 	rootPage: Page!
-	typeaheadSearchCmsContent(name: String): [CmsContentType!]!
+	typeaheadSearchCmsContent(name: String): [CmsContent!]!
 }
 
 type Coupon {
@@ -245,8 +245,8 @@ type Event {
 	title: String!
 	current_user_form_item_viewer_role: FormItemRole!
 	current_user_form_item_writer_role: FormItemRole!
-	form_response_attrs_json(itemIdentifiers: [String!]): JSON!
-	form_response_attrs_json_with_rendered_markdown(itemIdentifiers: [String!]): JSON!
+	form_response_attrs_json(itemIdentifiers: [String!]): Json!
+	form_response_attrs_json_with_rendered_markdown(itemIdentifiers: [String!]): Json!
 }
 
 type EventCategory {
@@ -297,7 +297,7 @@ input EventFiltersInput {
 	title: String
 	title_prefix: String
 	my_rating: [Int!]
-	form_items: JSON
+	form_items: Json
 }
 
 type EventsPagination {
@@ -347,7 +347,12 @@ type FormSection {
 
 
 
+"""
+A scalar that can represent any JSON value.
+"""
 scalar JSON
+
+scalar Json
 
 type LiquidAssign {
 	name: String!
@@ -477,7 +482,7 @@ type Product {
 	description_html: String!
 	image: ActiveStorageAttachment
 	name: String
-	payment_options: JSON
+	payment_options: Json
 	pricing_structure: PricingStructure!
 	product_variants: [ProductVariant!]!
 	provides_ticket_type: TicketType
@@ -555,7 +560,7 @@ type RootSite implements CmsParent {
 	defaultLayout: CmsLayout!
 	effectiveCmsLayout(path: String!): CmsLayout!
 	rootPage: Page!
-	typeaheadSearchCmsContent(name: String): [CmsContentType!]!
+	typeaheadSearchCmsContent(name: String): [CmsContent!]!
 	url: String!
 }
 
@@ -571,7 +576,7 @@ type Run {
 	room_names: [String]!
 	rooms: [Room!]!
 	schedule_note: String
-	signup_count_by_state_and_bucket_key_and_counted: JSON!
+	signup_count_by_state_and_bucket_key_and_counted: Json!
 	signups_paginated(page: Int, per_page: Int, filters: SignupFiltersInput, sort: [SortInput!]): SignupsPagination!
 	starts_at: NaiveDateTime
 	title_suffix: String
@@ -596,7 +601,7 @@ type Signup {
 	counted: Boolean!
 	requested_bucket_key: String
 	run: Run!
-	state: String!
+	state: SignupState!
 	user_con_profile: UserConProfile!
 	waitlist_position: Int
 }
@@ -627,6 +632,25 @@ type SignupRequest {
 	requested_bucket_key: String
 	state: String!
 	target_run: Run!
+}
+
+enum SignupState {
+	"""
+	Attendee's spot is held temporarily while the attendee finishes paying for their ticket
+	"""
+	ticket_purchase_hold
+	"""
+	Attendee's spot is confirmed
+	"""
+	confirmed
+	"""
+	Attendee is on the waitlist for this event and may be pulled in automatically
+	"""
+	waitlisted
+	"""
+	Attendee has withdrawn from this event (and this signup is no longer valid)
+	"""
+	withdrawn
 }
 
 type SignupsPagination {
@@ -791,8 +815,8 @@ type UserConProfile {
 	zipcode: String
 	current_user_form_item_viewer_role: FormItemRole!
 	current_user_form_item_writer_role: FormItemRole!
-	form_response_attrs_json(itemIdentifiers: [String!]): JSON!
-	form_response_attrs_json_with_rendered_markdown(itemIdentifiers: [String!]): JSON!
+	form_response_attrs_json(itemIdentifiers: [String!]): Json!
+	form_response_attrs_json_with_rendered_markdown(itemIdentifiers: [String!]): Json!
 }
 
 input UserConProfileFiltersInput {

@@ -30,9 +30,9 @@ impl ActiveStorageAttachmentType {
     &self,
     #[graphql(name = "maxWidth")] _max_width: u64,
     #[graphql(name = "maxHeight")] _max_height: u64,
-  ) -> &str {
+  ) -> Option<&str> {
     // TODO
-    "TODO"
+    Some("TODO")
   }
 
   async fn url(&self) -> &str {

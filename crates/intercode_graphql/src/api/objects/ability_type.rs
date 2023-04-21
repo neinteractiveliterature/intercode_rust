@@ -333,7 +333,10 @@ impl<'a> AbilityType<'a> {
     .await
   }
 
-  #[graphql(name = "can_delete_event")]
+  #[graphql(
+    name = "can_delete_event",
+    deprecation = "Deleting events is never allowed; this always returns false"
+  )]
   async fn can_delete_event(&self, _event_id: ID) -> Result<bool, Error> {
     Ok(false)
   }
