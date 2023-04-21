@@ -120,6 +120,10 @@ where
     }
   }
 
+  pub fn expect_models(&self) -> Result<&Vec<To::Model>, async_graphql::Error> {
+    Ok(&self.models)
+  }
+
   pub fn try_one(&self) -> Option<&To::Model> {
     if self.models.is_empty() {
       None

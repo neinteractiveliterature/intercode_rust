@@ -94,6 +94,7 @@ http = {workspace = true}
 hyper = "0.14.25"
 i18n-embed = {workspace = true}
 i18n-embed-fl = {workspace = true}
+ics = "0.5.8"
 indicatif = {version = "0.17.3", features = ["improved_unicode"]}
 intercode_entities = {path = "./crates/intercode_entities"}
 intercode_graphql = {path = "./crates/intercode_graphql"}

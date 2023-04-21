@@ -133,6 +133,10 @@ where
       "/reports/user_con_profiles/:user_con_profile_id",
       get(actions::reports::single_user_printable),
     )
+    .route(
+      "/calendars/user_schedule/:ical_secret",
+      get(actions::user_schedule::user_schedule),
+    )
     .fallback(actions::single_page_app_entry::single_page_app_entry)
     .layer(axum::middleware::from_fn(csrf_middleware))
     .layer(Extension(csrf_config))
