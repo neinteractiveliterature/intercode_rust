@@ -45,6 +45,7 @@ impl Policy<AuthorizationInfo, rooms::Model> for RoomPolicy {
 impl EntityPolicy<AuthorizationInfo, rooms::Model> for RoomPolicy {
   fn accessible_to(
     _principal: &AuthorizationInfo,
+    _action: &Self::Action,
   ) -> sea_orm::Select<<rooms::Model as sea_orm::ModelTrait>::Entity> {
     rooms::Entity::find()
   }

@@ -1,10 +1,12 @@
 use async_graphql::*;
 use intercode_entities::pages;
 use intercode_liquid::cms_parent_partial_source::PreloadPartialsStrategy;
+use intercode_policies::{policies::CmsContentPolicy, ReadManageAction};
 use liquid::object;
 
 use crate::{
-  cms_rendering_context::CmsRenderingContext, model_backed_type, LiquidRenderer, QueryData,
+  api::objects::model_backed_type::ModelBackedType, cms_rendering_context::CmsRenderingContext,
+  model_backed_type, LiquidRenderer, QueryData,
 };
 model_backed_type!(PageType, pages::Model);
 
@@ -12,6 +14,18 @@ model_backed_type!(PageType, pages::Model);
 impl PageType {
   async fn id(&self) -> ID {
     self.model.id.into()
+  }
+
+  #[graphql(
+    name = "admin_notes",
+    guard = "self.simple_policy_guard::<CmsContentPolicy<pages::Model>>(ReadManageAction::Manage)"
+  )]
+  async fn admin_notes(&self) -> Option<&str> {
+    self.model.admin_notes.as_deref()
+  }
+
+  async fn content(&self) -> Option<&str> {
+    self.model.content.as_deref()
   }
 
   #[graphql(name = "content_html")]
@@ -43,6 +57,11 @@ impl PageType {
   async fn current_ability_can_update(&self, _ctx: &Context<'_>) -> bool {
     // TODO
     false
+  }
+
+  #[graphql(name = "hidden_from_search")]
+  async fn hidden_from_search(&self) -> bool {
+    self.model.hidden_from_search
   }
 
   async fn name(&self) -> &Option<String> {

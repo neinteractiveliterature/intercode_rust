@@ -2,17 +2,17 @@ use std::borrow::{Borrow, Cow};
 
 use async_graphql::*;
 use intercode_entities::{
-  conventions, events, rooms, root_sites, runs, signups, tickets, user_con_profiles,
+  conventions, events, pages, rooms, root_sites, runs, signups, tickets, user_con_profiles,
 };
 use intercode_policies::{
   policies::{
-    CmsContentPolicy, ConventionAction, ConventionPolicy, EventAction, EventPolicy, RoomPolicy,
-    SignupAction, SignupPolicy, TicketAction, TicketPolicy, UserConProfileAction,
-    UserConProfilePolicy,
+    CmsContentModel, CmsContentPolicy, ConventionAction, ConventionPolicy, EventAction,
+    EventPolicy, RoomPolicy, SignupAction, SignupPolicy, TicketAction, TicketPolicy,
+    UserConProfileAction, UserConProfilePolicy,
   },
-  AuthorizationInfo, Policy, ReadManageAction,
+  AuthorizationInfo, EntityPolicy, Policy, ReadManageAction,
 };
-use sea_orm::EntityTrait;
+use sea_orm::{EntityTrait, PaginatorTrait};
 use seawater::loaders::{ExpectModel, ExpectModels};
 
 use crate::{lax_id::LaxId, QueryData};
@@ -123,6 +123,28 @@ impl<'a> AbilityType<'a> {
     )
     .await
   }
+
+  async fn can_perform_cms_content_action(
+    &self,
+    ctx: &Context<'_>,
+    action: ReadManageAction,
+  ) -> Result<bool, Error> {
+    let convention = ctx.data::<QueryData>()?.convention();
+
+    Ok(if let Some(convention) = convention {
+      CmsContentPolicy::action_permitted(self.authorization_info.as_ref(), &action, convention)
+        .await?
+    } else {
+      CmsContentPolicy::action_permitted(
+        self.authorization_info.as_ref(),
+        &action,
+        &root_sites::Model {
+          ..Default::default()
+        },
+      )
+      .await?
+    })
+  }
 }
 
 // TODO all the methods stubbed out with just "false"
@@ -190,25 +212,58 @@ impl<'a> AbilityType<'a> {
 
   #[graphql(name = "can_create_cms_files")]
   async fn can_create_cms_files(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    let convention = ctx.data::<QueryData>()?.convention();
+    self
+      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
+      .await
+  }
 
-    Ok(if let Some(convention) = convention {
-      CmsContentPolicy::action_permitted(
-        self.authorization_info.as_ref(),
-        &ReadManageAction::Manage,
-        convention,
-      )
-      .await?
-    } else {
-      CmsContentPolicy::action_permitted(
-        self.authorization_info.as_ref(),
-        &ReadManageAction::Manage,
-        &root_sites::Model {
-          ..Default::default()
-        },
-      )
-      .await?
-    })
+  #[graphql(name = "can_create_pages")]
+  async fn can_create_pages(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    self
+      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
+      .await
+  }
+
+  #[graphql(name = "can_create_cms_partials")]
+  async fn can_create_cms_partials(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    self
+      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
+      .await
+  }
+
+  #[graphql(name = "can_create_cms_layouts")]
+  async fn can_create_cms_layouts(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    self
+      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
+      .await
+  }
+
+  #[graphql(name = "can_create_cms_navigation_items")]
+  async fn can_create_cms_navigation_items(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    self
+      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
+      .await
+  }
+
+  #[graphql(name = "can_create_cms_variables")]
+  async fn can_create_cms_variables(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    self
+      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
+      .await
+  }
+
+  #[graphql(name = "can_create_cms_graphql_queries")]
+  async fn can_create_cms_graphql_queries(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    self
+      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
+      .await
+  }
+
+  #[graphql(name = "can_create_cms_content_groups")]
+  async fn can_create_cms_content_groups(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    self
+      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
+      .await
   }
 
   #[graphql(name = "can_create_user_con_profiles")]
@@ -479,10 +534,25 @@ impl<'a> AbilityType<'a> {
   async fn can_manage_signups(&self) -> bool {
     false
   }
+
   #[graphql(name = "can_manage_any_cms_content")]
-  async fn can_manage_any_cms_content(&self) -> bool {
-    false
+  async fn can_manage_any_cms_content(&self, ctx: &Context<'_>) -> Result<bool> {
+    let query_data = ctx.data::<QueryData>()?;
+
+    Ok(
+      pages::Model::filter_by_parent(
+        CmsContentPolicy::<pages::Model>::accessible_to(
+          &self.authorization_info,
+          &ReadManageAction::Manage,
+        ),
+        query_data.cms_parent(),
+      )
+      .count(query_data.db())
+      .await?
+        > 0,
+    )
   }
+
   #[graphql(name = "can_manage_staff_positions")]
   async fn can_manage_staff_positions(&self) -> bool {
     false
