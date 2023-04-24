@@ -20,6 +20,8 @@ use super::active_storage_attached_blobs_loader::ActiveStorageAttachedBlobsLoade
 use super::event_user_con_profile_event_rating_loader::EventUserConProfileEventRatingLoader;
 use super::filtered_event_runs_loader::{EventRunsLoaderFilter, FilteredEventRunsLoader};
 use super::loader_spawner::LoaderSpawner;
+use super::permissioned_models_loader::PermissionedModelsLoader;
+use super::permissioned_roles_loader::PermissionedRolesLoader;
 use super::run_user_con_profile_signup_requests_loader::RunUserConProfileSignupRequestsLoader;
 use super::run_user_con_profile_signups_loader::RunUserConProfileSignupsLoader;
 use super::signup_count_loader::SignupCountLoader;
@@ -53,6 +55,8 @@ macro_rules! loader_manager {
       pub event_runs_filtered: LoaderSpawner<EventRunsLoaderFilter, i64, FilteredEventRunsLoader>,
       pub event_user_con_profile_event_ratings:
         LoaderSpawner<i64, i64, EventUserConProfileEventRatingLoader>,
+      pub permissioned_models: DataLoader<PermissionedModelsLoader>,
+      pub permissioned_roles: DataLoader<PermissionedRolesLoader>,
       pub product_image: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub product_variant_image: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub run_signup_counts: DataLoader<SignupCountLoader>,
@@ -132,6 +136,16 @@ macro_rules! loader_manager {
         $delay_millis,
         EventUserConProfileEventRatingLoader::new,
       ),
+      permissioned_models: DataLoader::new(
+        PermissionedModelsLoader::new($db.clone(), $delay_millis),
+        tokio::spawn,
+      )
+      .delay($delay_millis),
+      permissioned_roles: DataLoader::new(
+        PermissionedRolesLoader::new($db.clone(), $delay_millis),
+        tokio::spawn,
+      )
+      .delay($delay_millis),
       product_image: DataLoader::new(
         ActiveStorageAttachedBlobsLoader::new($db.clone(), active_storage_attachments::Entity::find()
           .filter(active_storage_attachments::Column::RecordType.eq("Product"))

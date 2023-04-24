@@ -9,4 +9,8 @@ impl OrganizationRoleType {
   async fn id(&self) -> ID {
     self.model.id.into()
   }
+
+  async fn name(&self) -> Option<&str> {
+    self.model.name.as_deref()
+  }
 }

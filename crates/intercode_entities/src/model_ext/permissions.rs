@@ -1,13 +1,25 @@
+use std::fmt::Display;
+
 use crate::permissions;
 
 pub struct ExclusiveArcMissingReference;
 
+impl Display for ExclusiveArcMissingReference {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.write_fmt(format_args!(
+      "Exclusive arc has no non-null value on any of its reference fields"
+    ))
+  }
+}
+
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub enum PermissionedModelRef {
   CmsContentGroup(i64),
   Convention(i64),
   EventCategory(i64),
 }
 
+#[derive(Clone, Hash, PartialEq, Eq)]
 pub enum PermissionedRoleRef {
   OrganizationRole(i64),
   StaffPosition(i64),
