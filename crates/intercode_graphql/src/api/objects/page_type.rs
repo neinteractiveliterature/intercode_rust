@@ -1,13 +1,16 @@
 use async_graphql::*;
 use intercode_entities::pages;
 use intercode_liquid::cms_parent_partial_source::PreloadPartialsStrategy;
-use intercode_policies::{policies::CmsContentPolicy, ReadManageAction};
+use intercode_policies::{policies::CmsContentPolicy, AuthorizationInfo, Policy, ReadManageAction};
 use liquid::object;
+use seawater::loaders::ExpectModels;
 
 use crate::{
   api::objects::model_backed_type::ModelBackedType, cms_rendering_context::CmsRenderingContext,
-  model_backed_type, LiquidRenderer, QueryData,
+  load_one_by_model_id, model_backed_type, LiquidRenderer, QueryData,
 };
+
+use super::CmsLayoutType;
 model_backed_type!(PageType, pages::Model);
 
 #[Object(name = "Page")]
@@ -22,6 +25,12 @@ impl PageType {
   )]
   async fn admin_notes(&self) -> Option<&str> {
     self.model.admin_notes.as_deref()
+  }
+
+  #[graphql(name = "cms_layout")]
+  async fn cms_layout(&self, ctx: &Context<'_>) -> Result<Option<CmsLayoutType>> {
+    let loader_result = load_one_by_model_id!(pages_cms_layouts, ctx, self)?;
+    Ok(loader_result.try_one().cloned().map(CmsLayoutType::new))
   }
 
   async fn content(&self) -> Option<&str> {
@@ -48,15 +57,31 @@ impl PageType {
   }
 
   #[graphql(name = "current_ability_can_delete")]
-  async fn current_ability_can_delete(&self, _ctx: &Context<'_>) -> bool {
-    // TODO
-    false
+  async fn current_ability_can_delete(&self, ctx: &Context<'_>) -> Result<bool> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+
+    Ok(
+      CmsContentPolicy::action_permitted(
+        authorization_info,
+        &ReadManageAction::Manage,
+        &self.model,
+      )
+      .await?,
+    )
   }
 
   #[graphql(name = "current_ability_can_update")]
-  async fn current_ability_can_update(&self, _ctx: &Context<'_>) -> bool {
-    // TODO
-    false
+  async fn current_ability_can_update(&self, ctx: &Context<'_>) -> Result<bool> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+
+    Ok(
+      CmsContentPolicy::action_permitted(
+        authorization_info,
+        &ReadManageAction::Manage,
+        &self.model,
+      )
+      .await?,
+    )
   }
 
   #[graphql(name = "hidden_from_search")]

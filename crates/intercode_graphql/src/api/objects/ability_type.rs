@@ -2,13 +2,14 @@ use std::borrow::{Borrow, Cow};
 
 use async_graphql::*;
 use intercode_entities::{
-  conventions, events, pages, rooms, root_sites, runs, signups, tickets, user_con_profiles,
+  cms_content_model::CmsContentModel, conventions, events, pages, rooms, root_sites, runs, signups,
+  tickets, user_con_profiles,
 };
 use intercode_policies::{
   policies::{
-    CmsContentModel, CmsContentPolicy, ConventionAction, ConventionPolicy, EventAction,
-    EventPolicy, RoomPolicy, SignupAction, SignupPolicy, TicketAction, TicketPolicy,
-    UserConProfileAction, UserConProfilePolicy,
+    CmsContentPolicy, ConventionAction, ConventionPolicy, EventAction, EventPolicy, RoomPolicy,
+    SignupAction, SignupPolicy, TicketAction, TicketPolicy, UserConProfileAction,
+    UserConProfilePolicy,
   },
   AuthorizationInfo, EntityPolicy, Policy, ReadManageAction,
 };

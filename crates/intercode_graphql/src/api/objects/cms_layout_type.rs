@@ -1,12 +1,13 @@
 use async_graphql::*;
 use intercode_entities::cms_layouts;
 use intercode_liquid::{cms_parent_partial_source::PreloadPartialsStrategy, react_component_tag};
+use intercode_policies::{policies::CmsContentPolicy, AuthorizationInfo, Policy, ReadManageAction};
 use liquid::object;
 use serde_json::json;
 
 use crate::{
-  cms_rendering_context::CmsRenderingContext, model_backed_type, LiquidRenderer, QueryData,
-  SchemaData,
+  api::objects::ModelBackedType, cms_rendering_context::CmsRenderingContext, model_backed_type,
+  LiquidRenderer, QueryData, SchemaData,
 };
 model_backed_type!(CmsLayoutType, cms_layouts::Model);
 
@@ -17,6 +18,18 @@ const DEFAULT_NAVBAR_CLASSES: &str =
 impl CmsLayoutType {
   async fn id(&self) -> ID {
     self.model.id.into()
+  }
+
+  #[graphql(
+    name = "admin_notes",
+    guard = "self.simple_policy_guard::<CmsContentPolicy<cms_layouts::Model>>(ReadManageAction::Manage)"
+  )]
+  async fn admin_notes(&self) -> Option<&str> {
+    self.model.admin_notes.as_deref()
+  }
+
+  async fn content(&self) -> Option<&str> {
+    self.model.content.as_deref()
   }
 
   #[graphql(name = "content_html")]
@@ -51,7 +64,40 @@ impl CmsLayoutType {
       .map(Some)
   }
 
+  #[graphql(name = "current_ability_can_delete")]
+  async fn current_ability_can_delete(&self, ctx: &Context<'_>) -> Result<bool> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+
+    Ok(
+      CmsContentPolicy::action_permitted(
+        authorization_info,
+        &ReadManageAction::Manage,
+        &self.model,
+      )
+      .await?,
+    )
+  }
+
+  #[graphql(name = "current_ability_can_update")]
+  async fn current_ability_can_update(&self, ctx: &Context<'_>) -> Result<bool> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+
+    Ok(
+      CmsContentPolicy::action_permitted(
+        authorization_info,
+        &ReadManageAction::Manage,
+        &self.model,
+      )
+      .await?,
+    )
+  }
+
   async fn name(&self) -> Option<&str> {
     self.model.name.as_deref()
+  }
+
+  #[graphql(name = "navbar_classes")]
+  async fn navbar_classes(&self) -> Option<&str> {
+    self.model.navbar_classes.as_deref()
   }
 }

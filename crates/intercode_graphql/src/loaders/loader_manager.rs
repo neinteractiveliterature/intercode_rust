@@ -232,6 +232,7 @@ macro_rules! loader_manager {
 }
 
 loader_manager!(
+  entity_relation(cms_content_group_permissions, cms_content_groups, permissions);
   entity_relation(cms_navigation_item_page, cms_navigation_items, pages);
   entity_link(
     cms_navigation_item_section,
@@ -274,6 +275,7 @@ loader_manager!(
   entity_relation(order_entry_order, order_entries, orders);
   entity_relation(order_entry_product, order_entries, products);
   entity_relation(order_entry_product_variant, order_entries, product_variants);
+  entity_relation(pages_cms_layouts, pages, cms_layouts);
   entity_relation(product_product_variants, products, product_variants);
   entity_relation(product_provides_ticket_type, products, ticket_types);
   entity_relation(room_runs, rooms, runs);
