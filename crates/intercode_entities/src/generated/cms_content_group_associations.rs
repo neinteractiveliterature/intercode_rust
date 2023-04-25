@@ -24,11 +24,56 @@ pub enum Relation {
     on_delete = "NoAction"
   )]
   CmsContentGroups,
+  #[sea_orm(
+    belongs_to = "super::cms_layouts::Entity",
+    from = "Column::ContentId",
+    to = "super::cms_layouts::Column::Id",
+    on_condition = r#"Column::ContentType.eq("CmsLayout")"#,
+    on_update = "NoAction",
+    on_delete = "NoAction"
+  )]
+  CmsLayouts,
+  #[sea_orm(
+    belongs_to = "super::cms_partials::Entity",
+    from = "Column::ContentId",
+    to = "super::cms_partials::Column::Id",
+    on_condition = r#"Column::ContentType.eq("CmsPartial")"#,
+    on_update = "NoAction",
+    on_delete = "NoAction"
+  )]
+  CmsPartials,
+  #[sea_orm(
+    belongs_to = "super::pages::Entity",
+    from = "Column::ContentId",
+    to = "super::pages::Column::Id",
+    on_condition = r#"Column::ContentType.eq("Page")"#,
+    on_update = "NoAction",
+    on_delete = "NoAction"
+  )]
+  Pages,
 }
 
 impl Related<super::cms_content_groups::Entity> for Entity {
   fn to() -> RelationDef {
     Relation::CmsContentGroups.def()
+  }
+}
+
+impl Related<super::cms_layouts::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::CmsLayouts.def()
+  }
+}
+
+impl Related<super::cms_partials::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::CmsPartials.def()
+  }
+}
+
+impl Related<super::pages::Entity> for Entity {
+  fn to() -> RelationDef {
+    Relation::Pages.def()
   }
 }
 

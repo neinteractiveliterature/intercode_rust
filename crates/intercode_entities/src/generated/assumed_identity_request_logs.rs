@@ -16,7 +16,7 @@ pub struct Model {
   pub http_method: String,
   #[sea_orm(column_type = "Text")]
   pub url: String,
-  #[sea_orm(column_type = "Custom(\"inet\".to_owned())")]
+  #[sea_orm(column_type = "custom(\"inet\")")]
   pub ip_address: String,
   pub http_headers: Json,
   #[sea_orm(column_type = "Text", nullable)]

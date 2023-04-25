@@ -1,5 +1,19 @@
 use std::{collections::HashMap, hash::Hash};
 
+use seawater::loaders::ExpectModels;
+
+pub fn loader_result_hashmap_to_model_hashmap<K: Eq + Hash, M: Clone, R>(
+  loader_results: HashMap<K, R>,
+) -> HashMap<K, M>
+where
+  Option<R>: ExpectModels<M>,
+{
+  loader_results
+    .into_iter()
+    .filter_map(|(key, result)| Some(result).try_one().map(|model| (key, model.clone())))
+    .collect()
+}
+
 #[macro_export(crate)]
 macro_rules! exclusive_arc_variant_loader {
   ($name: ident, $entity: path, $ref_enum: path, $ref_variant: path, $model_enum: path, $model_variant: path) => {
@@ -26,13 +40,9 @@ macro_rules! exclusive_arc_variant_loader {
       let results = loader.load_many(ids).await?;
 
       Ok(
-        results
+        $crate::loaders::exclusive_arc_utils::loader_result_hashmap_to_model_hashmap(results)
           .into_iter()
-          .filter_map(|(id, result)| {
-            result
-              .try_one()
-              .map(|model| ($ref_variant(id), $model_variant(model.clone())))
-          })
+          .map(|(id, model)| ($ref_variant(id), $model_variant(model.clone())))
           .collect(),
       )
     }

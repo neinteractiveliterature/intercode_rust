@@ -17,6 +17,7 @@ use seawater::loaders::{EntityIdLoader, EntityLinkLoader, EntityRelationLoader};
 use seawater::ConnectionWrapper;
 
 use super::active_storage_attached_blobs_loader::ActiveStorageAttachedBlobsLoader;
+use super::cms_content_group_contents_loader::CmsContentGroupContentsLoader;
 use super::event_user_con_profile_event_rating_loader::EventUserConProfileEventRatingLoader;
 use super::filtered_event_runs_loader::{EventRunsLoaderFilter, FilteredEventRunsLoader};
 use super::loader_spawner::LoaderSpawner;
@@ -48,6 +49,7 @@ macro_rules! loader_manager {
 
   (@fields $($tail:tt)*) => {
     pub struct LoaderManager {
+      pub cms_content_group_contents: DataLoader<CmsContentGroupContentsLoader>,
       pub cms_file_file: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub convention_favicon: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub convention_open_graph_image: DataLoader<ActiveStorageAttachedBlobsLoader>,
@@ -103,6 +105,10 @@ macro_rules! loader_manager {
 
   (@constructor $db: expr, $delay_millis: expr, $($tail:tt)*) => {
     LoaderManager {
+      cms_content_group_contents: DataLoader::new(
+        CmsContentGroupContentsLoader::new($db.clone(), $delay_millis),
+        tokio::spawn,
+      ).delay($delay_millis),
       cms_file_file: DataLoader::new(
         ActiveStorageAttachedBlobsLoader::new($db.clone(), active_storage_attachments::Entity::find()
           .filter(active_storage_attachments::Column::RecordType.eq("CmsFile"))

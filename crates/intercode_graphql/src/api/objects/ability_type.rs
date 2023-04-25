@@ -54,7 +54,7 @@ impl<'a> AbilityType<'a> {
     signup_id: ID,
   ) -> Result<(events::Model, runs::Model, signups::Model), Error> {
     let query_data = ctx.data::<QueryData>()?;
-    let signup = signups::Entity::find_by_id(signup_id.parse()?)
+    let signup = signups::Entity::find_by_id(LaxId::parse(signup_id)?)
       .one(query_data.db())
       .await?
       .ok_or_else(|| Error::new("Signup not found"))?;
@@ -78,7 +78,7 @@ impl<'a> AbilityType<'a> {
     ticket_id: ID,
   ) -> Result<(conventions::Model, user_con_profiles::Model, tickets::Model), Error> {
     let query_data = ctx.data::<QueryData>()?;
-    let ticket = tickets::Entity::find_by_id(ticket_id.parse()?)
+    let ticket = tickets::Entity::find_by_id(LaxId::parse(ticket_id)?)
       .one(query_data.db())
       .await?
       .ok_or_else(|| Error::new("Ticket not found"))?;
