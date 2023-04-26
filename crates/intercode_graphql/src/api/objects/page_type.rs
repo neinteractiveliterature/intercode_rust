@@ -3,7 +3,7 @@ use intercode_entities::pages;
 use intercode_liquid::cms_parent_partial_source::PreloadPartialsStrategy;
 use intercode_policies::{policies::CmsContentPolicy, AuthorizationInfo, Policy, ReadManageAction};
 use liquid::object;
-use seawater::loaders::ExpectModels;
+use seawater::loaders::ExpectModel;
 
 use crate::{
   api::objects::model_backed_type::ModelBackedType, cms_rendering_context::CmsRenderingContext,

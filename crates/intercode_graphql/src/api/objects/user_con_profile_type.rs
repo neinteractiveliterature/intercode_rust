@@ -78,13 +78,8 @@ impl UserConProfileType {
 
   async fn convention(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {
     let loader = &ctx.data::<QueryData>()?.loaders().conventions_by_id();
-
-    let model = loader
-      .load_one(self.model.convention_id)
-      .await?
-      .expect_model()?;
-
-    Ok(ConventionType::new(model))
+    let loader_result = loader.load_one(self.model.convention_id).await?;
+    Ok(ConventionType::new(loader_result.expect_one()?.clone()))
   }
 
   async fn country(&self) -> Option<&str> {
@@ -153,8 +148,8 @@ impl UserConProfileType {
   async fn gravatar_url(&self, ctx: &Context<'_>) -> Result<String, Error> {
     if self.model.gravatar_enabled {
       let loader = &ctx.data::<QueryData>()?.loaders().users_by_id();
-
-      let model = loader.load_one(self.model.user_id).await?.expect_model()?;
+      let loader_result = loader.load_one(self.model.user_id).await?;
+      let model = loader_result.expect_one()?;
       Ok(format!(
         "https://gravatar.com/avatar/{:x}",
         md5::compute(model.email.trim().to_lowercase())

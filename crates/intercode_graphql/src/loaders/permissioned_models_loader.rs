@@ -5,11 +5,10 @@ use async_trait::async_trait;
 use futures::try_join;
 use intercode_entities::{
   cms_content_groups, conventions, event_categories, model_ext::permissions::PermissionedModelRef,
-  permissions,
 };
 use sea_orm::DbErr;
 use seawater::{
-  loaders::{EntityRelationLoader, ExpectModel},
+  loaders::{EntityIdLoader, ExpectModel},
   ConnectionWrapper,
 };
 use std::time::Duration;
@@ -18,29 +17,26 @@ use super::exclusive_arc_utils::merge_hash_maps;
 use crate::exclusive_arc_variant_loader;
 
 pub struct PermissionedModelsLoader {
-  permission_cms_content_group_loader:
-    DataLoader<EntityRelationLoader<permissions::Entity, cms_content_groups::Entity>>,
-  permission_convention_loader:
-    DataLoader<EntityRelationLoader<permissions::Entity, conventions::Entity>>,
-  permission_event_category_loader:
-    DataLoader<EntityRelationLoader<permissions::Entity, event_categories::Entity>>,
+  cms_content_group_loader: DataLoader<EntityIdLoader<cms_content_groups::Entity>>,
+  convention_loader: DataLoader<EntityIdLoader<conventions::Entity>>,
+  event_category_loader: DataLoader<EntityIdLoader<event_categories::Entity>>,
 }
 
 impl PermissionedModelsLoader {
   pub fn new(db: ConnectionWrapper, delay: Duration) -> Self {
     Self {
-      permission_cms_content_group_loader: DataLoader::new(
-        EntityRelationLoader::new(db.clone(), permissions::PrimaryKey::Id),
+      cms_content_group_loader: DataLoader::new(
+        EntityIdLoader::new(db.clone(), cms_content_groups::PrimaryKey::Id),
         tokio::spawn,
       )
       .delay(delay),
-      permission_convention_loader: DataLoader::new(
-        EntityRelationLoader::new(db.clone(), permissions::PrimaryKey::Id),
+      convention_loader: DataLoader::new(
+        EntityIdLoader::new(db.clone(), conventions::PrimaryKey::Id),
         tokio::spawn,
       )
       .delay(delay),
-      permission_event_category_loader: DataLoader::new(
-        EntityRelationLoader::new(db, permissions::PrimaryKey::Id),
+      event_category_loader: DataLoader::new(
+        EntityIdLoader::new(db, event_categories::PrimaryKey::Id),
         tokio::spawn,
       )
       .delay(delay),
@@ -92,9 +88,9 @@ impl Loader<PermissionedModelRef> for PermissionedModelsLoader {
     keys: &[PermissionedModelRef],
   ) -> Result<HashMap<PermissionedModelRef, Self::Value>, Self::Error> {
     let (cms_content_groups, conventions, event_categories) = try_join!(
-      load_cms_content_groups(keys, &self.permission_cms_content_group_loader),
-      load_conventions(keys, &self.permission_convention_loader),
-      load_event_categories(keys, &self.permission_event_category_loader),
+      load_cms_content_groups(keys, &self.cms_content_group_loader),
+      load_conventions(keys, &self.convention_loader),
+      load_event_categories(keys, &self.event_category_loader),
     )?;
 
     Ok(merge_hash_maps(vec![
@@ -106,9 +102,13 @@ impl Loader<PermissionedModelRef> for PermissionedModelsLoader {
 }
 
 impl ExpectModel<PermissionedModel> for Option<PermissionedModel> {
-  fn expect_model(&self) -> Result<PermissionedModel, async_graphql::Error> {
+  fn try_one(&self) -> Option<&PermissionedModel> {
+    self.as_ref()
+  }
+
+  fn expect_one(&self) -> Result<&PermissionedModel, async_graphql::Error> {
     if let Some(model) = self {
-      Ok(model.to_owned())
+      Ok(model)
     } else {
       Err(async_graphql::Error::new("Permissioned model not found"))
     }

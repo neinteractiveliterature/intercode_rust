@@ -1,12 +1,12 @@
 use std::{collections::HashMap, hash::Hash};
 
-use seawater::loaders::ExpectModels;
+use seawater::loaders::ExpectModel;
 
 pub fn loader_result_hashmap_to_model_hashmap<K: Eq + Hash, M: Clone, R>(
   loader_results: HashMap<K, R>,
 ) -> HashMap<K, M>
 where
-  Option<R>: ExpectModels<M>,
+  Option<R>: ExpectModel<M>,
 {
   loader_results
     .into_iter()
@@ -19,7 +19,7 @@ macro_rules! exclusive_arc_variant_loader {
   ($name: ident, $entity: path, $ref_enum: path, $ref_variant: path, $model_enum: path, $model_variant: path) => {
     async fn $name(
       keys: &[$ref_enum],
-      loader: &DataLoader<EntityRelationLoader<permissions::Entity, $entity>>,
+      loader: &DataLoader<::seawater::loaders::EntityIdLoader<$entity>>,
     ) -> Result<HashMap<$ref_enum, $model_enum>, Arc<DbErr>> {
       let ids = keys
         .iter()

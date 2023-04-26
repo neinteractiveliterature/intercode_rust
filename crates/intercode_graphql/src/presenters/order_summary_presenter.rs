@@ -2,7 +2,7 @@ use async_graphql::{Context, Error};
 use futures::{future::try_join_all, try_join};
 use intercode_entities::{order_entries, orders, product_variants, products};
 use intercode_inflector::inflector::string::pluralize;
-use seawater::loaders::ExpectModels;
+use seawater::loaders::{ExpectModel, ExpectModels};
 
 use crate::QueryData;
 

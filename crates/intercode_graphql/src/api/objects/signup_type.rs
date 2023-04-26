@@ -2,7 +2,7 @@ use async_graphql::{futures_util::try_join, *};
 use chrono::{Datelike, NaiveDate};
 use intercode_entities::{events, runs, signups};
 use intercode_policies::policies::{SignupAction, SignupPolicy};
-use seawater::loaders::ExpectModels;
+use seawater::loaders::ExpectModel;
 
 use crate::{api::enums::SignupState, model_backed_type, policy_guard::PolicyGuard, QueryData};
 

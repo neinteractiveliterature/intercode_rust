@@ -7,7 +7,7 @@ use std::{collections::HashMap, sync::Arc};
 
 use crate::{loaders::parent_model_id_only::ParentModelIdOnly, ConnectionWrapper};
 
-use super::expect::ExpectModels;
+use super::{expect::ExpectModels, ExpectModel};
 
 pub async fn load_all_linked<
   From: EntityTrait,
@@ -95,7 +95,7 @@ where
   pub models: Vec<To::Model>,
 }
 
-impl<From: EntityTrait, To: EntityTrait> EntityLinkLoaderResult<From, To>
+impl<From: EntityTrait, To: EntityTrait> ExpectModel<To::Model> for EntityLinkLoaderResult<From, To>
 where
   <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
 {
@@ -120,6 +120,36 @@ where
 }
 
 impl<From: EntityTrait, To: EntityTrait> ExpectModels<To::Model>
+  for EntityLinkLoaderResult<From, To>
+where
+  <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
+{
+  fn expect_models(&self) -> Result<&Vec<To::Model>, async_graphql::Error> {
+    Ok(&self.models)
+  }
+}
+
+impl<From: EntityTrait, To: EntityTrait> ExpectModel<To::Model>
+  for Option<EntityLinkLoaderResult<From, To>>
+where
+  <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
+{
+  fn try_one(&self) -> Option<&To::Model> {
+    self.as_ref().and_then(|result| result.try_one())
+  }
+
+  fn expect_one(&self) -> Result<&To::Model, async_graphql::Error> {
+    if let Some(result) = self {
+      result.expect_one()
+    } else {
+      Err(async_graphql::Error::new(
+        "EntityLinkLoader did not insert an expected key!  This should never happen; this is a bug in EntityLinkLoader.",
+      ))
+    }
+  }
+}
+
+impl<From: EntityTrait, To: EntityTrait> ExpectModels<To::Model>
   for Option<EntityLinkLoaderResult<From, To>>
 where
   <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
@@ -133,7 +163,13 @@ where
       ))
     }
   }
+}
 
+impl<From: EntityTrait, To: EntityTrait> ExpectModel<To::Model>
+  for Option<&EntityLinkLoaderResult<From, To>>
+where
+  <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
+{
   fn expect_one(&self) -> Result<&To::Model, async_graphql::Error> {
     if let Some(result) = self {
       result.expect_one()
@@ -145,7 +181,7 @@ where
   }
 
   fn try_one(&self) -> Option<&To::Model> {
-    self.as_ref().and_then(|result| result.try_one())
+    self.and_then(|result| result.try_one())
   }
 }
 
@@ -162,20 +198,6 @@ where
         "EntityLinkLoader did not insert an expected key!  This should never happen; this is a bug in EntityLinkLoader.",
       ))
     }
-  }
-
-  fn expect_one(&self) -> Result<&To::Model, async_graphql::Error> {
-    if let Some(result) = self {
-      result.expect_one()
-    } else {
-      Err(async_graphql::Error::new(
-        "EntityLinkLoader did not insert an expected key!  This should never happen; this is a bug in EntityLinkLoader.",
-      ))
-    }
-  }
-
-  fn try_one(&self) -> Option<&To::Model> {
-    self.as_ref().and_then(|result| result.try_one())
   }
 }
 

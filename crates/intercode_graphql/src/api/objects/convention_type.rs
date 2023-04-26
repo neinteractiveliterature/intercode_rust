@@ -34,7 +34,7 @@ use sea_orm::{
   sea_query::Expr, ColumnTrait, EntityTrait, JoinType, ModelTrait, QueryFilter, QueryOrder,
   QuerySelect, RelationTrait,
 };
-use seawater::loaders::ExpectModels;
+use seawater::loaders::{ExpectModel, ExpectModels};
 
 use crate::model_backed_type;
 model_backed_type!(ConventionType, conventions::Model);

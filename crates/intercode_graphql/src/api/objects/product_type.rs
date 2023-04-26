@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use async_graphql::*;
 use intercode_entities::products;
 use intercode_liquid::render_markdown;
-use seawater::loaders::ExpectModels;
+use seawater::loaders::{ExpectModel, ExpectModels};
 
 use crate::{
   api::scalars::JsonScalar, load_one_by_model_id, loader_result_to_many,

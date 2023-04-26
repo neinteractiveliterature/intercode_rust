@@ -33,15 +33,15 @@ impl PermissionType {
       .load_one(model_ref)
       .await?;
 
-    result.expect_model().map(|model| match model {
+    result.expect_one().map(|model| match model {
       PermissionedModel::CmsContentGroup(model) => {
-        PermissionedModelType::CmsContentGroup(CmsContentGroupType::new(model))
+        PermissionedModelType::CmsContentGroup(CmsContentGroupType::new(model.clone()))
       }
       PermissionedModel::Convention(model) => {
-        PermissionedModelType::Convention(ConventionType::new(model))
+        PermissionedModelType::Convention(ConventionType::new(model.clone()))
       }
       PermissionedModel::EventCategory(model) => {
-        PermissionedModelType::EventCategory(EventCategoryType::new(model))
+        PermissionedModelType::EventCategory(EventCategoryType::new(model.clone()))
       }
     })
   }
@@ -59,12 +59,12 @@ impl PermissionType {
       .load_one(role_ref)
       .await?;
 
-    result.expect_model().map(|role| match role {
+    result.expect_one().map(|role| match role {
       PermissionedRole::OrganizationRole(role) => {
-        PermissionedRoleType::OrganizationRole(OrganizationRoleType::new(role))
+        PermissionedRoleType::OrganizationRole(OrganizationRoleType::new(role.clone()))
       }
       PermissionedRole::StaffPosition(role) => {
-        PermissionedRoleType::StaffPosition(StaffPositionType::new(role))
+        PermissionedRoleType::StaffPosition(StaffPositionType::new(role.clone()))
       }
     })
   }

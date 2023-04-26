@@ -2,7 +2,7 @@ use async_graphql::*;
 use chrono::NaiveDateTime;
 use intercode_entities::orders;
 use rusty_money::{iso, Money};
-use seawater::loaders::ExpectModels;
+use seawater::loaders::{ExpectModel, ExpectModels};
 
 use crate::{load_one_by_model_id, model_backed_type, QueryData};
 

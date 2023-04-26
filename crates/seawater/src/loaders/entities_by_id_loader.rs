@@ -23,9 +23,9 @@ impl<E: EntityTrait> ExpectModel<E::Model> for EntityIdLoaderResult<E>
 where
   <E::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
 {
-  fn expect_model(&self) -> Result<E::Model, async_graphql::Error> {
+  fn expect_one(&self) -> Result<&E::Model, async_graphql::Error> {
     if let Some(model) = &self.model {
-      Ok(model.to_owned())
+      Ok(model)
     } else {
       Err(async_graphql::Error::new(format!(
         "{} {:?} not found",
@@ -34,20 +34,28 @@ where
       )))
     }
   }
+
+  fn try_one(&self) -> Option<&E::Model> {
+    self.model.as_ref()
+  }
 }
 
 impl<E: EntityTrait> ExpectModel<E::Model> for Option<EntityIdLoaderResult<E>>
 where
   <E::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
 {
-  fn expect_model(&self) -> Result<E::Model, async_graphql::Error> {
+  fn expect_one(&self) -> Result<&E::Model, async_graphql::Error> {
     if let Some(result) = self {
-      result.expect_model()
+      result.expect_one()
     } else {
       Err(async_graphql::Error::new(
         "EntityIdLoader did not insert an expected key!  This should never happen; this is a bug in EntityIdLoader.",
       ))
     }
+  }
+
+  fn try_one(&self) -> Option<&E::Model> {
+    self.as_ref().and_then(|result| result.try_one())
   }
 }
 

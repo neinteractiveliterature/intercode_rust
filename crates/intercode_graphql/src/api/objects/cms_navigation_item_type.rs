@@ -1,6 +1,6 @@
 use async_graphql::*;
 use intercode_entities::cms_navigation_items;
-use seawater::loaders::ExpectModels;
+use seawater::loaders::ExpectModel;
 
 use crate::{model_backed_type, QueryData};
 

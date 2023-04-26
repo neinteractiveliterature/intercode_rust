@@ -9,7 +9,7 @@ use sea_orm::{
   sea_query::{Expr, Func, SimpleExpr},
   JoinType, ModelTrait, QueryOrder, QuerySelect, RelationTrait,
 };
-use seawater::loaders::ExpectModels;
+use seawater::loaders::{ExpectModel, ExpectModels};
 
 use crate::{
   api::{

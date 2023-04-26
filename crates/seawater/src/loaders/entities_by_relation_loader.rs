@@ -8,7 +8,7 @@ use std::{collections::HashMap, marker::PhantomData, sync::Arc};
 
 use crate::{loaders::parent_model_id_only::ParentModelIdOnly, ConnectionWrapper};
 
-use super::expect::ExpectModels;
+use super::{expect::ExpectModels, ExpectModel};
 
 pub async fn load_all_related<From: EntityTrait + Related<To>, To: EntityTrait>(
   pk_column: <From::PrimaryKey as PrimaryKeyToColumn>::Column,
@@ -108,8 +108,14 @@ where
   pub fn relation_def(&self) -> RelationDef {
     <From as Related<To>>::to()
   }
+}
 
-  pub fn expect_one(&self) -> Result<&To::Model, async_graphql::Error> {
+impl<From: EntityTrait + Related<To>, To: EntityTrait> ExpectModel<To::Model>
+  for EntityRelationLoaderResult<From, To>
+where
+  <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
+{
+  fn expect_one(&self) -> Result<&To::Model, async_graphql::Error> {
     if self.models.len() == 1 {
       Ok(&self.models[0])
     } else {
@@ -120,16 +126,42 @@ where
     }
   }
 
-  pub fn expect_models(&self) -> Result<&Vec<To::Model>, async_graphql::Error> {
-    Ok(&self.models)
-  }
-
-  pub fn try_one(&self) -> Option<&To::Model> {
+  fn try_one(&self) -> Option<&To::Model> {
     if self.models.is_empty() {
       None
     } else {
       Some(&self.models[0])
     }
+  }
+}
+
+impl<From: EntityTrait + Related<To>, To: EntityTrait> ExpectModels<To::Model>
+  for EntityRelationLoaderResult<From, To>
+where
+  <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
+{
+  fn expect_models(&self) -> Result<&Vec<To::Model>, async_graphql::Error> {
+    Ok(&self.models)
+  }
+}
+
+impl<From: EntityTrait + Related<To>, To: EntityTrait> ExpectModel<To::Model>
+  for Option<EntityRelationLoaderResult<From, To>>
+where
+  <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
+{
+  fn expect_one(&self) -> Result<&To::Model, async_graphql::Error> {
+    if let Some(result) = self {
+      result.expect_one()
+    } else {
+      Err(async_graphql::Error::new(
+        "EntityRelationLoader did not insert an expected key!  This should never happen; this is a bug in EntityRelationLoader.",
+      ))
+    }
+  }
+
+  fn try_one(&self) -> Option<&To::Model> {
+    self.as_ref().and_then(|result| result.try_one())
   }
 }
 
@@ -147,7 +179,13 @@ where
       ))
     }
   }
+}
 
+impl<From: EntityTrait + Related<To>, To: EntityTrait> ExpectModel<To::Model>
+  for Option<&EntityRelationLoaderResult<From, To>>
+where
+  <<From as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType: Clone,
+{
   fn expect_one(&self) -> Result<&To::Model, async_graphql::Error> {
     if let Some(result) = self {
       result.expect_one()
@@ -176,20 +214,6 @@ where
         "EntityRelationLoader did not insert an expected key!  This should never happen; this is a bug in EntityRelationLoader.",
       ))
     }
-  }
-
-  fn expect_one(&self) -> Result<&To::Model, async_graphql::Error> {
-    if let Some(result) = self {
-      result.expect_one()
-    } else {
-      Err(async_graphql::Error::new(
-        "EntityRelationLoader did not insert an expected key!  This should never happen; this is a bug in EntityRelationLoader.",
-      ))
-    }
-  }
-
-  fn try_one(&self) -> Option<&To::Model> {
-    self.as_ref().and_then(|result| result.try_one())
   }
 }
 

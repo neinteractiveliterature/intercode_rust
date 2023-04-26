@@ -14,7 +14,7 @@ use intercode_policies::{
   AuthorizationInfo, EntityPolicy, Policy, ReadManageAction,
 };
 use sea_orm::{EntityTrait, PaginatorTrait};
-use seawater::loaders::{ExpectModel, ExpectModels};
+use seawater::loaders::ExpectModel;
 
 use crate::{lax_id::LaxId, QueryData};
 
@@ -113,7 +113,7 @@ impl<'a> AbilityType<'a> {
       .load_one(LaxId::parse(user_con_profile_id)?)
       .await?;
 
-    let user_con_profile = loader_result.expect_model()?;
+    let user_con_profile = loader_result.expect_one()?;
 
     model_action_permitted(
       self.authorization_info.as_ref(),

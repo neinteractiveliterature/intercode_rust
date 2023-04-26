@@ -12,14 +12,14 @@ impl Display for ExclusiveArcMissingReference {
   }
 }
 
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub enum PermissionedModelRef {
   CmsContentGroup(i64),
   Convention(i64),
   EventCategory(i64),
 }
 
-#[derive(Clone, Hash, PartialEq, Eq)]
+#[derive(Clone, Hash, PartialEq, Eq, Debug)]
 pub enum PermissionedRoleRef {
   OrganizationRole(i64),
   StaffPosition(i64),
