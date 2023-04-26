@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use sea_orm::{
-  AccessMode, ConnectionTrait, DatabaseConnection, DatabaseTransaction, IsolationLevel,
-  TransactionError, TransactionTrait,
+  AccessMode, ConnectionTrait, DatabaseConnection, DatabaseTransaction, DbErr, ExecResult,
+  IsolationLevel, TransactionError, TransactionTrait,
 };
 use std::{
   fmt::Debug,
@@ -56,6 +56,24 @@ impl ConnectionTrait for ConnectionWrapper {
         tx.upgrade()
           .ok_or_else(|| sea_orm::DbErr::Custom("Transaction has already ended".to_string()))?
           .execute(stmt)
+          .await
+      }
+    }
+  }
+
+  async fn execute_unprepared(&self, sql: &str) -> Result<ExecResult, DbErr> {
+    match self {
+      Self::DatabaseConnection(conn) => {
+        conn
+          .upgrade()
+          .ok_or_else(|| sea_orm::DbErr::Custom("Database has been disconnected".to_string()))?
+          .execute_unprepared(sql)
+          .await
+      }
+      Self::DatabaseTransaction(tx) => {
+        tx.upgrade()
+          .ok_or_else(|| sea_orm::DbErr::Custom("Transaction has already ended".to_string()))?
+          .execute_unprepared(sql)
           .await
       }
     }

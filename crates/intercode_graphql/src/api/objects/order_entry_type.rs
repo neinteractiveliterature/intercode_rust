@@ -1,6 +1,6 @@
 use async_graphql::*;
 use intercode_entities::order_entries;
-use seawater::loaders::ExpectModels;
+use seawater::loaders::ExpectModel;
 
 use crate::{
   model_backed_type, presenters::order_summary_presenter::load_and_describe_order_entry, QueryData,

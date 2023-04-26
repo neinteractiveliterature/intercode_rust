@@ -8,6 +8,7 @@ mod pricing_structure;
 mod registration_policy;
 pub use generated::*;
 
+pub mod cms_content_model;
 pub mod cms_parent;
 pub mod model_ext;
 

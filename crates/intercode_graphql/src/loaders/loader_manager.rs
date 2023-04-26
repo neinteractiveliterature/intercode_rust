@@ -17,9 +17,12 @@ use seawater::loaders::{EntityIdLoader, EntityLinkLoader, EntityRelationLoader};
 use seawater::ConnectionWrapper;
 
 use super::active_storage_attached_blobs_loader::ActiveStorageAttachedBlobsLoader;
+use super::cms_content_group_contents_loader::CmsContentGroupContentsLoader;
 use super::event_user_con_profile_event_rating_loader::EventUserConProfileEventRatingLoader;
 use super::filtered_event_runs_loader::{EventRunsLoaderFilter, FilteredEventRunsLoader};
 use super::loader_spawner::LoaderSpawner;
+use super::permissioned_models_loader::PermissionedModelsLoader;
+use super::permissioned_roles_loader::PermissionedRolesLoader;
 use super::run_user_con_profile_signup_requests_loader::RunUserConProfileSignupRequestsLoader;
 use super::run_user_con_profile_signups_loader::RunUserConProfileSignupsLoader;
 use super::signup_count_loader::SignupCountLoader;
@@ -46,6 +49,7 @@ macro_rules! loader_manager {
 
   (@fields $($tail:tt)*) => {
     pub struct LoaderManager {
+      pub cms_content_group_contents: DataLoader<CmsContentGroupContentsLoader>,
       pub cms_file_file: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub convention_favicon: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub convention_open_graph_image: DataLoader<ActiveStorageAttachedBlobsLoader>,
@@ -53,6 +57,8 @@ macro_rules! loader_manager {
       pub event_runs_filtered: LoaderSpawner<EventRunsLoaderFilter, i64, FilteredEventRunsLoader>,
       pub event_user_con_profile_event_ratings:
         LoaderSpawner<i64, i64, EventUserConProfileEventRatingLoader>,
+      pub permissioned_models: DataLoader<PermissionedModelsLoader>,
+      pub permissioned_roles: DataLoader<PermissionedRolesLoader>,
       pub product_image: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub product_variant_image: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub run_signup_counts: DataLoader<SignupCountLoader>,
@@ -99,6 +105,10 @@ macro_rules! loader_manager {
 
   (@constructor $db: expr, $delay_millis: expr, $($tail:tt)*) => {
     LoaderManager {
+      cms_content_group_contents: DataLoader::new(
+        CmsContentGroupContentsLoader::new($db.clone(), $delay_millis),
+        tokio::spawn,
+      ).delay($delay_millis),
       cms_file_file: DataLoader::new(
         ActiveStorageAttachedBlobsLoader::new($db.clone(), active_storage_attachments::Entity::find()
           .filter(active_storage_attachments::Column::RecordType.eq("CmsFile"))
@@ -132,6 +142,16 @@ macro_rules! loader_manager {
         $delay_millis,
         EventUserConProfileEventRatingLoader::new,
       ),
+      permissioned_models: DataLoader::new(
+        PermissionedModelsLoader::new($db.clone(), $delay_millis),
+        tokio::spawn,
+      )
+      .delay($delay_millis),
+      permissioned_roles: DataLoader::new(
+        PermissionedRolesLoader::new($db.clone(), $delay_millis),
+        tokio::spawn,
+      )
+      .delay($delay_millis),
       product_image: DataLoader::new(
         ActiveStorageAttachedBlobsLoader::new($db.clone(), active_storage_attachments::Entity::find()
           .filter(active_storage_attachments::Column::RecordType.eq("Product"))
@@ -232,6 +252,7 @@ macro_rules! loader_manager {
 }
 
 loader_manager!(
+  entity_relation(cms_content_group_permissions, cms_content_groups, permissions);
   entity_relation(cms_navigation_item_page, cms_navigation_items, pages);
   entity_link(
     cms_navigation_item_section,
@@ -274,6 +295,7 @@ loader_manager!(
   entity_relation(order_entry_order, order_entries, orders);
   entity_relation(order_entry_product, order_entries, products);
   entity_relation(order_entry_product_variant, order_entries, product_variants);
+  entity_relation(pages_cms_layouts, pages, cms_layouts);
   entity_relation(product_product_variants, products, product_variants);
   entity_relation(product_provides_ticket_type, products, ticket_types);
   entity_relation(room_runs, rooms, runs);

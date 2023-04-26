@@ -2,7 +2,8 @@ use std::borrow::{Borrow, Cow};
 
 use async_graphql::*;
 use intercode_entities::{
-  conventions, events, rooms, root_sites, runs, signups, tickets, user_con_profiles,
+  cms_content_model::CmsContentModel, conventions, events, pages, rooms, root_sites, runs, signups,
+  tickets, user_con_profiles,
 };
 use intercode_policies::{
   policies::{
@@ -10,10 +11,10 @@ use intercode_policies::{
     SignupAction, SignupPolicy, TicketAction, TicketPolicy, UserConProfileAction,
     UserConProfilePolicy,
   },
-  AuthorizationInfo, Policy, ReadManageAction,
+  AuthorizationInfo, EntityPolicy, Policy, ReadManageAction,
 };
-use sea_orm::EntityTrait;
-use seawater::loaders::{ExpectModel, ExpectModels};
+use sea_orm::{EntityTrait, PaginatorTrait};
+use seawater::loaders::ExpectModel;
 
 use crate::{lax_id::LaxId, QueryData};
 
@@ -53,7 +54,7 @@ impl<'a> AbilityType<'a> {
     signup_id: ID,
   ) -> Result<(events::Model, runs::Model, signups::Model), Error> {
     let query_data = ctx.data::<QueryData>()?;
-    let signup = signups::Entity::find_by_id(signup_id.parse()?)
+    let signup = signups::Entity::find_by_id(LaxId::parse(signup_id)?)
       .one(query_data.db())
       .await?
       .ok_or_else(|| Error::new("Signup not found"))?;
@@ -77,7 +78,7 @@ impl<'a> AbilityType<'a> {
     ticket_id: ID,
   ) -> Result<(conventions::Model, user_con_profiles::Model, tickets::Model), Error> {
     let query_data = ctx.data::<QueryData>()?;
-    let ticket = tickets::Entity::find_by_id(ticket_id.parse()?)
+    let ticket = tickets::Entity::find_by_id(LaxId::parse(ticket_id)?)
       .one(query_data.db())
       .await?
       .ok_or_else(|| Error::new("Ticket not found"))?;
@@ -112,7 +113,7 @@ impl<'a> AbilityType<'a> {
       .load_one(LaxId::parse(user_con_profile_id)?)
       .await?;
 
-    let user_con_profile = loader_result.expect_model()?;
+    let user_con_profile = loader_result.expect_one()?;
 
     model_action_permitted(
       self.authorization_info.as_ref(),
@@ -122,6 +123,28 @@ impl<'a> AbilityType<'a> {
       |_ctx| Ok(Some(user_con_profile)),
     )
     .await
+  }
+
+  async fn can_perform_cms_content_action(
+    &self,
+    ctx: &Context<'_>,
+    action: ReadManageAction,
+  ) -> Result<bool, Error> {
+    let convention = ctx.data::<QueryData>()?.convention();
+
+    Ok(if let Some(convention) = convention {
+      CmsContentPolicy::action_permitted(self.authorization_info.as_ref(), &action, convention)
+        .await?
+    } else {
+      CmsContentPolicy::action_permitted(
+        self.authorization_info.as_ref(),
+        &action,
+        &root_sites::Model {
+          ..Default::default()
+        },
+      )
+      .await?
+    })
   }
 }
 
@@ -190,25 +213,58 @@ impl<'a> AbilityType<'a> {
 
   #[graphql(name = "can_create_cms_files")]
   async fn can_create_cms_files(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    let convention = ctx.data::<QueryData>()?.convention();
+    self
+      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
+      .await
+  }
 
-    Ok(if let Some(convention) = convention {
-      CmsContentPolicy::action_permitted(
-        self.authorization_info.as_ref(),
-        &ReadManageAction::Manage,
-        convention,
-      )
-      .await?
-    } else {
-      CmsContentPolicy::action_permitted(
-        self.authorization_info.as_ref(),
-        &ReadManageAction::Manage,
-        &root_sites::Model {
-          ..Default::default()
-        },
-      )
-      .await?
-    })
+  #[graphql(name = "can_create_pages")]
+  async fn can_create_pages(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    self
+      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
+      .await
+  }
+
+  #[graphql(name = "can_create_cms_partials")]
+  async fn can_create_cms_partials(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    self
+      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
+      .await
+  }
+
+  #[graphql(name = "can_create_cms_layouts")]
+  async fn can_create_cms_layouts(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    self
+      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
+      .await
+  }
+
+  #[graphql(name = "can_create_cms_navigation_items")]
+  async fn can_create_cms_navigation_items(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    self
+      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
+      .await
+  }
+
+  #[graphql(name = "can_create_cms_variables")]
+  async fn can_create_cms_variables(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    self
+      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
+      .await
+  }
+
+  #[graphql(name = "can_create_cms_graphql_queries")]
+  async fn can_create_cms_graphql_queries(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    self
+      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
+      .await
+  }
+
+  #[graphql(name = "can_create_cms_content_groups")]
+  async fn can_create_cms_content_groups(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    self
+      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
+      .await
   }
 
   #[graphql(name = "can_create_user_con_profiles")]
@@ -333,7 +389,10 @@ impl<'a> AbilityType<'a> {
     .await
   }
 
-  #[graphql(name = "can_delete_event")]
+  #[graphql(
+    name = "can_delete_event",
+    deprecation = "Deleting events is never allowed; this always returns false"
+  )]
   async fn can_delete_event(&self, _event_id: ID) -> Result<bool, Error> {
     Ok(false)
   }
@@ -476,10 +535,25 @@ impl<'a> AbilityType<'a> {
   async fn can_manage_signups(&self) -> bool {
     false
   }
+
   #[graphql(name = "can_manage_any_cms_content")]
-  async fn can_manage_any_cms_content(&self) -> bool {
-    false
+  async fn can_manage_any_cms_content(&self, ctx: &Context<'_>) -> Result<bool> {
+    let query_data = ctx.data::<QueryData>()?;
+
+    Ok(
+      pages::Model::filter_by_parent(
+        CmsContentPolicy::<pages::Model>::accessible_to(
+          &self.authorization_info,
+          &ReadManageAction::Manage,
+        ),
+        query_data.cms_parent(),
+      )
+      .count(query_data.db())
+      .await?
+        > 0,
+    )
   }
+
   #[graphql(name = "can_manage_staff_positions")]
   async fn can_manage_staff_positions(&self) -> bool {
     false

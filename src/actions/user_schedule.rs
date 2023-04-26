@@ -8,9 +8,10 @@ use ics::{properties, ICalendar};
 use intercode_entities::{events, runs, signups, user_con_profiles};
 use itertools::Itertools;
 use once_cell::sync::Lazy;
-use sea_orm::{prelude::Uuid, ColumnTrait, EntityTrait, QueryFilter};
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use seawater::loaders::{ExpectModel, ExpectModels};
 use tracing::log::error;
+use uuid::Uuid;
 
 use crate::middleware::QueryDataFromRequest;
 
@@ -98,7 +99,7 @@ pub async fn user_schedule(
     .filter(|signup| signup.state != "withdrawn")
     .collect::<Vec<_>>();
 
-  let runs_by_id = query_data
+  let runs_by_id_result = query_data
     .loaders()
     .runs_by_id()
     .load_many(signups.iter().map(|signup| signup.run_id))
@@ -106,9 +107,10 @@ pub async fn user_schedule(
     .map_err(|err| {
       error!("{}", err);
       StatusCode::INTERNAL_SERVER_ERROR
-    })?
+    })?;
+  let runs_by_id = runs_by_id_result
     .iter()
-    .filter_map(|(run_id, result)| result.expect_model().map(|run| (*run_id, run)).ok())
+    .filter_map(|(run_id, result)| result.expect_one().map(|run| (*run_id, run)).ok())
     .collect::<HashMap<_, _>>();
 
   let run_rooms_result = query_data
@@ -130,7 +132,7 @@ pub async fn user_schedule(
     })
     .collect::<HashMap<_, _>>();
 
-  let events_by_id = query_data
+  let events_by_id_result = query_data
     .loaders()
     .events_by_id()
     .load_many(runs_by_id.values().map(|run| run.event_id))
@@ -138,9 +140,10 @@ pub async fn user_schedule(
     .map_err(|err| {
       error!("{}", err);
       StatusCode::INTERNAL_SERVER_ERROR
-    })?
+    })?;
+  let events_by_id = events_by_id_result
     .iter()
-    .filter_map(|(event_id, result)| result.expect_model().map(|event| (*event_id, event)).ok())
+    .filter_map(|(event_id, result)| result.expect_one().map(|event| (*event_id, event)).ok())
     .collect::<HashMap<_, _>>();
 
   for signup in signups {

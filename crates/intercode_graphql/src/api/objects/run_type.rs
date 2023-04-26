@@ -6,10 +6,10 @@ use intercode_policies::{
   AuthorizationInfo, Policy,
 };
 use sea_orm::{
-  sea_query::{Expr, Func},
+  sea_query::{Expr, Func, SimpleExpr},
   JoinType, ModelTrait, QueryOrder, QuerySelect, RelationTrait,
 };
-use seawater::loaders::ExpectModels;
+use seawater::loaders::{ExpectModel, ExpectModels};
 
 use crate::{
   api::{
@@ -256,17 +256,22 @@ impl RunType {
               signups::Relation::UserConProfiles.def(),
             )
             .order_by(
-              Func::lower(Expr::col(user_con_profiles::Column::LastName)),
+              SimpleExpr::FunctionCall(Func::lower(Expr::col(user_con_profiles::Column::LastName))),
               order.clone(),
             )
             .order_by(
-              Func::lower(Expr::col(user_con_profiles::Column::FirstName)),
+              SimpleExpr::FunctionCall(Func::lower(Expr::col(
+                user_con_profiles::Column::FirstName,
+              ))),
               order,
             ),
           "event_title" => scope
             .join(JoinType::InnerJoin, signups::Relation::Runs.def())
             .join(JoinType::InnerJoin, runs::Relation::Events.def())
-            .order_by(Func::lower(Expr::col(events::Column::Title)), order),
+            .order_by(
+              SimpleExpr::FunctionCall(Func::lower(Expr::col(events::Column::Title))),
+              order,
+            ),
           "bucket" => scope.order_by(signups::Column::BucketKey, order),
           "email" => scope
             .join(

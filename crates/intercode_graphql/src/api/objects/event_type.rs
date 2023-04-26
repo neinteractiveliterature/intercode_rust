@@ -46,12 +46,8 @@ impl EventType {
 
   async fn convention(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {
     let loader = ctx.data::<QueryData>()?.loaders().conventions_by_id();
-
-    let model = loader
-      .load_one(self.model.convention_id)
-      .await?
-      .expect_model()?;
-    Ok(ConventionType::new(model))
+    let loader_result = loader.load_one(self.model.convention_id).await?;
+    Ok(ConventionType::new(loader_result.expect_one()?.clone()))
   }
 
   #[graphql(name = "created_at")]
@@ -183,14 +179,13 @@ impl EventType {
 
   async fn run(&self, ctx: &Context<'_>, id: ID) -> Result<RunType, Error> {
     let query_data = ctx.data::<QueryData>()?;
-    let run = query_data
+    let loader_result = query_data
       .loaders()
       .runs_by_id()
       .load_one(id.parse()?)
-      .await?
-      .expect_model()?;
+      .await?;
 
-    Ok(RunType::new(run))
+    Ok(RunType::new(loader_result.expect_one()?.clone()))
   }
 
   async fn runs(

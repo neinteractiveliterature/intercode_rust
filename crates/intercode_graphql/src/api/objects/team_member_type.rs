@@ -2,7 +2,7 @@ use crate::{policy_guard::PolicyGuard, QueryData};
 use async_graphql::*;
 use intercode_entities::{conventions, events, team_members};
 use intercode_policies::{policies::TeamMemberPolicy, ReadManageAction};
-use seawater::loaders::ExpectModels;
+use seawater::loaders::ExpectModel;
 
 use crate::model_backed_type;
 

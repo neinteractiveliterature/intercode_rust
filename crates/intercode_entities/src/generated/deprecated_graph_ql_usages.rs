@@ -17,7 +17,7 @@ pub struct Model {
   pub argument_name: Option<String>,
   #[sea_orm(column_type = "Text", nullable)]
   pub user_agent: Option<String>,
-  #[sea_orm(column_type = "Custom(\"inet\".to_owned())", nullable)]
+  #[sea_orm(column_type = "custom(\"inet\")", nullable)]
   pub client_address: Option<String>,
   pub created_at: DateTime,
   pub updated_at: DateTime,

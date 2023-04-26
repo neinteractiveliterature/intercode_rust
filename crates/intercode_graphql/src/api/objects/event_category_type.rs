@@ -1,7 +1,7 @@
 use async_graphql::{Context, Error, Object, ID};
 use intercode_entities::event_categories;
 use intercode_inflector::inflector::string::pluralize;
-use seawater::loaders::ExpectModels;
+use seawater::loaders::ExpectModel;
 
 use crate::{model_backed_type, QueryData};
 
