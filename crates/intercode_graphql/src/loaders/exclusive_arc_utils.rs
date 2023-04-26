@@ -14,7 +14,7 @@ where
     .collect()
 }
 
-#[macro_export(crate)]
+#[macro_export]
 macro_rules! exclusive_arc_variant_loader {
   ($name: ident, $entity: path, $ref_enum: path, $ref_variant: path, $model_enum: path, $model_variant: path) => {
     async fn $name(
