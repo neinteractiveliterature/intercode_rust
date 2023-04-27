@@ -35,7 +35,7 @@ cached = "~0.42"
 chrono = "0.4"
 chrono-tz = "0.8"
 dyn-clone = "1.0.11"
-futures = "0.3.27"
+futures = "0.3.28"
 html-escape = "0.2.13"
 http = "0.2.9"
 i18n-embed = {version = "0.13", features = ["fluent-system"]}
