@@ -552,7 +552,7 @@ checksum = "f9a320103719de37b7b4da4c8eb629d4573f6bcfd3dfe80d3208806895ccf81d"
 dependencies = [
  "axum",
  "bytes",
- "cookie",
+ "cookie 0.16.2",
  "futures-util",
  "http",
  "mime",
@@ -560,6 +560,29 @@ dependencies = [
  "tokio",
  "tower",
  "tower-http 0.3.5",
+ "tower-layer",
+ "tower-service",
+]
+
+[[package]]
+name = "axum-extra"
+version = "0.7.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "febf23ab04509bd7672e6abe76bd8277af31b679e89fa5ffc6087dc289a448a3"
+dependencies = [
+ "axum",
+ "axum-core",
+ "bytes",
+ "cookie 0.17.0",
+ "futures-util",
+ "http",
+ "http-body",
+ "mime",
+ "pin-project-lite",
+ "serde",
+ "tokio",
+ "tower",
+ "tower-http 0.4.0",
  "tower-layer",
  "tower-service",
 ]
@@ -604,7 +627,7 @@ checksum = "4b114309d293dd8a6fedebf09d5b8bbb0f7647b3d204ca0dd333b5f797aed5c8"
 dependencies = [
  "async-session",
  "axum",
- "axum-extra",
+ "axum-extra 0.4.2",
  "futures",
  "http-body",
  "tokio",
@@ -1158,6 +1181,17 @@ dependencies = [
  "sha2 0.10.6",
  "subtle",
  "time 0.3.21",
+ "version_check",
+]
+
+[[package]]
+name = "cookie"
+version = "0.17.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7efb37c3e1ccb1ff97164ad95ac1606e8ccd35b3fa0a7d99a304c7f4a428cc24"
+dependencies = [
+ "percent-encoding",
+ "time 0.3.20",
  "version_check",
 ]
 
@@ -2395,7 +2429,7 @@ dependencies = [
  "async-graphql-axum",
  "async-stripe",
  "axum",
- "axum-extra",
+ "axum-extra 0.7.4",
  "axum-server",
  "axum-sessions",
  "base64 0.21.0",
