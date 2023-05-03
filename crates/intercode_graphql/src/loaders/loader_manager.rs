@@ -54,6 +54,7 @@ macro_rules! loader_manager {
       pub convention_favicon: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub convention_open_graph_image: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub event_attached_images: DataLoader<ActiveStorageAttachedBlobsLoader>,
+      pub event_proposal_attached_images: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub event_runs_filtered: LoaderSpawner<EventRunsLoaderFilter, i64, FilteredEventRunsLoader>,
       pub event_user_con_profile_event_ratings:
         LoaderSpawner<i64, i64, EventUserConProfileEventRatingLoader>,
@@ -129,6 +130,11 @@ macro_rules! loader_manager {
       ).delay($delay_millis),
       event_attached_images: DataLoader::new(
         ActiveStorageAttachedBlobsLoader::new($db.clone(), events::Model::attached_images_scope()),
+        tokio::spawn,
+      )
+      .delay($delay_millis),
+      event_proposal_attached_images: DataLoader::new(
+        ActiveStorageAttachedBlobsLoader::new($db.clone(), event_proposals::Model::attached_images_scope()),
         tokio::spawn,
       )
       .delay($delay_millis),
@@ -280,6 +286,8 @@ loader_manager!(
     event_category_event_proposal_form,
     EventCategoryToEventProposalForm
   );
+  entity_relation(event_proposal_convention, event_proposals, conventions);
+  entity_relation(event_proposal_event, event_proposals, events);
   entity_relation(event_proposal_event_category, event_proposals, event_categories);
   entity_relation(event_proposal_owner, event_proposals, user_con_profiles);
   entity_link(form_form_items, FormToFormItems);
