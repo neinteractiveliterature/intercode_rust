@@ -2,7 +2,9 @@
 
 use sea_orm::entity::prelude::*;
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
+use crate::model_ext::event_proposals::EventProposalStatus;
+
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Default)]
 #[sea_orm(table_name = "event_proposals")]
 pub struct Model {
   #[sea_orm(primary_key)]
@@ -10,7 +12,7 @@ pub struct Model {
   pub convention_id: Option<i64>,
   pub owner_id: Option<i64>,
   pub event_id: Option<i64>,
-  pub status: Option<String>,
+  pub status: Option<EventProposalStatus>,
   #[sea_orm(column_type = "Text", nullable)]
   pub title: Option<String>,
   #[sea_orm(column_type = "Text", nullable)]

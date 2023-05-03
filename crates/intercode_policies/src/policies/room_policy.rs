@@ -43,6 +43,7 @@ impl Policy<AuthorizationInfo, rooms::Model> for RoomPolicy {
 }
 
 impl EntityPolicy<AuthorizationInfo, rooms::Model> for RoomPolicy {
+  type Action = ReadManageAction;
   fn accessible_to(
     _principal: &AuthorizationInfo,
     _action: &Self::Action,

@@ -1,9 +1,8 @@
-mod enums;
-mod inputs;
-mod interfaces;
-mod objects;
-
-mod query_root;
-mod scalars;
-mod unions;
+pub(crate) mod enums;
+pub(crate) mod inputs;
+pub(crate) mod interfaces;
+pub(crate) mod objects;
+pub(crate) mod query_root;
+pub(crate) mod scalars;
+pub(crate) mod unions;
 pub use query_root::QueryRoot;

@@ -280,6 +280,8 @@ loader_manager!(
     event_category_event_proposal_form,
     EventCategoryToEventProposalForm
   );
+  entity_relation(event_proposal_event_category, event_proposals, event_categories);
+  entity_relation(event_proposal_owner, event_proposals, user_con_profiles);
   entity_link(form_form_items, FormToFormItems);
   entity_relation(form_form_sections, forms, form_sections);
   entity_relation(form_section_form_items, form_sections, form_items);

@@ -3,6 +3,12 @@ edition = "2021"
 name = "intercode_rust"
 version = "0.1.0"
 
+[profile.dev]
+split-debuginfo = "unpacked"
+
+[profile.test]
+split-debuginfo = "unpacked"
+
 [profile.release]
 # debug = 1
 lto = true

@@ -4,34 +4,41 @@ use super::{
   active_storage_attachment_type::ActiveStorageAttachmentType,
   stripe_account_type::StripeAccountType, CmsContentGroupType, CmsContentType, CmsFileType,
   CmsGraphqlQueryType, CmsLayoutType, CmsNavigationItemType, CmsPartialType, CmsVariableType,
-  EventCategoryType, EventType, EventsPaginationType, FormType, ModelBackedType, PageType,
-  RoomType, ScheduledStringableValueType, SignupType, StaffPositionType, TicketTypeType,
-  UserConProfileType, UserConProfilesPaginationType,
+  EventCategoryType, EventProposalsPaginationType, EventType, EventsPaginationType, FormType,
+  ModelBackedType, PageType, RoomType, ScheduledStringableValueType, SignupType, StaffPositionType,
+  TicketTypeType, UserConProfileType, UserConProfilesPaginationType,
 };
 use crate::{
   api::{
     enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
-    inputs::{EventFiltersInput, SortInput, UserConProfileFiltersInput},
-    interfaces::CmsParentImplementation,
+    inputs::{EventFiltersInput, EventProposalFiltersInput, SortInput, UserConProfileFiltersInput},
+    interfaces::{CmsParentImplementation, PaginationImplementation},
     scalars::DateScalar,
   },
   cms_rendering_context::CmsRenderingContext,
   lax_id::LaxId,
+  load_one_by_model_id, loader_result_to_many,
+  query_builders::{EventProposalsQueryBuilder, QueryBuilder},
   LiquidRenderer, QueryData, SchemaData,
 };
 use async_graphql::*;
 use chrono::{DateTime, Utc};
+use futures::future::try_join_all;
 use intercode_entities::{
   cms_parent::CmsParentTrait,
-  cms_partials, conventions, events,
+  cms_partials, conventions, event_proposals, events,
   links::{ConventionToSignups, ConventionToStaffPositions},
   model_ext::time_bounds::TimeBoundsSelectExt,
   runs, signups, staff_positions, team_members, user_con_profiles, users, MaximumEventSignupsValue,
 };
+use intercode_policies::{
+  policies::{EventProposalAction, EventProposalPolicy},
+  AuthorizationInfo, EntityPolicy, Policy,
+};
 use intercode_timespan::ScheduledValue;
 use liquid::object;
 use sea_orm::{
-  sea_query::Expr, ColumnTrait, EntityTrait, JoinType, ModelTrait, QueryFilter, QueryOrder,
+  sea_query::Expr, ColumnTrait, DbErr, EntityTrait, JoinType, ModelTrait, QueryFilter, QueryOrder,
   QuerySelect, RelationTrait,
 };
 use seawater::loaders::{ExpectModel, ExpectModels};
@@ -128,20 +135,56 @@ impl ConventionType {
   }
 
   #[graphql(name = "event_categories")]
-  async fn event_categories(&self, ctx: &Context<'_>) -> Result<Vec<EventCategoryType>, Error> {
-    Ok(
-      ctx
-        .data::<QueryData>()?
-        .loaders()
-        .convention_event_categories()
-        .load_one(self.model.id)
-        .await?
-        .expect_models()?
-        .iter()
-        .cloned()
-        .map(EventCategoryType::new)
-        .collect(),
-    )
+  async fn event_categories(
+    &self,
+    ctx: &Context<'_>,
+    #[graphql(name = "current_ability_can_read_event_proposals")]
+    current_ability_can_read_event_proposals: Option<bool>,
+  ) -> Result<Vec<EventCategoryType>, Error> {
+    let loader_result = load_one_by_model_id!(convention_event_categories, ctx, self)?;
+    let event_categories: Vec<_> = loader_result_to_many!(loader_result, EventCategoryType);
+
+    match current_ability_can_read_event_proposals {
+      Some(true) => {
+        let principal = ctx.data::<AuthorizationInfo>()?;
+        let futures = event_categories
+          .into_iter()
+          .map(|graphql_object| async {
+            let event_category = graphql_object.get_model();
+            let event_proposal = event_proposals::Model {
+              convention_id: Some(self.model.id),
+              event_category_id: event_category.id,
+              ..Default::default()
+            };
+            Ok::<_, DbErr>((
+              graphql_object,
+              EventProposalPolicy::action_permitted(
+                principal,
+                &EventProposalAction::Read,
+                &(self.model.clone(), event_proposal),
+              )
+              .await?,
+            ))
+          })
+          .collect::<Vec<_>>();
+
+        let results = try_join_all(futures.into_iter()).await?;
+        let event_categories_with_permission = results
+          .into_iter()
+          .filter_map(
+            |(graphql_object, can_read)| {
+              if can_read {
+                Some(graphql_object)
+              } else {
+                None
+              }
+            },
+          )
+          .collect::<Vec<_>>();
+        Ok(event_categories_with_permission)
+      }
+      _ => Ok(event_categories),
+    }
   }
 
   #[graphql(name = "event_mailing_list_domain")]
@@ -264,6 +307,29 @@ impl ConventionType {
     }
 
     Ok(EventsPaginationType::new(Some(scope), page, per_page))
+  }
+
+  #[graphql(name = "event_proposals_paginated")]
+  async fn event_proposals_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
+    filters: Option<EventProposalFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<EventProposalsPaginationType, Error> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let scope = self.model.find_related(event_proposals::Entity).filter(
+      event_proposals::Column::Id.in_subquery(
+        sea_orm::QuerySelect::query(
+          &mut EventProposalPolicy::accessible_to(authorization_info, &EventProposalAction::Read)
+            .select_only()
+            .column(event_proposals::Column::Id),
+        )
+        .take(),
+      ),
+    );
+    EventProposalsQueryBuilder::new(filters, sort).paginate(ctx, scope, page, per_page)
   }
 
   async fn favicon(&self, ctx: &Context<'_>) -> Result<Option<ActiveStorageAttachmentType>> {

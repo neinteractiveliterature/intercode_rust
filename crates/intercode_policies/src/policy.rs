@@ -44,8 +44,7 @@ pub trait Policy<Principal: Send + Sync, Resource: Send + Sync> {
   }
 }
 
-pub trait EntityPolicy<Principal: Send + Sync, Resource: ModelTrait + Sync>:
-  Policy<Principal, Resource>
-{
+pub trait EntityPolicy<Principal: Send + Sync, Resource: ModelTrait + Sync> {
+  type Action: Send + Sync;
   fn accessible_to(principal: &Principal, action: &Self::Action) -> Select<Resource::Entity>;
 }

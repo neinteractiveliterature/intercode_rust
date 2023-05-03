@@ -74,7 +74,7 @@ macro_rules! loader_result_to_optional_single {
 #[macro_export]
 macro_rules! loader_result_to_required_single {
   ($loader_result: ident, $type: ty) => {
-    <$type>::new($loader_result.expect_one()?.clone())
+    <$type>::new(::seawater::loaders::ExpectModel::expect_one(&$loader_result)?.clone())
   };
 }
 
