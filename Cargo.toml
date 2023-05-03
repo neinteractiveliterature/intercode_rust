@@ -77,7 +77,7 @@ axum = {workspace = true}
 axum-extra = {version = "~0.4", features = ["cookie"]}
 axum-server = {version = "0.4.7", features = ["tls-rustls"]}
 axum-sessions = "~0.4"
-base64 = "0.13.1"
+base64 = "0.21.0"
 bcrypt = "0.14.0"
 bumpalo-herd = {workspace = true}
 chrono = {workspace = true}
