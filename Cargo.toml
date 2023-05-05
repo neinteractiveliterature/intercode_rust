@@ -88,7 +88,7 @@ bcrypt = "0.14.0"
 bumpalo-herd = {workspace = true}
 chrono = {workspace = true}
 chrono-tz = {workspace = true}
-clap = {version = "4.2.4", features = ["derive", "cargo"]}
+clap = {version = "4.2.7", features = ["derive", "cargo"]}
 console-subscriber = {version = "0.1.8", optional = true}
 csrf = "0.4.1"
 dhat = {version = "0.3.2", optional = true}
