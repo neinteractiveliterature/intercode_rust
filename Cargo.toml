@@ -58,7 +58,7 @@ parking_lot = "0.12.1"
 pulldown-cmark = "0.9.2"
 regex = "*"
 rusty-money = "0.4.1"
-sea-orm = {version = "^0", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"]}
+sea-orm = {version = "^0.11.3", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"]}
 serde = "1.0"
 serde_json = "1.0"
 tokio = {version = "~1.27.0", features = ["rt-multi-thread", "macros", "signal", "tracing"]}
