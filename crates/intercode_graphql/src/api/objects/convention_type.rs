@@ -4,9 +4,10 @@ use super::{
   active_storage_attachment_type::ActiveStorageAttachmentType,
   stripe_account_type::StripeAccountType, CmsContentGroupType, CmsContentType, CmsFileType,
   CmsGraphqlQueryType, CmsLayoutType, CmsNavigationItemType, CmsPartialType, CmsVariableType,
-  EventCategoryType, EventProposalsPaginationType, EventType, EventsPaginationType, FormType,
-  ModelBackedType, PageType, RoomType, ScheduledStringableValueType, SignupType, StaffPositionType,
-  TicketTypeType, UserConProfileType, UserConProfilesPaginationType,
+  EventCategoryType, EventProposalType, EventProposalsPaginationType, EventType,
+  EventsPaginationType, FormType, ModelBackedType, PageType, RoomType,
+  ScheduledStringableValueType, SignupType, StaffPositionType, TicketTypeType, UserConProfileType,
+  UserConProfilesPaginationType,
 };
 use crate::{
   api::{
@@ -307,6 +308,25 @@ impl ConventionType {
     }
 
     Ok(EventsPaginationType::new(Some(scope), page, per_page))
+  }
+
+  /// Finds an event proposal by ID in this convention. If there is no event proposal with that ID
+  /// in this convention, errors out.
+  #[graphql(name = "event_proposal")]
+  async fn event_proposal(
+    &self,
+    ctx: &Context<'_>,
+    #[graphql(desc = "The ID of the event proposal to find.")] id: ID,
+  ) -> Result<EventProposalType> {
+    let db = ctx.data::<QueryData>()?.db();
+    let id = LaxId::parse(id)?;
+    let event_proposal = event_proposals::Entity::find()
+      .filter(event_proposals::Column::ConventionId.eq(self.model.id))
+      .filter(event_proposals::Column::Id.eq(id))
+      .one(db)
+      .await?
+      .ok_or_else(|| Error::new(format!("Event proposal {} not found", id)))?;
+    Ok(EventProposalType::new(event_proposal))
   }
 
   #[graphql(name = "event_proposals_paginated")]

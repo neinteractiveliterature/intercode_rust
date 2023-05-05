@@ -1,6 +1,6 @@
 use async_graphql::{
   http::{playground_source, GraphQLPlaygroundConfig},
-  EmptyMutation, EmptySubscription, Schema,
+  EmptySubscription, Schema,
 };
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::{
@@ -15,7 +15,7 @@ use crate::{
   server::AppState,
 };
 
-pub type IntercodeSchema = Schema<api::QueryRoot, EmptyMutation, EmptySubscription>;
+pub type IntercodeSchema = Schema<api::QueryRoot, api::MutationRoot, EmptySubscription>;
 
 #[debug_handler(state = AppState)]
 pub async fn graphql_handler(

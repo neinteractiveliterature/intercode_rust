@@ -60,6 +60,14 @@ impl EventProposalType {
     self.model.id.into()
   }
 
+  #[graphql(
+    name = "admin_notes",
+    guard = "self.policy_guard(EventProposalAction::ReadAdminNotes)"
+  )]
+  async fn admin_notes(&self) -> Option<&str> {
+    self.model.admin_notes.as_deref()
+  }
+
   #[graphql(name = "current_user_form_item_viewer_role")]
   async fn current_user_form_item_viewer_role(
     &self,
@@ -102,6 +110,20 @@ impl EventProposalType {
     item_identifiers: Option<Vec<String>>,
   ) -> Result<JsonScalar, Error> {
     <Self as FormResponseImplementation<event_proposals::Model>>::form_response_attrs_json(
+      self,
+      ctx,
+      item_identifiers,
+    )
+    .await
+  }
+
+  #[graphql(name = "form_response_attrs_json_with_rendered_markdown")]
+  async fn form_response_attrs_json_with_rendered_markdown(
+    &self,
+    ctx: &Context<'_>,
+    item_identifiers: Option<Vec<String>>,
+  ) -> Result<JsonScalar, Error> {
+    <Self as FormResponseImplementation<event_proposals::Model>>::form_response_attrs_json_with_rendered_markdown(
       self,
       ctx,
       item_identifiers,
@@ -152,7 +174,13 @@ impl EventProposalType {
   }
 
   async fn status(&self) -> Option<String> {
-    self.model.status.as_ref().map(|status| status.to_string())
+    self.model.status.as_ref().map(|status| {
+      serde_json::to_value(status)
+        .unwrap()
+        .as_str()
+        .unwrap()
+        .to_string()
+    })
   }
 
   #[graphql(name = "submitted_at")]
