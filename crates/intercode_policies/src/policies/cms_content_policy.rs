@@ -136,6 +136,8 @@ impl<M: CmsContentAuthorizable> EntityPolicy<AuthorizationInfo, M> for CmsConten
 where
   M: CmsContentModel + ModelTrait,
 {
+  type Action = ReadManageAction;
+
   fn accessible_to(
     principal: &AuthorizationInfo,
     action: &ReadManageAction,

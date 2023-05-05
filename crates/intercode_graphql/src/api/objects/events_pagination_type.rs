@@ -12,20 +12,6 @@ pub struct EventsPaginationType {
   per_page: u64,
 }
 
-impl EventsPaginationType {
-  pub fn new(
-    scope: Option<Select<events::Entity>>,
-    page: Option<u64>,
-    per_page: Option<u64>,
-  ) -> Self {
-    EventsPaginationType {
-      scope: scope.unwrap_or_else(intercode_entities::events::Entity::find),
-      page: page.unwrap_or(1),
-      per_page: per_page.unwrap_or(20),
-    }
-  }
-}
-
 #[Object(name = "EventsPagination")]
 impl EventsPaginationType {
   #[graphql(name = "current_page")]
@@ -53,16 +39,26 @@ impl EventsPaginationType {
 
   #[graphql(name = "total_entries")]
   async fn total_entries(&self, ctx: &Context<'_>) -> Result<u64, Error> {
-    <Self as PaginationImplementation<SelectModel<events::Model>>>::total_entries(self, ctx).await
+    <Self as PaginationImplementation<events::Entity>>::total_entries(self, ctx).await
   }
 
   #[graphql(name = "total_pages")]
   async fn total_pages(&self, ctx: &Context<'_>) -> Result<u64, Error> {
-    <Self as PaginationImplementation<SelectModel<events::Model>>>::total_pages(self, ctx).await
+    <Self as PaginationImplementation<events::Entity>>::total_pages(self, ctx).await
   }
 }
 
-impl PaginationImplementation<SelectModel<events::Model>> for EventsPaginationType {
+impl PaginationImplementation<events::Entity> for EventsPaginationType {
+  type Selector = SelectModel<events::Model>;
+
+  fn new(scope: Option<Select<events::Entity>>, page: Option<u64>, per_page: Option<u64>) -> Self {
+    EventsPaginationType {
+      scope: scope.unwrap_or_else(intercode_entities::events::Entity::find),
+      page: page.unwrap_or(1),
+      per_page: per_page.unwrap_or(20),
+    }
+  }
+
   fn paginator_and_page_size<'s, C: ConnectionTrait>(
     &'s self,
     db: &'s C,

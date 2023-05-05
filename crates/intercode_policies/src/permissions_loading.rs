@@ -1,8 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
 use intercode_entities::{
-  cms_content_groups, event_categories, events, organization_roles_users, permissions, runs,
-  signups, staff_positions, staff_positions_user_con_profiles, team_members, user_con_profiles,
+  cms_content_groups, conventions, event_categories, events, organization_roles_users, permissions,
+  runs, signups, staff_positions, staff_positions_user_con_profiles, team_members,
+  user_con_profiles,
 };
 use itertools::Itertools;
 use sea_orm::{
@@ -303,4 +304,38 @@ pub async fn load_all_team_member_event_ids_in_convention(
     .await?;
 
   Ok(events.iter().map(|event| event.id).collect())
+}
+
+pub fn conventions_with_permission(
+  permission: &str,
+  user_id: Option<i64>,
+) -> Select<conventions::Entity> {
+  conventions::Entity::find().filter(
+    conventions::Column::Id.in_subquery(
+      sea_orm::QuerySelect::query(
+        &mut user_permission_scope(user_id)
+          .filter(permissions::Column::Permission.eq(permission))
+          .select_only()
+          .column(permissions::Column::ConventionId),
+      )
+      .take(),
+    ),
+  )
+}
+
+pub fn event_categories_with_permission(
+  permission: &str,
+  user_id: Option<i64>,
+) -> Select<event_categories::Entity> {
+  event_categories::Entity::find().filter(
+    event_categories::Column::Id.in_subquery(
+      sea_orm::QuerySelect::query(
+        &mut user_permission_scope(user_id)
+          .filter(permissions::Column::Permission.eq(permission))
+          .select_only()
+          .column(permissions::Column::EventCategoryId),
+      )
+      .take(),
+    ),
+  )
 }

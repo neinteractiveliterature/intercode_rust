@@ -1,7 +1,7 @@
 use async_graphql::InputObject;
 use sea_orm::Order;
 
-#[derive(InputObject)]
+#[derive(InputObject, Clone)]
 /// A description of a field to sort a result set by. This is typically used in pagination
 /// fields to specify how the results should be ordered.
 pub struct SortInput {

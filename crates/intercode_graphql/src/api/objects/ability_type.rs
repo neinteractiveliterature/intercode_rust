@@ -7,9 +7,9 @@ use intercode_entities::{
 };
 use intercode_policies::{
   policies::{
-    CmsContentPolicy, ConventionAction, ConventionPolicy, EventAction, EventPolicy, RoomPolicy,
-    SignupAction, SignupPolicy, TicketAction, TicketPolicy, UserConProfileAction,
-    UserConProfilePolicy,
+    CmsContentPolicy, ConventionAction, ConventionPolicy, EventAction, EventPolicy,
+    EventProposalAction, EventProposalPolicy, RoomPolicy, SignupAction, SignupPolicy, TicketAction,
+    TicketPolicy, UserConProfileAction, UserConProfilePolicy,
   },
   AuthorizationInfo, EntityPolicy, Policy, ReadManageAction,
 };
@@ -98,6 +98,37 @@ impl<'a> AbilityType<'a> {
     let convention = convention_result.expect_one()?;
 
     Ok((convention.clone(), user_con_profile.clone(), ticket))
+  }
+
+  async fn can_perform_event_proposal_action(
+    &self,
+    ctx: &Context<'_>,
+    event_proposal_id: ID,
+    action: &EventProposalAction,
+  ) -> Result<bool> {
+    let query_data = ctx.data::<QueryData>()?;
+    let loader_result = query_data
+      .loaders()
+      .event_proposals_by_id()
+      .load_one(LaxId::parse(event_proposal_id)?)
+      .await?;
+
+    let event_proposal = loader_result.expect_one()?;
+    let convention_result = query_data
+      .loaders()
+      .event_proposal_convention()
+      .load_one(event_proposal.id)
+      .await?;
+    let convention = convention_result.expect_one()?;
+
+    model_action_permitted(
+      self.authorization_info.as_ref(),
+      EventProposalPolicy,
+      ctx,
+      action,
+      |_ctx| Ok(Some((convention.clone(), event_proposal.clone()))),
+    )
+    .await
   }
 
   async fn can_perform_user_con_profile_action(
@@ -395,6 +426,43 @@ impl<'a> AbilityType<'a> {
   )]
   async fn can_delete_event(&self, _event_id: ID) -> Result<bool, Error> {
     Ok(false)
+  }
+
+  #[graphql(name = "can_read_admin_notes_on_event_proposal")]
+  async fn can_read_admin_notes_on_event_proposal(
+    &self,
+    ctx: &Context<'_>,
+    event_proposal_id: ID,
+  ) -> Result<bool, Error> {
+    self
+      .can_perform_event_proposal_action(
+        ctx,
+        event_proposal_id,
+        &EventProposalAction::ReadAdminNotes,
+      )
+      .await
+  }
+
+  #[graphql(name = "can_update_event_proposal")]
+  async fn can_update_event_proposal(
+    &self,
+    ctx: &Context<'_>,
+    event_proposal_id: ID,
+  ) -> Result<bool, Error> {
+    self
+      .can_perform_event_proposal_action(ctx, event_proposal_id, &EventProposalAction::Update)
+      .await
+  }
+
+  #[graphql(name = "can_delete_event_proposal")]
+  async fn can_delete_event_proposal(
+    &self,
+    ctx: &Context<'_>,
+    event_proposal_id: ID,
+  ) -> Result<bool, Error> {
+    self
+      .can_perform_event_proposal_action(ctx, event_proposal_id, &EventProposalAction::Delete)
+      .await
   }
 
   #[graphql(name = "can_override_maximum_event_provided_tickets")]

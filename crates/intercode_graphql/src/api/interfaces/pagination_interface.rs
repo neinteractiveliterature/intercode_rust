@@ -1,5 +1,5 @@
 use async_graphql::{async_trait::async_trait, Context, Error, Interface};
-use sea_orm::{ConnectionTrait, Paginator, SelectorTrait};
+use sea_orm::{ConnectionTrait, EntityTrait, Paginator, Select, SelectorTrait};
 
 use crate::{
   api::objects::{EventsPaginationType, SignupsPaginationType, UserConProfilesPaginationType},
@@ -53,11 +53,15 @@ pub enum PaginationInterface {
 }
 
 #[async_trait]
-pub trait PaginationImplementation<Item: SelectorTrait + Send + Sync> {
+pub trait PaginationImplementation<Entity: EntityTrait + Send + Sync> {
+  type Selector: SelectorTrait<Item = Entity::Model> + Send + Sync;
+
+  fn new(scope: Option<Select<Entity>>, page: Option<u64>, per_page: Option<u64>) -> Self;
+
   fn paginator_and_page_size<'s, C: ConnectionTrait>(
     &'s self,
     db: &'s C,
-  ) -> (Paginator<'s, C, Item>, u64);
+  ) -> (Paginator<'s, C, Self::Selector>, u64);
 
   async fn total_entries(&self, ctx: &Context) -> Result<u64, Error> {
     let db = ctx.data::<QueryData>()?.db();

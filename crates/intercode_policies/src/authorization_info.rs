@@ -1,5 +1,7 @@
 use cached::{async_sync::Mutex, CachedAsync, UnboundCache};
-use intercode_entities::{cms_content_groups, signups, user_con_profiles, users};
+use intercode_entities::{
+  cms_content_groups, conventions, event_categories, signups, user_con_profiles, users,
+};
 use oxide_auth::endpoint::Scope;
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, Select};
 use seawater::ConnectionWrapper;
@@ -11,6 +13,7 @@ use std::{
 use tokio::sync::OnceCell;
 
 use crate::{
+  conventions_with_permission, event_categories_with_permission,
   load_all_active_signups_in_convention_by_event_id, load_all_team_member_event_ids_in_convention,
   permissions_loading::{
     load_all_permissions_in_convention_with_model_type_and_id, UserPermissionsMap,
@@ -224,6 +227,10 @@ impl AuthorizationInfo {
     true
   }
 
+  pub fn conventions_with_permission(&self, permission: &str) -> Select<conventions::Entity> {
+    conventions_with_permission(permission, self.user.as_ref().map(|u| u.id))
+  }
+
   pub async fn has_convention_permission(
     &self,
     permission: &str,
@@ -238,6 +245,13 @@ impl AuthorizationInfo {
       .await?;
 
     Ok(perms.has_convention_permission(convention_id, permission))
+  }
+
+  pub fn event_categories_with_permission(
+    &self,
+    permission: &str,
+  ) -> Select<event_categories::Entity> {
+    event_categories_with_permission(permission, self.user.as_ref().map(|u| u.id))
   }
 
   pub async fn has_event_category_permission(

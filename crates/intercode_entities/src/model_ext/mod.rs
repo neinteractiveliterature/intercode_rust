@@ -1,5 +1,6 @@
 pub mod conventions;
 mod coupons;
+pub mod event_proposals;
 pub mod form_item_permissions;
 pub mod form_responses;
 pub mod orders;
