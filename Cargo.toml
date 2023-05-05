@@ -73,7 +73,7 @@ tokio-console = ["dep:console-subscriber", "tokio/full", "tokio/tracing"]
 
 [dependencies]
 Inflector = {workspace = true}
-anyhow = "1.0.70"
+anyhow = "1.0.71"
 askama = {version = "0.12.0", features = ["with-axum"]}
 askama_axum = "0.3.0"
 async-graphql = {workspace = true}
