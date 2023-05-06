@@ -9,10 +9,9 @@ use axum::{
   response::{IntoResponse, IntoResponseParts, Response, ResponseParts},
 };
 use axum_extra::extract::{
-  cookie::{Cookie, Expiration},
+  cookie::{Cookie, Expiration, SameSite},
   CookieJar,
 };
-use axum_sessions::SameSite;
 use base64::Engine;
 use csrf::{CsrfCookie, CsrfProtection, CsrfToken};
 use http::{request::Parts, Request};
