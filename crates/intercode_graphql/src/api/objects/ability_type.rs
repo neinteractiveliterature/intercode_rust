@@ -179,7 +179,6 @@ impl<'a> AbilityType<'a> {
   }
 }
 
-// TODO all the methods stubbed out with just "false"
 #[Object(name = "Ability")]
 impl<'a> AbilityType<'a> {
   #[graphql(name = "can_manage_conventions")]
@@ -380,10 +379,12 @@ impl<'a> AbilityType<'a> {
   }
   #[graphql(name = "can_update_departments")]
   async fn can_update_departments(&self) -> bool {
+    // TODO
     false
   }
   #[graphql(name = "can_manage_email_routes")]
   async fn can_manage_email_routes(&self) -> bool {
+    // TODO
     false
   }
 
@@ -501,6 +502,7 @@ impl<'a> AbilityType<'a> {
 
   #[graphql(name = "can_update_event_categories")]
   async fn can_update_event_categories(&self) -> bool {
+    // TODO
     false
   }
 
@@ -551,22 +553,27 @@ impl<'a> AbilityType<'a> {
 
   #[graphql(name = "can_manage_runs")]
   async fn can_manage_runs(&self) -> bool {
+    // TODO
     false
   }
   #[graphql(name = "can_manage_forms")]
   async fn can_manage_forms(&self) -> bool {
+    // TODO
     false
   }
   #[graphql(name = "can_read_any_mailing_list")]
   async fn can_read_any_mailing_list(&self) -> bool {
+    // TODO
     false
   }
   #[graphql(name = "can_update_notification_templates")]
   async fn can_update_notification_templates(&self) -> bool {
+    // TODO
     false
   }
   #[graphql(name = "can_manage_oauth_applications")]
   async fn can_manage_oauth_applications(&self) -> bool {
+    // TODO
     false
   }
 
@@ -601,6 +608,7 @@ impl<'a> AbilityType<'a> {
 
   #[graphql(name = "can_manage_signups")]
   async fn can_manage_signups(&self) -> bool {
+    // TODO
     false
   }
 
@@ -624,22 +632,27 @@ impl<'a> AbilityType<'a> {
 
   #[graphql(name = "can_manage_staff_positions")]
   async fn can_manage_staff_positions(&self) -> bool {
+    // TODO
     false
   }
   #[graphql(name = "can_read_orders")]
   async fn can_read_orders(&self) -> bool {
+    // TODO
     false
   }
   #[graphql(name = "can_manage_ticket_types")]
   async fn can_manage_ticket_types(&self) -> bool {
+    // TODO
     false
   }
   #[graphql(name = "can_read_user_activity_alerts")]
   async fn can_read_user_activity_alerts(&self) -> bool {
+    // TODO
     false
   }
   #[graphql(name = "can_read_organizations")]
   async fn can_read_organizations(&self) -> bool {
+    // TODO
     false
   }
 
