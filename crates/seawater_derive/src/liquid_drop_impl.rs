@@ -77,19 +77,19 @@ impl LiquidDropImpl {
 
     let (methods, other_items): (Vec<ImplItem>, Vec<ImplItem>) =
       input.items.into_iter().partition(|item| match item {
-        syn::ImplItem::Method(method) => method.sig.receiver().is_some(),
+        syn::ImplItem::Fn(method) => method.sig.receiver().is_some(),
         _ => false,
       });
     let (constructors, other_items): (Vec<ImplItem>, Vec<ImplItem>) =
       other_items.into_iter().partition(|item| match item {
-        ImplItem::Method(method) => {
+        ImplItem::Fn(method) => {
           method.sig.receiver().is_none()
             && method
               .block
               .stmts
               .last()
               .map(|stmt| match stmt {
-                syn::Stmt::Expr(syn::Expr::Struct(struct_expr)) => struct_expr
+                syn::Stmt::Expr(syn::Expr::Struct(struct_expr), _) => struct_expr
                   .path
                   .segments
                   .last()
@@ -109,7 +109,7 @@ impl LiquidDropImpl {
     let getter_methods = methods
       .into_iter()
       .filter_map(|method| match method {
-        syn::ImplItem::Method(mut method) => {
+        syn::ImplItem::Fn(mut method) => {
           let attrs = method
             .attrs
             .iter()
@@ -130,7 +130,7 @@ impl LiquidDropImpl {
             .retain(|attr| DropMethodAttribute::try_from(attr).is_err());
 
           if ignore {
-            ignored_methods.push(syn::ImplItem::Method(method));
+            ignored_methods.push(syn::ImplItem::Fn(method));
             return None;
           }
 

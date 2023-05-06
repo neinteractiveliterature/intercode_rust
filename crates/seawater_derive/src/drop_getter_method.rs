@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use proc_macro::Span;
 use quote::{quote, ToTokens};
-use syn::{GenericArgument, Ident, ImplItemMethod, LitStr, Path, Signature, Type, TypeTuple};
+use syn::{GenericArgument, Ident, ImplItemFn, LitStr, Path, Signature, Type, TypeTuple};
 
 use crate::helpers::get_drop_result_generic_arg;
 
@@ -15,7 +15,7 @@ pub struct DropGetterMethod {
 
 #[derive(Clone)]
 pub enum DropGetterMethodImplItem {
-  Base(Box<ImplItemMethod>),
+  Base(Box<ImplItemFn>),
   Async(Box<DropGetterMethodImplItem>),
   Uncached(Box<DropGetterMethodImplItem>),
 }
@@ -39,7 +39,7 @@ impl DropGetterMethodImplItem {
     }
   }
 
-  pub fn getter(&self) -> &ImplItemMethod {
+  pub fn getter(&self) -> &ImplItemFn {
     match self {
       DropGetterMethodImplItem::Base(method) => method,
       DropGetterMethodImplItem::Uncached(inner_method)
@@ -97,7 +97,7 @@ pub fn is_serializable_type(ty: &Type) -> bool {
 }
 
 impl DropGetterMethod {
-  pub fn new(method: ImplItemMethod, serialize: bool, is_id: bool) -> Self {
+  pub fn new(method: ImplItemFn, serialize: bool, is_id: bool) -> Self {
     DropGetterMethod {
       impl_item: method.into(),
       serialize,
@@ -220,11 +220,11 @@ impl DropGetterMethod {
   }
 }
 
-impl From<ImplItemMethod> for DropGetterMethodImplItem {
-  fn from(method: ImplItemMethod) -> Self {
+impl From<ImplItemFn> for DropGetterMethodImplItem {
+  fn from(method: ImplItemFn) -> Self {
     if let Some(uncached_attr) = method.attrs.iter().find(|attr| {
       attr
-        .path
+        .path()
         .is_ident(&Ident::new("uncached", Span::call_site().into()))
     }) {
       let mut inner_method = method.clone();
