@@ -108,7 +108,7 @@ impl<S: Send + Sync> FromRequestParts<S> for CsrfData {
       .get::<CsrfConfig>()
       .cloned()
       .ok_or(CsrfExtractionFailure("Can't extract CsrfConfig extension"))?;
-    let engine = base64::engine::general_purpose::STANDARD_NO_PAD;
+    let engine = base64::engine::general_purpose::STANDARD;
 
     let jar = CookieJar::from_request_parts(parts, state).await.unwrap();
     let cookie: Option<Vec<u8>> = jar
