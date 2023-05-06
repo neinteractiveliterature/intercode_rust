@@ -3,6 +3,7 @@ use axum_sessions::{
   async_session::{MemoryStore, Session, SessionStore},
   SessionLayer,
 };
+use base64::Engine;
 use chrono::Utc;
 use futures::future::BoxFuture;
 use http::Request;
@@ -30,6 +31,7 @@ impl SessionStore for DbSessionStore {
     cookie_value: String,
   ) -> axum_sessions::async_session::Result<Option<Session>> {
     let session_id = Session::id_from_cookie_value(&cookie_value)?;
+    let engine = base64::engine::general_purpose::STANDARD_NO_PAD;
 
     sessions::Entity::find()
       .filter(sessions::Column::SessionId.eq(session_id.clone()))
@@ -38,7 +40,7 @@ impl SessionStore for DbSessionStore {
       .map(|find_result| {
         find_result
           .and_then(|record| record.data)
-          .and_then(|encoded| base64::decode(encoded).ok())
+          .and_then(|encoded| engine.decode(encoded).ok())
           .and_then(|bytes| String::from_utf8(bytes).ok())
           .and_then(|data| serde_json::from_str::<Session>(&data).ok())
       })
@@ -49,8 +51,9 @@ impl SessionStore for DbSessionStore {
     &self,
     session: Session,
   ) -> axum_sessions::async_session::Result<Option<String>> {
+    let engine = base64::engine::general_purpose::STANDARD_NO_PAD;
     let session_id = session.id().to_string();
-    let encoded_data = base64::encode(serde_json::to_string(&session)?);
+    let encoded_data = engine.encode(serde_json::to_string(&session)?);
     let model = sessions::ActiveModel {
       id: sea_orm::ActiveValue::NotSet,
       created_at: sea_orm::ActiveValue::Set(Some(Utc::now().naive_utc())),

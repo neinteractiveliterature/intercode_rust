@@ -13,6 +13,7 @@ use axum_extra::extract::{
   CookieJar,
 };
 use axum_sessions::SameSite;
+use base64::Engine;
 use csrf::{CsrfCookie, CsrfProtection, CsrfToken};
 use http::{request::Parts, Request};
 use std::{
@@ -108,18 +109,19 @@ impl<S: Send + Sync> FromRequestParts<S> for CsrfData {
       .get::<CsrfConfig>()
       .cloned()
       .ok_or(CsrfExtractionFailure("Can't extract CsrfConfig extension"))?;
+    let engine = base64::engine::general_purpose::STANDARD_NO_PAD;
 
     let jar = CookieJar::from_request_parts(parts, state).await.unwrap();
     let cookie: Option<Vec<u8>> = jar
       .get(&config.cookie_name)
       .map(|cookie| cookie.value())
-      .and_then(|value| base64::decode(value).ok());
+      .and_then(|value| engine.decode(value).ok());
     let cookie = cookie.and_then(|value| config.protect.parse_cookie(&value).ok());
 
     let header: Option<Vec<u8>> = parts
       .headers
       .get("x-csrf-token")
-      .and_then(|header_value| base64::decode(header_value.as_bytes()).ok());
+      .and_then(|header_value| engine.decode(header_value.as_bytes()).ok());
     let token = header.and_then(|value| config.protect.parse_token(&value).ok());
 
     let verified = match (token.as_ref(), cookie.as_ref()) {
