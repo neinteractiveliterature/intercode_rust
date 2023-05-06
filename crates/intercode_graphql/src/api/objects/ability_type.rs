@@ -8,8 +8,8 @@ use intercode_entities::{
 use intercode_policies::{
   policies::{
     CmsContentPolicy, ConventionAction, ConventionPolicy, EventAction, EventPolicy,
-    EventProposalAction, EventProposalPolicy, RoomPolicy, SignupAction, SignupPolicy, TicketAction,
-    TicketPolicy, UserConProfileAction, UserConProfilePolicy,
+    EventProposalAction, EventProposalPolicy, RoomPolicy, RunAction, RunPolicy, SignupAction,
+    SignupPolicy, TicketAction, TicketPolicy, UserConProfileAction, UserConProfilePolicy,
   },
   AuthorizationInfo, EntityPolicy, Policy, ReadManageAction,
 };
@@ -552,10 +552,30 @@ impl<'a> AbilityType<'a> {
   }
 
   #[graphql(name = "can_manage_runs")]
-  async fn can_manage_runs(&self) -> bool {
-    // TODO
-    false
+  async fn can_manage_runs(&self, ctx: &Context<'_>) -> Result<bool> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let convention = ctx.data::<QueryData>()?.convention();
+    let Some(convention) = convention else {
+      return Ok(false);
+    };
+
+    Ok(
+      RunPolicy::action_permitted(
+        authorization_info,
+        &RunAction::Manage,
+        &(
+          convention.clone(),
+          events::Model {
+            convention_id: convention.id,
+            ..Default::default()
+          },
+          runs::Model::default(),
+        ),
+      )
+      .await?,
+    )
   }
+
   #[graphql(name = "can_manage_forms")]
   async fn can_manage_forms(&self) -> bool {
     // TODO

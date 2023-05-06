@@ -35,7 +35,12 @@ impl Policy<AuthorizationInfo, (conventions::Model, events::Model, runs::Model)>
   ) -> Result<bool, Self::Error> {
     match action {
       RunAction::Read => todo!(),
-      RunAction::Manage => todo!(),
+      RunAction::Manage => Ok(
+        principal
+          .has_scope_and_convention_permission("manage_events", "update_runs", convention.id)
+          .await?
+          || principal.site_admin_manage(),
+      ),
       RunAction::SignupSummary => {
         if event.private_signup_list {
           return Ok(false);
