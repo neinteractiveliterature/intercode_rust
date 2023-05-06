@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-
-use syn::{AttrStyle, Attribute, Meta};
+use syn::{Attribute, LitBool};
 
 #[derive(Debug, Clone)]
 pub enum DropMethodAttribute {
@@ -14,69 +12,33 @@ impl TryFrom<&Attribute> for DropMethodAttribute {
   type Error = UnknownDropMethodAttribute;
 
   fn try_from(attr: &Attribute) -> Result<Self, Self::Error> {
-    if attr.style == AttrStyle::Outer
-      && attr
-        .path
-        .get_ident()
-        .map(|ident| ident == "liquid_drop")
-        .unwrap_or(false)
-    {
-      let meta_list = attr
-        .parse_meta()
-        .ok()
-        .and_then(|parsed_meta| match parsed_meta {
-          Meta::List(list) => Some(list),
-          _ => None,
-        });
-      let nested_metas = meta_list.map(|list| {
-        list
-          .nested
-          .into_iter()
-          .flat_map(|item| match item {
-            syn::NestedMeta::Meta(meta) => Some(meta),
-            _ => None,
-          })
-          .collect::<Vec<_>>()
-      });
-      let name_values = nested_metas
-        .iter()
-        .flat_map(|metas| {
-          metas
-            .iter()
-            .filter_map(|meta| match meta {
-              Meta::NameValue(name_value) => Some(name_value),
-              _ => None,
-            })
-            .filter_map(|name_value| {
-              let path_ident = name_value.path.get_ident();
-              path_ident.map(|ident| (ident.to_string(), name_value.lit.clone()))
-            })
+    let mut ignore_flag = false;
+    let mut serialize_value_flag = false;
+
+    if attr.path().is_ident("liquid_drop") {
+      attr
+        .parse_nested_meta(|meta| {
+          if meta.path.is_ident("ignore") {
+            let value = meta.value()?;
+            let flag: LitBool = value.parse()?;
+            ignore_flag = flag.value;
+          } else if meta.path.is_ident("serialize_value") {
+            let value = meta.value()?;
+            let flag: LitBool = value.parse()?;
+            serialize_value_flag = flag.value;
+          }
+
+          Ok(())
         })
-        .collect::<HashMap<_, _>>();
+        .map_err(|_err| UnknownDropMethodAttribute)?;
+    }
 
-      let ignore_flag = name_values
-        .get("ignore")
-        .and_then(|lit| match lit {
-          syn::Lit::Bool(b) => Some(b.value),
-          _ => None,
-        })
-        .unwrap_or(false);
+    if ignore_flag {
+      return Ok(Self::Ignore);
+    }
 
-      if ignore_flag {
-        return Ok(DropMethodAttribute::Ignore);
-      }
-
-      let serialize_value_flag = name_values
-        .get("serialize_value")
-        .and_then(|lit| match lit {
-          syn::Lit::Bool(b) => Some(b.value),
-          _ => None,
-        })
-        .unwrap_or(false);
-
-      if serialize_value_flag {
-        return Ok(DropMethodAttribute::SerializeValue);
-      }
+    if serialize_value_flag {
+      return Ok(Self::SerializeValue);
     }
 
     Err(UnknownDropMethodAttribute)

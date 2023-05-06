@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 
 use syn::{
-  parse::Parse, punctuated::Punctuated, spanned::Spanned, token::Comma, Error, Ident, Lit, Meta,
-  NestedMeta, Path, Token,
+  parse::{Parse, Parser},
+  punctuated::Punctuated,
+  spanned::Spanned,
+  token::Comma,
+  Error, Expr, Ident, Lit, Meta, MetaList, Path, Token,
 };
 
 pub struct RelatedAssociationMacroArgs {
@@ -24,8 +27,8 @@ pub struct LinkedAssociationMacroArgs {
 
 struct ArgsByType {
   path_args: Vec<Path>,
-  list_args: HashMap<String, Punctuated<NestedMeta, Comma>>,
-  name_value_args: HashMap<String, Lit>,
+  list_args: HashMap<String, MetaList>,
+  name_value_args: HashMap<String, Expr>,
 }
 
 pub trait AssociationMacroArgs {
@@ -130,7 +133,7 @@ fn split_attribute_args(args: Punctuated<Meta, Token![,]>) -> ArgsByType {
       list
         .path
         .get_ident()
-        .map(|ident| (ident.to_string(), list.nested.clone()))
+        .map(|ident| (ident.to_string(), list.clone()))
     })
     .collect::<HashMap<_, _>>();
 
@@ -147,7 +150,7 @@ fn split_attribute_args(args: Punctuated<Meta, Token![,]>) -> ArgsByType {
       pair
         .path
         .get_ident()
-        .map(|ident| (ident.to_string(), pair.lit.clone()))
+        .map(|ident| (ident.to_string(), pair.value.clone()))
     })
     .collect::<HashMap<_, _>>();
 
@@ -222,58 +225,28 @@ fn parse_optional_args(
   let inverse = args_by_type
     .list_args
     .get("inverse")
-    .map(|nested| {
-      let mut nested_iter = nested.iter();
-      let path = nested_iter
-        .next()
-        .map(|meta| match meta {
-          NestedMeta::Meta(Meta::Path(path)) => path
-            .get_ident()
-            .cloned()
-            .ok_or_else(|| Error::new(path.span(), "Not a valid identifier")),
-          _ => Err(Error::new(meta.span(), "Identifier expected")),
-        })
-        .transpose();
-
-      if nested_iter.next().is_some() {
-        Err(Error::new(
-          nested.span(),
-          "Unexpected parameter for inverse",
-        ))
-      } else {
-        path
-      }
-    })
-    .transpose()?
-    .flatten();
+    .map(|list| Ident::parse.parse2(list.tokens.clone()))
+    .transpose()?;
 
   let eager_load_associations = args_by_type
     .list_args
     .get("eager_load")
-    .map(|nested| {
-      let nested_iter = nested.iter();
-      nested_iter
-        .map(|meta| match meta {
-          NestedMeta::Meta(Meta::Path(path)) => path
-            .get_ident()
-            .cloned()
-            .ok_or_else(|| Error::new(path.span(), "Not a valid identifier")),
-          _ => Err(Error::new(meta.span(), "Identifier expected")),
-        })
-        .collect::<Result<Vec<Ident>, _>>()
-    })
+    .map(|list| Punctuated::<Ident, Comma>::parse_terminated.parse2(list.tokens.clone()))
     .transpose()?
-    .unwrap_or_default();
+    .unwrap_or_default()
+    .into_iter()
+    .collect::<Vec<_>>();
 
   let serialize = args_by_type
     .name_value_args
     .get("serialize")
-    .map(|lit| {
-      if let Lit::Bool(bool_value) = lit {
-        Ok(bool_value.value)
-      } else {
-        Err(Error::new(lit.span(), "Boolean value expected"))
+    .map(|expr| {
+      if let Expr::Lit(lit) = expr {
+        if let Lit::Bool(bool_value) = &lit.lit {
+          return Ok(bool_value.value);
+        }
       }
+      Err(Error::new(expr.span(), "Boolean value expected"))
     })
     .transpose()?
     .unwrap_or(false);
