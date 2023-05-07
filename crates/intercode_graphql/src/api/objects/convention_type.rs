@@ -221,7 +221,7 @@ impl ConventionType {
     ctx: &Context<'_>,
     start: Option<DateScalar>,
     finish: Option<DateScalar>,
-    #[graphql(name = "include_dropped")] include_dropped: Option<bool>,
+    include_dropped: Option<bool>,
     filters: Option<EventFiltersInput>,
   ) -> Result<Vec<EventType>, Error> {
     let mut scope = self
@@ -229,7 +229,7 @@ impl ConventionType {
       .find_related(events::Entity)
       .between(start.map(Into::into), finish.map(Into::into));
 
-    if let Some(true) = include_dropped {
+    if include_dropped != Some(true) {
       scope = scope.filter(events::Column::Status.eq("active"));
     }
 

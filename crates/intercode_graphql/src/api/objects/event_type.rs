@@ -75,6 +75,11 @@ impl EventType {
     self.model.can_play_concurrently
   }
 
+  #[graphql(name = "con_mail_destination")]
+  async fn con_mail_destination(&self) -> Option<&str> {
+    self.model.con_mail_destination.as_deref()
+  }
+
   #[graphql(name = "content_warnings")]
   async fn content_warnings(&self) -> Option<&str> {
     self.model.content_warnings.as_deref()

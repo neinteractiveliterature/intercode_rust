@@ -29,6 +29,21 @@ impl From<ReadManageAction> for EventAction {
   }
 }
 
+async fn has_applicable_permission(
+  principal: &AuthorizationInfo,
+  permission: &str,
+  event: &events::Model,
+) -> Result<bool, DbErr> {
+  Ok(
+    principal
+      .has_convention_permission(permission, event.convention_id)
+      .await?
+      || principal
+        .has_event_category_permission(permission, event.convention_id, event.event_category_id)
+        .await?,
+  )
+}
+
 pub struct EventPolicy;
 
 #[async_trait]
@@ -41,6 +56,10 @@ impl Policy<AuthorizationInfo, (conventions::Model, events::Model)> for EventPol
     action: &Self::Action,
     (convention, event): &(conventions::Model, events::Model),
   ) -> Result<bool, Self::Error> {
+    if !principal.can_act_in_convention(convention.id) {
+      return Ok(false);
+    }
+
     match action {
       EventAction::Read => Ok(
         (principal.has_scope("read_events")
@@ -56,12 +75,8 @@ impl Policy<AuthorizationInfo, (conventions::Model, events::Model)> for EventPol
                 &convention.show_event_list,
               )
               .await)
-            || principal
-              .has_convention_permission("read_inactive_events", event.convention_id)
-              .await?
-            || principal
-              .has_convention_permission("update_events", event.convention_id)
-              .await?))
+            || has_applicable_permission(principal, "read_inactive_events", event).await?
+            || has_applicable_permission(principal, "update_events", event).await?))
           || principal.site_admin_read(),
       ),
       EventAction::ReadSignups => {
@@ -87,11 +102,21 @@ impl Policy<AuthorizationInfo, (conventions::Model, events::Model)> for EventPol
               .contains(&event.convention_id))
           || principal.site_admin_read(),
       ),
-      EventAction::ReadAdminNotes => todo!(),
-      EventAction::UpdateAdminNotes => todo!(),
-      EventAction::Drop => todo!(),
-      EventAction::Create => todo!(),
-      EventAction::Restore => todo!(),
+      EventAction::ReadAdminNotes => Ok(
+        (principal.has_scope("read_events")
+          && has_applicable_permission(principal, "access_admin_notes", event).await?)
+          || principal.site_admin_read(),
+      ),
+      EventAction::UpdateAdminNotes => Ok(
+        (principal.has_scope("manage_events")
+          && has_applicable_permission(principal, "access_admin_notes", event).await?)
+          || principal.site_admin_manage(),
+      ),
+      EventAction::Drop | EventAction::Create | EventAction::Restore => Ok(
+        (principal.has_scope("manage_events")
+          && has_applicable_permission(principal, "update_events", event).await?)
+          || principal.site_admin_manage(),
+      ),
       EventAction::Update => Ok(
         principal.has_scope("manage_events")
           && (principal
