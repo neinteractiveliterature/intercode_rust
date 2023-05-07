@@ -10,8 +10,8 @@ split-debuginfo = "unpacked"
 split-debuginfo = "unpacked"
 
 [profile.release]
-# debug = 1
-lto = true
+debug = 1
+# lto = true
 
 # [target.'cfg(not(target_env = "msvc"))'.dependencies]
 # tikv-jemallocator = {version = "0.5", features = ["profiling"]}

@@ -4,6 +4,7 @@ use crate::{
     scalars::{DateScalar, JsonScalar},
   },
   loaders::filtered_event_runs_loader::EventRunsLoaderFilter,
+  policy_guard::PolicyGuard,
   presenters::form_response_presenter::attached_images_by_filename,
   QueryData,
 };
@@ -12,11 +13,11 @@ use async_trait::async_trait;
 use chrono::NaiveDateTime;
 use futures::StreamExt;
 use intercode_entities::{
-  events, forms, model_ext::form_item_permissions::FormItemRole, RegistrationPolicy,
+  conventions, events, forms, model_ext::form_item_permissions::FormItemRole, RegistrationPolicy,
 };
 use intercode_liquid::render_markdown;
 use intercode_policies::{
-  policies::{EventPolicy, MaximumEventProvidedTicketsOverridePolicy},
+  policies::{EventAction, EventPolicy, MaximumEventProvidedTicketsOverridePolicy},
   AuthorizationInfo, FormResponsePolicy, Policy, ReadManageAction,
 };
 use seawater::loaders::{ExpectModel, ExpectModels};
@@ -29,10 +30,40 @@ use super::{
 use crate::model_backed_type;
 model_backed_type!(EventType, events::Model);
 
-#[Object(name = "Event")]
+impl EventType {
+  fn policy_guard(
+    &self,
+    action: EventAction,
+  ) -> PolicyGuard<'_, EventPolicy, (conventions::Model, events::Model), events::Model> {
+    PolicyGuard::new(action, &self.model, move |model, ctx| {
+      let model = model.clone();
+      let ctx = ctx;
+      let query_data = ctx.data::<QueryData>();
+
+      Box::pin(async {
+        let query_data = query_data?;
+        let convention_loader = query_data.loaders().event_convention();
+        let convention_result = convention_loader.load_one(model.id).await?;
+        let convention = convention_result.expect_one()?;
+
+        Ok((convention.clone(), model))
+      })
+    })
+  }
+}
+
+#[Object(name = "Event", guard = "self.policy_guard(EventAction::Read)")]
 impl EventType {
   async fn id(&self) -> ID {
     self.model.id.into()
+  }
+
+  #[graphql(
+    name = "admin_notes",
+    guard = "self.policy_guard(EventAction::ReadAdminNotes)"
+  )]
+  async fn admin_notes(&self) -> Option<&str> {
+    self.model.admin_notes.as_deref()
   }
 
   async fn author(&self) -> &Option<String> {
@@ -44,6 +75,16 @@ impl EventType {
     self.model.can_play_concurrently
   }
 
+  #[graphql(name = "con_mail_destination")]
+  async fn con_mail_destination(&self) -> Option<&str> {
+    self.model.con_mail_destination.as_deref()
+  }
+
+  #[graphql(name = "content_warnings")]
+  async fn content_warnings(&self) -> Option<&str> {
+    self.model.content_warnings.as_deref()
+  }
+
   async fn convention(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {
     let loader = ctx.data::<QueryData>()?.loaders().conventions_by_id();
     let loader_result = loader.load_one(self.model.convention_id).await?;
@@ -53,6 +94,19 @@ impl EventType {
   #[graphql(name = "created_at")]
   async fn created_at(&self) -> Option<NaiveDateTime> {
     self.model.created_at
+  }
+
+  async fn description(&self) -> Option<&str> {
+    self.model.description.as_deref()
+  }
+
+  #[graphql(name = "description_html")]
+  async fn description_html(&self, ctx: &Context<'_>) -> Result<String, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+    Ok(render_markdown(
+      self.model.description.as_deref().unwrap_or_default(),
+      &attached_images_by_filename(&self.model, query_data).await?,
+    ))
   }
 
   async fn email(&self) -> &Option<String> {
@@ -150,6 +204,15 @@ impl EventType {
     }
   }
 
+  async fn organization(&self) -> Option<&str> {
+    self.model.organization.as_deref()
+  }
+
+  #[graphql(name = "participant_communications")]
+  async fn participant_communications(&self) -> Option<&str> {
+    self.model.participant_communications.as_deref()
+  }
+
   #[graphql(name = "private_signup_list")]
   async fn private_signup_list(&self) -> bool {
     self.model.private_signup_list
@@ -214,6 +277,11 @@ impl EventType {
     )
   }
 
+  #[graphql(name = "short_blurb")]
+  async fn short_blurb(&self) -> Option<&str> {
+    self.model.short_blurb.as_deref()
+  }
+
   #[graphql(name = "short_blurb_html")]
   async fn short_blurb_html(&self, ctx: &Context<'_>) -> Result<String, Error> {
     let query_data = ctx.data::<QueryData>()?;
@@ -245,6 +313,10 @@ impl EventType {
 
   async fn title(&self) -> &String {
     &self.model.title
+  }
+
+  async fn url(&self) -> Option<&str> {
+    self.model.url.as_deref()
   }
 
   // STUFF FOR FORM_RESPONSE_INTERFACE

@@ -36,6 +36,11 @@ impl RegistrationPolicyBucketType {
     self.0.is_not_counted()
   }
 
+  #[graphql(name = "preferred_slots")]
+  async fn preferred_slots(&self) -> Option<u32> {
+    self.0.preferred_slots.into()
+  }
+
   #[graphql(name = "slots_limited")]
   async fn slots_limited(&self) -> bool {
     self.0.slots_limited()
