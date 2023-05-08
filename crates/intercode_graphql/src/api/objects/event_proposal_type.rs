@@ -1,6 +1,5 @@
 use async_graphql::*;
 use async_trait::async_trait;
-use chrono::NaiveDateTime;
 use intercode_entities::{
   conventions, event_proposals, forms, model_ext::form_item_permissions::FormItemRole,
 };
@@ -11,7 +10,10 @@ use intercode_policies::{
 use seawater::loaders::ExpectModel;
 
 use crate::{
-  api::{interfaces::FormResponseImplementation, scalars::JsonScalar},
+  api::{
+    interfaces::FormResponseImplementation,
+    scalars::{DateScalar, JsonScalar},
+  },
   load_one_by_model_id, loader_result_to_optional_single, loader_result_to_required_single,
   model_backed_type,
   policy_guard::PolicyGuard,
@@ -184,8 +186,8 @@ impl EventProposalType {
   }
 
   #[graphql(name = "submitted_at")]
-  async fn submitted_at(&self) -> Option<&NaiveDateTime> {
-    self.model.submitted_at.as_ref()
+  async fn submitted_at(&self) -> Option<DateScalar> {
+    self.model.submitted_at.map(DateScalar::from)
   }
 
   async fn title(&self) -> Option<&str> {
@@ -193,8 +195,8 @@ impl EventProposalType {
   }
 
   #[graphql(name = "updated_at")]
-  async fn updated_at(&self) -> &NaiveDateTime {
-    &self.model.updated_at
+  async fn updated_at(&self) -> DateScalar {
+    self.model.updated_at.into()
   }
 }
 

@@ -1,10 +1,9 @@
 use async_graphql::*;
-use chrono::NaiveDateTime;
 use intercode_entities::{conventions, tickets, user_con_profiles};
 use intercode_policies::policies::{TicketAction, TicketPolicy};
 use seawater::loaders::ExpectModel;
 
-use crate::{model_backed_type, policy_guard::PolicyGuard, QueryData};
+use crate::{api::scalars::DateScalar, model_backed_type, policy_guard::PolicyGuard, QueryData};
 
 use super::{EventType, ModelBackedType, OrderEntryType, TicketTypeType, UserConProfileType};
 model_backed_type!(TicketType, tickets::Model);
@@ -49,8 +48,8 @@ impl TicketType {
   }
 
   #[graphql(name = "created_at")]
-  async fn created_at(&self) -> NaiveDateTime {
-    self.model.created_at
+  async fn created_at(&self) -> DateScalar {
+    self.model.created_at.into()
   }
 
   #[graphql(name = "order_entry")]
@@ -95,8 +94,8 @@ impl TicketType {
   }
 
   #[graphql(name = "updated_at")]
-  async fn updated_at(&self) -> NaiveDateTime {
-    self.model.updated_at
+  async fn updated_at(&self) -> DateScalar {
+    self.model.updated_at.into()
   }
 
   #[graphql(name = "user_con_profile")]

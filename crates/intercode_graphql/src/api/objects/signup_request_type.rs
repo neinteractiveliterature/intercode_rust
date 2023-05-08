@@ -1,10 +1,9 @@
 use async_graphql::*;
-use chrono::NaiveDateTime;
 use intercode_entities::signup_requests;
 
 use crate::{
-  load_one_by_model_id, loader_result_to_optional_single, loader_result_to_required_single,
-  model_backed_type,
+  api::scalars::DateScalar, load_one_by_model_id, loader_result_to_optional_single,
+  loader_result_to_required_single, model_backed_type,
 };
 
 use super::{RunType, SignupType, UserConProfileType};
@@ -18,8 +17,8 @@ impl SignupRequestType {
   }
 
   #[graphql(name = "created_at")]
-  async fn created_at(&self) -> &NaiveDateTime {
-    &self.model.created_at
+  async fn created_at(&self) -> DateScalar {
+    self.model.created_at.into()
   }
 
   #[graphql(name = "replace_signup")]

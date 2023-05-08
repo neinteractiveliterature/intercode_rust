@@ -1,10 +1,9 @@
 use async_graphql::*;
-use chrono::NaiveDateTime;
 use intercode_entities::orders;
 use rusty_money::{iso, Money};
 use seawater::loaders::{ExpectModel, ExpectModels};
 
-use crate::{load_one_by_model_id, model_backed_type, QueryData};
+use crate::{api::scalars::DateScalar, load_one_by_model_id, model_backed_type, QueryData};
 
 use super::{
   money_type::MoneyType, CouponApplicationType, ModelBackedType, OrderEntryType, UserConProfileType,
@@ -74,8 +73,8 @@ impl OrderType {
   }
 
   #[graphql(name = "submitted_at")]
-  async fn submitted_at(&self) -> Option<&NaiveDateTime> {
-    self.model.submitted_at.as_ref()
+  async fn submitted_at(&self) -> Option<DateScalar> {
+    self.model.submitted_at.map(DateScalar::from)
   }
 
   #[graphql(name = "total_price")]
