@@ -25,11 +25,9 @@ impl Policy<AuthorizationInfo, rooms::Model> for RoomPolicy {
         if principal.has_scope("manage_conventions") {
           let convention_id = resource.convention_id;
           let has_permission = if let Some(convention_id) = convention_id {
-            let perms = principal
-              .all_model_permissions_in_convention(convention_id)
-              .await?;
-
-            perms.has_convention_permission(convention_id, "update_rooms")
+            principal
+              .has_convention_permission("update_rooms", convention_id)
+              .await?
           } else {
             false
           };

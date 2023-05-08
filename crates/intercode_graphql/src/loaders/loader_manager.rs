@@ -320,11 +320,9 @@ loader_manager!(
   entity_link(signup_request_result_signup, SignupRequestToResultSignup);
   entity_relation(signup_request_target_run, signup_requests, runs);
   entity_relation(signup_request_user_con_profile, signup_requests, user_con_profiles);
-  entity_link(
-    staff_position_user_con_profiles,
-    StaffPositionToUserConProfiles
-  );
   entity_id(staff_positions_by_id, staff_positions);
+  entity_relation(staff_position_permissions, staff_positions, permissions);
+  entity_link(staff_position_user_con_profiles, StaffPositionToUserConProfiles);
   entity_relation(team_member_event, team_members, events);
   entity_relation(
     team_member_user_con_profile,

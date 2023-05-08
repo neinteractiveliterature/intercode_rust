@@ -7,7 +7,7 @@ use crate::{
   model_backed_type,
 };
 
-use super::{ModelBackedType, RunType, SignupType, UserConProfileType};
+use super::{RunType, SignupType, UserConProfileType};
 
 model_backed_type!(SignupRequestType, signup_requests::Model);
 
