@@ -1,7 +1,6 @@
 use async_graphql::*;
 use intercode_entities::cms_content_groups;
 use intercode_policies::{policies::CmsContentPolicy, AuthorizationInfo, Policy, ReadManageAction};
-use seawater::loaders::ExpectModels;
 
 use crate::{
   load_one_by_model_id, loader_result_to_many,

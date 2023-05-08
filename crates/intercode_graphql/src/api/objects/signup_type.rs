@@ -1,6 +1,6 @@
 use async_graphql::{futures_util::try_join, *};
 use chrono::{Datelike, NaiveDate};
-use intercode_entities::{events, runs, signups};
+use intercode_entities::{conventions, events, runs, signups};
 use intercode_policies::policies::{SignupAction, SignupPolicy};
 use seawater::loaders::ExpectModel;
 
@@ -24,8 +24,17 @@ impl SignupType {
   fn policy_guard(
     &self,
     action: SignupAction,
-  ) -> PolicyGuard<'_, SignupPolicy, (events::Model, runs::Model, signups::Model), signups::Model>
-  {
+  ) -> PolicyGuard<
+    '_,
+    SignupPolicy,
+    (
+      conventions::Model,
+      events::Model,
+      runs::Model,
+      signups::Model,
+    ),
+    signups::Model,
+  > {
     PolicyGuard::new(action, &self.model, move |model, ctx| {
       let model = model.clone();
       let ctx = ctx;
@@ -35,12 +44,15 @@ impl SignupType {
         let query_data = query_data?;
         let signup_run_loader = query_data.loaders().signup_run();
         let run_event_loader = query_data.loaders().run_event();
+        let event_convention_loader = query_data.loaders().event_convention();
         let run_result = signup_run_loader.load_one(model.id).await?;
         let run = run_result.expect_one()?;
         let event_result = run_event_loader.load_one(run.id).await?;
         let event = event_result.expect_one()?;
+        let convention_result = event_convention_loader.load_one(event.id).await?;
+        let convention = convention_result.expect_one()?;
 
-        Ok((event.clone(), run.clone(), model))
+        Ok((convention.clone(), event.clone(), run.clone(), model))
       })
     })
   }

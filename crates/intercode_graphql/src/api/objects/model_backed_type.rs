@@ -67,7 +67,9 @@ macro_rules! load_one_by_model_id {
 #[macro_export]
 macro_rules! loader_result_to_optional_single {
   ($loader_result: ident, $type: ty) => {
-    $loader_result.try_one().cloned().map(<$type>::new)
+    ::seawater::loaders::ExpectModel::try_one(&$loader_result)
+      .cloned()
+      .map(<$type>::new)
   };
 }
 
@@ -81,8 +83,7 @@ macro_rules! loader_result_to_required_single {
 #[macro_export]
 macro_rules! loader_result_to_many {
   ($loader_result: ident, $type: ty) => {
-    $loader_result
-      .expect_models()?
+    ::seawater::loaders::ExpectModels::expect_models(&$loader_result)?
       .iter()
       .cloned()
       .map(<$type>::new)
