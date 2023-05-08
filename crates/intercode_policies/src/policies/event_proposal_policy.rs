@@ -261,7 +261,10 @@ impl EntityPolicy<AuthorizationInfo, event_proposals::Model> for EventProposalPo
     match action {
       EventProposalAction::Read => {
         let scope = event_proposals::Entity::find();
-        if principal.has_scope("read_events") && principal.site_admin() {
+        if principal.has_scope("read_events")
+          && principal.site_admin()
+          && principal.assumed_identity_from_profile.is_none()
+        {
           return scope
             .filter(event_proposals::Column::Status.is_in(NON_DRAFT_STATUSES.iter().cloned()));
         }

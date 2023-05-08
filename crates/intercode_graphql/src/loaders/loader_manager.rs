@@ -319,6 +319,7 @@ loader_manager!(
   entity_link(signup_request_replace_signup, SignupRequestToReplaceSignup);
   entity_link(signup_request_result_signup, SignupRequestToResultSignup);
   entity_relation(signup_request_target_run, signup_requests, runs);
+  entity_relation(signup_request_user_con_profile, signup_requests, user_con_profiles);
   entity_link(
     staff_position_user_con_profiles,
     StaffPositionToUserConProfiles

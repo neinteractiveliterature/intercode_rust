@@ -52,7 +52,15 @@ impl<'a> AbilityType<'a> {
     &self,
     ctx: &Context<'_>,
     signup_id: ID,
-  ) -> Result<(events::Model, runs::Model, signups::Model), Error> {
+  ) -> Result<
+    (
+      conventions::Model,
+      events::Model,
+      runs::Model,
+      signups::Model,
+    ),
+    Error,
+  > {
     let query_data = ctx.data::<QueryData>()?;
     let signup = signups::Entity::find_by_id(LaxId::parse(signup_id)?)
       .one(query_data.db())
@@ -69,7 +77,14 @@ impl<'a> AbilityType<'a> {
     let event_result = query_data.loaders().run_event().load_one(run.id).await?;
     let event = event_result.expect_one()?;
 
-    Ok((event.clone(), run.clone(), signup))
+    let convention_result = query_data
+      .loaders()
+      .event_convention()
+      .load_one(event.id)
+      .await?;
+    let convention = convention_result.expect_one()?;
+
+    Ok((convention.clone(), event.clone(), run.clone(), signup))
   }
 
   async fn get_ticket_policy_model(
@@ -627,9 +642,29 @@ impl<'a> AbilityType<'a> {
   }
 
   #[graphql(name = "can_manage_signups")]
-  async fn can_manage_signups(&self) -> bool {
-    // TODO
-    false
+  async fn can_manage_signups(&self, ctx: &Context<'_>) -> Result<bool> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let convention = ctx.data::<QueryData>()?.convention();
+    let Some(convention) = convention else {
+      return Ok(false);
+    };
+
+    Ok(
+      SignupPolicy::action_permitted(
+        authorization_info,
+        &SignupAction::Manage,
+        &(
+          convention.clone(),
+          events::Model {
+            convention_id: convention.id,
+            ..Default::default()
+          },
+          runs::Model::default(),
+          signups::Model::default(),
+        ),
+      )
+      .await?,
+    )
   }
 
   #[graphql(name = "can_manage_any_cms_content")]
@@ -678,11 +713,11 @@ impl<'a> AbilityType<'a> {
 
   #[graphql(name = "can_read_signups")]
   async fn can_read_signups(&self, ctx: &Context<'_>) -> Result<bool> {
-    let convention_id = ctx.data::<QueryData>()?.convention().map(|c| c.id);
+    let convention = ctx.data::<QueryData>()?.convention();
 
-    if let Some(convention_id) = convention_id {
+    if let Some(convention) = convention {
       let event = events::Model {
-        convention_id,
+        convention_id: convention.id,
         ..Default::default()
       };
       let run = runs::Model::default();
@@ -693,7 +728,7 @@ impl<'a> AbilityType<'a> {
         SignupPolicy,
         ctx,
         &SignupAction::Read,
-        |_ctx| Ok(Some((event, run, signup))),
+        |_ctx| Ok(Some((convention.clone(), event, run, signup))),
       )
       .await
     } else {

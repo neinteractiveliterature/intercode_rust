@@ -6,20 +6,23 @@ use super::{
   CmsGraphqlQueryType, CmsLayoutType, CmsNavigationItemType, CmsPartialType, CmsVariableType,
   EventCategoryType, EventProposalType, EventProposalsPaginationType, EventType,
   EventsPaginationType, FormType, ModelBackedType, PageType, RoomType,
-  ScheduledStringableValueType, SignupType, StaffPositionType, TicketTypeType, UserConProfileType,
-  UserConProfilesPaginationType,
+  ScheduledStringableValueType, SignupRequestsPaginationType, SignupType, StaffPositionType,
+  TicketTypeType, UserConProfileType, UserConProfilesPaginationType,
 };
 use crate::{
   api::{
     enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
-    inputs::{EventFiltersInput, EventProposalFiltersInput, SortInput, UserConProfileFiltersInput},
+    inputs::{
+      EventFiltersInput, EventProposalFiltersInput, SignupRequestFiltersInput, SortInput,
+      UserConProfileFiltersInput,
+    },
     interfaces::{CmsParentImplementation, PaginationImplementation},
     scalars::DateScalar,
   },
   cms_rendering_context::CmsRenderingContext,
   lax_id::LaxId,
   load_one_by_model_id, loader_result_to_many,
-  query_builders::{EventProposalsQueryBuilder, QueryBuilder},
+  query_builders::{EventProposalsQueryBuilder, QueryBuilder, SignupRequestsQueryBuilder},
   LiquidRenderer, QueryData, SchemaData,
 };
 use async_graphql::*;
@@ -28,12 +31,13 @@ use futures::future::try_join_all;
 use intercode_entities::{
   cms_parent::CmsParentTrait,
   cms_partials, conventions, event_proposals, events,
-  links::{ConventionToSignups, ConventionToStaffPositions},
+  links::{ConventionToSignupRequests, ConventionToSignups, ConventionToStaffPositions},
   model_ext::time_bounds::TimeBoundsSelectExt,
-  runs, signups, staff_positions, team_members, user_con_profiles, users, MaximumEventSignupsValue,
+  runs, signup_requests, signups, staff_positions, team_members, user_con_profiles, users,
+  MaximumEventSignupsValue,
 };
 use intercode_policies::{
-  policies::{EventProposalAction, EventProposalPolicy},
+  policies::{EventProposalAction, EventProposalPolicy, SignupRequestAction, SignupRequestPolicy},
   AuthorizationInfo, EntityPolicy, Policy,
 };
 use intercode_timespan::ScheduledValue;
@@ -513,6 +517,29 @@ impl ConventionType {
   #[graphql(name = "show_schedule")]
   async fn show_schedule(&self) -> &str {
     self.model.show_schedule.as_str()
+  }
+
+  #[graphql(name = "signup_requests_paginated")]
+  async fn signup_requests_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
+    filters: Option<SignupRequestFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<SignupRequestsPaginationType, Error> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let scope = self.model.find_linked(ConventionToSignupRequests).filter(
+      signup_requests::Column::Id.in_subquery(
+        sea_orm::QuerySelect::query(
+          &mut SignupRequestPolicy::accessible_to(authorization_info, &SignupRequestAction::Read)
+            .select_only()
+            .column(signup_requests::Column::Id),
+        )
+        .take(),
+      ),
+    );
+    SignupRequestsQueryBuilder::new(filters, sort).paginate(ctx, scope, page, per_page)
   }
 
   #[graphql(name = "site_mode")]
