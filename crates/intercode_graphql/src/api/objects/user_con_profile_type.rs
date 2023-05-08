@@ -4,13 +4,12 @@ use super::{
   AbilityType, ConventionType, ModelBackedType, OrderType, SignupType, StaffPositionType,
   TeamMemberType, TicketType,
 };
-use crate::api::scalars::JsonScalar;
+use crate::api::scalars::{DateScalar, JsonScalar};
 use crate::presenters::order_summary_presenter::load_and_describe_order_summary_for_user_con_profile;
 use crate::{api::interfaces::FormResponseImplementation, QueryData};
 use crate::{load_one_by_model_id, loader_result_to_many, model_backed_type};
 use async_graphql::*;
 use async_trait::async_trait;
-use chrono::NaiveDate;
 use intercode_entities::model_ext::form_item_permissions::FormItemRole;
 use intercode_entities::{forms, order_entries, orders, user_con_profiles, UserNames};
 use intercode_policies::policies::{UserConProfileAction, UserConProfilePolicy};
@@ -68,8 +67,8 @@ impl UserConProfileType {
   }
 
   #[graphql(name = "birth_date")]
-  async fn birth_date(&self) -> Option<NaiveDate> {
-    self.model.birth_date
+  async fn birth_date(&self) -> Option<DateScalar> {
+    self.model.birth_date.map(DateScalar::from)
   }
 
   async fn city(&self) -> Option<&str> {

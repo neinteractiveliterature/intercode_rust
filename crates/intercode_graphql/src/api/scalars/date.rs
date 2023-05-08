@@ -1,5 +1,5 @@
 use async_graphql::{InputValueError, Scalar, ScalarType};
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 
 pub struct DateScalar(pub NaiveDateTime);
 
@@ -23,8 +23,20 @@ impl From<DateScalar> for NaiveDateTime {
   }
 }
 
+impl From<DateScalar> for NaiveDate {
+  fn from(scalar: DateScalar) -> Self {
+    scalar.0.date()
+  }
+}
+
 impl From<NaiveDateTime> for DateScalar {
   fn from(date: NaiveDateTime) -> Self {
     DateScalar(date)
+  }
+}
+
+impl From<NaiveDate> for DateScalar {
+  fn from(date: NaiveDate) -> Self {
+    DateScalar(date.and_time(NaiveTime::MIN))
   }
 }
