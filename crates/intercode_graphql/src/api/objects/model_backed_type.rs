@@ -69,14 +69,16 @@ macro_rules! loader_result_to_optional_single {
   ($loader_result: ident, $type: ty) => {
     ::seawater::loaders::ExpectModel::try_one(&$loader_result)
       .cloned()
-      .map(<$type>::new)
+      .map(<$type as $crate::api::objects::ModelBackedType>::new)
   };
 }
 
 #[macro_export]
 macro_rules! loader_result_to_required_single {
   ($loader_result: ident, $type: ty) => {
-    <$type>::new(::seawater::loaders::ExpectModel::expect_one(&$loader_result)?.clone())
+    <$type as $crate::api::objects::ModelBackedType>::new(
+      ::seawater::loaders::ExpectModel::expect_one(&$loader_result)?.clone(),
+    )
   };
 }
 
@@ -86,7 +88,7 @@ macro_rules! loader_result_to_many {
     ::seawater::loaders::ExpectModels::expect_models(&$loader_result)?
       .iter()
       .cloned()
-      .map(<$type>::new)
+      .map(<$type as $crate::api::objects::ModelBackedType>::new)
       .collect()
   };
 }

@@ -22,3 +22,9 @@ impl From<DateScalar> for NaiveDateTime {
     scalar.0
   }
 }
+
+impl From<NaiveDateTime> for DateScalar {
+  fn from(date: NaiveDateTime) -> Self {
+    DateScalar(date)
+  }
+}

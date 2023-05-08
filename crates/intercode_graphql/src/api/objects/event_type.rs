@@ -10,7 +10,6 @@ use crate::{
 };
 use async_graphql::*;
 use async_trait::async_trait;
-use chrono::NaiveDateTime;
 use futures::StreamExt;
 use intercode_entities::{
   conventions, events, forms, model_ext::form_item_permissions::FormItemRole, RegistrationPolicy,
@@ -92,8 +91,8 @@ impl EventType {
   }
 
   #[graphql(name = "created_at")]
-  async fn created_at(&self) -> Option<NaiveDateTime> {
-    self.model.created_at
+  async fn created_at(&self) -> Option<DateScalar> {
+    self.model.created_at.map(DateScalar::from)
   }
 
   async fn description(&self) -> Option<&str> {

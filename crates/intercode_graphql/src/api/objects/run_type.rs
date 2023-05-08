@@ -1,5 +1,5 @@
 use async_graphql::{Context, Error, Object, ID};
-use chrono::{Duration, NaiveDateTime};
+use chrono::Duration;
 use intercode_entities::{events, runs, signups, user_con_profiles, users};
 use intercode_policies::{
   policies::{RunAction, RunPolicy},
@@ -15,7 +15,7 @@ use crate::{
   api::{
     inputs::{SignupFiltersInput, SortInput},
     interfaces::PaginationImplementation,
-    scalars::JsonScalar,
+    scalars::{DateScalar, JsonScalar},
   },
   model_backed_type, QueryData,
 };
@@ -77,7 +77,7 @@ impl RunType {
   }
 
   #[graphql(name = "ends_at")]
-  async fn ends_at(&self, ctx: &Context<'_>) -> Result<Option<NaiveDateTime>, Error> {
+  async fn ends_at(&self, ctx: &Context<'_>) -> Result<Option<DateScalar>, Error> {
     let starts_at = self.model.starts_at;
 
     if let Some(starts_at) = starts_at {
@@ -90,7 +90,9 @@ impl RunType {
         .expect_one()?
         .length_seconds;
 
-      Ok(Some(starts_at + Duration::seconds(length_seconds.into())))
+      Ok(Some(DateScalar(
+        starts_at + Duration::seconds(length_seconds.into()),
+      )))
     } else {
       Ok(None)
     }
@@ -294,8 +296,8 @@ impl RunType {
   }
 
   #[graphql(name = "starts_at")]
-  async fn starts_at(&self) -> Option<NaiveDateTime> {
-    self.model.starts_at
+  async fn starts_at(&self) -> Option<DateScalar> {
+    self.model.starts_at.map(DateScalar)
   }
 
   #[graphql(name = "title_suffix")]
