@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:14.7
+        image: postgres:14.8
         env:
           POSTGRES_HOST_AUTH_METHOD: trust
         options: >-
