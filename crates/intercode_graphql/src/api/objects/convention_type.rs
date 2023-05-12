@@ -17,6 +17,7 @@ use crate::{
       UserConProfileFiltersInput,
     },
     interfaces::{CmsParentImplementation, PaginationImplementation},
+    objects::ProductType,
     scalars::DateScalar,
   },
   cms_rendering_context::CmsRenderingContext,
@@ -470,19 +471,14 @@ impl ConventionType {
     }
   }
 
+  async fn products(&self, ctx: &Context<'_>) -> Result<Vec<ProductType>> {
+    let loader_result = load_one_by_model_id!(convention_products, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, ProductType))
+  }
+
   async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<RoomType>, Error> {
-    Ok(
-      ctx
-        .data::<QueryData>()?
-        .loaders()
-        .convention_rooms()
-        .load_one(self.model.id)
-        .await?
-        .expect_models()?
-        .iter()
-        .map(|room| RoomType::new(room.clone()))
-        .collect(),
-    )
+    let loader_result = load_one_by_model_id!(convention_rooms, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, RoomType))
   }
 
   async fn signup(&self, ctx: &Context<'_>, id: ID) -> Result<SignupType, Error> {

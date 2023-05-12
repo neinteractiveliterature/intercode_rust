@@ -2,15 +2,15 @@ use std::borrow::{Borrow, Cow};
 
 use async_graphql::*;
 use intercode_entities::{
-  cms_content_model::CmsContentModel, conventions, events, pages, rooms, root_sites, runs, signups,
-  staff_positions, tickets, user_con_profiles,
+  cms_content_model::CmsContentModel, conventions, events, orders, pages, rooms, root_sites, runs,
+  signups, staff_positions, tickets, user_con_profiles,
 };
 use intercode_policies::{
   policies::{
     CmsContentPolicy, ConventionAction, ConventionPolicy, EventAction, EventPolicy,
-    EventProposalAction, EventProposalPolicy, RoomPolicy, RunAction, RunPolicy, SignupAction,
-    SignupPolicy, StaffPositionPolicy, TicketAction, TicketPolicy, UserConProfileAction,
-    UserConProfilePolicy,
+    EventProposalAction, EventProposalPolicy, OrderAction, OrderPolicy, RoomPolicy, RunAction,
+    RunPolicy, SignupAction, SignupPolicy, StaffPositionPolicy, TicketAction, TicketPolicy,
+    UserConProfileAction, UserConProfilePolicy,
   },
   AuthorizationInfo, EntityPolicy, Policy, ReadManageAction,
 };
@@ -704,10 +704,33 @@ impl<'a> AbilityType<'a> {
   }
 
   #[graphql(name = "can_read_orders")]
-  async fn can_read_orders(&self) -> bool {
-    // TODO
-    false
+  async fn can_read_orders(&self, ctx: &Context<'_>) -> Result<bool> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let convention = ctx.data::<QueryData>()?.convention();
+    let Some(convention)= convention else {
+      return Ok(false);
+    };
+
+    Ok(
+      OrderPolicy::action_permitted(
+        authorization_info,
+        &OrderAction::Read,
+        &(
+          convention.clone(),
+          user_con_profiles::Model {
+            convention_id: convention.id,
+            ..Default::default()
+          },
+          orders::Model {
+            ..Default::default()
+          },
+          vec![],
+        ),
+      )
+      .await?,
+    )
   }
+
   #[graphql(name = "can_manage_ticket_types")]
   async fn can_manage_ticket_types(&self) -> bool {
     // TODO
