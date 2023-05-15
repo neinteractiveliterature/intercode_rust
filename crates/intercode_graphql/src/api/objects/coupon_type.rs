@@ -2,7 +2,7 @@ use async_graphql::*;
 use intercode_entities::coupons;
 use seawater::loaders::ExpectModel;
 
-use crate::{model_backed_type, QueryData};
+use crate::{api::scalars::DateScalar, model_backed_type, QueryData};
 
 use super::{ModelBackedType, MoneyType, ProductType};
 model_backed_type!(CouponType, coupons::Model);
@@ -15,6 +15,11 @@ impl CouponType {
 
   async fn code(&self) -> &str {
     &self.model.code
+  }
+
+  #[graphql(name = "expires_at")]
+  async fn expires_at(&self) -> Option<DateScalar> {
+    self.model.expires_at.map(|date| date.into())
   }
 
   #[graphql(name = "fixed_amount")]
@@ -46,5 +51,10 @@ impl CouponType {
       .await?;
 
     Ok(loader_result.try_one().cloned().map(ProductType::new))
+  }
+
+  #[graphql(name = "usage_limit")]
+  async fn usage_limit(&self) -> Option<i32> {
+    self.model.usage_limit
   }
 }

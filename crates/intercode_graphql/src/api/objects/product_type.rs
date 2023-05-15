@@ -5,8 +5,7 @@ use intercode_entities::products;
 use intercode_liquid::render_markdown;
 
 use crate::{
-  api::scalars::JsonScalar, load_one_by_model_id, loader_result_to_many,
-  loader_result_to_optional_single, model_backed_type,
+  load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single, model_backed_type,
 };
 
 use super::{
@@ -53,8 +52,17 @@ impl ProductType {
   }
 
   #[graphql(name = "payment_options")]
-  async fn payment_options(&self) -> Option<JsonScalar> {
-    self.model.payment_options.clone().map(JsonScalar)
+  async fn payment_options(&self) -> Vec<String> {
+    self
+      .model
+      .payment_options
+      .as_ref()
+      .and_then(|value| value.as_array())
+      .cloned()
+      .unwrap_or_default()
+      .into_iter()
+      .filter_map(|item| item.as_str().map(str::to_string))
+      .collect()
   }
 
   #[graphql(name = "pricing_structure")]

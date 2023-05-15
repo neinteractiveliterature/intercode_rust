@@ -1,9 +1,9 @@
 use async_trait::async_trait;
 use futures::future::try_join_all;
 use intercode_entities::{conventions, orders, tickets, user_con_profiles};
-use sea_orm::DbErr;
+use sea_orm::{sea_query::Cond, ColumnTrait, DbErr, EntityTrait, QueryFilter, QuerySelect};
 
-use crate::{AuthorizationInfo, Policy, ReadManageAction};
+use crate::{AuthorizationInfo, EntityPolicy, Policy, ReadManageAction};
 
 use super::{TicketAction, TicketPolicy};
 
@@ -104,6 +104,66 @@ impl
           )
           .await?,
       ),
+    }
+  }
+}
+
+impl EntityPolicy<AuthorizationInfo, orders::Model> for OrderPolicy {
+  type Action = OrderAction;
+  fn accessible_to(
+    principal: &AuthorizationInfo,
+    _action: &Self::Action,
+  ) -> sea_orm::Select<<orders::Model as sea_orm::ModelTrait>::Entity> {
+    let scope = orders::Entity::find()
+      .inner_join(user_con_profiles::Entity)
+      .filter(
+        Cond::any()
+          .add_option(if principal.has_scope("read_conventions") {
+            Some(
+              user_con_profiles::Column::ConventionId.in_subquery(
+                QuerySelect::query(
+                  &mut principal
+                    .conventions_with_permission("read_orders")
+                    .select_only()
+                    .column(conventions::Column::Id),
+                )
+                .take(),
+              ),
+            )
+          } else {
+            None
+          })
+          .add_option(if principal.has_scope("read_conventions") {
+            Some(
+              user_con_profiles::Column::ConventionId.in_subquery(
+                QuerySelect::query(
+                  &mut principal
+                    .conventions_with_permission("update_orders")
+                    .select_only()
+                    .column(conventions::Column::Id),
+                )
+                .take(),
+              ),
+            )
+          } else {
+            None
+          })
+          .add_option(if principal.has_scope("read_profile") {
+            principal
+              .user
+              .as_ref()
+              .map(|user| user_con_profiles::Column::UserId.eq(user.id))
+          } else {
+            None
+          }),
+      );
+
+    if let Some(assumed_identity_from_profile) = principal.assumed_identity_from_profile.as_ref() {
+      scope.filter(
+        user_con_profiles::Column::ConventionId.eq(assumed_identity_from_profile.convention_id),
+      )
+    } else {
+      scope
     }
   }
 }

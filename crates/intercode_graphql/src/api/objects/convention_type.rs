@@ -4,17 +4,17 @@ use super::{
   active_storage_attachment_type::ActiveStorageAttachmentType,
   stripe_account_type::StripeAccountType, CmsContentGroupType, CmsContentType, CmsFileType,
   CmsGraphqlQueryType, CmsLayoutType, CmsNavigationItemType, CmsPartialType, CmsVariableType,
-  EventCategoryType, EventProposalType, EventProposalsPaginationType, EventType,
-  EventsPaginationType, FormType, ModelBackedType, PageType, RoomType,
-  ScheduledStringableValueType, SignupRequestsPaginationType, SignupType, StaffPositionType,
-  TicketTypeType, UserConProfileType, UserConProfilesPaginationType,
+  CouponsPaginationType, EventCategoryType, EventProposalType, EventProposalsPaginationType,
+  EventType, EventsPaginationType, FormType, ModelBackedType, OrdersPaginationType, PageType,
+  RoomType, ScheduledStringableValueType, SignupRequestsPaginationType, SignupType,
+  StaffPositionType, TicketTypeType, UserConProfileType, UserConProfilesPaginationType,
 };
 use crate::{
   api::{
     enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
     inputs::{
-      EventFiltersInput, EventProposalFiltersInput, SignupRequestFiltersInput, SortInput,
-      UserConProfileFiltersInput,
+      CouponFiltersInput, EventFiltersInput, EventProposalFiltersInput, OrderFiltersInput,
+      SignupRequestFiltersInput, SortInput, UserConProfileFiltersInput,
     },
     interfaces::{CmsParentImplementation, PaginationImplementation},
     objects::ProductType,
@@ -23,7 +23,10 @@ use crate::{
   cms_rendering_context::CmsRenderingContext,
   lax_id::LaxId,
   load_one_by_model_id, loader_result_to_many,
-  query_builders::{EventProposalsQueryBuilder, QueryBuilder, SignupRequestsQueryBuilder},
+  query_builders::{
+    CouponsQueryBuilder, EventProposalsQueryBuilder, OrdersQueryBuilder, QueryBuilder,
+    SignupRequestsQueryBuilder,
+  },
   LiquidRenderer, QueryData, SchemaData,
 };
 use async_graphql::*;
@@ -31,15 +34,20 @@ use chrono::{DateTime, Utc};
 use futures::future::try_join_all;
 use intercode_entities::{
   cms_parent::CmsParentTrait,
-  cms_partials, conventions, event_proposals, events,
-  links::{ConventionToSignupRequests, ConventionToSignups, ConventionToStaffPositions},
+  cms_partials, conventions, coupons, event_proposals, events,
+  links::{
+    ConventionToOrders, ConventionToSignupRequests, ConventionToSignups, ConventionToStaffPositions,
+  },
   model_ext::time_bounds::TimeBoundsSelectExt,
-  runs, signup_requests, signups, staff_positions, team_members, user_con_profiles, users,
+  orders, runs, signup_requests, signups, staff_positions, team_members, user_con_profiles, users,
   MaximumEventSignupsValue,
 };
 use intercode_policies::{
-  policies::{EventProposalAction, EventProposalPolicy, SignupRequestAction, SignupRequestPolicy},
-  AuthorizationInfo, EntityPolicy, Policy,
+  policies::{
+    CouponPolicy, EventProposalAction, EventProposalPolicy, OrderAction, OrderPolicy,
+    SignupRequestAction, SignupRequestPolicy,
+  },
+  AuthorizationInfo, EntityPolicy, Policy, ReadManageAction,
 };
 use intercode_timespan::ScheduledValue;
 use liquid::object;
@@ -116,6 +124,29 @@ impl ConventionType {
   #[graphql(name = "clickwrap_agreement")]
   async fn clickwrap_agreement(&self) -> Option<&str> {
     self.model.clickwrap_agreement.as_deref()
+  }
+
+  #[graphql(name = "coupons_paginated")]
+  async fn coupons_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
+    filters: Option<CouponFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<CouponsPaginationType, Error> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let scope = self.model.find_related(coupons::Entity).filter(
+      coupons::Column::Id.in_subquery(
+        sea_orm::QuerySelect::query(
+          &mut CouponPolicy::accessible_to(authorization_info, &ReadManageAction::Read)
+            .select_only()
+            .column(coupons::Column::Id),
+        )
+        .take(),
+      ),
+    );
+    CouponsQueryBuilder::new(filters, sort).paginate(ctx, scope, page, per_page)
   }
 
   async fn domain(&self) -> &str {
@@ -444,6 +475,29 @@ impl ConventionType {
         .and_then(|models| models.get(0).cloned())
         .map(ActiveStorageAttachmentType::new),
     )
+  }
+
+  #[graphql(name = "orders_paginated")]
+  async fn orders_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
+    filters: Option<OrderFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<OrdersPaginationType, Error> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let scope = self.model.find_linked(ConventionToOrders).filter(
+      orders::Column::Id.in_subquery(
+        sea_orm::QuerySelect::query(
+          &mut OrderPolicy::accessible_to(authorization_info, &OrderAction::Read)
+            .select_only()
+            .column(orders::Column::Id),
+        )
+        .take(),
+      ),
+    );
+    OrdersQueryBuilder::new(filters, sort).paginate(ctx, scope, page, per_page)
   }
 
   #[graphql(name = "pre_schedule_content_html")]
