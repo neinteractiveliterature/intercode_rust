@@ -1,3 +1,4 @@
+mod order_status;
 mod pricing_strategy;
 mod signup_mode;
 mod signup_state;
@@ -5,6 +6,7 @@ mod site_mode;
 mod ticket_mode;
 mod timezone_mode;
 
+pub use order_status::OrderStatus;
 pub use pricing_strategy::PricingStrategy;
 pub use signup_mode::SignupMode;
 pub use signup_state::SignupState;

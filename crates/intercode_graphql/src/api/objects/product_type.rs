@@ -5,14 +5,14 @@ use intercode_entities::products;
 use intercode_liquid::render_markdown;
 
 use crate::{
-  api::scalars::JsonScalar, load_one_by_model_id, loader_result_to_many,
-  loader_result_to_optional_single, model_backed_type,
+  load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single, model_backed_type,
+  QueryData,
 };
 
 use super::{
   active_storage_attachment_type::ActiveStorageAttachmentType,
-  pricing_structure_type::PricingStructureType, ModelBackedType, ProductVariantType,
-  TicketTypeType,
+  pricing_structure_type::PricingStructureType, ModelBackedType, OrderQuantityByStatusType,
+  ProductVariantType, TicketTypeType,
 };
 model_backed_type!(ProductType, products::Model);
 
@@ -52,9 +52,34 @@ impl ProductType {
     &self.model.name
   }
 
+  #[graphql(name = "order_quantities_by_status")]
+  async fn order_quantities_by_status(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<OrderQuantityByStatusType>> {
+    Ok(
+      ctx
+        .data::<QueryData>()?
+        .loaders()
+        .product_order_quantity_by_status
+        .load_one(self.model.id)
+        .await?
+        .unwrap_or_default(),
+    )
+  }
+
   #[graphql(name = "payment_options")]
-  async fn payment_options(&self) -> Option<JsonScalar> {
-    self.model.payment_options.clone().map(JsonScalar)
+  async fn payment_options(&self) -> Vec<String> {
+    self
+      .model
+      .payment_options
+      .as_ref()
+      .and_then(|value| value.as_array())
+      .cloned()
+      .unwrap_or_default()
+      .into_iter()
+      .filter_map(|item| item.as_str().map(str::to_string))
+      .collect()
   }
 
   #[graphql(name = "pricing_structure")]

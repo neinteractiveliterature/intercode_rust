@@ -21,6 +21,9 @@ use super::cms_content_group_contents_loader::CmsContentGroupContentsLoader;
 use super::event_user_con_profile_event_rating_loader::EventUserConProfileEventRatingLoader;
 use super::filtered_event_runs_loader::{EventRunsLoaderFilter, FilteredEventRunsLoader};
 use super::loader_spawner::LoaderSpawner;
+use super::order_quantity_by_status_loader::{
+  OrderQuantityByStatusLoader, OrderQuantityByStatusLoaderEntity,
+};
 use super::permissioned_models_loader::PermissionedModelsLoader;
 use super::permissioned_roles_loader::PermissionedRolesLoader;
 use super::run_user_con_profile_signup_requests_loader::RunUserConProfileSignupRequestsLoader;
@@ -61,7 +64,9 @@ macro_rules! loader_manager {
       pub permissioned_models: DataLoader<PermissionedModelsLoader>,
       pub permissioned_roles: DataLoader<PermissionedRolesLoader>,
       pub product_image: DataLoader<ActiveStorageAttachedBlobsLoader>,
+      pub product_order_quantity_by_status: DataLoader<OrderQuantityByStatusLoader>,
       pub product_variant_image: DataLoader<ActiveStorageAttachedBlobsLoader>,
+      pub product_variant_order_quantity_by_status: DataLoader<OrderQuantityByStatusLoader>,
       pub run_signup_counts: DataLoader<SignupCountLoader>,
       pub run_user_con_profile_signups: LoaderSpawner<i64, i64, RunUserConProfileSignupsLoader>,
       pub run_user_con_profile_signup_requests:
@@ -164,10 +169,18 @@ macro_rules! loader_manager {
           .filter(active_storage_attachments::Column::Name.eq("image"))),
         tokio::spawn,
       ).delay($delay_millis),
+      product_order_quantity_by_status: DataLoader::new(
+        OrderQuantityByStatusLoader::new($db.clone(), OrderQuantityByStatusLoaderEntity::Product),
+        tokio::spawn,
+      ).delay($delay_millis),
       product_variant_image: DataLoader::new(
         ActiveStorageAttachedBlobsLoader::new($db.clone(), active_storage_attachments::Entity::find()
           .filter(active_storage_attachments::Column::RecordType.eq("ProductVariant"))
           .filter(active_storage_attachments::Column::Name.eq("image"))),
+        tokio::spawn,
+      ).delay($delay_millis),
+      product_variant_order_quantity_by_status: DataLoader::new(
+        OrderQuantityByStatusLoader::new($db.clone(), OrderQuantityByStatusLoaderEntity::ProductVariant),
         tokio::spawn,
       ).delay($delay_millis),
       run_signup_counts: DataLoader::new(SignupCountLoader::new($db.clone()), tokio::spawn)
@@ -266,6 +279,7 @@ loader_manager!(
   );
   entity_link(convention_catch_all_staff_position, ConventionToCatchAllStaffPosition);
   entity_relation(convention_event_categories, conventions, event_categories);
+  entity_relation(convention_products, conventions, products);
   entity_relation(convention_rooms, conventions, rooms);
   entity_link(convention_staff_positions, ConventionToStaffPositions);
   entity_relation(convention_ticket_types, conventions, ticket_types);

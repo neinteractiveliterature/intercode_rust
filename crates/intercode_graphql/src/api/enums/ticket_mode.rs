@@ -1,4 +1,4 @@
-use async_graphql::Enum;
+use async_graphql::{resolver_utils::parse_enum, Enum};
 
 #[derive(Enum, Copy, Clone, Eq, PartialEq)]
 pub enum TicketMode {
@@ -19,11 +19,7 @@ impl TryFrom<&str> for TicketMode {
   type Error = async_graphql::Error;
 
   fn try_from(value: &str) -> Result<Self, Self::Error> {
-    match value {
-      "disabled" => Ok(TicketMode::Disabled),
-      "required_for_signup" => Ok(TicketMode::RequiredForSignup),
-      "ticket_per_event" => Ok(TicketMode::TicketPerEvent),
-      _ => Err(Self::Error::new(format!("Unknown ticket mode: {}", value))),
-    }
+    parse_enum(value.into())
+      .map_err(|err| Self::Error::new(err.into_server_error(Default::default()).message))
   }
 }

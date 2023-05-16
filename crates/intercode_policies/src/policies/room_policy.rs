@@ -1,6 +1,6 @@
 use axum::async_trait;
 use intercode_entities::rooms;
-use sea_orm::{DbErr, EntityTrait};
+use sea_orm::{sea_query::Expr, DbErr, EntityTrait, QueryFilter};
 
 use crate::{
   authorization_info::AuthorizationInfo,
@@ -44,9 +44,12 @@ impl EntityPolicy<AuthorizationInfo, rooms::Model> for RoomPolicy {
   type Action = ReadManageAction;
   fn accessible_to(
     _principal: &AuthorizationInfo,
-    _action: &Self::Action,
-  ) -> sea_orm::Select<<rooms::Model as sea_orm::ModelTrait>::Entity> {
-    rooms::Entity::find()
+    action: &Self::Action,
+  ) -> sea_orm::Select<rooms::Entity> {
+    match action {
+      ReadManageAction::Read => rooms::Entity::find(),
+      ReadManageAction::Manage => rooms::Entity::find().filter(Expr::cust("0 = 1")),
+    }
   }
 }
 

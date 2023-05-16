@@ -1,4 +1,6 @@
-use crate::{conventions, events, runs, signup_requests, signups, staff_positions};
+use crate::{
+  conventions, events, orders, runs, signup_requests, signups, staff_positions, user_con_profiles,
+};
 use sea_orm::{Linked, RelationDef, RelationTrait};
 
 #[derive(Debug, Clone)]
@@ -10,6 +12,21 @@ impl Linked for ConventionToCatchAllStaffPosition {
 
   fn link(&self) -> Vec<RelationDef> {
     vec![conventions::Relation::StaffPositions.def()]
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct ConventionToOrders;
+
+impl Linked for ConventionToOrders {
+  type FromEntity = conventions::Entity;
+  type ToEntity = orders::Entity;
+
+  fn link(&self) -> Vec<sea_orm::LinkDef> {
+    vec![
+      conventions::Relation::UserConProfiles.def(),
+      user_con_profiles::Relation::Orders.def(),
+    ]
   }
 }
 
