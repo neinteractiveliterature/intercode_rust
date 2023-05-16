@@ -25,6 +25,7 @@ mod maximum_event_provided_tickets_override_type;
 pub mod model_backed_type;
 mod money_type;
 mod order_entry_type;
+mod order_quantity_by_status_type;
 mod order_type;
 mod orders_pagination_type;
 mod organization_role_type;
@@ -81,6 +82,7 @@ pub use maximum_event_provided_tickets_override_type::MaximumEventProvidedTicket
 pub use model_backed_type::*;
 pub use money_type::MoneyType;
 pub use order_entry_type::OrderEntryType;
+pub use order_quantity_by_status_type::OrderQuantityByStatusType;
 pub use order_type::OrderType;
 pub use orders_pagination_type::OrdersPaginationType;
 pub use organization_role_type::OrganizationRoleType;

@@ -6,12 +6,13 @@ use intercode_liquid::render_markdown;
 
 use crate::{
   load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single, model_backed_type,
+  QueryData,
 };
 
 use super::{
   active_storage_attachment_type::ActiveStorageAttachmentType,
-  pricing_structure_type::PricingStructureType, ModelBackedType, ProductVariantType,
-  TicketTypeType,
+  pricing_structure_type::PricingStructureType, ModelBackedType, OrderQuantityByStatusType,
+  ProductVariantType, TicketTypeType,
 };
 model_backed_type!(ProductType, products::Model);
 
@@ -49,6 +50,22 @@ impl ProductType {
 
   async fn name(&self) -> &Option<String> {
     &self.model.name
+  }
+
+  #[graphql(name = "order_quantities_by_status")]
+  async fn order_quantities_by_status(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<OrderQuantityByStatusType>> {
+    Ok(
+      ctx
+        .data::<QueryData>()?
+        .loaders()
+        .product_order_quantity_by_status
+        .load_one(self.model.id)
+        .await?
+        .unwrap_or_default(),
+    )
   }
 
   #[graphql(name = "payment_options")]
