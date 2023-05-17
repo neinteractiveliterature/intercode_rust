@@ -3,21 +3,21 @@ use std::borrow::{Borrow, Cow};
 use async_graphql::*;
 use intercode_entities::{
   cms_content_model::CmsContentModel, conventions, events, orders, pages, products, rooms,
-  root_sites, runs, signups, staff_positions, tickets, user_con_profiles,
+  root_sites, runs, signups, staff_positions, ticket_types, tickets, user_con_profiles,
 };
 use intercode_policies::{
   policies::{
     CmsContentPolicy, ConventionAction, ConventionPolicy, EventAction, EventPolicy,
     EventProposalAction, EventProposalPolicy, OrderAction, OrderPolicy, ProductPolicy, RoomPolicy,
     RunAction, RunPolicy, SignupAction, SignupPolicy, StaffPositionPolicy, TicketAction,
-    TicketPolicy, UserConProfileAction, UserConProfilePolicy,
+    TicketPolicy, TicketTypePolicy, UserConProfileAction, UserConProfilePolicy,
   },
   AuthorizationInfo, EntityPolicy, Policy, ReadManageAction,
 };
 use sea_orm::{EntityTrait, PaginatorTrait};
 use seawater::loaders::ExpectModel;
 
-use crate::{lax_id::LaxId, QueryData};
+use crate::{lax_id::LaxId, load_one_by_id, QueryData};
 
 pub struct AbilityType<'a> {
   authorization_info: Cow<'a, AuthorizationInfo>,
@@ -805,10 +805,32 @@ impl<'a> AbilityType<'a> {
   }
 
   #[graphql(name = "can_manage_ticket_types")]
-  async fn can_manage_ticket_types(&self) -> bool {
-    // TODO
-    false
+  async fn can_manage_ticket_types(&self, ctx: &Context<'_>) -> Result<bool> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let convention = ctx.data::<QueryData>()?.convention();
+    let Some(convention)= convention else {
+      return Ok(false);
+    };
+    let single_event_loader_result = load_one_by_id!(convention_single_event, ctx, convention.id)?;
+    let single_event = single_event_loader_result.try_one();
+
+    Ok(
+      TicketTypePolicy::action_permitted(
+        authorization_info,
+        &ReadManageAction::Manage,
+        &(
+          convention.clone(),
+          single_event.cloned(),
+          ticket_types::Model {
+            convention_id: Some(convention.id),
+            ..Default::default()
+          },
+        ),
+      )
+      .await?,
+    )
   }
+
   #[graphql(name = "can_read_user_activity_alerts")]
   async fn can_read_user_activity_alerts(&self) -> bool {
     // TODO

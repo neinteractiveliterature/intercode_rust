@@ -14,6 +14,16 @@ impl TicketTypeType {
     self.model.id.into()
   }
 
+  #[graphql(name = "allows_event_signups")]
+  async fn allows_event_signups(&self) -> bool {
+    self.model.allows_event_signups
+  }
+
+  #[graphql(name = "counts_towards_convention_maximum")]
+  async fn counts_towards_convention_maximum(&self) -> bool {
+    self.model.counts_towards_convention_maximum
+  }
+
   async fn description(&self) -> Option<&str> {
     self.model.description.as_deref()
   }

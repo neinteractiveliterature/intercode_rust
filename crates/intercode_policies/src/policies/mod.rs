@@ -13,6 +13,7 @@ mod signup_request_policy;
 mod staff_position_policy;
 mod team_member_policy;
 mod ticket_policy;
+mod ticket_type_policy;
 mod user_con_profile_policy;
 
 pub use cms_content_policy::*;
@@ -30,4 +31,5 @@ pub use signup_request_policy::*;
 pub use staff_position_policy::*;
 pub use team_member_policy::*;
 pub use ticket_policy::*;
+pub use ticket_type_policy::*;
 pub use user_con_profile_policy::*;
