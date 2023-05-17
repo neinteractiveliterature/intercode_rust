@@ -1,7 +1,10 @@
 use crate::{
   conventions, events, orders, runs, signup_requests, signups, staff_positions, user_con_profiles,
 };
-use sea_orm::{Linked, RelationDef, RelationTrait};
+use sea_orm::{
+  sea_query::{Expr, IntoCondition},
+  Linked, RelationDef, RelationTrait,
+};
 
 #[derive(Debug, Clone)]
 pub struct ConventionToCatchAllStaffPosition;
@@ -71,5 +74,23 @@ impl Linked for ConventionToSignupRequests {
       events::Relation::Runs.def(),
       runs::Relation::SignupRequests.def(),
     ]
+  }
+}
+
+#[derive(Debug, Clone)]
+pub struct ConventionToSingleEvent;
+
+impl Linked for ConventionToSingleEvent {
+  type FromEntity = conventions::Entity;
+  type ToEntity = events::Entity;
+
+  fn link(&self) -> Vec<sea_orm::LinkDef> {
+    vec![conventions::Relation::Events
+      .def()
+      .on_condition(|conventions_table, _events_table| {
+        Expr::col((conventions_table, conventions::Column::SiteMode))
+          .eq("single_event")
+          .into_condition()
+      })]
   }
 }

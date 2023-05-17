@@ -14,7 +14,7 @@ impl OrderQuantityByStatusType {
   }
 }
 
-#[Object]
+#[Object(name = "OrderQuantityByStatus")]
 impl OrderQuantityByStatusType {
   pub async fn status(&self) -> OrderStatus {
     self.status

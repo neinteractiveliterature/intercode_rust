@@ -5,10 +5,10 @@ use async_graphql::dataloader::DataLoader;
 
 use intercode_entities::links::{
   CmsNavigationItemToCmsNavigationSection, ConventionToCatchAllStaffPosition,
-  ConventionToStaffPositions, EventCategoryToEventForm, EventCategoryToEventProposalForm,
-  EventToProvidedTickets, FormToFormItems, SignupRequestToReplaceSignup,
-  SignupRequestToResultSignup, StaffPositionToUserConProfiles, TicketToProvidedByEvent,
-  UserConProfileToStaffPositions,
+  ConventionToSingleEvent, ConventionToStaffPositions, EventCategoryToEventForm,
+  EventCategoryToEventProposalForm, EventToProvidedTickets, FormToFormItems,
+  SignupRequestToReplaceSignup, SignupRequestToResultSignup, StaffPositionToUserConProfiles,
+  TicketToProvidedByEvent, UserConProfileToStaffPositions,
 };
 use intercode_entities::model_ext::FormResponse;
 use intercode_entities::*;
@@ -281,6 +281,7 @@ loader_manager!(
   entity_relation(convention_event_categories, conventions, event_categories);
   entity_relation(convention_products, conventions, products);
   entity_relation(convention_rooms, conventions, rooms);
+  entity_link(convention_single_event, ConventionToSingleEvent);
   entity_link(convention_staff_positions, ConventionToStaffPositions);
   entity_relation(convention_ticket_types, conventions, ticket_types);
   entity_relation(convention_user_con_profile_form, conventions, forms);
