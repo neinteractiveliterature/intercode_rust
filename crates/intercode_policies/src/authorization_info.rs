@@ -30,6 +30,7 @@ pub struct AuthorizationInfo {
   pub assumed_identity_from_profile: Option<user_con_profiles::Model>,
   active_signups_by_convention_and_event: Mutex<UnboundCache<i64, SignupsByEventId>>,
   all_model_permissions_by_convention: Mutex<UnboundCache<i64, UserPermissionsMap>>,
+  organization_permissions_by_organization_id: OnceCell<HashMap<i64, HashSet<String>>>,
   user_con_profile_ids: OnceCell<HashSet<i64>>,
   team_member_event_ids_by_convention_id: Mutex<UnboundCache<i64, HashSet<i64>>>,
 }
@@ -43,6 +44,7 @@ impl Clone for AuthorizationInfo {
       assumed_identity_from_profile: self.assumed_identity_from_profile.clone(),
       active_signups_by_convention_and_event: Mutex::new(UnboundCache::new()),
       all_model_permissions_by_convention: Mutex::new(UnboundCache::new()),
+      organization_permissions_by_organization_id: OnceCell::new(),
       user_con_profile_ids: OnceCell::new(),
       team_member_event_ids_by_convention_id: Mutex::new(UnboundCache::new()),
     }
@@ -95,6 +97,7 @@ impl AuthorizationInfo {
       assumed_identity_from_profile,
       active_signups_by_convention_and_event: Mutex::new(UnboundCache::new()),
       all_model_permissions_by_convention: Mutex::new(UnboundCache::new()),
+      organization_permissions_by_organization_id: OnceCell::new(),
       user_con_profile_ids: OnceCell::new(),
       team_member_event_ids_by_convention_id: Mutex::new(UnboundCache::new()),
     }
@@ -125,11 +128,38 @@ impl AuthorizationInfo {
     let permissions_map = lock
       .try_get_or_set_with(convention_id, || {
         let user_id = self.user.as_ref().as_ref().map(|user| user.id);
-        load_all_permissions_in_convention_with_model_type_and_id(&self.db, convention_id, user_id)
+        load_all_permissions_in_convention_with_model_type_and_id(
+          &self.db,
+          Some(convention_id),
+          user_id,
+        )
       })
       .await?;
 
     Ok(permissions_map.clone())
+  }
+
+  pub async fn organization_permissions_by_organization_id(
+    &self,
+  ) -> Result<&HashMap<i64, HashSet<String>>, DbErr> {
+    self
+      .organization_permissions_by_organization_id
+      .get_or_try_init(|| async {
+        let user_id = self.user.as_ref().as_ref().map(|user| user.id);
+        Ok(
+          load_all_permissions_in_convention_with_model_type_and_id(&self.db, None, user_id)
+            .await?
+            .into_iter()
+            .filter_map(|(model_id, permissions)| match model_id {
+              crate::PermissionModelId::OrganizationId(organization_id) => {
+                Some((organization_id, permissions))
+              }
+              _ => None,
+            })
+            .collect(),
+        )
+      })
+      .await
   }
 
   pub async fn team_member_event_ids_in_convention(
@@ -285,6 +315,21 @@ impl AuthorizationInfo {
       .await?;
 
     Ok(perms.has_event_category_permission_in_convention(convention_id, permission))
+  }
+
+  pub async fn has_organization_permission(
+    &self,
+    permission: &str,
+    organization_id: i64,
+  ) -> Result<bool, DbErr> {
+    let perms = self.organization_permissions_by_organization_id().await?;
+
+    Ok(
+      perms
+        .get(&organization_id)
+        .map(|org_perms| org_perms.contains(permission))
+        .unwrap_or(false),
+    )
   }
 
   pub async fn has_scope_and_convention_permission(
