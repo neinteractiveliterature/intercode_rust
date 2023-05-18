@@ -8,7 +8,8 @@ use intercode_entities::links::{
   ConventionToSingleEvent, ConventionToStaffPositions, EventCategoryToEventForm,
   EventCategoryToEventProposalForm, EventToProvidedTickets, FormToFormItems,
   SignupRequestToReplaceSignup, SignupRequestToResultSignup, StaffPositionToUserConProfiles,
-  TicketToProvidedByEvent, UserConProfileToStaffPositions,
+  TicketToProvidedByEvent, UserActivityAlertToNotificationDestinations,
+  UserConProfileToStaffPositions,
 };
 use intercode_entities::model_ext::FormResponse;
 use intercode_entities::*;
@@ -284,6 +285,7 @@ loader_manager!(
   entity_link(convention_single_event, ConventionToSingleEvent);
   entity_link(convention_staff_positions, ConventionToStaffPositions);
   entity_relation(convention_ticket_types, conventions, ticket_types);
+  entity_relation(convention_user_activity_alerts, conventions, user_activity_alerts);
   entity_relation(convention_user_con_profile_form, conventions, forms);
   entity_id(conventions_by_id, conventions);
   entity_relation(coupon_application_coupon, coupon_applications, coupons);
@@ -315,6 +317,8 @@ loader_manager!(
     maximum_event_provided_tickets_overrides,
     ticket_types
   );
+  entity_relation(notification_destination_staff_position, notification_destinations, staff_positions);
+  entity_relation(notification_destination_user_con_profile, notification_destinations, user_con_profiles);
   entity_relation(order_coupon_applications, orders, coupon_applications);
   entity_relation(order_order_entries, orders, order_entries);
   entity_relation(order_user_con_profile, orders, user_con_profiles);
@@ -350,6 +354,8 @@ loader_manager!(
   entity_relation(ticket_ticket_type, tickets, ticket_types);
   entity_relation(ticket_user_con_profile, tickets, user_con_profiles);
   entity_relation(ticket_type_providing_products, ticket_types, products);
+  entity_link(user_activity_alert_notification_destinations, UserActivityAlertToNotificationDestinations);
+  entity_relation(user_activity_alert_user, user_activity_alerts, users);
   entity_id(user_con_profiles_by_id, user_con_profiles);
   entity_relation(user_con_profile_convention, user_con_profiles, conventions);
   entity_relation(user_con_profile_orders, user_con_profiles, orders);

@@ -2,12 +2,13 @@ use std::str::FromStr;
 
 use super::{
   active_storage_attachment_type::ActiveStorageAttachmentType,
-  stripe_account_type::StripeAccountType, CmsContentGroupType, CmsContentType, CmsFileType,
-  CmsGraphqlQueryType, CmsLayoutType, CmsNavigationItemType, CmsPartialType, CmsVariableType,
-  CouponsPaginationType, EventCategoryType, EventProposalType, EventProposalsPaginationType,
-  EventType, EventsPaginationType, FormType, ModelBackedType, OrdersPaginationType, PageType,
-  RoomType, ScheduledStringableValueType, SignupRequestsPaginationType, SignupType,
-  StaffPositionType, TicketTypeType, UserConProfileType, UserConProfilesPaginationType,
+  stripe_account_type::StripeAccountType, user_activity_alert_type::UserActivityAlertType,
+  CmsContentGroupType, CmsContentType, CmsFileType, CmsGraphqlQueryType, CmsLayoutType,
+  CmsNavigationItemType, CmsPartialType, CmsVariableType, CouponsPaginationType, EventCategoryType,
+  EventProposalType, EventProposalsPaginationType, EventType, EventsPaginationType, FormType,
+  ModelBackedType, OrdersPaginationType, PageType, RoomType, ScheduledStringableValueType,
+  SignupRequestsPaginationType, SignupType, StaffPositionType, TicketTypeType, UserConProfileType,
+  UserConProfilesPaginationType,
 };
 use crate::{
   api::{
@@ -711,6 +712,12 @@ impl ConventionType {
   #[graphql(name = "timezone_name")]
   async fn timezone_name(&self) -> Option<&str> {
     self.model.timezone_name.as_deref()
+  }
+
+  #[graphql(name = "user_activity_alerts")]
+  async fn user_activity_alerts(&self, ctx: &Context<'_>) -> Result<Vec<UserActivityAlertType>> {
+    let loader_result = load_one_by_model_id!(convention_user_activity_alerts, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, UserActivityAlertType))
   }
 
   #[graphql(name = "user_con_profile")]
