@@ -3,14 +3,16 @@ use std::borrow::{Borrow, Cow};
 use async_graphql::*;
 use intercode_entities::{
   cms_content_model::CmsContentModel, conventions, events, orders, pages, products, rooms,
-  root_sites, runs, signups, staff_positions, ticket_types, tickets, user_con_profiles,
+  root_sites, runs, signups, staff_positions, ticket_types, tickets, user_activity_alerts,
+  user_con_profiles,
 };
 use intercode_policies::{
   policies::{
     CmsContentPolicy, ConventionAction, ConventionPolicy, EventAction, EventPolicy,
     EventProposalAction, EventProposalPolicy, OrderAction, OrderPolicy, ProductPolicy, RoomPolicy,
     RunAction, RunPolicy, SignupAction, SignupPolicy, StaffPositionPolicy, TicketAction,
-    TicketPolicy, TicketTypePolicy, UserConProfileAction, UserConProfilePolicy,
+    TicketPolicy, TicketTypePolicy, UserActivityAlertPolicy, UserConProfileAction,
+    UserConProfilePolicy,
   },
   AuthorizationInfo, EntityPolicy, Policy, ReadManageAction,
 };
@@ -832,10 +834,26 @@ impl<'a> AbilityType<'a> {
   }
 
   #[graphql(name = "can_read_user_activity_alerts")]
-  async fn can_read_user_activity_alerts(&self) -> bool {
-    // TODO
-    false
+  async fn can_read_user_activity_alerts(&self, ctx: &Context<'_>) -> Result<bool> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let convention = ctx.data::<QueryData>()?.convention();
+    let Some(convention)= convention else {
+      return Ok(false);
+    };
+
+    Ok(
+      UserActivityAlertPolicy::action_permitted(
+        authorization_info,
+        &ReadManageAction::Read,
+        &user_activity_alerts::Model {
+          convention_id: convention.id,
+          ..Default::default()
+        },
+      )
+      .await?,
+    )
   }
+
   #[graphql(name = "can_read_organizations")]
   async fn can_read_organizations(&self) -> bool {
     // TODO
