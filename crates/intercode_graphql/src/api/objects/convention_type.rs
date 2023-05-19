@@ -4,11 +4,11 @@ use super::{
   active_storage_attachment_type::ActiveStorageAttachmentType,
   stripe_account_type::StripeAccountType, user_activity_alert_type::UserActivityAlertType,
   CmsContentGroupType, CmsContentType, CmsFileType, CmsGraphqlQueryType, CmsLayoutType,
-  CmsNavigationItemType, CmsPartialType, CmsVariableType, CouponsPaginationType, EventCategoryType,
-  EventProposalType, EventProposalsPaginationType, EventType, EventsPaginationType, FormType,
-  ModelBackedType, OrdersPaginationType, PageType, RoomType, ScheduledStringableValueType,
-  SignupRequestsPaginationType, SignupType, StaffPositionType, TicketTypeType, UserConProfileType,
-  UserConProfilesPaginationType,
+  CmsNavigationItemType, CmsPartialType, CmsVariableType, CouponsPaginationType, DepartmentType,
+  EventCategoryType, EventProposalType, EventProposalsPaginationType, EventType,
+  EventsPaginationType, FormType, ModelBackedType, OrdersPaginationType, PageType, RoomType,
+  ScheduledStringableValueType, SignupRequestsPaginationType, SignupType, StaffPositionType,
+  TicketTypeType, UserConProfileType, UserConProfilesPaginationType,
 };
 use crate::{
   api::{
@@ -148,6 +148,11 @@ impl ConventionType {
       ),
     );
     CouponsQueryBuilder::new(filters, sort).paginate(ctx, scope, page, per_page)
+  }
+
+  async fn departments(&self, ctx: &Context<'_>) -> Result<Vec<DepartmentType>> {
+    let loader_result = load_one_by_model_id!(convention_departments, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, DepartmentType))
   }
 
   async fn domain(&self) -> &str {

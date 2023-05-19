@@ -1,6 +1,7 @@
 mod cms_content_policy;
 mod convention_policy;
 mod coupon_policy;
+mod department_policy;
 mod event_policy;
 mod event_proposal_policy;
 mod maximum_event_provided_tickets_override_policy;
@@ -22,6 +23,7 @@ mod user_con_profile_policy;
 pub use cms_content_policy::*;
 pub use convention_policy::*;
 pub use coupon_policy::*;
+pub use department_policy::*;
 pub use event_policy::*;
 pub use event_proposal_policy::*;
 pub use maximum_event_provided_tickets_override_policy::*;

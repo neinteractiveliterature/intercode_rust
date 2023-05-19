@@ -2,17 +2,17 @@ use std::borrow::{Borrow, Cow};
 
 use async_graphql::*;
 use intercode_entities::{
-  cms_content_model::CmsContentModel, conventions, events, orders, organizations, pages, products,
-  rooms, root_sites, runs, signups, staff_positions, ticket_types, tickets, user_activity_alerts,
-  user_con_profiles,
+  cms_content_model::CmsContentModel, conventions, departments, events, orders, organizations,
+  pages, products, rooms, root_sites, runs, signups, staff_positions, ticket_types, tickets,
+  user_activity_alerts, user_con_profiles,
 };
 use intercode_policies::{
   policies::{
-    CmsContentPolicy, ConventionAction, ConventionPolicy, EventAction, EventPolicy,
-    EventProposalAction, EventProposalPolicy, OrderAction, OrderPolicy, OrganizationPolicy,
-    ProductPolicy, RoomPolicy, RunAction, RunPolicy, SignupAction, SignupPolicy,
-    StaffPositionPolicy, TicketAction, TicketPolicy, TicketTypePolicy, UserActivityAlertPolicy,
-    UserConProfileAction, UserConProfilePolicy,
+    CmsContentPolicy, ConventionAction, ConventionPolicy, DepartmentPolicy, EventAction,
+    EventPolicy, EventProposalAction, EventProposalPolicy, OrderAction, OrderPolicy,
+    OrganizationPolicy, ProductPolicy, RoomPolicy, RunAction, RunPolicy, SignupAction,
+    SignupPolicy, StaffPositionPolicy, TicketAction, TicketPolicy, TicketTypePolicy,
+    UserActivityAlertPolicy, UserConProfileAction, UserConProfilePolicy,
   },
   AuthorizationInfo, EntityPolicy, Policy, ReadManageAction,
 };
@@ -395,11 +395,27 @@ impl<'a> AbilityType<'a> {
     )
     .await
   }
+
   #[graphql(name = "can_update_departments")]
-  async fn can_update_departments(&self) -> bool {
-    // TODO
-    false
+  async fn can_update_departments(&self, ctx: &Context<'_>) -> Result<bool> {
+    let authorization_info = self.authorization_info.as_ref();
+    let Some(convention) = ctx.data::<QueryData>()?.convention() else {
+      return Ok(false);
+    };
+
+    Ok(
+      DepartmentPolicy::action_permitted(
+        authorization_info,
+        &ReadManageAction::Manage,
+        &departments::Model {
+          convention_id: convention.id,
+          ..Default::default()
+        },
+      )
+      .await?,
+    )
   }
+
   #[graphql(name = "can_manage_email_routes")]
   async fn can_manage_email_routes(&self) -> bool {
     // TODO
@@ -571,7 +587,7 @@ impl<'a> AbilityType<'a> {
 
   #[graphql(name = "can_manage_runs")]
   async fn can_manage_runs(&self, ctx: &Context<'_>) -> Result<bool> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let authorization_info = self.authorization_info.as_ref();
     let convention = ctx.data::<QueryData>()?.convention();
     let Some(convention) = convention else {
       return Ok(false);
@@ -663,7 +679,7 @@ impl<'a> AbilityType<'a> {
 
   #[graphql(name = "can_manage_signups")]
   async fn can_manage_signups(&self, ctx: &Context<'_>) -> Result<bool> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let authorization_info = self.authorization_info.as_ref();
     let convention = ctx.data::<QueryData>()?.convention();
     let Some(convention) = convention else {
       return Ok(false);
@@ -707,7 +723,7 @@ impl<'a> AbilityType<'a> {
 
   #[graphql(name = "can_manage_staff_positions")]
   async fn can_manage_staff_positions(&self, ctx: &Context<'_>) -> Result<bool> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let authorization_info = self.authorization_info.as_ref();
     let convention = ctx.data::<QueryData>()?.convention();
     Ok(
       StaffPositionPolicy::action_permitted(
@@ -724,7 +740,7 @@ impl<'a> AbilityType<'a> {
 
   #[graphql(name = "can_read_orders")]
   async fn can_read_orders(&self, ctx: &Context<'_>) -> Result<bool> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let authorization_info = self.authorization_info.as_ref();
     let convention = ctx.data::<QueryData>()?.convention();
     let Some(convention)= convention else {
       return Ok(false);
@@ -752,7 +768,7 @@ impl<'a> AbilityType<'a> {
 
   #[graphql(name = "can_create_orders")]
   async fn can_create_orders(&self, ctx: &Context<'_>) -> Result<bool> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let authorization_info = self.authorization_info.as_ref();
     let convention = ctx.data::<QueryData>()?.convention();
     let Some(convention)= convention else {
       return Ok(false);
@@ -780,7 +796,7 @@ impl<'a> AbilityType<'a> {
 
   #[graphql(name = "can_update_orders")]
   async fn can_update_orders(&self, ctx: &Context<'_>) -> Result<bool> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let authorization_info = self.authorization_info.as_ref();
     let convention = ctx.data::<QueryData>()?.convention();
     let Some(convention)= convention else {
       return Ok(false);
@@ -808,7 +824,7 @@ impl<'a> AbilityType<'a> {
 
   #[graphql(name = "can_manage_ticket_types")]
   async fn can_manage_ticket_types(&self, ctx: &Context<'_>) -> Result<bool> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let authorization_info = self.authorization_info.as_ref();
     let convention = ctx.data::<QueryData>()?.convention();
     let Some(convention)= convention else {
       return Ok(false);
@@ -835,7 +851,7 @@ impl<'a> AbilityType<'a> {
 
   #[graphql(name = "can_read_user_activity_alerts")]
   async fn can_read_user_activity_alerts(&self, ctx: &Context<'_>) -> Result<bool> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let authorization_info = self.authorization_info.as_ref();
     let convention = ctx.data::<QueryData>()?.convention();
     let Some(convention)= convention else {
       return Ok(false);
@@ -855,8 +871,8 @@ impl<'a> AbilityType<'a> {
   }
 
   #[graphql(name = "can_read_organizations")]
-  async fn can_read_organizations(&self, ctx: &Context<'_>) -> Result<bool> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+  async fn can_read_organizations(&self) -> Result<bool> {
+    let authorization_info = self.authorization_info.as_ref();
 
     Ok(
       OrganizationPolicy::action_permitted(

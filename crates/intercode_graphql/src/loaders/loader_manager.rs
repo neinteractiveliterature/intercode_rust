@@ -33,7 +33,6 @@ use super::signup_count_loader::SignupCountLoader;
 use super::waitlist_position_loader::WaitlistPositionLoader;
 
 macro_rules! loader_manager {
-
   (@fields entity_id($name: ident, $entity: ident); $($tail:tt)*) => {
     loader_manager! {
       @fields $($tail)* $name: DataLoader<EntityIdLoader<$entity::Entity>>,
@@ -280,6 +279,7 @@ loader_manager!(
     CmsNavigationItemToCmsNavigationSection
   );
   entity_link(convention_catch_all_staff_position, ConventionToCatchAllStaffPosition);
+  entity_relation(convention_departments, conventions, departments);
   entity_relation(convention_event_categories, conventions, event_categories);
   entity_relation(convention_products, conventions, products);
   entity_relation(convention_rooms, conventions, rooms);
@@ -292,6 +292,7 @@ loader_manager!(
   entity_relation(coupon_application_coupon, coupon_applications, coupons);
   entity_relation(coupon_application_order, coupon_applications, orders);
   entity_relation(coupon_provides_product, coupons, products);
+  entity_relation(department_event_categories, departments, event_categories);
   entity_relation(event_convention, events, conventions);
   entity_relation(event_event_category, events, event_categories);
   entity_relation(event_maximum_event_provided_tickets_overrides, events, maximum_event_provided_tickets_overrides);
