@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
 use intercode_entities::{
-  cms_content_groups, conventions, event_categories, events, organization_roles_users, permissions,
-  runs, signups, staff_positions, staff_positions_user_con_profiles, team_members,
-  user_con_profiles,
+  cms_content_groups, conventions, event_categories, events, organization_roles,
+  organization_roles_users, permissions, runs, signups, staff_positions,
+  staff_positions_user_con_profiles, team_members, user_con_profiles,
 };
 use itertools::Itertools;
 use sea_orm::{
@@ -56,13 +56,17 @@ pub fn user_permission_scope(user_id: Option<i64>) -> Select<permissions::Entity
 }
 
 pub fn select_all_permissions_in_convention(
-  convention_id: i64,
+  convention_id: Option<i64>,
   user_id: Option<i64>,
 ) -> Select<permissions::Entity> {
   user_permission_scope(user_id).filter(
     Condition::any()
-      .add(permissions::Column::ConventionId.eq(convention_id))
       .add(
+        convention_id
+          .map(|convention_id| permissions::Column::ConventionId.eq(convention_id))
+          .unwrap_or_else(|| permissions::Column::ConventionId.is_null()),
+      )
+      .add_option(convention_id.map(|convention_id| {
         permissions::Column::EventCategoryId.in_subquery(
           sea_orm::QuerySelect::query(
             &mut event_categories::Entity::find()
@@ -71,19 +75,33 @@ pub fn select_all_permissions_in_convention(
               .column(event_categories::Column::Id),
           )
           .take(),
-        ),
-      )
+        )
+      }))
       .add(
-        permissions::Column::CmsContentGroupId.in_subquery(
-          sea_orm::QuerySelect::query(
-            &mut cms_content_groups::Entity::find()
-              .filter(cms_content_groups::Column::ParentType.eq("Convention"))
-              .filter(cms_content_groups::Column::ParentId.eq(convention_id))
-              .select_only()
-              .column(cms_content_groups::Column::Id),
-          )
-          .take(),
-        ),
+        convention_id
+          .map(|convention_id| {
+            permissions::Column::CmsContentGroupId.in_subquery(
+              sea_orm::QuerySelect::query(
+                &mut cms_content_groups::Entity::find()
+                  .filter(cms_content_groups::Column::ParentType.eq("Convention"))
+                  .filter(cms_content_groups::Column::ParentId.eq(convention_id))
+                  .select_only()
+                  .column(cms_content_groups::Column::Id),
+              )
+              .take(),
+            )
+          })
+          .unwrap_or_else(|| {
+            permissions::Column::CmsContentGroupId.in_subquery(
+              sea_orm::QuerySelect::query(
+                &mut cms_content_groups::Entity::find()
+                  .filter(cms_content_groups::Column::ParentType.eq("RootSite"))
+                  .select_only()
+                  .column(cms_content_groups::Column::Id),
+              )
+              .take(),
+            )
+          }),
       ),
   )
 }
@@ -93,6 +111,7 @@ pub enum PermissionModelId {
   Convention(i64),
   EventCategory(i64),
   CmsContentGroup(i64),
+  OrganizationId(i64),
 }
 
 #[derive(Clone)]
@@ -108,12 +127,15 @@ impl FromQueryResult for UserPermission {
     let convention_id: Option<i64> = res.try_get(pre, "convention_id")?;
     let event_category_id: Option<i64> = res.try_get(pre, "event_category_id")?;
     let cms_content_group_id: Option<i64> = res.try_get(pre, "cms_content_group_id")?;
+    let organization_id: Option<i64> = res.try_get(pre, "organization_id")?;
     let model_id = if let Some(convention_id) = convention_id {
       PermissionModelId::Convention(convention_id)
     } else if let Some(event_category_id) = event_category_id {
       PermissionModelId::EventCategory(event_category_id)
     } else if let Some(cms_content_group_id) = cms_content_group_id {
       PermissionModelId::CmsContentGroup(cms_content_group_id)
+    } else if let Some(organization_id) = organization_id {
+      PermissionModelId::OrganizationId(organization_id)
     } else {
       return Err(DbErr::Custom(
         "Permission record did not have a model ID".to_string(),
@@ -236,18 +258,32 @@ impl UserPermissionsMap {
   }
 }
 
+impl IntoIterator for UserPermissionsMap {
+  type Item = (PermissionModelId, HashSet<String>);
+  type IntoIter = <HashMap<PermissionModelId, HashSet<String>> as IntoIterator>::IntoIter;
+
+  fn into_iter(self) -> Self::IntoIter {
+    self.permissions.into_iter()
+  }
+}
+
 pub async fn load_all_permissions_in_convention_with_model_type_and_id(
   db: &ConnectionWrapper,
-  convention_id: i64,
+  convention_id: Option<i64>,
   user_id: Option<i64>,
 ) -> Result<UserPermissionsMap, DbErr> {
   Ok(UserPermissionsMap::from_user_permissions(
     &mut select_all_permissions_in_convention(convention_id, user_id)
+      .left_join(organization_roles::Entity)
       .select_only()
       .column(permissions::Column::Permission)
       .column(permissions::Column::ConventionId)
       .column(permissions::Column::EventCategoryId)
       .column(permissions::Column::CmsContentGroupId)
+      .column_as(
+        organization_roles::Column::OrganizationId,
+        "organization_id",
+      )
       .into_model::<UserPermission>()
       .all(db)
       .await?

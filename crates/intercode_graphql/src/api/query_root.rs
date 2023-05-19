@@ -2,7 +2,8 @@ use std::borrow::Cow;
 
 use super::interfaces::CmsParentInterface;
 use super::objects::{
-  AbilityType, ConventionType, EventType, RootSiteType, UserConProfileType, UserType,
+  AbilityType, ConventionType, EventType, OrganizationType, RootSiteType, UserConProfileType,
+  UserType,
 };
 use crate::api::objects::ModelBackedType;
 use crate::entity_relay_connection::RelayConnectable;
@@ -10,8 +11,9 @@ use crate::{LiquidRenderer, QueryData};
 use async_graphql::connection::{query, Connection};
 use async_graphql::*;
 use intercode_entities::cms_parent::CmsParent;
-use intercode_entities::{events, oauth_applications, root_sites};
+use intercode_entities::{events, oauth_applications, organizations, root_sites};
 use intercode_policies::AuthorizationInfo;
+use itertools::Itertools;
 use liquid::object;
 use sea_orm::{EntityTrait, PaginatorTrait};
 
@@ -112,6 +114,19 @@ impl QueryRoot {
       .count(query_data.db())
       .await?;
     Ok(count > 0)
+  }
+
+  async fn organizations(&self, ctx: &Context<'_>) -> Result<Vec<OrganizationType>> {
+    let query_data = ctx.data::<QueryData>()?;
+
+    Ok(
+      organizations::Entity::find()
+        .all(query_data.db())
+        .await?
+        .into_iter()
+        .map(OrganizationType::new)
+        .collect_vec(),
+    )
   }
 
   async fn preview_liquid(&self, ctx: &Context<'_>, content: String) -> Result<String, Error> {

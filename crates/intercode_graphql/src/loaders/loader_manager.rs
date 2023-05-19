@@ -33,6 +33,7 @@ use super::signup_count_loader::SignupCountLoader;
 use super::waitlist_position_loader::WaitlistPositionLoader;
 
 macro_rules! loader_manager {
+
   (@fields entity_id($name: ident, $entity: ident); $($tail:tt)*) => {
     loader_manager! {
       @fields $($tail)* $name: DataLoader<EntityIdLoader<$entity::Entity>>,
@@ -325,6 +326,10 @@ loader_manager!(
   entity_relation(order_entry_order, order_entries, orders);
   entity_relation(order_entry_product, order_entries, products);
   entity_relation(order_entry_product_variant, order_entries, product_variants);
+  entity_relation(organization_conventions, organizations, conventions);
+  entity_relation(organization_organization_roles, organizations, organization_roles);
+  entity_relation(organization_role_permissions, organization_roles, permissions);
+  entity_relation(organization_role_users, organization_roles, users);
   entity_relation(pages_cms_layouts, pages, cms_layouts);
   entity_relation(product_product_variants, products, product_variants);
   entity_relation(product_provides_ticket_type, products, ticket_types);
