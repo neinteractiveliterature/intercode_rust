@@ -1,5 +1,5 @@
 use axum::async_trait;
-use intercode_entities::user_activity_alerts;
+use intercode_entities::departments;
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter, QuerySelect};
 
 use crate::{
@@ -7,24 +7,24 @@ use crate::{
   policy::{EntityPolicy, Policy, ReadManageAction},
 };
 
-pub struct UserActivityAlertPolicy;
+pub struct DepartmentPolicy;
 
 #[async_trait]
-impl Policy<AuthorizationInfo, user_activity_alerts::Model> for UserActivityAlertPolicy {
+impl Policy<AuthorizationInfo, departments::Model> for DepartmentPolicy {
   type Action = ReadManageAction;
   type Error = DbErr;
 
   async fn action_permitted(
     principal: &AuthorizationInfo,
     action: &ReadManageAction,
-    user_activity_alert: &user_activity_alerts::Model,
+    user_activity_alert: &departments::Model,
   ) -> Result<bool, Self::Error> {
     match action {
       ReadManageAction::Read => Ok(
         principal
           .has_scope_and_convention_permission(
             "read_conventions",
-            "update_user_activity_alerts",
+            "read_departments",
             user_activity_alert.convention_id,
           )
           .await?
@@ -34,7 +34,7 @@ impl Policy<AuthorizationInfo, user_activity_alerts::Model> for UserActivityAler
         principal
           .has_scope_and_convention_permission(
             "manage_conventions",
-            "update_user_activity_alerts",
+            "update_departments",
             user_activity_alert.convention_id,
           )
           .await?
@@ -44,19 +44,24 @@ impl Policy<AuthorizationInfo, user_activity_alerts::Model> for UserActivityAler
   }
 }
 
-impl EntityPolicy<AuthorizationInfo, user_activity_alerts::Model> for UserActivityAlertPolicy {
+impl EntityPolicy<AuthorizationInfo, departments::Model> for DepartmentPolicy {
   type Action = ReadManageAction;
   fn accessible_to(
     principal: &AuthorizationInfo,
-    _action: &Self::Action,
-  ) -> sea_orm::Select<user_activity_alerts::Entity> {
-    user_activity_alerts::Entity::find().filter(
-      user_activity_alerts::Column::ConventionId.in_subquery(
-        QuerySelect::query(
-          &mut principal.conventions_with_permission("update_user_activity_alerts"),
-        )
-        .take(),
+    action: &Self::Action,
+  ) -> sea_orm::Select<departments::Entity> {
+    match action {
+      ReadManageAction::Read => {
+        departments::Entity::find().filter(departments::Column::ConventionId.in_subquery(
+          QuerySelect::query(&mut principal.conventions_with_permission("read_departments")).take(),
+        ))
+      }
+      ReadManageAction::Manage => departments::Entity::find().filter(
+        departments::Column::ConventionId.in_subquery(
+          QuerySelect::query(&mut principal.conventions_with_permission("update_departments"))
+            .take(),
+        ),
       ),
-    )
+    }
   }
 }
