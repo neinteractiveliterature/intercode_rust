@@ -1,21 +1,24 @@
 use std::borrow::Cow;
 
+use super::inputs::{EmailRouteFiltersInput, SortInput};
 use super::interfaces::CmsParentInterface;
 use super::objects::{
-  AbilityType, ConventionType, EventType, OrganizationType, RootSiteType, UserConProfileType,
-  UserType,
+  AbilityType, ConventionType, EmailRoutesPaginationType, EventType, OrganizationType,
+  RootSiteType, UserConProfileType, UserType,
 };
 use crate::api::objects::ModelBackedType;
 use crate::entity_relay_connection::RelayConnectable;
+use crate::query_builders::{EmailRoutesQueryBuilder, QueryBuilder};
 use crate::{LiquidRenderer, QueryData};
 use async_graphql::connection::{query, Connection};
 use async_graphql::*;
 use intercode_entities::cms_parent::CmsParent;
-use intercode_entities::{events, oauth_applications, organizations, root_sites};
-use intercode_policies::AuthorizationInfo;
+use intercode_entities::{email_routes, events, oauth_applications, organizations, root_sites};
+use intercode_policies::policies::EmailRoutePolicy;
+use intercode_policies::{AuthorizationInfo, EntityPolicy, ReadManageAction};
 use itertools::Itertools;
 use liquid::object;
-use sea_orm::{EntityTrait, PaginatorTrait};
+use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect};
 
 pub struct QueryRoot;
 
@@ -23,10 +26,15 @@ pub struct QueryRoot;
 impl QueryRoot {
   pub async fn assumed_identity_from_profile(
     &self,
-    _ctx: &Context<'_>,
-  ) -> Option<UserConProfileType> {
-    // TODO
-    None
+    ctx: &Context<'_>,
+  ) -> Result<Option<UserConProfileType>> {
+    Ok(
+      ctx
+        .data::<AuthorizationInfo>()?
+        .assumed_identity_from_profile
+        .as_ref()
+        .map(|profile| UserConProfileType::new(profile.clone())),
+    )
   }
 
   pub async fn cms_parent_by_request_host(
@@ -78,6 +86,29 @@ impl QueryRoot {
       Some(user) => Ok(Some(UserType::new(user.to_owned()))),
       None => Ok(None),
     }
+  }
+
+  #[graphql(name = "email_routes_paginated")]
+  async fn email_routes_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
+    filters: Option<EmailRouteFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<EmailRoutesPaginationType, Error> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let scope = email_routes::Entity::find().filter(
+      email_routes::Column::Id.in_subquery(
+        sea_orm::QuerySelect::query(
+          &mut EmailRoutePolicy::accessible_to(authorization_info, &ReadManageAction::Read)
+            .select_only()
+            .column(email_routes::Column::Id),
+        )
+        .take(),
+      ),
+    );
+    EmailRoutesQueryBuilder::new(filters, sort).paginate(ctx, scope, page, per_page)
   }
 
   async fn events(

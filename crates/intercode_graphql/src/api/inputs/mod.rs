@@ -1,4 +1,5 @@
 mod coupon_filters_input;
+mod email_route_filters_input;
 mod event_filters_input;
 mod event_proposal_filters_input;
 mod order_filters_input;
@@ -8,6 +9,7 @@ mod sort_input;
 mod user_con_profile_filters_input;
 
 pub use coupon_filters_input::*;
+pub use email_route_filters_input::*;
 pub use event_filters_input::*;
 pub use event_proposal_filters_input::*;
 pub use order_filters_input::*;
