@@ -2,14 +2,14 @@ use std::borrow::{Borrow, Cow};
 
 use async_graphql::*;
 use intercode_entities::{
-  cms_content_model::CmsContentModel, conventions, departments, events, orders, organizations,
-  pages, products, rooms, root_sites, runs, signups, staff_positions, ticket_types, tickets,
-  user_activity_alerts, user_con_profiles,
+  cms_content_model::CmsContentModel, conventions, departments, email_routes, events, orders,
+  organizations, pages, products, rooms, root_sites, runs, signups, staff_positions, ticket_types,
+  tickets, user_activity_alerts, user_con_profiles,
 };
 use intercode_policies::{
   policies::{
-    CmsContentPolicy, ConventionAction, ConventionPolicy, DepartmentPolicy, EventAction,
-    EventPolicy, EventProposalAction, EventProposalPolicy, OrderAction, OrderPolicy,
+    CmsContentPolicy, ConventionAction, ConventionPolicy, DepartmentPolicy, EmailRoutePolicy,
+    EventAction, EventPolicy, EventProposalAction, EventProposalPolicy, OrderAction, OrderPolicy,
     OrganizationPolicy, ProductPolicy, RoomPolicy, RunAction, RunPolicy, SignupAction,
     SignupPolicy, StaffPositionPolicy, TicketAction, TicketPolicy, TicketTypePolicy,
     UserActivityAlertPolicy, UserConProfileAction, UserConProfilePolicy,
@@ -417,9 +417,15 @@ impl<'a> AbilityType<'a> {
   }
 
   #[graphql(name = "can_manage_email_routes")]
-  async fn can_manage_email_routes(&self) -> bool {
-    // TODO
-    false
+  async fn can_manage_email_routes(&self) -> Result<bool> {
+    Ok(
+      EmailRoutePolicy::action_permitted(
+        self.authorization_info.as_ref(),
+        &ReadManageAction::Manage,
+        &email_routes::Model::default(),
+      )
+      .await?,
+    )
   }
 
   #[graphql(name = "can_update_event")]
