@@ -300,6 +300,7 @@ loader_manager!(
   entity_relation(event_runs, events, runs);
   entity_relation(event_team_members, events, team_members);
   entity_id(events_by_id, events);
+  entity_relation(event_category_department, event_categories, departments);
   entity_link(event_category_event_form, EventCategoryToEventForm);
   entity_link(
     event_category_event_proposal_form,

@@ -42,6 +42,11 @@ impl Policy<AuthorizationInfo, staff_positions::Model> for StaffPositionPolicy {
 
 impl EntityPolicy<AuthorizationInfo, staff_positions::Model> for StaffPositionPolicy {
   type Action = ReadManageAction;
+
+  fn id_column() -> staff_positions::Column {
+    staff_positions::Column::Id
+  }
+
   fn accessible_to(
     _principal: &AuthorizationInfo,
     _action: &Self::Action,

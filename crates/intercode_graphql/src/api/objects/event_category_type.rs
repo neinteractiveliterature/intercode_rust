@@ -1,11 +1,13 @@
 use async_graphql::{Context, Error, Object, ID};
 use intercode_entities::event_categories;
 use intercode_inflector::inflector::string::pluralize;
-use seawater::loaders::ExpectModel;
 
-use crate::{model_backed_type, QueryData};
+use crate::{
+  load_one_by_model_id, loader_result_to_optional_single, loader_result_to_required_single,
+  model_backed_type,
+};
 
-use super::{FormType, ModelBackedType};
+use super::{DepartmentType, FormType};
 
 model_backed_type!(EventCategoryType, event_categories::Model);
 
@@ -25,34 +27,24 @@ impl EventCategoryType {
     &self.model.default_color
   }
 
+  pub async fn department(&self, ctx: &Context<'_>) -> Result<Option<DepartmentType>, Error> {
+    let loader_result = load_one_by_model_id!(event_category_department, ctx, self)?;
+    Ok(loader_result_to_optional_single!(
+      loader_result,
+      DepartmentType
+    ))
+  }
+
   #[graphql(name = "event_form")]
   pub async fn event_form(&self, ctx: &Context<'_>) -> Result<FormType, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-
-    Ok(FormType::new(
-      query_data
-        .loaders()
-        .event_category_event_form()
-        .load_one(self.model.id)
-        .await?
-        .expect_one()?
-        .clone(),
-    ))
+    let loader_result = load_one_by_model_id!(event_category_event_form, ctx, self)?;
+    Ok(loader_result_to_required_single!(loader_result, FormType))
   }
 
   #[graphql(name = "event_proposal_form")]
   async fn event_proposal_form(&self, ctx: &Context<'_>) -> Result<Option<FormType>, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-
-    Ok(
-      query_data
-        .loaders()
-        .event_category_event_proposal_form()
-        .load_one(self.model.id)
-        .await?
-        .try_one()
-        .map(|model| FormType::new(model.clone())),
-    )
+    let loader_result = load_one_by_model_id!(event_category_event_proposal_form, ctx, self)?;
+    Ok(loader_result_to_optional_single!(loader_result, FormType))
   }
 
   #[graphql(name = "full_color")]
@@ -62,6 +54,11 @@ impl EventCategoryType {
 
   async fn name(&self) -> &str {
     &self.model.name
+  }
+
+  #[graphql(name = "proposal_description")]
+  async fn proposal_description(&self) -> Option<&str> {
+    self.model.proposal_description.as_deref()
   }
 
   #[graphql(name = "scheduling_ui")]

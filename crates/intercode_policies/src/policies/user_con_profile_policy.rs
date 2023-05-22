@@ -1,9 +1,17 @@
 use async_trait::async_trait;
-use intercode_entities::{model_ext::form_item_permissions::FormItemRole, user_con_profiles};
-use sea_orm::DbErr;
+use intercode_entities::{
+  conventions, model_ext::form_item_permissions::FormItemRole, team_members, user_con_profiles,
+};
+use sea_orm::{
+  sea_query::{Cond, Expr},
+  ColumnTrait, DbErr, EntityTrait, QueryFilter, QuerySelect,
+};
 
-use crate::{AuthorizationInfo, FormResponsePolicy, Policy, ReadManageAction};
+use crate::{AuthorizationInfo, EntityPolicy, FormResponsePolicy, Policy, ReadManageAction};
 
+use super::TeamMemberPolicy;
+
+#[derive(PartialEq, Eq)]
 pub enum UserConProfileAction {
   Read,
   ReadEmail,
@@ -207,5 +215,85 @@ impl FormResponsePolicy<AuthorizationInfo, user_con_profiles::Model> for UserCon
     }
 
     return FormItemRole::Normal;
+  }
+}
+
+impl EntityPolicy<AuthorizationInfo, user_con_profiles::Model> for UserConProfilePolicy {
+  type Action = UserConProfileAction;
+
+  fn accessible_to(
+    principal: &AuthorizationInfo,
+    action: &Self::Action,
+  ) -> sea_orm::Select<user_con_profiles::Entity> {
+    let scope = user_con_profiles::Entity::find();
+
+    // TODO consider implementing other actions
+    if *action != UserConProfileAction::Read {
+      return scope.filter(Expr::cust("1 = 0"));
+    }
+
+    let scope = principal
+      .assumed_identity_from_profile
+      .as_ref()
+      .map(|profile| {
+        scope
+          .clone()
+          .filter(user_con_profiles::Column::ConventionId.eq(profile.convention_id))
+      })
+      .unwrap_or(scope);
+
+    if principal.site_admin_read() && principal.has_scope("read_conventions") {
+      return scope;
+    }
+
+    scope.filter(
+      Cond::any()
+        .add_option(
+          principal
+            .user
+            .as_ref()
+            .map(|user| user_con_profiles::Column::UserId.eq(user.id)),
+        )
+        .add(
+          user_con_profiles::Column::Id.in_subquery(
+            QuerySelect::query(
+              &mut TeamMemberPolicy::accessible_to(principal, &ReadManageAction::Read)
+                .select_only()
+                .column(team_members::Column::UserConProfileId),
+            )
+            .take(),
+          ),
+        )
+        .add(
+          user_con_profiles::Column::ConventionId.in_subquery(
+            QuerySelect::query(
+              &mut principal
+                .conventions_where_team_member()
+                .select_only()
+                .column(conventions::Column::Id),
+            )
+            .take(),
+          ),
+        )
+        .add(
+          user_con_profiles::Column::ConventionId.in_subquery(
+            QuerySelect::query(
+              &mut principal
+                .conventions_with_permissions(&[
+                  "read_user_con_profiles",
+                  "read_user_con_profile_email",
+                  "read_user_con_profile_personal_info",
+                ])
+                .select_only()
+                .column(conventions::Column::Id),
+            )
+            .take(),
+          ),
+        ),
+    )
+  }
+
+  fn id_column() -> user_con_profiles::Column {
+    user_con_profiles::Column::Id
   }
 }

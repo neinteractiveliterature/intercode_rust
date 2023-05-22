@@ -1,4 +1,3 @@
-use async_graphql::Context;
 use intercode_entities::{orders, user_con_profiles};
 use sea_orm::{
   sea_query::{Cond, Expr, Func, SimpleExpr},
@@ -31,7 +30,7 @@ impl QueryBuilder for OrdersQueryBuilder {
   type Entity = orders::Entity;
   type Pagination = OrdersPaginationType;
 
-  fn apply_filters(&self, _ctx: &Context<'_>, scope: Select<Self::Entity>) -> Select<Self::Entity> {
+  fn apply_filters(&self, scope: Select<Self::Entity>) -> Select<Self::Entity> {
     let Some(filters) = &self.filters else {
       return scope;
     };
@@ -77,7 +76,7 @@ impl QueryBuilder for OrdersQueryBuilder {
     scope
   }
 
-  fn apply_sorts(&self, _ctx: &Context<'_>, scope: Select<Self::Entity>) -> Select<Self::Entity> {
+  fn apply_sorts(&self, scope: Select<Self::Entity>) -> Select<Self::Entity> {
     let Some(sorts) = &self.sorts else {
       return scope;
     };

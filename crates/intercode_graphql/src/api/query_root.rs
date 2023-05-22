@@ -108,7 +108,7 @@ impl QueryRoot {
         .take(),
       ),
     );
-    EmailRoutesQueryBuilder::new(filters, sort).paginate(ctx, scope, page, per_page)
+    EmailRoutesQueryBuilder::new(filters, sort).paginate(scope, page, per_page)
   }
 
   async fn events(

@@ -42,6 +42,11 @@ impl Policy<AuthorizationInfo, rooms::Model> for RoomPolicy {
 
 impl EntityPolicy<AuthorizationInfo, rooms::Model> for RoomPolicy {
   type Action = ReadManageAction;
+
+  fn id_column() -> rooms::Column {
+    rooms::Column::Id
+  }
+
   fn accessible_to(
     _principal: &AuthorizationInfo,
     action: &Self::Action,

@@ -1,4 +1,3 @@
-use async_graphql::Context;
 use intercode_entities::coupons;
 use sea_orm::{
   sea_query::{Expr, Func, SimpleExpr},
@@ -30,7 +29,7 @@ impl QueryBuilder for CouponsQueryBuilder {
   type Entity = coupons::Entity;
   type Pagination = CouponsPaginationType;
 
-  fn apply_filters(&self, _ctx: &Context<'_>, scope: Select<Self::Entity>) -> Select<Self::Entity> {
+  fn apply_filters(&self, scope: Select<Self::Entity>) -> Select<Self::Entity> {
     let Some(filters) = &self.filters else {
       return scope;
     };
@@ -44,7 +43,7 @@ impl QueryBuilder for CouponsQueryBuilder {
     scope
   }
 
-  fn apply_sorts(&self, _ctx: &Context<'_>, scope: Select<Self::Entity>) -> Select<Self::Entity> {
+  fn apply_sorts(&self, scope: Select<Self::Entity>) -> Select<Self::Entity> {
     let Some(sorts) = &self.sorts else {
       return scope;
     };

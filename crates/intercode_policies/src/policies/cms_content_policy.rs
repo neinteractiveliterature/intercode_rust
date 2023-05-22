@@ -11,7 +11,7 @@ use sea_orm::{
   ColumnTrait, DbErr, EntityTrait, ModelTrait, QueryFilter, QuerySelect, QueryTrait, Select,
 };
 
-pub trait CmsContentAuthorizable: Send + Sync {
+pub trait CmsContentAuthorizable: Send + Sync + ModelTrait {
   fn convention_id(&self) -> Option<i64>;
   fn cms_content_groups_scope(&self) -> Option<Select<cms_content_groups::Entity>>;
 }
@@ -203,5 +203,9 @@ where
         M::filter_by_id_in(scope, content_ids.to_owned())
       }
     }
+  }
+
+  fn id_column() -> <<M as ModelTrait>::Entity as EntityTrait>::Column {
+    <M as CmsContentModel>::id_column()
   }
 }

@@ -110,6 +110,11 @@ impl
 
 impl EntityPolicy<AuthorizationInfo, orders::Model> for OrderPolicy {
   type Action = OrderAction;
+
+  fn id_column() -> orders::Column {
+    orders::Column::Id
+  }
+
   fn accessible_to(
     principal: &AuthorizationInfo,
     _action: &Self::Action,

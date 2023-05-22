@@ -254,6 +254,10 @@ impl FormResponsePolicy<AuthorizationInfo, (conventions::Model, event_proposals:
 impl EntityPolicy<AuthorizationInfo, event_proposals::Model> for EventProposalPolicy {
   type Action = EventProposalAction;
 
+  fn id_column() -> event_proposals::Column {
+    event_proposals::Column::Id
+  }
+
   fn accessible_to(
     principal: &AuthorizationInfo,
     action: &Self::Action,

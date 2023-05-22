@@ -64,6 +64,11 @@ impl Policy<AuthorizationInfo, coupons::Model> for CouponPolicy {
 
 impl EntityPolicy<AuthorizationInfo, coupons::Model> for CouponPolicy {
   type Action = ReadManageAction;
+
+  fn id_column() -> coupons::Column {
+    coupons::Column::Id
+  }
+
   fn accessible_to(
     principal: &AuthorizationInfo,
     _action: &Self::Action,
