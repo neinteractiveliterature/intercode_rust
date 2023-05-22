@@ -35,7 +35,7 @@ async-graphql-value = {version = "~5.0.8"}
 async-stripe = {version = "0.21.0", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
 async-trait = "*"
 axum = {version = "~0.6.18", features = ["multipart", "macros", "headers"]}
-bumpalo = "3.12.2"
+bumpalo = "3.13.0"
 bumpalo-herd = "0.1.2"
 cached = "~0.43.0"
 chrono = "0.4"
