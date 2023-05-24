@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_graphql::*;
 use intercode_entities::cms_layouts;
 use intercode_liquid::{cms_parent_partial_source::PreloadPartialsStrategy, react_component_tag};
@@ -41,7 +43,7 @@ impl CmsLayoutType {
   ) -> Result<Option<String>, Error> {
     let schema_data = ctx.data::<SchemaData>()?;
     let query_data = ctx.data::<QueryData>()?;
-    let liquid_renderer = ctx.data::<Box<dyn LiquidRenderer>>()?;
+    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
 
     let cms_rendering_context = CmsRenderingContext::new(
       object!({

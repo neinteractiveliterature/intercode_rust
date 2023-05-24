@@ -549,7 +549,7 @@ impl<'a> AbilityType<'a> {
     Ok(
       EventCategoryPolicy::action_permitted(
         &self.authorization_info,
-        &ReadManageAction::Read,
+        &ReadManageAction::Manage,
         &event_categories::Model {
           convention_id: convention.id,
           ..Default::default()

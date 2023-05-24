@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
 use super::{
   active_storage_attachment_type::ActiveStorageAttachmentType,
@@ -370,6 +370,11 @@ impl ConventionType {
     )
   }
 
+  async fn forms(&self, ctx: &Context<'_>) -> Result<Vec<FormType>> {
+    let loader_result = load_one_by_model_id!(convention_forms, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, FormType))
+  }
+
   async fn hidden(&self) -> bool {
     self.model.hidden
   }
@@ -467,7 +472,7 @@ impl ConventionType {
   #[graphql(name = "pre_schedule_content_html")]
   async fn pre_schedule_content_html(&self, ctx: &Context<'_>) -> Result<Option<String>, Error> {
     let query_data = ctx.data::<QueryData>()?;
-    let liquid_renderer = ctx.data::<Box<dyn LiquidRenderer>>()?;
+    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
 
     let partial = self
       .model

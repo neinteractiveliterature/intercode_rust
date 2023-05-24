@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_graphql::*;
 use intercode_entities::pages;
 use intercode_liquid::cms_parent_partial_source::PreloadPartialsStrategy;
@@ -41,7 +43,7 @@ impl PageType {
   async fn content_html(&self, ctx: &Context<'_>) -> Result<String, Error> {
     if let Some(content) = &self.model.content {
       let query_data = ctx.data::<QueryData>()?;
-      let liquid_renderer = ctx.data::<Box<dyn LiquidRenderer>>()?;
+      let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
       let cms_rendering_context =
         CmsRenderingContext::new(object!({}), query_data, liquid_renderer.as_ref());
 
