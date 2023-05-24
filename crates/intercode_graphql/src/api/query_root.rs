@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::sync::Arc;
 
 use super::inputs::{EmailRouteFiltersInput, SortInput};
 use super::interfaces::CmsParentInterface;
@@ -108,7 +109,7 @@ impl QueryRoot {
         .take(),
       ),
     );
-    EmailRoutesQueryBuilder::new(filters, sort).paginate(ctx, scope, page, per_page)
+    EmailRoutesQueryBuilder::new(filters, sort).paginate(scope, page, per_page)
   }
 
   async fn events(
@@ -161,7 +162,7 @@ impl QueryRoot {
   }
 
   async fn preview_liquid(&self, ctx: &Context<'_>, content: String) -> Result<String, Error> {
-    let liquid_renderer = ctx.data::<Box<dyn LiquidRenderer>>()?;
+    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
     liquid_renderer
       .render_liquid(content.as_str(), object!({}), None)
       .await

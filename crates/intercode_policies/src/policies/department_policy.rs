@@ -46,6 +46,11 @@ impl Policy<AuthorizationInfo, departments::Model> for DepartmentPolicy {
 
 impl EntityPolicy<AuthorizationInfo, departments::Model> for DepartmentPolicy {
   type Action = ReadManageAction;
+
+  fn id_column() -> departments::Column {
+    departments::Column::Id
+  }
+
   fn accessible_to(
     principal: &AuthorizationInfo,
     action: &Self::Action,

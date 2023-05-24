@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_graphql::{
   async_trait::async_trait,
   futures_util::{try_join, TryFutureExt},
@@ -254,7 +256,7 @@ where
 
   async fn liquid_assigns(&self, ctx: &Context<'_>) -> Result<Vec<LiquidAssignType>, Error> {
     let query_data = ctx.data::<QueryData>()?;
-    let liquid_renderer = ctx.data::<Box<dyn LiquidRenderer>>()?;
+    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
     let cms_rendering_context =
       CmsRenderingContext::new(liquid::object!({}), query_data, liquid_renderer.as_ref());
 
@@ -280,7 +282,7 @@ where
 
   async fn preview_liquid(&self, ctx: &Context<'_>, content: String) -> Result<String, Error> {
     let query_data = ctx.data::<QueryData>()?;
-    let liquid_renderer = ctx.data::<Box<dyn LiquidRenderer>>()?;
+    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
     let cms_rendering_context =
       CmsRenderingContext::new(liquid::object!({}), query_data, liquid_renderer.as_ref());
 

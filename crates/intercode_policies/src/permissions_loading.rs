@@ -328,35 +328,36 @@ pub async fn load_all_team_member_event_ids_in_convention(
   convention_id: i64,
   user_id: Option<i64>,
 ) -> Result<HashSet<i64>, DbErr> {
-  let events = events::Entity::find()
-    .join(JoinType::InnerJoin, events::Relation::TeamMembers.def())
-    .join(
-      JoinType::InnerJoin,
-      team_members::Relation::UserConProfiles.def(),
-    )
+  let events = events_where_team_member(user_id)
     .filter(events::Column::ConventionId.eq(convention_id))
-    .filter(user_con_profiles::Column::UserId.eq(user_id))
     .all(db)
     .await?;
 
   Ok(events.iter().map(|event| event.id).collect())
 }
 
-pub fn conventions_with_permission(
-  permission: &str,
+pub fn conventions_with_permissions(
+  permissions: &[&str],
   user_id: Option<i64>,
 ) -> Select<conventions::Entity> {
   conventions::Entity::find().filter(
     conventions::Column::Id.in_subquery(
       sea_orm::QuerySelect::query(
         &mut user_permission_scope(user_id)
-          .filter(permissions::Column::Permission.eq(permission))
+          .filter(permissions::Column::Permission.is_in(permissions.iter().cloned()))
           .select_only()
           .column(permissions::Column::ConventionId),
       )
       .take(),
     ),
   )
+}
+
+pub fn conventions_with_permission(
+  permission: &str,
+  user_id: Option<i64>,
+) -> Select<conventions::Entity> {
+  conventions_with_permissions(&[permission], user_id)
 }
 
 pub fn event_categories_with_permission(
@@ -370,6 +371,33 @@ pub fn event_categories_with_permission(
           .filter(permissions::Column::Permission.eq(permission))
           .select_only()
           .column(permissions::Column::EventCategoryId),
+      )
+      .take(),
+    ),
+  )
+}
+
+pub fn events_where_team_member(user_id: Option<i64>) -> Select<events::Entity> {
+  let Some(user_id) = user_id else {
+    return events::Entity::find().filter(Expr::cust("1 = 0"));
+  };
+
+  events::Entity::find()
+    .join(JoinType::InnerJoin, events::Relation::TeamMembers.def())
+    .join(
+      JoinType::InnerJoin,
+      team_members::Relation::UserConProfiles.def(),
+    )
+    .filter(user_con_profiles::Column::UserId.eq(user_id))
+}
+
+pub fn conventions_where_team_member(user_id: Option<i64>) -> Select<conventions::Entity> {
+  conventions::Entity::find().filter(
+    conventions::Column::Id.in_subquery(
+      QuerySelect::query(
+        &mut events_where_team_member(user_id)
+          .select_only()
+          .column(events::Column::ConventionId),
       )
       .take(),
     ),

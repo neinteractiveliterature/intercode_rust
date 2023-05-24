@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
 use super::{
   active_storage_attachment_type::ActiveStorageAttachmentType,
@@ -17,7 +17,7 @@ use crate::{
       CouponFiltersInput, EventFiltersInput, EventProposalFiltersInput, OrderFiltersInput,
       SignupRequestFiltersInput, SortInput, UserConProfileFiltersInput,
     },
-    interfaces::{CmsParentImplementation, PaginationImplementation},
+    interfaces::CmsParentImplementation,
     objects::ProductType,
     scalars::DateScalar,
   },
@@ -25,8 +25,8 @@ use crate::{
   lax_id::LaxId,
   load_one_by_model_id, loader_result_to_many,
   query_builders::{
-    CouponsQueryBuilder, EventProposalsQueryBuilder, OrdersQueryBuilder, QueryBuilder,
-    SignupRequestsQueryBuilder,
+    CouponsQueryBuilder, EventProposalsQueryBuilder, EventsQueryBuilder, OrdersQueryBuilder,
+    QueryBuilder, SignupRequestsQueryBuilder, UserConProfilesQueryBuilder,
   },
   LiquidRenderer, QueryData, SchemaData,
 };
@@ -40,22 +40,18 @@ use intercode_entities::{
     ConventionToOrders, ConventionToSignupRequests, ConventionToSignups, ConventionToStaffPositions,
   },
   model_ext::time_bounds::TimeBoundsSelectExt,
-  orders, runs, signup_requests, signups, staff_positions, team_members, user_con_profiles, users,
-  MaximumEventSignupsValue,
+  signups, staff_positions, team_members, user_con_profiles, MaximumEventSignupsValue,
 };
 use intercode_policies::{
   policies::{
-    CouponPolicy, EventProposalAction, EventProposalPolicy, OrderAction, OrderPolicy,
-    SignupRequestAction, SignupRequestPolicy,
+    ConventionAction, ConventionPolicy, CouponPolicy, EventPolicy, EventProposalAction,
+    EventProposalPolicy, OrderPolicy, SignupRequestPolicy, UserConProfilePolicy,
   },
-  AuthorizationInfo, EntityPolicy, Policy, ReadManageAction,
+  AuthorizationInfo, Policy,
 };
 use intercode_timespan::ScheduledValue;
 use liquid::object;
-use sea_orm::{
-  sea_query::Expr, ColumnTrait, DbErr, EntityTrait, JoinType, ModelTrait, QueryFilter, QueryOrder,
-  QuerySelect, RelationTrait,
-};
+use sea_orm::{ColumnTrait, DbErr, EntityTrait, ModelTrait, QueryFilter, QuerySelect};
 use seawater::loaders::{ExpectModel, ExpectModels};
 
 use crate::model_backed_type;
@@ -136,18 +132,13 @@ impl ConventionType {
     filters: Option<CouponFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<CouponsPaginationType, Error> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
-    let scope = self.model.find_related(coupons::Entity).filter(
-      coupons::Column::Id.in_subquery(
-        sea_orm::QuerySelect::query(
-          &mut CouponPolicy::accessible_to(authorization_info, &ReadManageAction::Read)
-            .select_only()
-            .column(coupons::Column::Id),
-        )
-        .take(),
-      ),
-    );
-    CouponsQueryBuilder::new(filters, sort).paginate(ctx, scope, page, per_page)
+    CouponsQueryBuilder::new(filters, sort).paginate_authorized(
+      ctx,
+      self.model.find_related(coupons::Entity),
+      page,
+      per_page,
+      CouponPolicy,
+    )
   }
 
   async fn departments(&self, ctx: &Context<'_>) -> Result<Vec<DepartmentType>> {
@@ -275,9 +266,19 @@ impl ConventionType {
       scope = scope.filter(events::Column::Status.eq("active"));
     }
 
-    if let Some(filters) = filters {
-      scope = filters.apply_filters(ctx, &scope)?;
-    }
+    let query_builder = EventsQueryBuilder::new(
+      filters,
+      None,
+      ctx.data::<QueryData>()?.user_con_profile().cloned(),
+      ConventionPolicy::action_permitted(
+        ctx.data::<AuthorizationInfo>()?,
+        &ConventionAction::Schedule,
+        &self.model,
+      )
+      .await?,
+    );
+
+    scope = query_builder.apply_filters(scope);
 
     Ok(
       scope
@@ -298,58 +299,25 @@ impl ConventionType {
     filters: Option<EventFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<EventsPaginationType, Error> {
-    let mut scope = self
-      .model
-      .find_related(events::Entity)
-      .filter(events::Column::Status.eq("active"));
+    let user_con_profile = ctx.data::<QueryData>()?.user_con_profile();
+    let can_read_schedule = ConventionPolicy::action_permitted(
+      ctx.data::<AuthorizationInfo>()?,
+      &ConventionAction::Schedule,
+      &self.model,
+    )
+    .await?;
 
-    if let Some(filters) = filters {
-      scope = filters.apply_filters(ctx, &scope)?;
-    }
-
-    if let Some(sort) = sort {
-      for sort_column in sort {
-        let order = sort_column.query_order();
-
-        scope = match sort_column.field.as_str() {
-          "first_scheduled_run_start" => {
-            // TODO authorize that the user is able to see the schedule
-            scope
-              .left_join(runs::Entity)
-              .filter(Expr::cust(
-                "runs.starts_at = (
-                SELECT MIN(runs.starts_at) FROM runs WHERE runs.event_id = events.id
-              )",
-              ))
-              .order_by(runs::Column::StartsAt, order)
-          }
-          "created_at" => scope.order_by(events::Column::CreatedAt, order),
-          "owner" => scope
-            .join(JoinType::LeftJoin, events::Relation::Users1.def())
-            .order_by(users::Column::LastName, order.clone())
-            .order_by(users::Column::FirstName, order),
-          "title" => scope.order_by(
-            Expr::cust(
-              "regexp_replace(
-                  regexp_replace(
-                    trim(regexp_replace(unaccent(events.title), '[^0-9a-z ]', '', 'gi')),
-                    '^(the|a|an) +',
-                    '',
-                    'i'
-                  ),
-                  ' ',
-                  '',
-                  'g'
-                )",
-            ),
-            order,
-          ),
-          _ => scope,
-        }
-      }
-    }
-
-    Ok(EventsPaginationType::new(Some(scope), page, per_page))
+    EventsQueryBuilder::new(filters, sort, user_con_profile.cloned(), can_read_schedule)
+      .paginate_authorized(
+        ctx,
+        self
+          .model
+          .find_related(events::Entity)
+          .filter(events::Column::Status.eq("active")),
+        page,
+        per_page,
+        EventPolicy,
+      )
   }
 
   /// Finds an event proposal by ID in this convention. If there is no event proposal with that ID
@@ -380,18 +348,13 @@ impl ConventionType {
     filters: Option<EventProposalFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<EventProposalsPaginationType, Error> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
-    let scope = self.model.find_related(event_proposals::Entity).filter(
-      event_proposals::Column::Id.in_subquery(
-        sea_orm::QuerySelect::query(
-          &mut EventProposalPolicy::accessible_to(authorization_info, &EventProposalAction::Read)
-            .select_only()
-            .column(event_proposals::Column::Id),
-        )
-        .take(),
-      ),
-    );
-    EventProposalsQueryBuilder::new(filters, sort).paginate(ctx, scope, page, per_page)
+    EventProposalsQueryBuilder::new(filters, sort).paginate_authorized(
+      ctx,
+      self.model.find_related(event_proposals::Entity),
+      page,
+      per_page,
+      EventProposalPolicy,
+    )
   }
 
   async fn favicon(&self, ctx: &Context<'_>) -> Result<Option<ActiveStorageAttachmentType>> {
@@ -405,6 +368,11 @@ impl ConventionType {
         .and_then(|models| models.get(0).cloned())
         .map(ActiveStorageAttachmentType::new),
     )
+  }
+
+  async fn forms(&self, ctx: &Context<'_>) -> Result<Vec<FormType>> {
+    let loader_result = load_one_by_model_id!(convention_forms, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, FormType))
   }
 
   async fn hidden(&self) -> bool {
@@ -492,24 +460,19 @@ impl ConventionType {
     filters: Option<OrderFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<OrdersPaginationType, Error> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
-    let scope = self.model.find_linked(ConventionToOrders).filter(
-      orders::Column::Id.in_subquery(
-        sea_orm::QuerySelect::query(
-          &mut OrderPolicy::accessible_to(authorization_info, &OrderAction::Read)
-            .select_only()
-            .column(orders::Column::Id),
-        )
-        .take(),
-      ),
-    );
-    OrdersQueryBuilder::new(filters, sort).paginate(ctx, scope, page, per_page)
+    OrdersQueryBuilder::new(filters, sort).paginate_authorized(
+      ctx,
+      self.model.find_linked(ConventionToOrders),
+      page,
+      per_page,
+      OrderPolicy,
+    )
   }
 
   #[graphql(name = "pre_schedule_content_html")]
   async fn pre_schedule_content_html(&self, ctx: &Context<'_>) -> Result<Option<String>, Error> {
     let query_data = ctx.data::<QueryData>()?;
-    let liquid_renderer = ctx.data::<Box<dyn LiquidRenderer>>()?;
+    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
 
     let partial = self
       .model
@@ -584,18 +547,13 @@ impl ConventionType {
     filters: Option<SignupRequestFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<SignupRequestsPaginationType, Error> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
-    let scope = self.model.find_linked(ConventionToSignupRequests).filter(
-      signup_requests::Column::Id.in_subquery(
-        sea_orm::QuerySelect::query(
-          &mut SignupRequestPolicy::accessible_to(authorization_info, &SignupRequestAction::Read)
-            .select_only()
-            .column(signup_requests::Column::Id),
-        )
-        .take(),
-      ),
-    );
-    SignupRequestsQueryBuilder::new(filters, sort).paginate(ctx, scope, page, per_page)
+    SignupRequestsQueryBuilder::new(filters, sort).paginate_authorized(
+      ctx,
+      self.model.find_linked(ConventionToSignupRequests),
+      page,
+      per_page,
+      SignupRequestPolicy,
+    )
   }
 
   #[graphql(name = "site_mode")]
@@ -767,39 +725,13 @@ impl ConventionType {
     filters: Option<UserConProfileFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<UserConProfilesPaginationType, Error> {
-    let mut scope = self.model.find_related(user_con_profiles::Entity);
-
-    if let Some(filters) = filters {
-      scope = filters.apply_filters(ctx, &scope)?;
-    }
-
-    if let Some(sort) = sort {
-      for sort_column in sort {
-        let _order = sort_column.query_order();
-
-        scope = match sort_column.field.as_str() {
-          "id" => todo!(),
-          "attending" => todo!(),
-          "email" => todo!(),
-          "first_name" => todo!(),
-          "is_team_member" => todo!(),
-          "last_name" => todo!(),
-          "payment_amount" => todo!(),
-          "privileges" => todo!(),
-          "name" => todo!(),
-          "ticket" => todo!(),
-          "ticket_type" => todo!(),
-          "user_id" => todo!(),
-          _ => scope,
-        }
-      }
-    }
-
-    Ok(UserConProfilesPaginationType::new(
-      Some(scope),
+    UserConProfilesQueryBuilder::new(filters, sort).paginate_authorized(
+      ctx,
+      self.model.find_related(user_con_profiles::Entity),
       page,
       per_page,
-    ))
+      UserConProfilePolicy,
+    )
   }
 
   // STUFF FOR IMPLEMENTING CMS_PARENT

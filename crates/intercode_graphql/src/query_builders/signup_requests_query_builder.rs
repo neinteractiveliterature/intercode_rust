@@ -1,4 +1,3 @@
-use async_graphql::Context;
 use intercode_entities::signup_requests;
 use sea_orm::{sea_query::Expr, ColumnTrait, QueryFilter, QueryOrder, Select};
 
@@ -24,7 +23,7 @@ impl QueryBuilder for SignupRequestsQueryBuilder {
   type Entity = signup_requests::Entity;
   type Pagination = SignupRequestsPaginationType;
 
-  fn apply_filters(&self, _ctx: &Context<'_>, scope: Select<Self::Entity>) -> Select<Self::Entity> {
+  fn apply_filters(&self, scope: Select<Self::Entity>) -> Select<Self::Entity> {
     let Some(filters) = &self.filters else {
       return scope;
     };
@@ -42,7 +41,7 @@ impl QueryBuilder for SignupRequestsQueryBuilder {
     scope
   }
 
-  fn apply_sorts(&self, _ctx: &Context<'_>, scope: Select<Self::Entity>) -> Select<Self::Entity> {
+  fn apply_sorts(&self, scope: Select<Self::Entity>) -> Select<Self::Entity> {
     let Some(sorts) = &self.sorts else {
       return scope;
     };

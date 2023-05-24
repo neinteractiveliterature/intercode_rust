@@ -42,6 +42,11 @@ impl Policy<AuthorizationInfo, products::Model> for ProductPolicy {
 
 impl EntityPolicy<AuthorizationInfo, products::Model> for ProductPolicy {
   type Action = ReadManageAction;
+
+  fn id_column() -> products::Column {
+    products::Column::Id
+  }
+
   fn accessible_to(
     _principal: &AuthorizationInfo,
     action: &Self::Action,

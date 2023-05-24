@@ -1,11 +1,17 @@
 use async_trait::async_trait;
-use intercode_entities::{conventions, events, model_ext::form_item_permissions::FormItemRole};
-use sea_orm::DbErr;
+use intercode_entities::{
+  conventions, event_categories, events, model_ext::form_item_permissions::FormItemRole,
+};
+use sea_orm::{
+  sea_query::{Cond, Expr},
+  ColumnTrait, DbErr, EntityTrait, QueryFilter, QuerySelect,
+};
 
-use crate::{AuthorizationInfo, FormResponsePolicy, Policy, ReadManageAction};
+use crate::{AuthorizationInfo, EntityPolicy, FormResponsePolicy, Policy, ReadManageAction};
 
 use super::has_schedule_release_permissions;
 
+#[derive(PartialEq, Eq)]
 pub enum EventAction {
   Read,
   ReadAdminNotes,
@@ -197,5 +203,84 @@ impl FormResponsePolicy<AuthorizationInfo, (conventions::Model, events::Model)> 
     resource: &(conventions::Model, events::Model),
   ) -> FormItemRole {
     Self::form_item_viewer_role(principal, resource).await
+  }
+}
+
+impl EntityPolicy<AuthorizationInfo, events::Model> for EventPolicy {
+  type Action = EventAction;
+
+  fn accessible_to(
+    principal: &AuthorizationInfo,
+    action: &Self::Action,
+  ) -> sea_orm::Select<events::Entity> {
+    let scope = events::Entity::find();
+
+    // TODO consider implementing other actions
+    if *action != EventAction::Read {
+      return scope.filter(Expr::cust("1 = 0"));
+    }
+
+    if !principal.has_scope("read_events") {
+      return scope.filter(Expr::cust("1 = 0"));
+    }
+
+    let scope = principal
+      .assumed_identity_from_profile
+      .as_ref()
+      .map(|profile| {
+        scope
+          .clone()
+          .filter(events::Column::ConventionId.eq(profile.convention_id))
+      })
+      .unwrap_or(scope);
+
+    if principal.site_admin_read() {
+      return scope;
+    }
+
+    let scope = scope.left_join(conventions::Entity).filter(
+      Cond::any()
+        .add(
+          events::Column::Id.in_subquery(
+            QuerySelect::query(
+              &mut principal
+                .events_where_team_member()
+                .select_only()
+                .column(events::Column::Id),
+            )
+            .take(),
+          ),
+        )
+        .add(conventions::Column::SiteMode.eq("single_event"))
+        .add(
+          events::Column::ConventionId.in_subquery(
+            QuerySelect::query(
+              &mut principal
+                .conventions_with_permissions(&["read_inactive_events", "update_events"])
+                .select_only()
+                .column(conventions::Column::Id),
+            )
+            .take(),
+          ),
+        )
+        // event updaters can see dropped events in their categories
+        .add(
+          events::Column::EventCategoryId.in_subquery(
+            QuerySelect::query(
+              &mut principal
+                .event_categories_with_permission("update_events")
+                .select_only()
+                .column(event_categories::Column::Id),
+            )
+            .take(),
+          ),
+        ),
+    );
+
+    scope
+  }
+
+  fn id_column() -> events::Column {
+    events::Column::Id
   }
 }

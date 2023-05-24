@@ -26,11 +26,7 @@ impl QueryBuilder for EventProposalsQueryBuilder {
   type Entity = event_proposals::Entity;
   type Pagination = EventProposalsPaginationType;
 
-  fn apply_filters(
-    &self,
-    _ctx: &async_graphql::Context<'_>,
-    scope: Select<Self::Entity>,
-  ) -> Select<Self::Entity> {
+  fn apply_filters(&self, scope: Select<Self::Entity>) -> Select<Self::Entity> {
     let Some(filters) = &self.filters else {
       return scope;
     };
@@ -81,11 +77,7 @@ impl QueryBuilder for EventProposalsQueryBuilder {
     scope
   }
 
-  fn apply_sorts(
-    &self,
-    _ctx: &async_graphql::Context<'_>,
-    scope: Select<Self::Entity>,
-  ) -> Select<Self::Entity> {
+  fn apply_sorts(&self, scope: Select<Self::Entity>) -> Select<Self::Entity> {
     let Some(sorts) = &self.sorts else {
       return scope;
     };

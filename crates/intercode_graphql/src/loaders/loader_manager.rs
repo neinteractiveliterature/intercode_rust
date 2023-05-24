@@ -281,6 +281,7 @@ loader_manager!(
   entity_link(convention_catch_all_staff_position, ConventionToCatchAllStaffPosition);
   entity_relation(convention_departments, conventions, departments);
   entity_relation(convention_event_categories, conventions, event_categories);
+  entity_relation(convention_forms, conventions, forms);
   entity_relation(convention_products, conventions, products);
   entity_relation(convention_rooms, conventions, rooms);
   entity_link(convention_single_event, ConventionToSingleEvent);
@@ -300,6 +301,8 @@ loader_manager!(
   entity_relation(event_runs, events, runs);
   entity_relation(event_team_members, events, team_members);
   entity_id(events_by_id, events);
+  entity_relation(event_category_convention, event_categories, conventions);
+  entity_relation(event_category_department, event_categories, departments);
   entity_link(event_category_event_form, EventCategoryToEventForm);
   entity_link(
     event_category_event_proposal_form,

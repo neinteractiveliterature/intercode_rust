@@ -1,8 +1,9 @@
 use std::fmt::Display;
 
 use axum::async_trait;
-use sea_orm::{ModelTrait, Select};
+use sea_orm::{ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QuerySelect, Select};
 
+#[derive(PartialEq, Eq)]
 pub enum CRUDAction {
   Create,
   Read,
@@ -10,6 +11,7 @@ pub enum CRUDAction {
   Delete,
 }
 
+#[derive(PartialEq, Eq)]
 pub enum ReadManageAction {
   Read,
   Manage,
@@ -47,4 +49,24 @@ pub trait Policy<Principal: Send + Sync, Resource: Send + Sync> {
 pub trait EntityPolicy<Principal: Send + Sync, Resource: ModelTrait + Sync> {
   type Action: Send + Sync;
   fn accessible_to(principal: &Principal, action: &Self::Action) -> Select<Resource::Entity>;
+  fn id_column() -> <Resource::Entity as EntityTrait>::Column;
+
+  fn filter_scope(
+    scope: Select<Resource::Entity>,
+    principal: &Principal,
+    action: &Self::Action,
+  ) -> Select<Resource::Entity> {
+    let id_column = Self::id_column();
+
+    scope.filter(
+      id_column.in_subquery(
+        sea_orm::QuerySelect::query(
+          &mut Self::accessible_to(principal, action)
+            .select_only()
+            .column(id_column),
+        )
+        .take(),
+      ),
+    )
+  }
 }

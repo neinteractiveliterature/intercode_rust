@@ -1,11 +1,22 @@
 use async_graphql::{Context, Error, Object, ID};
-use intercode_entities::event_categories;
+use intercode_entities::{event_categories, events};
 use intercode_inflector::inflector::string::pluralize;
+use intercode_policies::{
+  policies::{ConventionAction, ConventionPolicy, EventPolicy},
+  AuthorizationInfo, Policy,
+};
+use sea_orm::ModelTrait;
 use seawater::loaders::ExpectModel;
 
-use crate::{model_backed_type, QueryData};
+use crate::{
+  api::inputs::{EventFiltersInput, SortInput},
+  load_one_by_model_id, loader_result_to_optional_single, loader_result_to_required_single,
+  model_backed_type,
+  query_builders::{EventsQueryBuilder, QueryBuilder},
+  QueryData,
+};
 
-use super::{FormType, ModelBackedType};
+use super::{DepartmentType, EventsPaginationType, FormType};
 
 model_backed_type!(EventCategoryType, event_categories::Model);
 
@@ -25,34 +36,53 @@ impl EventCategoryType {
     &self.model.default_color
   }
 
+  pub async fn department(&self, ctx: &Context<'_>) -> Result<Option<DepartmentType>, Error> {
+    let loader_result = load_one_by_model_id!(event_category_department, ctx, self)?;
+    Ok(loader_result_to_optional_single!(
+      loader_result,
+      DepartmentType
+    ))
+  }
+
   #[graphql(name = "event_form")]
   pub async fn event_form(&self, ctx: &Context<'_>) -> Result<FormType, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-
-    Ok(FormType::new(
-      query_data
-        .loaders()
-        .event_category_event_form()
-        .load_one(self.model.id)
-        .await?
-        .expect_one()?
-        .clone(),
-    ))
+    let loader_result = load_one_by_model_id!(event_category_event_form, ctx, self)?;
+    Ok(loader_result_to_required_single!(loader_result, FormType))
   }
 
   #[graphql(name = "event_proposal_form")]
   async fn event_proposal_form(&self, ctx: &Context<'_>) -> Result<Option<FormType>, Error> {
-    let query_data = ctx.data::<QueryData>()?;
+    let loader_result = load_one_by_model_id!(event_category_event_proposal_form, ctx, self)?;
+    Ok(loader_result_to_optional_single!(loader_result, FormType))
+  }
 
-    Ok(
-      query_data
-        .loaders()
-        .event_category_event_proposal_form()
-        .load_one(self.model.id)
-        .await?
-        .try_one()
-        .map(|model| FormType::new(model.clone())),
+  #[graphql(name = "events_paginated")]
+  async fn events_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
+    filters: Option<EventFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<EventsPaginationType, Error> {
+    let user_con_profile = ctx.data::<QueryData>()?.user_con_profile();
+    let convention_loader_result = load_one_by_model_id!(event_category_convention, ctx, self)?;
+    let convention = convention_loader_result.expect_one()?;
+    let can_read_schedule = ConventionPolicy::action_permitted(
+      ctx.data::<AuthorizationInfo>()?,
+      &ConventionAction::Schedule,
+      convention,
     )
+    .await?;
+
+    EventsQueryBuilder::new(filters, sort, user_con_profile.cloned(), can_read_schedule)
+      .paginate_authorized(
+        ctx,
+        self.model.find_related(events::Entity),
+        page,
+        per_page,
+        EventPolicy,
+      )
   }
 
   #[graphql(name = "full_color")]
@@ -62,6 +92,11 @@ impl EventCategoryType {
 
   async fn name(&self) -> &str {
     &self.model.name
+  }
+
+  #[graphql(name = "proposal_description")]
+  async fn proposal_description(&self) -> Option<&str> {
+    self.model.proposal_description.as_deref()
   }
 
   #[graphql(name = "scheduling_ui")]

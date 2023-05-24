@@ -67,6 +67,11 @@ impl
 
 impl EntityPolicy<AuthorizationInfo, ticket_types::Model> for TicketTypePolicy {
   type Action = ReadManageAction;
+
+  fn id_column() -> ticket_types::Column {
+    ticket_types::Column::Id
+  }
+
   fn accessible_to(
     _principal: &AuthorizationInfo,
     action: &Self::Action,

@@ -34,6 +34,10 @@ impl Policy<AuthorizationInfo, email_routes::Model> for EmailRoutePolicy {
 impl EntityPolicy<AuthorizationInfo, email_routes::Model> for EmailRoutePolicy {
   type Action = ReadManageAction;
 
+  fn id_column() -> email_routes::Column {
+    email_routes::Column::Id
+  }
+
   fn accessible_to(
     principal: &AuthorizationInfo,
     action: &Self::Action,

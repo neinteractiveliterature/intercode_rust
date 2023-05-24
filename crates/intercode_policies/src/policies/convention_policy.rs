@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use futures::try_join;
 use intercode_entities::conventions;
-use sea_orm::DbErr;
+use sea_orm::{sea_query::Cond, ColumnTrait, DbErr, EntityTrait, QueryFilter, QuerySelect, Select};
 use tuple_conv::RepeatedTuple;
 
 use crate::{AuthorizationInfo, Policy, ReadManageAction};
@@ -63,6 +63,60 @@ pub async fn has_schedule_release_permissions(
       )
     }
   }
+}
+
+pub fn conventions_with_schedule_release_permissions(
+  authorization_info: &AuthorizationInfo,
+  schedule_release_column: conventions::Column,
+) -> Select<conventions::Entity> {
+  conventions::Entity::find().filter(
+    Cond::any()
+      .add(schedule_release_column.eq("yes"))
+      .add(
+        schedule_release_column
+          .eq("gms")
+          .and(conventions::Column::Id.in_subquery(
+            QuerySelect::query(&mut authorization_info.conventions_where_team_member()).take(),
+          )),
+      )
+      .add(
+        schedule_release_column.eq("gms").and(
+          conventions::Column::Id
+            .in_subquery(
+              QuerySelect::query(
+                &mut authorization_info.conventions_with_permission("read_prerelease_schedule"),
+              )
+              .take(),
+            )
+            .or(
+              conventions::Column::Id.in_subquery(
+                QuerySelect::query(
+                  &mut authorization_info
+                    .conventions_with_permission("read_limited_prerelease_schedule"),
+                )
+                .take(),
+              ),
+            ),
+        ),
+      )
+      .add(
+        schedule_release_column.eq("priv").and(
+          conventions::Column::Id.in_subquery(
+            QuerySelect::query(
+              &mut authorization_info
+                .conventions_with_permission("read_limited_prerelease_schedule"),
+            )
+            .take(),
+          ),
+        ),
+      )
+      .add(
+        conventions::Column::Id.in_subquery(
+          QuerySelect::query(&mut authorization_info.conventions_with_permission("update_events"))
+            .take(),
+        ),
+      ),
+  )
 }
 
 pub struct ConventionPolicy;

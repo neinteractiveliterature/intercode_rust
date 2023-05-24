@@ -103,6 +103,10 @@ impl
 impl EntityPolicy<AuthorizationInfo, signup_requests::Model> for SignupRequestPolicy {
   type Action = SignupRequestAction;
 
+  fn id_column() -> signup_requests::Column {
+    signup_requests::Column::Id
+  }
+
   fn accessible_to(
     principal: &AuthorizationInfo,
     action: &Self::Action,

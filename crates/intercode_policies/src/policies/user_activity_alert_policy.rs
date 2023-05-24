@@ -46,6 +46,11 @@ impl Policy<AuthorizationInfo, user_activity_alerts::Model> for UserActivityAler
 
 impl EntityPolicy<AuthorizationInfo, user_activity_alerts::Model> for UserActivityAlertPolicy {
   type Action = ReadManageAction;
+
+  fn id_column() -> user_activity_alerts::Column {
+    user_activity_alerts::Column::Id
+  }
+
   fn accessible_to(
     principal: &AuthorizationInfo,
     _action: &Self::Action,
