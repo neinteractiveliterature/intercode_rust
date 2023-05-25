@@ -31,7 +31,7 @@ members = [
 [workspace.dependencies]
 Inflector = "*"
 async-graphql = {version = "~5.0.9", features = ["tracing", "dataloader", "chrono"]}
-async-graphql-value = {version = "~5.0.8"}
+async-graphql-value = {version = "~5.0.9"}
 async-stripe = {version = "0.21.0", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
 async-trait = "*"
 axum = {version = "~0.6.18", features = ["multipart", "macros", "headers"]}
