@@ -4,7 +4,7 @@ use sea_orm::entity::prelude::*;
 
 use crate::model_ext::form_item_permissions::FormItemRole;
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Default)]
 #[sea_orm(table_name = "form_items")]
 pub struct Model {
   #[sea_orm(primary_key)]

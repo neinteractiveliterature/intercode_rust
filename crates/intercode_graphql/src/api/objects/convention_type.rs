@@ -35,7 +35,7 @@ use chrono::{DateTime, Utc};
 use futures::future::try_join_all;
 use intercode_entities::{
   cms_parent::CmsParentTrait,
-  cms_partials, conventions, coupons, event_proposals, events,
+  cms_partials, conventions, coupons, event_proposals, events, forms,
   links::{
     ConventionToOrders, ConventionToSignupRequests, ConventionToSignups, ConventionToStaffPositions,
   },
@@ -370,9 +370,25 @@ impl ConventionType {
     )
   }
 
+  async fn form(&self, ctx: &Context<'_>, id: ID) -> Result<FormType> {
+    let form = self
+      .model
+      .all_forms()
+      .filter(forms::Column::Id.eq(LaxId::parse(id.clone())?))
+      .one(ctx.data::<QueryData>()?.db())
+      .await?;
+    form
+      .ok_or_else(|| Error::new(format!("Form {:?} not found in convention", id)))
+      .map(FormType::new)
+  }
+
   async fn forms(&self, ctx: &Context<'_>) -> Result<Vec<FormType>> {
-    let loader_result = load_one_by_model_id!(convention_forms, ctx, self)?;
-    Ok(loader_result_to_many!(loader_result, FormType))
+    let forms = self
+      .model
+      .all_forms()
+      .all(ctx.data::<QueryData>()?.db())
+      .await?;
+    Ok(forms.into_iter().map(FormType::new).collect())
   }
 
   async fn hidden(&self) -> bool {

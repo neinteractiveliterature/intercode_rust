@@ -6,10 +6,10 @@ use async_graphql::dataloader::DataLoader;
 use intercode_entities::links::{
   CmsNavigationItemToCmsNavigationSection, ConventionToCatchAllStaffPosition,
   ConventionToSingleEvent, ConventionToStaffPositions, EventCategoryToEventForm,
-  EventCategoryToEventProposalForm, EventToProvidedTickets, FormToFormItems,
-  SignupRequestToReplaceSignup, SignupRequestToResultSignup, StaffPositionToUserConProfiles,
-  TicketToProvidedByEvent, UserActivityAlertToNotificationDestinations,
-  UserConProfileToStaffPositions,
+  EventCategoryToEventProposalForm, EventToProvidedTickets, FormToEventCategories, FormToFormItems,
+  FormToProposalEventCategories, FormToUserConProfileConventions, SignupRequestToReplaceSignup,
+  SignupRequestToResultSignup, StaffPositionToUserConProfiles, TicketToProvidedByEvent,
+  UserActivityAlertToNotificationDestinations, UserConProfileToStaffPositions,
 };
 use intercode_entities::model_ext::FormResponse;
 use intercode_entities::*;
@@ -281,7 +281,6 @@ loader_manager!(
   entity_link(convention_catch_all_staff_position, ConventionToCatchAllStaffPosition);
   entity_relation(convention_departments, conventions, departments);
   entity_relation(convention_event_categories, conventions, event_categories);
-  entity_relation(convention_forms, conventions, forms);
   entity_relation(convention_products, conventions, products);
   entity_relation(convention_rooms, conventions, rooms);
   entity_link(convention_single_event, ConventionToSingleEvent);
@@ -313,8 +312,11 @@ loader_manager!(
   entity_relation(event_proposal_event_category, event_proposals, event_categories);
   entity_relation(event_proposal_owner, event_proposals, user_con_profiles);
   entity_id(event_proposals_by_id, event_proposals);
+  entity_link(form_event_categories, FormToEventCategories);
   entity_link(form_form_items, FormToFormItems);
   entity_relation(form_form_sections, forms, form_sections);
+  entity_link(form_proposal_event_categories, FormToProposalEventCategories);
+  entity_link(form_user_con_profile_conventions, FormToUserConProfileConventions);
   entity_relation(form_section_form_items, form_sections, form_items);
   entity_relation(maximum_event_provided_tickets_override_event, maximum_event_provided_tickets_overrides, events);
   entity_relation(
