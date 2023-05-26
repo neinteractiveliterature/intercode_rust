@@ -2235,6 +2235,7 @@ dependencies = [
  "chrono",
  "indexmap",
  "intercode_timespan",
+ "itertools",
  "once_cell",
  "paste",
  "regex",

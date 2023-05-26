@@ -11,6 +11,7 @@ async-trait = {workspace = true}
 chrono = {workspace = true}
 indexmap = "1.9.3"
 intercode_timespan = {path = "../intercode_timespan"}
+itertools = {workspace = true}
 once_cell = {workspace = true}
 paste = "1.0.12"
 regex = {workspace = true}

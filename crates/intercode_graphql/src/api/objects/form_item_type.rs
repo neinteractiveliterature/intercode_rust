@@ -2,7 +2,7 @@ use async_graphql::*;
 use intercode_entities::{form_items, model_ext::form_item_permissions::FormItemRole};
 use intercode_liquid::render_markdown;
 
-use crate::model_backed_type;
+use crate::{api::scalars::JsonScalar, model_backed_type};
 model_backed_type!(FormItemType, form_items::Model);
 
 #[Object(name = "FormItem")]
@@ -39,6 +39,10 @@ impl FormItemType {
   #[graphql(name = "item_type")]
   async fn item_type(&self) -> Option<&str> {
     self.model.item_type.as_deref()
+  }
+
+  async fn properties(&self) -> JsonScalar {
+    JsonScalar(self.model.properties.clone().unwrap_or_default())
   }
 
   async fn position(&self) -> i32 {
