@@ -52,7 +52,7 @@ linkify = "~0.9"
 liquid = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
 liquid-core = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
 md5 = "*"
-once_cell = "1.17.1"
+once_cell = "1.17.2"
 oxide-auth = "0.5.3"
 parking_lot = "0.12.1"
 pulldown-cmark = "0.9.3"
