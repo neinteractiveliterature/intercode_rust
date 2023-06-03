@@ -647,10 +647,21 @@ impl<'a> AbilityType<'a> {
   }
 
   #[graphql(name = "can_read_any_mailing_list")]
-  async fn can_read_any_mailing_list(&self) -> bool {
-    // TODO
-    false
+  async fn can_read_any_mailing_list(&self, ctx: &Context<'_>) -> Result<bool> {
+    let Some(convention) = ctx.data::<QueryData>()?.convention() else {
+      return Ok(false);
+    };
+
+    Ok(
+      ConventionPolicy::action_permitted(
+        &self.authorization_info,
+        &ConventionAction::ReadAnyMailingList,
+        convention,
+      )
+      .await?,
+    )
   }
+
   #[graphql(name = "can_update_notification_templates")]
   async fn can_update_notification_templates(&self) -> bool {
     // TODO

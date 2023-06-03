@@ -24,6 +24,7 @@ intercode_timespan = {path = "../intercode_timespan"}
 itertools = {workspace = true}
 liquid = {workspace = true}
 liquid-core = {workspace = true}
+mailparse = {workspace = true}
 md5 = {workspace = true}
 once_cell = {workspace = true}
 pulldown-cmark = {workspace = true}

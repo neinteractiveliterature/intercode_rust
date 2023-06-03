@@ -51,6 +51,7 @@ itertools = "0.10.5"
 linkify = "~0.9"
 liquid = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
 liquid-core = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
+mailparse = "0.14.0"
 md5 = "*"
 once_cell = "1.17.1"
 oxide-auth = "0.5.3"

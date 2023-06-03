@@ -65,6 +65,18 @@ macro_rules! load_one_by_model_id {
 }
 
 #[macro_export]
+macro_rules! load_many_by_model_ids {
+  ($loader: ident, $ctx: ident, $models: expr) => {
+    $ctx
+      .data::<$crate::QueryData>()?
+      .loaders()
+      .$loader()
+      .load_many($models.map(|signup| signup.id))
+      .await
+  };
+}
+
+#[macro_export]
 macro_rules! loader_result_to_optional_single {
   ($loader_result: ident, $type: ty) => {
     ::seawater::loaders::ExpectModel::try_one(&$loader_result)
@@ -90,5 +102,15 @@ macro_rules! loader_result_to_many {
       .cloned()
       .map(<$type as $crate::api::objects::ModelBackedType>::new)
       .collect()
+  };
+}
+
+#[macro_export]
+macro_rules! loader_result_map_to_required_map {
+  ($loader_result_map: expr) => {
+    $loader_result_map
+      .into_iter()
+      .map(|(id, model_result)| model_result.expect_one().map(|model| (id, model.clone())))
+      .collect::<Result<HashMap<_, _>, _>>()
   };
 }

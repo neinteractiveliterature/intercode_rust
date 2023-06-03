@@ -2,13 +2,14 @@ use std::{str::FromStr, sync::Arc};
 
 use super::{
   active_storage_attachment_type::ActiveStorageAttachmentType,
-  stripe_account_type::StripeAccountType, user_activity_alert_type::UserActivityAlertType,
-  CmsContentGroupType, CmsContentType, CmsFileType, CmsGraphqlQueryType, CmsLayoutType,
-  CmsNavigationItemType, CmsPartialType, CmsVariableType, CouponsPaginationType, DepartmentType,
-  EventCategoryType, EventProposalType, EventProposalsPaginationType, EventType,
-  EventsPaginationType, FormType, ModelBackedType, OrdersPaginationType, PageType, RoomType,
-  ScheduledStringableValueType, SignupRequestsPaginationType, SignupType, StaffPositionType,
-  TicketTypeType, UserConProfileType, UserConProfilesPaginationType,
+  mailing_lists_type::MailingListsType, stripe_account_type::StripeAccountType,
+  user_activity_alert_type::UserActivityAlertType, CmsContentGroupType, CmsContentType,
+  CmsFileType, CmsGraphqlQueryType, CmsLayoutType, CmsNavigationItemType, CmsPartialType,
+  CmsVariableType, CouponsPaginationType, DepartmentType, EventCategoryType, EventProposalType,
+  EventProposalsPaginationType, EventType, EventsPaginationType, FormType, ModelBackedType,
+  OrdersPaginationType, PageType, RoomType, ScheduledStringableValueType,
+  SignupRequestsPaginationType, SignupType, StaffPositionType, TicketTypeType, UserConProfileType,
+  UserConProfilesPaginationType,
 };
 use crate::{
   api::{
@@ -39,8 +40,8 @@ use intercode_entities::{
   links::{
     ConventionToOrders, ConventionToSignupRequests, ConventionToSignups, ConventionToStaffPositions,
   },
-  model_ext::time_bounds::TimeBoundsSelectExt,
-  signups, staff_positions, team_members, user_con_profiles, MaximumEventSignupsValue,
+  model_ext::{time_bounds::TimeBoundsSelectExt, user_con_profiles::BioEligibility},
+  signups, staff_positions, user_con_profiles, MaximumEventSignupsValue,
 };
 use intercode_policies::{
   policies::{
@@ -51,7 +52,7 @@ use intercode_policies::{
 };
 use intercode_timespan::ScheduledValue;
 use liquid::object;
-use sea_orm::{ColumnTrait, DbErr, EntityTrait, ModelTrait, QueryFilter, QuerySelect};
+use sea_orm::{ColumnTrait, DbErr, EntityTrait, ModelTrait, QueryFilter};
 use seawater::loaders::{ExpectModel, ExpectModels};
 
 use crate::model_backed_type;
@@ -82,14 +83,7 @@ impl ConventionType {
     let profiles: Vec<UserConProfileType> = self
       .model
       .find_related(user_con_profiles::Entity)
-      .left_join(staff_positions::Entity)
-      .left_join(team_members::Entity)
-      .filter(
-        staff_positions::Column::Id
-          .is_not_null()
-          .or(team_members::Column::Id.is_not_null()),
-      )
-      .group_by(user_con_profiles::Column::Id)
+      .bio_eligible()
       .all(db.as_ref())
       .await?
       .iter()
@@ -401,6 +395,11 @@ impl ConventionType {
 
   async fn location(&self) -> Option<&serde_json::Value> {
     self.model.location.as_ref()
+  }
+
+  #[graphql(name = "mailing_lists")]
+  async fn mailing_lists(&self) -> MailingListsType {
+    MailingListsType::new(self.model.clone())
   }
 
   #[graphql(name = "maximum_event_signups")]
