@@ -1,5 +1,33 @@
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QuerySelect, Select};
+
 use super::UserNames;
-use crate::user_con_profiles;
+use crate::{staff_positions, team_members, user_con_profiles};
+
+pub trait BioEligibility {
+  fn bio_eligible(self) -> Select<user_con_profiles::Entity>;
+}
+
+impl BioEligibility for Select<user_con_profiles::Entity> {
+  fn bio_eligible(self) -> Select<user_con_profiles::Entity> {
+    self.filter(
+      user_con_profiles::Column::Id.in_subquery(
+        QuerySelect::query(
+          &mut user_con_profiles::Entity::find()
+            .left_join(staff_positions::Entity)
+            .left_join(team_members::Entity)
+            .filter(
+              staff_positions::Column::Id
+                .is_not_null()
+                .or(team_members::Column::Id.is_not_null()),
+            )
+            .select_only()
+            .column(user_con_profiles::Column::Id),
+        )
+        .take(),
+      ),
+    )
+  }
+}
 
 impl user_con_profiles::Model {
   pub fn bio_name(&self) -> String {

@@ -4,7 +4,7 @@ use std::time::Duration;
 use async_graphql::dataloader::DataLoader;
 
 use intercode_entities::links::{
-  CmsNavigationItemToCmsNavigationSection, ConventionToCatchAllStaffPosition,
+  CmsNavigationItemToCmsNavigationSection, ConventionToCatchAllStaffPosition, ConventionToSignups,
   ConventionToSingleEvent, ConventionToStaffPositions, EventCategoryToEventForm,
   EventCategoryToEventProposalForm, EventToProvidedTickets, FormToEventCategories, FormToFormItems,
   FormToProposalEventCategories, FormToUserConProfileConventions, SignupRequestToReplaceSignup,
@@ -283,6 +283,7 @@ loader_manager!(
   entity_relation(convention_event_categories, conventions, event_categories);
   entity_relation(convention_products, conventions, products);
   entity_relation(convention_rooms, conventions, rooms);
+  entity_link(convention_signups, ConventionToSignups);
   entity_link(convention_single_event, ConventionToSingleEvent);
   entity_link(convention_staff_positions, ConventionToStaffPositions);
   entity_relation(convention_ticket_types, conventions, ticket_types);

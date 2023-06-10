@@ -15,6 +15,9 @@ pub enum ConventionAction {
   ViewReports,
   ViewAttendees,
   ViewEventProposals,
+  ReadAnyMailingList,
+  ReadTeamMembersMailingList,
+  ReadUserConProfilesMailingList,
 }
 
 impl From<ReadManageAction> for ConventionAction {
@@ -195,6 +198,30 @@ impl Policy<AuthorizationInfo, conventions::Model> for ConventionPolicy {
             .has_any_permission("read_event_proposals"),
         )
       }
+      ConventionAction::ReadAnyMailingList => Ok(
+        principal.has_scope("read_conventions")
+          && (principal
+            .has_convention_permission("read_team_members_mailing_list", resource.id)
+            .await?
+            || principal
+              .has_convention_permission("read_user_con_profiles_mailing_list", resource.id)
+              .await?
+            || principal.site_admin_read()),
+      ),
+      ConventionAction::ReadTeamMembersMailingList => Ok(
+        principal.has_scope("read_conventions")
+          && (principal
+            .has_convention_permission("read_team_members_mailing_list", resource.id)
+            .await?
+            || principal.site_admin_read()),
+      ),
+      ConventionAction::ReadUserConProfilesMailingList => Ok(
+        principal.has_scope("read_conventions")
+          && (principal
+            .has_convention_permission("read_user_con_profiles_mailing_list", resource.id)
+            .await?
+            || principal.site_admin_read()),
+      ),
     }
   }
 }

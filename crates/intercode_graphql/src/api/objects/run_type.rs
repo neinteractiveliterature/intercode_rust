@@ -1,4 +1,4 @@
-use async_graphql::{Context, Error, Object, ID};
+use async_graphql::{Context, Error, Object, Result, ID};
 use chrono::Duration;
 use intercode_entities::{events, runs, signups, user_con_profiles, users};
 use intercode_policies::{
@@ -90,9 +90,9 @@ impl RunType {
         .expect_one()?
         .length_seconds;
 
-      Ok(Some(DateScalar(
-        starts_at + Duration::seconds(length_seconds.into()),
-      )))
+      (starts_at + Duration::seconds(length_seconds.into()))
+        .try_into()
+        .map(Some)
     } else {
       Ok(None)
     }
@@ -296,8 +296,8 @@ impl RunType {
   }
 
   #[graphql(name = "starts_at")]
-  async fn starts_at(&self) -> Option<DateScalar> {
-    self.model.starts_at.map(DateScalar)
+  async fn starts_at(&self) -> Result<Option<DateScalar>> {
+    self.model.starts_at.map(DateScalar::try_from).transpose()
   }
 
   #[graphql(name = "title_suffix")]

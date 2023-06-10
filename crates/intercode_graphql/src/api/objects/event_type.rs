@@ -91,8 +91,8 @@ impl EventType {
   }
 
   #[graphql(name = "created_at")]
-  async fn created_at(&self) -> Option<DateScalar> {
-    self.model.created_at.map(DateScalar::from)
+  async fn created_at(&self) -> Result<Option<DateScalar>> {
+    self.model.created_at.map(DateScalar::try_from).transpose()
   }
 
   async fn description(&self) -> Option<&str> {
