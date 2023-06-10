@@ -29,13 +29,13 @@ use crate::{
 #[iden = "TRIM"]
 struct TrimFunction;
 
-pub struct MailingListsWaitlistResult {
+pub struct MailingListsWaitlistsResult {
   pub emails: Vec<ContactEmailType>,
   pub run: runs::Model,
 }
 
 #[Object]
-impl MailingListsWaitlistResult {
+impl MailingListsWaitlistsResult {
   async fn emails(&self) -> &Vec<ContactEmailType> {
     &self.emails
   }
@@ -294,7 +294,7 @@ impl MailingListsType {
   #[graphql(
     guard = "self.simple_policy_guard::<ConventionPolicy>(ConventionAction::ReadUserConProfilesMailingList)"
   )]
-  async fn waitlists(&self, ctx: &Context<'_>) -> Result<Vec<MailingListsWaitlistResult>> {
+  async fn waitlists(&self, ctx: &Context<'_>) -> Result<Vec<MailingListsWaitlistsResult>> {
     let db = ctx.data::<QueryData>()?.db();
     let signups = self
       .model
@@ -334,7 +334,7 @@ impl MailingListsType {
 
     let mut results = signups_by_run_id
       .iter()
-      .map(|(run_id, signups)| MailingListsWaitlistResult {
+      .map(|(run_id, signups)| MailingListsWaitlistsResult {
         emails: signups
           .iter()
           .map(|signup| {
