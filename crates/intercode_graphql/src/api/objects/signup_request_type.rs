@@ -17,8 +17,8 @@ impl SignupRequestType {
   }
 
   #[graphql(name = "created_at")]
-  async fn created_at(&self) -> DateScalar {
-    self.model.created_at.into()
+  async fn created_at(&self) -> Result<DateScalar> {
+    self.model.created_at.try_into()
   }
 
   #[graphql(name = "replace_signup")]

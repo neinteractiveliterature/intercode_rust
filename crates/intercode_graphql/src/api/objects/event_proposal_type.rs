@@ -186,8 +186,12 @@ impl EventProposalType {
   }
 
   #[graphql(name = "submitted_at")]
-  async fn submitted_at(&self) -> Option<DateScalar> {
-    self.model.submitted_at.map(DateScalar::from)
+  async fn submitted_at(&self) -> Result<Option<DateScalar>> {
+    self
+      .model
+      .submitted_at
+      .map(DateScalar::try_from)
+      .transpose()
   }
 
   async fn title(&self) -> Option<&str> {
@@ -195,8 +199,8 @@ impl EventProposalType {
   }
 
   #[graphql(name = "updated_at")]
-  async fn updated_at(&self) -> DateScalar {
-    self.model.updated_at.into()
+  async fn updated_at(&self) -> Result<DateScalar> {
+    self.model.updated_at.try_into()
   }
 }
 

@@ -73,8 +73,12 @@ impl OrderType {
   }
 
   #[graphql(name = "submitted_at")]
-  async fn submitted_at(&self) -> Option<DateScalar> {
-    self.model.submitted_at.map(DateScalar::from)
+  async fn submitted_at(&self) -> Result<Option<DateScalar>> {
+    self
+      .model
+      .submitted_at
+      .map(DateScalar::try_from)
+      .transpose()
   }
 
   #[graphql(name = "total_price")]

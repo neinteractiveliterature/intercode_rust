@@ -67,8 +67,8 @@ impl UserConProfileType {
   }
 
   #[graphql(name = "birth_date")]
-  async fn birth_date(&self) -> Option<DateScalar> {
-    self.model.birth_date.map(DateScalar::from)
+  async fn birth_date(&self) -> Result<Option<DateScalar>> {
+    self.model.birth_date.map(DateScalar::try_from).transpose()
   }
 
   async fn city(&self) -> Option<&str> {

@@ -3,6 +3,7 @@ mod coupons;
 pub mod event_proposals;
 pub mod form_item_permissions;
 pub mod form_responses;
+pub mod order_by_title;
 pub mod orders;
 pub mod permissions;
 pub mod time_bounds;

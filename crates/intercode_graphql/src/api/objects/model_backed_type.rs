@@ -65,14 +65,21 @@ macro_rules! load_one_by_model_id {
 }
 
 #[macro_export]
-macro_rules! load_many_by_model_ids {
-  ($loader: ident, $ctx: ident, $models: expr) => {
+macro_rules! load_many_by_ids {
+  ($loader: ident, $ctx: ident, $ids: expr) => {
     $ctx
       .data::<$crate::QueryData>()?
       .loaders()
       .$loader()
-      .load_many($models.map(|signup| signup.id))
+      .load_many($ids)
       .await
+  };
+}
+
+#[macro_export]
+macro_rules! load_many_by_model_ids {
+  ($loader: ident, $ctx: ident, $models: expr) => {
+    $crate::load_many_by_ids!($loader, $ctx, $models.map(|model| model.id))
   };
 }
 

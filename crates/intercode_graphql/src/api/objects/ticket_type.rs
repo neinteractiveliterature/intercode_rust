@@ -48,8 +48,8 @@ impl TicketType {
   }
 
   #[graphql(name = "created_at")]
-  async fn created_at(&self) -> DateScalar {
-    self.model.created_at.into()
+  async fn created_at(&self) -> Result<DateScalar> {
+    self.model.created_at.try_into()
   }
 
   #[graphql(name = "order_entry")]
@@ -94,8 +94,8 @@ impl TicketType {
   }
 
   #[graphql(name = "updated_at")]
-  async fn updated_at(&self) -> DateScalar {
-    self.model.updated_at.into()
+  async fn updated_at(&self) -> Result<DateScalar> {
+    self.model.updated_at.try_into()
   }
 
   #[graphql(name = "user_con_profile")]

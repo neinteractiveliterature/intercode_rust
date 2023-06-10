@@ -18,8 +18,8 @@ impl CouponType {
   }
 
   #[graphql(name = "expires_at")]
-  async fn expires_at(&self) -> Option<DateScalar> {
-    self.model.expires_at.map(|date| date.into())
+  async fn expires_at(&self) -> Result<Option<DateScalar>> {
+    self.model.expires_at.map(DateScalar::try_from).transpose()
   }
 
   #[graphql(name = "fixed_amount")]
