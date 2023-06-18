@@ -37,7 +37,7 @@ async-trait = "*"
 axum = {version = "~0.6.18", features = ["multipart", "macros", "headers"]}
 bumpalo = "3.13.0"
 bumpalo-herd = "0.1.2"
-cached = "~0.43.0"
+cached = "~0.44.0"
 chrono = "0.4"
 chrono-tz = "0.8"
 dyn-clone = "1.0.11"
