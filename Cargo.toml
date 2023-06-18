@@ -32,7 +32,7 @@ members = [
 Inflector = "*"
 async-graphql = {version = "~5.0.10", features = ["tracing", "dataloader", "chrono"]}
 async-graphql-value = {version = "~5.0.10"}
-async-stripe = {version = "0.21.0", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
+async-stripe = {version = "0.22.2", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
 async-trait = "*"
 axum = {version = "~0.6.18", features = ["multipart", "macros", "headers"]}
 bumpalo = "3.13.0"
