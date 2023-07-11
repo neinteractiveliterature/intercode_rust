@@ -17,6 +17,8 @@ http = {workspace = true}
 i18n-embed = {workspace = true}
 i18n-embed-fl = {workspace = true}
 intercode_entities = {path = "../intercode_entities"}
+intercode_graphql_core = {path = "../intercode_graphql_core"}
+intercode_graphql_loaders = {path = "../intercode_graphql_loaders"}
 intercode_inflector = {path = "../intercode_inflector"}
 intercode_liquid = {path = "../intercode_liquid"}
 intercode_policies = {path = "../intercode_policies"}

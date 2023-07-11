@@ -1,12 +1,10 @@
 use intercode_entities::{event_categories, event_proposals, user_con_profiles};
+use intercode_graphql_core::filter_utils::{string_search, string_search_condition};
 use sea_orm::{sea_query::Cond, ColumnTrait, QueryFilter, QueryOrder, Select};
 
-use crate::{
-  api::{
-    inputs::{EventProposalFiltersInput, SortInput},
-    objects::EventProposalsPaginationType,
-  },
-  filter_utils::{string_search, string_search_condition},
+use crate::api::{
+  inputs::{EventProposalFiltersInput, SortInput},
+  objects::EventProposalsPaginationType,
 };
 
 use super::QueryBuilder;

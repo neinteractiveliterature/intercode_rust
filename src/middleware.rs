@@ -7,7 +7,7 @@ use http::{request::Parts, StatusCode};
 use intercode_entities::{
   cms_parent::CmsParent, conventions, root_sites, user_con_profiles, users,
 };
-use intercode_graphql::{ArcQueryData, OwnedQueryData, QueryData};
+use intercode_graphql_core::query_data::{ArcQueryData, OwnedQueryData, QueryData};
 use intercode_policies::AuthorizationInfo;
 use once_cell::sync::Lazy;
 use regex::Regex;

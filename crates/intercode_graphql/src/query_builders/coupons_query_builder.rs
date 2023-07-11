@@ -1,15 +1,13 @@
 use intercode_entities::coupons;
+use intercode_graphql_core::filter_utils::string_search;
 use sea_orm::{
   sea_query::{Expr, Func, SimpleExpr},
   QueryOrder, Select,
 };
 
-use crate::{
-  api::{
-    inputs::{CouponFiltersInput, SortInput},
-    objects::CouponsPaginationType,
-  },
-  filter_utils::string_search,
+use crate::api::{
+  inputs::{CouponFiltersInput, SortInput},
+  objects::CouponsPaginationType,
 };
 
 use super::QueryBuilder;

@@ -1,8 +1,11 @@
+use std::sync::Arc;
+
 use async_graphql::*;
 use intercode_entities::cms_files;
+use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{policies::CmsContentPolicy, AuthorizationInfo, Policy, ReadManageAction};
 
-use crate::{model_backed_type, QueryData};
+use crate::model_backed_type;
 
 use super::{active_storage_attachment_type::ActiveStorageAttachmentType, ModelBackedType};
 model_backed_type!(CmsFileType, cms_files::Model);
@@ -28,8 +31,7 @@ impl CmsFileType {
   async fn file(&self, ctx: &Context<'_>) -> Result<Option<ActiveStorageAttachmentType>> {
     Ok(
       ctx
-        .data::<QueryData>()?
-        .loaders()
+        .data::<Arc<LoaderManager>>()?
         .cms_file_file
         .load_one(self.model.id)
         .await?

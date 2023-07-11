@@ -13,23 +13,20 @@ use super::{
 };
 use crate::{
   api::{
-    enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
     inputs::{
       CouponFiltersInput, EventFiltersInput, EventProposalFiltersInput, OrderFiltersInput,
       SignupRequestFiltersInput, SortInput, UserConProfileFiltersInput,
     },
     interfaces::CmsParentImplementation,
     objects::ProductType,
-    scalars::DateScalar,
   },
   cms_rendering_context::CmsRenderingContext,
-  lax_id::LaxId,
   load_one_by_model_id, loader_result_to_many,
   query_builders::{
     CouponsQueryBuilder, EventProposalsQueryBuilder, EventsQueryBuilder, OrdersQueryBuilder,
     QueryBuilder, SignupRequestsQueryBuilder, UserConProfilesQueryBuilder,
   },
-  LiquidRenderer, QueryData, SchemaData,
+  SchemaData,
 };
 use async_graphql::*;
 use chrono::{DateTime, Utc};
@@ -43,6 +40,14 @@ use intercode_entities::{
   model_ext::{time_bounds::TimeBoundsSelectExt, user_con_profiles::BioEligibility},
   signups, staff_positions, user_con_profiles, MaximumEventSignupsValue,
 };
+use intercode_graphql_core::{
+  enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
+  lax_id::LaxId,
+  liquid_renderer::LiquidRenderer,
+  query_data::QueryData,
+  scalars::DateScalar,
+};
+use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
   policies::{
     ConventionAction, ConventionPolicy, CouponPolicy, EventPolicy, EventProposalAction,
@@ -101,8 +106,7 @@ impl ConventionType {
   async fn catch_all_staff_position(&self, ctx: &Context<'_>) -> Result<Option<StaffPositionType>> {
     Ok(
       ctx
-        .data::<QueryData>()?
-        .loaders()
+        .data::<Arc<LoaderManager>>()?
         .convention_catch_all_staff_position()
         .load_one(self.model.id)
         .await?
@@ -354,8 +358,7 @@ impl ConventionType {
   async fn favicon(&self, ctx: &Context<'_>) -> Result<Option<ActiveStorageAttachmentType>> {
     Ok(
       ctx
-        .data::<QueryData>()?
-        .loaders()
+        .data::<Arc<LoaderManager>>()?
         .convention_favicon
         .load_one(self.model.id)
         .await?
@@ -468,8 +471,7 @@ impl ConventionType {
   ) -> Result<Option<ActiveStorageAttachmentType>> {
     Ok(
       ctx
-        .data::<QueryData>()?
-        .loaders()
+        .data::<Arc<LoaderManager>>()?
         .convention_open_graph_image
         .load_one(self.model.id)
         .await?
@@ -630,11 +632,10 @@ impl ConventionType {
 
   #[graphql(name = "staff_positions")]
   async fn staff_positions(&self, ctx: &Context<'_>) -> Result<Vec<StaffPositionType>, Error> {
-    let query_data = &ctx.data::<QueryData>()?;
+    let loaders = &ctx.data::<Arc<LoaderManager>>()?;
 
     Ok(
-      query_data
-        .loaders()
+      loaders
         .convention_staff_positions()
         .load_one(self.model.id)
         .await?
@@ -695,11 +696,10 @@ impl ConventionType {
 
   #[graphql(name = "ticket_types")]
   async fn ticket_types(&self, ctx: &Context<'_>) -> Result<Vec<TicketTypeType>, Error> {
-    let query_data = ctx.data::<QueryData>()?;
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
 
     Ok(
-      query_data
-        .loaders()
+      loaders
         .convention_ticket_types()
         .load_one(self.model.id)
         .await?
@@ -754,8 +754,7 @@ impl ConventionType {
   async fn user_con_profile_form(&self, ctx: &Context<'_>) -> Result<FormType> {
     Ok(FormType::new(
       ctx
-        .data::<QueryData>()?
-        .loaders()
+        .data::<Arc<LoaderManager>>()?
         .convention_user_con_profile_form()
         .load_one(self.model.id)
         .await?

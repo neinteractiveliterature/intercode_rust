@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use async_graphql::*;
 use intercode_entities::cms_layouts;
+use intercode_graphql_core::{liquid_renderer::LiquidRenderer, query_data::QueryData};
 use intercode_liquid::{cms_parent_partial_source::PreloadPartialsStrategy, react_component_tag};
 use intercode_policies::{policies::CmsContentPolicy, AuthorizationInfo, Policy, ReadManageAction};
 use liquid::object;
@@ -9,7 +10,7 @@ use serde_json::json;
 
 use crate::{
   api::objects::ModelBackedType, cms_rendering_context::CmsRenderingContext, model_backed_type,
-  LiquidRenderer, QueryData, SchemaData,
+  SchemaData,
 };
 model_backed_type!(CmsLayoutType, cms_layouts::Model);
 

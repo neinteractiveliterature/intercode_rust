@@ -1,9 +1,12 @@
+use std::sync::Arc;
+
 use async_graphql::*;
 use intercode_entities::rooms;
+use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{policies::RoomPolicy, ReadManageAction};
 use seawater::loaders::ExpectModels;
 
-use crate::{model_backed_type, QueryData};
+use crate::model_backed_type;
 
 use super::{ModelBackedType, RunType};
 model_backed_type!(RoomType, rooms::Model);
@@ -24,8 +27,7 @@ impl RoomType {
   async fn runs(&self, ctx: &Context<'_>) -> Result<Vec<RunType>, Error> {
     Ok(
       ctx
-        .data::<QueryData>()?
-        .loaders()
+        .data::<Arc<LoaderManager>>()?
         .room_runs()
         .load_one(self.model.id)
         .await?

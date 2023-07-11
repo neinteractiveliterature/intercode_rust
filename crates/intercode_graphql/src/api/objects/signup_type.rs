@@ -1,12 +1,16 @@
+use std::sync::Arc;
+
 use async_graphql::{futures_util::try_join, *};
 use chrono::{Datelike, NaiveDate};
 use intercode_entities::{conventions, events, runs, signups};
+use intercode_graphql_core::{enums::SignupState, policy_guard::PolicyGuard};
+use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::policies::{SignupAction, SignupPolicy};
 use seawater::loaders::ExpectModel;
 
-use crate::{api::enums::SignupState, model_backed_type, policy_guard::PolicyGuard, QueryData};
+use crate::{load_one_by_model_id, loader_result_to_required_single, model_backed_type};
 
-use super::{ModelBackedType, RunType, UserConProfileType};
+use super::{RunType, UserConProfileType};
 
 model_backed_type!(SignupType, signups::Model);
 
@@ -38,13 +42,13 @@ impl SignupType {
     PolicyGuard::new(action, &self.model, move |model, ctx| {
       let model = model.clone();
       let ctx = ctx;
-      let query_data = ctx.data::<QueryData>();
+      let loaders = ctx.data::<Arc<LoaderManager>>();
 
       Box::pin(async {
-        let query_data = query_data?;
-        let signup_run_loader = query_data.loaders().signup_run();
-        let run_event_loader = query_data.loaders().run_event();
-        let event_convention_loader = query_data.loaders().event_convention();
+        let loaders = loaders?;
+        let signup_run_loader = loaders.signup_run();
+        let run_event_loader = loaders.run_event();
+        let event_convention_loader = loaders.event_convention();
         let run_result = signup_run_loader.load_one(model.id).await?;
         let run = run_result.expect_one()?;
         let event_result = run_event_loader.load_one(run.id).await?;
@@ -66,13 +70,12 @@ impl SignupType {
 
   #[graphql(name = "age_restrictions_check")]
   async fn age_restrictions_check(&self, ctx: &Context<'_>) -> Result<&str, Error> {
-    let query_data = ctx.data::<QueryData>()?;
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
 
     let (user_con_profile, (run, event)) = try_join!(
       async {
         Ok::<_, Error>(
-          query_data
-            .loaders()
+          loaders
             .signup_user_con_profile()
             .load_one(self.model.id)
             .await?
@@ -81,15 +84,13 @@ impl SignupType {
         )
       },
       async {
-        let run = query_data
-          .loaders()
+        let run = loaders
           .signup_run()
           .load_one(self.model.id)
           .await?
           .expect_one()?
           .clone();
-        let event = query_data
-          .loaders()
+        let event = loaders
           .run_event()
           .load_one(run.id)
           .await?
@@ -129,17 +130,8 @@ impl SignupType {
   }
 
   async fn run(&self, ctx: &Context<'_>) -> Result<RunType, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-
-    Ok(RunType::new(
-      query_data
-        .loaders()
-        .signup_run()
-        .load_one(self.model.id)
-        .await?
-        .expect_one()?
-        .clone(),
-    ))
+    let loader_result = load_one_by_model_id!(signup_run, ctx, self)?;
+    Ok(loader_result_to_required_single!(loader_result, RunType))
   }
 
   async fn state(&self) -> Result<SignupState> {
@@ -148,25 +140,18 @@ impl SignupType {
 
   #[graphql(name = "user_con_profile")]
   async fn user_con_profile(&self, ctx: &Context<'_>) -> Result<UserConProfileType, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-
-    Ok(UserConProfileType::new(
-      query_data
-        .loaders()
-        .signup_user_con_profile()
-        .load_one(self.model.id)
-        .await?
-        .expect_one()?
-        .clone(),
+    let loader_result = load_one_by_model_id!(signup_user_con_profile, ctx, self)?;
+    Ok(loader_result_to_required_single!(
+      loader_result,
+      UserConProfileType
     ))
   }
 
   #[graphql(name = "waitlist_position")]
   async fn waitlist_position(&self, ctx: &Context<'_>) -> Result<Option<usize>, Error> {
-    let query_data = ctx.data::<QueryData>()?;
     Ok(
-      query_data
-        .loaders()
+      ctx
+        .data::<Arc<LoaderManager>>()?
         .signup_waitlist_position
         .load_one(self.model.clone().into())
         .await?

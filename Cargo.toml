@@ -20,6 +20,8 @@ debug = 1
 members = [
   "./crates/intercode_entities",
   "./crates/intercode_graphql",
+  "./crates/intercode_graphql_core",
+  "./crates/intercode_graphql_loaders",
   "./crates/intercode_inflector",
   "./crates/intercode_liquid",
   "./crates/intercode_policies",
@@ -105,6 +107,8 @@ ics = "0.5.8"
 indicatif = {version = "0.17.3", features = ["improved_unicode"]}
 intercode_entities = {path = "./crates/intercode_entities"}
 intercode_graphql = {path = "./crates/intercode_graphql"}
+intercode_graphql_core = {path = "./crates/intercode_graphql_core"}
+intercode_graphql_loaders = {path = "./crates/intercode_graphql_loaders"}
 intercode_inflector = {path = "./crates/intercode_inflector"}
 intercode_liquid = {path = "./crates/intercode_liquid"}
 intercode_policies = {path = "./crates/intercode_policies"}

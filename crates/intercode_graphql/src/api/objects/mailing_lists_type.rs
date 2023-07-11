@@ -11,6 +11,7 @@ use intercode_entities::{
   },
   runs, signups, team_members, tickets, user_con_profiles, users, UserNames,
 };
+use intercode_graphql_core::{query_data::QueryData, scalars::DateScalar};
 use intercode_policies::policies::{ConventionAction, ConventionPolicy};
 use itertools::Itertools;
 use sea_orm::{
@@ -20,9 +21,8 @@ use sea_orm::{
 use seawater::loaders::ExpectModel;
 
 use crate::{
-  api::{objects::ModelBackedType, scalars::DateScalar},
-  load_many_by_ids, load_many_by_model_ids, loader_result_map_to_required_map, model_backed_type,
-  QueryData,
+  api::objects::ModelBackedType, load_many_by_ids, load_many_by_model_ids,
+  loader_result_map_to_required_map, model_backed_type,
 };
 
 #[derive(Iden)]

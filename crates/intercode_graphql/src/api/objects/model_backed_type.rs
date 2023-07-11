@@ -1,7 +1,6 @@
+use intercode_graphql_core::policy_guard::PolicyGuard;
 use intercode_policies::{AuthorizationInfo, Policy};
 use sea_orm::ModelTrait;
-
-use crate::policy_guard::PolicyGuard;
 
 pub trait ModelBackedType {
   type Model: ModelTrait;
@@ -49,8 +48,7 @@ macro_rules! model_backed_type {
 macro_rules! load_one_by_id {
   ($loader: ident, $ctx: ident, $id: expr) => {
     $ctx
-      .data::<$crate::QueryData>()?
-      .loaders()
+      .data::<::std::sync::Arc<::intercode_graphql_loaders::LoaderManager>>()?
       .$loader()
       .load_one($id)
       .await
@@ -68,8 +66,7 @@ macro_rules! load_one_by_model_id {
 macro_rules! load_many_by_ids {
   ($loader: ident, $ctx: ident, $ids: expr) => {
     $ctx
-      .data::<$crate::QueryData>()?
-      .loaders()
+      .data::<::std::sync::Arc<::intercode_graphql_loaders::LoaderManager>>()?
       .$loader()
       .load_many($ids)
       .await

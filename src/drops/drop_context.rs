@@ -1,7 +1,8 @@
 use std::{fmt::Debug, sync::Weak};
 
 use i18n_embed::fluent::FluentLanguageLoader;
-use intercode_graphql::{QueryData, SchemaData};
+use intercode_graphql::SchemaData;
+use intercode_graphql_core::query_data::QueryData;
 use seawater::{ConnectionWrapper, DropStore};
 
 #[derive(Clone)]

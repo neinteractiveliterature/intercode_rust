@@ -6,6 +6,7 @@ use chrono_tz::UTC;
 use http::{header::CONTENT_TYPE, StatusCode};
 use ics::{properties, ICalendar};
 use intercode_entities::{events, runs, signups, user_con_profiles};
+use intercode_graphql_loaders::LoaderManager;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
@@ -80,8 +81,9 @@ pub async fn user_schedule(
   // let timezone_component = Component::new("VTIMEZONE");
   // timezone.
 
-  let signups_loader_result = query_data
-    .loaders()
+  let loaders = LoaderManager::new(query_data.db().clone());
+
+  let signups_loader_result = loaders
     .user_con_profile_signups()
     .load_one(user_con_profile.id)
     .await
@@ -99,8 +101,7 @@ pub async fn user_schedule(
     .filter(|signup| signup.state != "withdrawn")
     .collect::<Vec<_>>();
 
-  let runs_by_id_result = query_data
-    .loaders()
+  let runs_by_id_result = loaders
     .runs_by_id()
     .load_many(signups.iter().map(|signup| signup.run_id))
     .await
@@ -113,8 +114,7 @@ pub async fn user_schedule(
     .filter_map(|(run_id, result)| result.expect_one().map(|run| (*run_id, run)).ok())
     .collect::<HashMap<_, _>>();
 
-  let run_rooms_result = query_data
-    .loaders()
+  let run_rooms_result = loaders
     .run_rooms()
     .load_many(runs_by_id.keys().copied())
     .await
@@ -132,8 +132,7 @@ pub async fn user_schedule(
     })
     .collect::<HashMap<_, _>>();
 
-  let events_by_id_result = query_data
-    .loaders()
+  let events_by_id_result = loaders
     .events_by_id()
     .load_many(runs_by_id.values().map(|run| run.event_id))
     .await

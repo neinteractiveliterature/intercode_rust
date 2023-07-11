@@ -4,9 +4,7 @@ use sea_orm::DbErr;
 use seawater::ConnectionWrapper;
 use std::sync::Arc;
 
-use crate::presenters::signup_count_presenter::{
-  load_signup_count_data_for_run_ids, RunSignupCounts,
-};
+use crate::signup_count_presenter::{load_signup_count_data_for_run_ids, RunSignupCounts};
 
 pub struct SignupCountLoader {
   db: ConnectionWrapper,

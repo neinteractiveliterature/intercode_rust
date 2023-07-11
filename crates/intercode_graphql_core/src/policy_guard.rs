@@ -4,7 +4,7 @@ use async_graphql::{Context, ErrorExtensions, Guard, Result};
 use async_trait::async_trait;
 use intercode_policies::{AuthorizationInfo, Policy};
 
-use crate::QueryData;
+use crate::query_data::QueryData;
 
 pub trait GetResourceFn<'a, M: Send + Sync + 'static, R: Send + Sync>:
   for<'b> Fn(&'a M, &'b Context<'_>) -> Pin<Box<dyn Future<Output = Result<R>> + Send + Sync + 'b>>

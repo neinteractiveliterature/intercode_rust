@@ -1,9 +1,12 @@
+use std::sync::Arc;
+
 use async_graphql::*;
 use intercode_entities::order_entries;
+use intercode_graphql_loaders::LoaderManager;
 use seawater::loaders::ExpectModel;
 
 use crate::{
-  model_backed_type, presenters::order_summary_presenter::load_and_describe_order_entry, QueryData,
+  model_backed_type, presenters::order_summary_presenter::load_and_describe_order_entry,
 };
 
 use super::{money_type::MoneyType, ModelBackedType, OrderType, ProductType, ProductVariantType};
@@ -22,8 +25,7 @@ impl OrderEntryType {
 
   async fn order(&self, ctx: &Context<'_>) -> Result<OrderType> {
     let loader_result = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .order_entry_order()
       .load_one(self.model.id)
       .await?;
@@ -41,8 +43,7 @@ impl OrderEntryType {
 
   async fn product(&self, ctx: &Context<'_>) -> Result<ProductType> {
     let product_result = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .order_entry_product()
       .load_one(self.model.id)
       .await?;
@@ -53,8 +54,7 @@ impl OrderEntryType {
   #[graphql(name = "product_variant")]
   async fn product_variant(&self, ctx: &Context<'_>) -> Result<Option<ProductVariantType>> {
     let product_variant_result = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .order_entry_product_variant()
       .load_one(self.model.id)
       .await?;

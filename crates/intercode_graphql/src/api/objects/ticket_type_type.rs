@@ -1,11 +1,11 @@
 use async_graphql::*;
 use intercode_entities::{maximum_event_provided_tickets_overrides, ticket_types};
+use intercode_graphql_core::{lax_id::LaxId, query_data::QueryData};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-use seawater::loaders::ExpectModels;
 
-use crate::{lax_id::LaxId, model_backed_type, QueryData};
+use crate::{load_one_by_model_id, loader_result_to_many, model_backed_type};
 
-use super::{ModelBackedType, ProductType};
+use super::ProductType;
 model_backed_type!(TicketTypeType, ticket_types::Model);
 
 #[Object(name = "TicketType")]
@@ -59,18 +59,7 @@ impl TicketTypeType {
 
   #[graphql(name = "providing_products")]
   async fn providing_products(&self, ctx: &Context<'_>) -> Result<Vec<ProductType>, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-
-    Ok(
-      query_data
-        .loaders()
-        .ticket_type_providing_products()
-        .load_one(self.model.id)
-        .await?
-        .expect_models()?
-        .iter()
-        .map(|product| ProductType::new(product.to_owned()))
-        .collect(),
-    )
+    let loader_result = load_one_by_model_id!(ticket_type_providing_products, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, ProductType))
   }
 }

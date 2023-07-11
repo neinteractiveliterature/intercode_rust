@@ -1,12 +1,10 @@
 use intercode_entities::user_con_profiles;
+use intercode_graphql_core::filter_utils::string_search_condition;
 use sea_orm::{sea_query::Cond, QueryFilter, Select};
 
-use crate::{
-  api::{
-    inputs::{SortInput, UserConProfileFiltersInput},
-    objects::UserConProfilesPaginationType,
-  },
-  filter_utils::string_search_condition,
+use crate::api::{
+  inputs::{SortInput, UserConProfileFiltersInput},
+  objects::UserConProfilesPaginationType,
 };
 
 use super::QueryBuilder;

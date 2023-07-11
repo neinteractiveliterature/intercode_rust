@@ -1,16 +1,13 @@
 use intercode_entities::{orders, user_con_profiles};
+use intercode_graphql_core::{filter_utils::string_search_condition, lax_id::LaxId};
 use sea_orm::{
   sea_query::{Cond, Expr, Func, SimpleExpr},
   ColumnTrait, QueryFilter, QueryOrder, Select,
 };
 
-use crate::{
-  api::{
-    inputs::{OrderFiltersInput, SortInput},
-    objects::OrdersPaginationType,
-  },
-  filter_utils::string_search_condition,
-  lax_id::LaxId,
+use crate::api::{
+  inputs::{OrderFiltersInput, SortInput},
+  objects::OrdersPaginationType,
 };
 
 use super::QueryBuilder;

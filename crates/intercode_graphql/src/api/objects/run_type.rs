@@ -1,6 +1,10 @@
+use std::sync::Arc;
+
 use async_graphql::{Context, Error, Object, Result, ID};
 use chrono::Duration;
 use intercode_entities::{events, runs, signups, user_con_profiles, users};
+use intercode_graphql_core::scalars::{DateScalar, JsonScalar};
+use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
   policies::{RunAction, RunPolicy},
   AuthorizationInfo, Policy,
@@ -9,15 +13,15 @@ use sea_orm::{
   sea_query::{Expr, Func, SimpleExpr},
   JoinType, ModelTrait, QueryOrder, QuerySelect, RelationTrait,
 };
-use seawater::loaders::{ExpectModel, ExpectModels};
+use seawater::loaders::ExpectModel;
 
 use crate::{
   api::{
     inputs::{SignupFiltersInput, SortInput},
     interfaces::PaginationImplementation,
-    scalars::{DateScalar, JsonScalar},
   },
-  model_backed_type, QueryData,
+  load_one_by_model_id, loader_result_to_many, loader_result_to_required_single, model_backed_type,
+  QueryData,
 };
 
 use super::{
@@ -35,11 +39,9 @@ impl RunType {
 
   #[graphql(name = "confirmed_signup_count")]
   async fn confirmed_signup_count(&self, ctx: &Context<'_>) -> Result<i64, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-
     Ok(
-      query_data
-        .loaders()
+      ctx
+        .data::<Arc<LoaderManager>>()?
         .run_signup_counts
         .load_one(self.model.id)
         .await?
@@ -51,16 +53,14 @@ impl RunType {
   #[graphql(name = "current_ability_can_signup_summary_run")]
   async fn current_ability_can_signup_summary_run(&self, ctx: &Context<'_>) -> Result<bool, Error> {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
-    let query_data = ctx.data::<QueryData>()?;
-    let event = query_data
-      .loaders()
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
+    let event = loaders
       .run_event()
       .load_one(self.model.id)
       .await?
       .expect_one()?
       .clone();
-    let convention = query_data
-      .loaders()
+    let convention = loaders
       .event_convention()
       .load_one(event.id)
       .await?
@@ -81,9 +81,8 @@ impl RunType {
     let starts_at = self.model.starts_at;
 
     if let Some(starts_at) = starts_at {
-      let query_data = ctx.data::<QueryData>()?;
-      let length_seconds = query_data
-        .loaders()
+      let length_seconds = ctx
+        .data::<Arc<LoaderManager>>()?
         .run_event()
         .load_one(self.model.id)
         .await?
@@ -99,25 +98,16 @@ impl RunType {
   }
 
   async fn event(&self, ctx: &Context<'_>) -> Result<EventType, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-
-    Ok(EventType::new(
-      query_data
-        .loaders()
-        .run_event()
-        .load_one(self.model.id)
-        .await?
-        .expect_one()?
-        .clone(),
-    ))
+    let loader_result = load_one_by_model_id!(run_event, ctx, self)?;
+    Ok(loader_result_to_required_single!(loader_result, EventType))
   }
 
   #[graphql(name = "my_signups")]
   async fn my_signups(&self, ctx: &Context<'_>) -> Result<Vec<SignupType>, Error> {
     let query_data = ctx.data::<QueryData>()?;
     if let Some(user_con_profile) = query_data.user_con_profile() {
-      let loader = query_data
-        .loaders()
+      let loader = ctx
+        .data::<Arc<LoaderManager>>()?
         .run_user_con_profile_signups
         .get(user_con_profile.id)
         .await;
@@ -141,8 +131,8 @@ impl RunType {
   async fn my_signup_requests(&self, ctx: &Context<'_>) -> Result<Vec<SignupRequestType>, Error> {
     let query_data = ctx.data::<QueryData>()?;
     if let Some(user_con_profile) = query_data.user_con_profile() {
-      let loader = query_data
-        .loaders()
+      let loader = ctx
+        .data::<Arc<LoaderManager>>()?
         .run_user_con_profile_signup_requests
         .get(user_con_profile.id)
         .await;
@@ -164,10 +154,9 @@ impl RunType {
 
   #[graphql(name = "not_counted_signup_count")]
   async fn not_counted_signup_count(&self, ctx: &Context<'_>) -> Result<i64, Error> {
-    let query_data = ctx.data::<QueryData>()?;
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
 
-    let counts = query_data
-      .loaders()
+    let counts = loaders
       .run_signup_counts
       .load_one(self.model.id)
       .await?
@@ -192,19 +181,8 @@ impl RunType {
   }
 
   async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<RoomType>, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-
-    Ok(
-      query_data
-        .loaders()
-        .run_rooms()
-        .load_one(self.model.id)
-        .await?
-        .expect_models()?
-        .iter()
-        .map(|model| RoomType::new(model.clone()))
-        .collect(),
-    )
+    let loader_result = load_one_by_model_id!(run_rooms, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, RoomType))
   }
 
   #[graphql(name = "schedule_note")]
@@ -217,10 +195,9 @@ impl RunType {
     &self,
     ctx: &Context<'_>,
   ) -> Result<JsonScalar, Error> {
-    let query_data = ctx.data::<QueryData>()?;
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
 
-    let counts = query_data
-      .loaders()
+    let counts = loaders
       .run_signup_counts
       .load_one(self.model.id)
       .await?

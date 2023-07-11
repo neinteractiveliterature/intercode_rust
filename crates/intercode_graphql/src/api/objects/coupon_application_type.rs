@@ -3,7 +3,7 @@ use intercode_entities::coupon_applications;
 use rusty_money::{iso, Money};
 use seawater::loaders::{ExpectModel, ExpectModels};
 
-use crate::{load_one_by_id, load_one_by_model_id, model_backed_type, QueryData};
+use crate::{load_one_by_id, load_one_by_model_id, model_backed_type};
 
 use super::{CouponType, ModelBackedType, MoneyType};
 model_backed_type!(CouponApplicationType, coupon_applications::Model);
@@ -15,13 +15,7 @@ impl CouponApplicationType {
   }
 
   async fn coupon(&self, ctx: &Context<'_>) -> Result<CouponType> {
-    let loader_result = ctx
-      .data::<QueryData>()?
-      .loaders()
-      .coupon_application_coupon()
-      .load_one(self.model.id)
-      .await?;
-
+    let loader_result = load_one_by_model_id!(coupon_application_coupon, ctx, self)?;
     Ok(CouponType::new(loader_result.expect_one()?.clone()))
   }
 

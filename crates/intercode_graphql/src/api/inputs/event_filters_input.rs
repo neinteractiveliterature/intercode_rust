@@ -1,6 +1,5 @@
 use async_graphql::InputObject;
-
-use crate::api::scalars::JsonScalar;
+use intercode_graphql_core::scalars::JsonScalar;
 
 #[derive(InputObject, Default)]
 pub struct EventFiltersInput {

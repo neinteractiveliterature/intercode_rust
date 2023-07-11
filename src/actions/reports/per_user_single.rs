@@ -5,7 +5,7 @@ use futures::try_join;
 use intercode_entities::{
   events, rooms, rooms_runs, runs, signups, team_members, user_con_profiles, UserNames,
 };
-use intercode_graphql::QueryData;
+use intercode_graphql_core::query_data::QueryData;
 use intercode_inflector::IntercodeInflector;
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, ModelTrait, QueryFilter};
 

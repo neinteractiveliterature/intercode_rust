@@ -1,7 +1,11 @@
+use std::sync::Arc;
+
 use super::{ModelBackedType, TicketTypeType};
-use crate::{model_backed_type, policy_guard::PolicyGuard, QueryData};
+use crate::model_backed_type;
 use async_graphql::*;
 use intercode_entities::{conventions, events, maximum_event_provided_tickets_overrides};
+use intercode_graphql_core::policy_guard::PolicyGuard;
+use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{policies::MaximumEventProvidedTicketsOverridePolicy, ReadManageAction};
 use seawater::loaders::ExpectModel;
 
@@ -27,14 +31,12 @@ impl MaximumEventProvidedTicketsOverrideType {
     PolicyGuard::new(action, &self.model, move |model, ctx| {
       let model = model.clone();
       let ctx = ctx;
-      let query_data = ctx.data::<QueryData>();
+      let loaders = ctx.data::<Arc<LoaderManager>>();
 
       Box::pin(async {
-        let query_data = query_data?;
-        let event_loader = query_data
-          .loaders()
-          .maximum_event_provided_tickets_override_event();
-        let convention_loader = query_data.loaders().event_convention();
+        let loaders = loaders?;
+        let event_loader = loaders.maximum_event_provided_tickets_override_event();
+        let convention_loader = loaders.event_convention();
         let event_result = event_loader.load_one(model.id).await?;
         let event = event_result.expect_one()?;
         let convention_result = convention_loader.load_one(event.id).await?;
@@ -63,8 +65,7 @@ impl MaximumEventProvidedTicketsOverrideType {
   #[graphql(name = "ticket_type")]
   async fn ticket_type(&self, ctx: &Context<'_>) -> Result<TicketTypeType> {
     let ticket_type_result = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .maximum_event_provided_tickets_override_ticket_type()
       .load_one(self.model.id)
       .await?;

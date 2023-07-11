@@ -1,7 +1,9 @@
 use api::{MutationRoot, QueryRoot};
-use async_graphql::{async_trait::async_trait, EmptySubscription, Schema};
+use async_graphql::{EmptySubscription, Schema};
 use i18n_embed::fluent::FluentLanguageLoader;
-use intercode_entities::{cms_parent::CmsParent, conventions, user_con_profiles, users};
+use intercode_entities::{cms_parent::CmsParent, users};
+use intercode_graphql_core::query_data::QueryData;
+use intercode_graphql_loaders::LoaderManager;
 use intercode_liquid::{
   cms_parent_partial_source::{LazyCmsPartialSource, PreloadPartialsStrategy},
   tags::GraphQLExecutorBuilder,
@@ -9,20 +11,13 @@ use intercode_liquid::{
 };
 use intercode_policies::AuthorizationInfo;
 use liquid::partials::LazyCompiler;
-use loaders::LoaderManager;
 use seawater::ConnectionWrapper;
 use std::{fmt::Debug, future::Future, sync::Arc};
 
 pub mod api;
 pub mod cms_rendering_context;
-pub mod entity_relay_connection;
-pub(crate) mod filter_utils;
-mod lax_id;
-pub mod loaders;
-mod policy_guard;
 pub mod presenters;
 pub mod query_builders;
-pub mod rendering_utils;
 
 #[derive(Clone)]
 pub struct SchemaData {
@@ -35,120 +30,6 @@ impl Debug for SchemaData {
     f.debug_struct("SchemaData")
       .field("language_loader", &self.language_loader)
       .finish_non_exhaustive()
-  }
-}
-
-#[async_trait]
-pub trait LiquidRenderer: Send + Sync + Debug {
-  async fn render_liquid(
-    &self,
-    content: &str,
-    globals: liquid::Object,
-    preload_partials_strategy: Option<PreloadPartialsStrategy<'_>>,
-  ) -> Result<String, async_graphql::Error>;
-
-  async fn builtin_globals(
-    &self,
-  ) -> Result<Box<dyn liquid::ObjectView + Send>, async_graphql::Error>;
-}
-
-pub trait QueryDataContainer: Sync + Send + Debug {
-  fn clone_ref(&self) -> Box<dyn QueryDataContainer>;
-  fn cms_parent(&self) -> &CmsParent;
-  fn current_user(&self) -> Option<&users::Model>;
-  fn convention(&self) -> Option<&conventions::Model>;
-  fn db(&self) -> &ConnectionWrapper;
-  fn loaders(&self) -> &LoaderManager;
-  fn timezone(&self) -> &chrono_tz::Tz;
-  fn user_con_profile(&self) -> Option<&user_con_profiles::Model>;
-}
-
-pub type QueryData = Box<dyn QueryDataContainer>;
-
-impl Clone for QueryData {
-  fn clone(&self) -> Self {
-    self.clone_ref()
-  }
-}
-
-#[derive(Debug)]
-pub struct OwnedQueryData {
-  pub cms_parent: CmsParent,
-  pub current_user: Option<users::Model>,
-  pub convention: Option<conventions::Model>,
-  pub db: ConnectionWrapper,
-  pub loaders: LoaderManager,
-  pub timezone: chrono_tz::Tz,
-  pub user_con_profile: Option<user_con_profiles::Model>,
-}
-
-impl OwnedQueryData {
-  pub fn new(
-    cms_parent: CmsParent,
-    current_user: Option<users::Model>,
-    convention: Option<conventions::Model>,
-    db: ConnectionWrapper,
-    timezone: chrono_tz::Tz,
-    user_con_profile: Option<user_con_profiles::Model>,
-  ) -> Self {
-    OwnedQueryData {
-      cms_parent,
-      current_user,
-      convention,
-      db: db.clone(),
-      loaders: LoaderManager::new(db),
-      timezone,
-      user_con_profile,
-    }
-  }
-}
-
-#[derive(Debug)]
-pub struct ArcQueryData {
-  owned_query_data: Arc<OwnedQueryData>,
-}
-
-impl ArcQueryData {
-  pub fn new(owned_query_data: OwnedQueryData) -> Self {
-    ArcQueryData {
-      owned_query_data: Arc::new(owned_query_data),
-    }
-  }
-}
-
-impl QueryDataContainer for ArcQueryData {
-  fn clone_ref(&self) -> Box<dyn QueryDataContainer> {
-    Box::new(ArcQueryData {
-      owned_query_data: self.owned_query_data.clone(),
-    })
-  }
-
-  fn cms_parent(&self) -> &CmsParent {
-    &self.owned_query_data.cms_parent
-  }
-
-  fn current_user(&self) -> Option<&users::Model> {
-    self.owned_query_data.current_user.as_ref()
-  }
-
-  fn convention(&self) -> Option<&conventions::Model> {
-    self.owned_query_data.convention.as_ref()
-  }
-
-  fn db(&self) -> &ConnectionWrapper {
-    &self.owned_query_data.db
-  }
-
-  fn loaders(&self) -> &LoaderManager {
-    &self.owned_query_data.loaders
-  }
-
-  fn timezone(&self) -> &chrono_tz::Tz {
-    &self.owned_query_data.timezone
-  }
-
-  fn user_con_profile(&self) -> Option<&user_con_profiles::Model> {
-    self.owned_query_data.user_con_profile.as_ref()
   }
 }
 
@@ -174,10 +55,12 @@ impl GraphQLExecutor for EmbeddedGraphQLExecutor {
     request: async_graphql::Request,
   ) -> std::pin::Pin<Box<dyn Future<Output = async_graphql::Response> + Send + '_>> {
     let schema = build_intercode_graphql_schema(self.schema_data.clone());
+    let loader_manager = Arc::new(LoaderManager::new(self.query_data.db().clone()));
 
     let request = request
       .data(self.query_data.clone_ref())
-      .data(self.authorization_info.clone());
+      .data(self.authorization_info.clone())
+      .data(loader_manager);
     let response_future = async move { schema.execute(request).await };
 
     Box::pin(response_future)

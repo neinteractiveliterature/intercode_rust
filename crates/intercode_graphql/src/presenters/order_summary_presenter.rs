@@ -1,10 +1,11 @@
+use std::sync::Arc;
+
 use async_graphql::{Context, Error};
 use futures::{future::try_join_all, try_join};
 use intercode_entities::{order_entries, orders, product_variants, products};
+use intercode_graphql_loaders::LoaderManager;
 use intercode_inflector::inflector::string::pluralize;
 use seawater::loaders::{ExpectModel, ExpectModels};
-
-use crate::QueryData;
 
 pub fn describe_order_entry(
   order_entry: &order_entries::Model,
@@ -39,15 +40,11 @@ pub async fn load_and_describe_order_entry(
   ctx: &Context<'_>,
   always_show_quantity: bool,
 ) -> Result<String, Error> {
-  let query_data = ctx.data::<QueryData>()?;
+  let loaders = ctx.data::<Arc<LoaderManager>>()?;
 
   let (product_result, product_variant_result) = try_join!(
-    query_data
-      .loaders()
-      .order_entry_product()
-      .load_one(order_entry.id),
-    query_data
-      .loaders()
+    loaders.order_entry_product().load_one(order_entry.id),
+    loaders
       .order_entry_product_variant()
       .load_one(order_entry.id),
   )?;
@@ -68,12 +65,8 @@ pub async fn load_and_describe_order(
   ctx: &Context<'_>,
   always_show_quantity: bool,
 ) -> Result<String, Error> {
-  let query_data = ctx.data::<QueryData>()?;
-  let order_entries_result = query_data
-    .loaders()
-    .order_order_entries()
-    .load_one(order.id)
-    .await?;
+  let loaders = ctx.data::<Arc<LoaderManager>>()?;
+  let order_entries_result = loaders.order_order_entries().load_one(order.id).await?;
   let order_entries = order_entries_result.expect_models()?;
 
   let entry_summaries = try_join_all(

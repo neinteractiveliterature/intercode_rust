@@ -1,11 +1,13 @@
+use std::sync::Arc;
+
 use async_graphql::*;
 use intercode_entities::cms_content_groups;
+use intercode_graphql_loaders::{
+  cms_content_group_contents_loader::CmsContentGroupItem, LoaderManager,
+};
 use intercode_policies::{policies::CmsContentPolicy, AuthorizationInfo, Policy, ReadManageAction};
 
-use crate::{
-  load_one_by_model_id, loader_result_to_many,
-  loaders::cms_content_group_contents_loader::CmsContentGroupItem, model_backed_type, QueryData,
-};
+use crate::{load_one_by_model_id, loader_result_to_many, model_backed_type};
 
 use super::{
   CmsContentType, CmsLayoutType, CmsPartialType, ModelBackedType, PageType, PermissionType,
@@ -20,8 +22,7 @@ impl CmsContentGroupType {
 
   async fn contents(&self, ctx: &Context<'_>) -> Result<Vec<CmsContentType>> {
     let loader_result = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .cms_content_group_contents
       .load_one(self.model.id)
       .await?

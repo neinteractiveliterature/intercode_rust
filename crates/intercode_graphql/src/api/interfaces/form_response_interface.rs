@@ -1,30 +1,28 @@
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use async_graphql::{Context, Error, Interface};
 use async_trait::async_trait;
 use intercode_entities::model_ext::form_item_permissions::FormItemRole;
 use intercode_entities::model_ext::FormResponse;
 use intercode_entities::{form_items, forms};
+use intercode_graphql_core::scalars::JsonScalar;
+use intercode_graphql_loaders::LoaderManager;
 use intercode_inflector::IntercodeInflector;
 use seawater::loaders::ExpectModels;
 
 use crate::api::objects::{EventProposalType, EventType, ModelBackedType, UserConProfileType};
-use crate::api::scalars::JsonScalar;
 use crate::presenters::form_response_presenter::{
   attached_images_by_filename, form_response_as_json, FormResponsePresentationFormat,
 };
-use crate::{QueryData, SchemaData};
+use crate::SchemaData;
 
 async fn load_filtered_form_items(
-  query_data: &QueryData,
+  loaders: &LoaderManager,
   form_id: i64,
   item_identifiers: Option<Vec<String>>,
 ) -> Result<Vec<form_items::Model>, Error> {
-  let form_items_result = query_data
-    .loaders()
-    .form_form_items()
-    .load_one(form_id)
-    .await?;
+  let form_items_result = loaders.form_form_items().load_one(form_id).await?;
   let form_items = form_items_result.expect_models()?;
   let form_items: Vec<form_items::Model> = match item_identifiers {
     Some(item_identifiers) => {
@@ -99,15 +97,15 @@ where
     item_identifiers: Option<Vec<String>>,
   ) -> Result<JsonScalar, Error> {
     let schema_data = ctx.data::<SchemaData>()?;
-    let query_data = ctx.data::<QueryData>()?;
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
     let form = self.get_form(ctx).await?;
 
     let model = self.get_model();
-    let attached_images = attached_images_by_filename(model, query_data).await?;
+    let attached_images = attached_images_by_filename(model, loaders).await?;
 
     let viewer_role = self.current_user_form_item_viewer_role(ctx).await?;
 
-    let form_items = load_filtered_form_items(query_data, form.id, item_identifiers).await?;
+    let form_items = load_filtered_form_items(loaders, form.id, item_identifiers).await?;
 
     Ok(JsonScalar(form_response_as_json(
       model,
@@ -126,15 +124,15 @@ where
     item_identifiers: Option<Vec<String>>,
   ) -> Result<JsonScalar, Error> {
     let schema_data = ctx.data::<SchemaData>()?;
-    let query_data = ctx.data::<QueryData>()?;
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
     let form = self.get_form(ctx).await?;
 
     let model = self.get_model();
-    let attached_images = attached_images_by_filename(model, query_data).await?;
+    let attached_images = attached_images_by_filename(model, loaders).await?;
 
     let viewer_role = self.current_user_form_item_viewer_role(ctx).await?;
 
-    let form_items = load_filtered_form_items(query_data, form.id, item_identifiers).await?;
+    let form_items = load_filtered_form_items(loaders, form.id, item_identifiers).await?;
 
     Ok(JsonScalar(form_response_as_json(
       model,

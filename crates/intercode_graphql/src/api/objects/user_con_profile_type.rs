@@ -1,17 +1,21 @@
 use std::borrow::Cow;
+use std::sync::Arc;
 
 use super::{
   AbilityType, ConventionType, ModelBackedType, OrderType, SignupType, StaffPositionType,
   TeamMemberType, TicketType,
 };
-use crate::api::scalars::{DateScalar, JsonScalar};
 use crate::presenters::order_summary_presenter::load_and_describe_order_summary_for_user_con_profile;
 use crate::{api::interfaces::FormResponseImplementation, QueryData};
-use crate::{load_one_by_model_id, loader_result_to_many, model_backed_type};
+use crate::{
+  load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single, model_backed_type,
+};
 use async_graphql::*;
 use async_trait::async_trait;
 use intercode_entities::model_ext::form_item_permissions::FormItemRole;
 use intercode_entities::{forms, order_entries, orders, user_con_profiles, UserNames};
+use intercode_graphql_core::scalars::{DateScalar, JsonScalar};
+use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::policies::{UserConProfileAction, UserConProfilePolicy};
 use intercode_policies::{AuthorizationInfo, FormResponsePolicy};
 use pulldown_cmark::{html, Options, Parser};
@@ -76,7 +80,7 @@ impl UserConProfileType {
   }
 
   async fn convention(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {
-    let loader = &ctx.data::<QueryData>()?.loaders().conventions_by_id();
+    let loader = &ctx.data::<Arc<LoaderManager>>()?.conventions_by_id();
     let loader_result = loader.load_one(self.model.convention_id).await?;
     Ok(ConventionType::new(loader_result.expect_one()?.clone()))
   }
@@ -121,7 +125,7 @@ impl UserConProfileType {
   }
 
   async fn email(&self, ctx: &Context<'_>) -> Result<String, Error> {
-    let loader = ctx.data::<QueryData>()?.loaders().user_con_profile_user();
+    let loader = ctx.data::<Arc<LoaderManager>>()?.user_con_profile_user();
 
     Ok(
       loader
@@ -146,7 +150,7 @@ impl UserConProfileType {
   #[graphql(name = "gravatar_url")]
   async fn gravatar_url(&self, ctx: &Context<'_>) -> Result<String, Error> {
     if self.model.gravatar_enabled {
-      let loader = &ctx.data::<QueryData>()?.loaders().users_by_id();
+      let loader = &ctx.data::<Arc<LoaderManager>>()?.users_by_id();
       let loader_result = loader.load_one(self.model.user_id).await?;
       let model = loader_result.expect_one()?;
       Ok(format!(
@@ -200,8 +204,7 @@ impl UserConProfileType {
   #[graphql(name = "order_summary")]
   async fn order_summary(&self, ctx: &Context<'_>) -> Result<String> {
     let orders = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .user_con_profile_orders()
       .load_one(self.model.id)
       .await?;
@@ -217,8 +220,7 @@ impl UserConProfileType {
   #[graphql(name = "site_admin")]
   async fn site_admin(&self, ctx: &Context<'_>) -> Result<bool> {
     let user = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .user_con_profile_user()
       .load_one(self.model.id)
       .await?;
@@ -228,20 +230,8 @@ impl UserConProfileType {
 
   #[graphql(name = "staff_positions")]
   async fn staff_positions(&self, ctx: &Context<'_>) -> Result<Vec<StaffPositionType>, Error> {
-    let loader = &ctx
-      .data::<QueryData>()?
-      .loaders()
-      .user_con_profile_staff_positions();
-
-    Ok(
-      loader
-        .load_one(self.model.id)
-        .await?
-        .expect_models()?
-        .iter()
-        .map(|staff_position| StaffPositionType::new(staff_position.to_owned()))
-        .collect(),
-    )
+    let loader_result = load_one_by_model_id!(user_con_profile_staff_positions, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, StaffPositionType))
   }
 
   async fn state(&self) -> Option<&str> {
@@ -250,32 +240,13 @@ impl UserConProfileType {
 
   #[graphql(name = "team_members")]
   async fn team_members(&self, ctx: &Context<'_>) -> Result<Vec<TeamMemberType>, Error> {
-    let loader = &ctx
-      .data::<QueryData>()?
-      .loaders()
-      .user_con_profile_team_members();
-
-    Ok(
-      loader
-        .load_one(self.model.id)
-        .await?
-        .expect_models()?
-        .iter()
-        .map(|team_member| TeamMemberType::new(team_member.to_owned()))
-        .collect(),
-    )
+    let loader_result = load_one_by_model_id!(user_con_profile_team_members, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, TeamMemberType))
   }
 
   async fn ticket(&self, ctx: &Context<'_>) -> Result<Option<TicketType>, Error> {
-    let loader = &ctx.data::<QueryData>()?.loaders().user_con_profile_ticket();
-
-    Ok(
-      loader
-        .load_one(self.model.id)
-        .await?
-        .try_one()
-        .map(|ticket| TicketType::new(ticket.to_owned())),
-    )
+    let loader_result = load_one_by_model_id!(user_con_profile_ticket, ctx, self)?;
+    Ok(loader_result_to_optional_single!(loader_result, TicketType))
   }
 
   #[graphql(name = "user_id")]
@@ -337,9 +308,8 @@ impl UserConProfileType {
 #[async_trait]
 impl FormResponseImplementation<user_con_profiles::Model> for UserConProfileType {
   async fn get_form(&self, ctx: &Context<'_>) -> Result<forms::Model, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-    query_data
-      .loaders()
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
+    loaders
       .convention_user_con_profile_form()
       .load_one(self.model.convention_id)
       .await?

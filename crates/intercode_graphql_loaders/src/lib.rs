@@ -5,12 +5,13 @@ mod exclusive_arc_utils;
 pub mod filtered_event_runs_loader;
 mod loader_manager;
 mod loader_spawner;
-mod order_quantity_by_status_loader;
+pub mod order_quantity_by_status_loader;
 pub mod permissioned_models_loader;
 pub mod permissioned_roles_loader;
 mod run_user_con_profile_signup_requests_loader;
 mod run_user_con_profile_signups_loader;
 mod signup_count_loader;
+pub mod signup_count_presenter;
 mod waitlist_position_loader;
 
 pub use loader_manager::LoaderManager;

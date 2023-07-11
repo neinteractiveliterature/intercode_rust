@@ -1,8 +1,7 @@
 use async_graphql::Object;
+use intercode_graphql_core::scalars::JsonScalar;
 use mailparse::SingleInfo;
 use serde_json::Value;
-
-use crate::api::scalars::JsonScalar;
 
 #[derive(Clone)]
 pub struct ContactEmail {

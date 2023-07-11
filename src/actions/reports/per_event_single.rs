@@ -4,7 +4,7 @@ use askama::Template;
 use intercode_entities::{
   events, rooms, runs, signups, user_con_profiles, RegistrationPolicy, SlotCount, UserNames,
 };
-use intercode_graphql::presenters::signup_count_presenter::RunSignupCounts;
+use intercode_graphql_loaders::signup_count_presenter::RunSignupCounts;
 use intercode_inflector::IntercodeInflector;
 
 use crate::actions::reports::filters;

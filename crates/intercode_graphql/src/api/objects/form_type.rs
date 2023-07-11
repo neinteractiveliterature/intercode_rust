@@ -1,11 +1,12 @@
+use std::sync::Arc;
+
 use async_graphql::*;
 use intercode_entities::{forms, FormExport};
+use intercode_graphql_core::scalars::JsonScalar;
+use intercode_graphql_loaders::LoaderManager;
 use seawater::loaders::ExpectModels;
 
-use crate::{
-  api::scalars::JsonScalar, load_one_by_model_id, loader_result_to_many, model_backed_type,
-  QueryData,
-};
+use crate::{load_one_by_model_id, loader_result_to_many, model_backed_type};
 
 use super::{ConventionType, EventCategoryType, FormSectionType};
 model_backed_type!(FormType, forms::Model);
@@ -27,8 +28,7 @@ impl FormType {
     let section_loader_result = load_one_by_model_id!(form_form_sections, ctx, self)?;
     let sections = section_loader_result.expect_models()?;
     let item_loader_results = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .form_section_form_items()
       .load_many(sections.iter().map(|section| section.id))
       .await?;

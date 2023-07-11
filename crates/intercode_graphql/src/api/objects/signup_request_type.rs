@@ -1,9 +1,10 @@
 use async_graphql::*;
 use intercode_entities::signup_requests;
+use intercode_graphql_core::scalars::DateScalar;
 
 use crate::{
-  api::scalars::DateScalar, load_one_by_model_id, loader_result_to_optional_single,
-  loader_result_to_required_single, model_backed_type,
+  load_one_by_model_id, loader_result_to_optional_single, loader_result_to_required_single,
+  model_backed_type,
 };
 
 use super::{RunType, SignupType, UserConProfileType};

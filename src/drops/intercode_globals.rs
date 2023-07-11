@@ -1,7 +1,7 @@
 use async_graphql::indexmap::IndexMap;
 use futures::try_join;
 use intercode_entities::{conventions, events};
-use intercode_graphql::QueryData;
+use intercode_graphql_core::query_data::QueryData;
 use liquid::ValueView;
 use once_cell::race::OnceBox;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};

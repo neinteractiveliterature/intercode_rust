@@ -1,11 +1,13 @@
 use std::env;
 
-use crate::{rendering_utils::url_with_possible_host, LiquidRenderer, QueryData};
 use html_escape::encode_double_quoted_attribute;
 use http::Uri;
 use intercode_entities::{
   active_storage_attachments, active_storage_blobs, cms_parent::CmsParentTrait, cms_variables,
   conventions, events, pages,
+};
+use intercode_graphql_core::{
+  liquid_renderer::LiquidRenderer, query_data::QueryData, rendering_utils::url_with_possible_host,
 };
 use intercode_liquid::{cms_parent_partial_source::PreloadPartialsStrategy, react_component_tag};
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter};

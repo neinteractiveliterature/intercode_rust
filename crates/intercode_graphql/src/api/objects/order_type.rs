@@ -1,9 +1,13 @@
+use std::sync::Arc;
+
 use async_graphql::*;
 use intercode_entities::orders;
+use intercode_graphql_core::scalars::DateScalar;
+use intercode_graphql_loaders::LoaderManager;
 use rusty_money::{iso, Money};
 use seawater::loaders::{ExpectModel, ExpectModels};
 
-use crate::{api::scalars::DateScalar, load_one_by_model_id, model_backed_type, QueryData};
+use crate::{load_one_by_model_id, model_backed_type};
 
 use super::{
   money_type::MoneyType, CouponApplicationType, ModelBackedType, OrderEntryType, UserConProfileType,
@@ -24,8 +28,7 @@ impl OrderType {
   #[graphql(name = "coupon_applications")]
   async fn coupon_applications(&self, ctx: &Context<'_>) -> Result<Vec<CouponApplicationType>> {
     let loader_result = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .order_coupon_applications()
       .load_one(self.model.id)
       .await?;
@@ -42,7 +45,7 @@ impl OrderType {
 
   #[graphql(name = "order_entries")]
   async fn order_entries(&self, ctx: &Context<'_>) -> Result<Vec<OrderEntryType>, Error> {
-    let loader = &ctx.data::<QueryData>()?.loaders().order_order_entries();
+    let loader = &ctx.data::<Arc<LoaderManager>>()?.order_order_entries();
 
     Ok(
       loader
@@ -98,8 +101,7 @@ impl OrderType {
   #[graphql(name = "user_con_profile")]
   async fn user_con_profile(&self, ctx: &Context<'_>) -> Result<UserConProfileType> {
     let loader_result = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .order_user_con_profile()
       .load_one(self.model.id)
       .await?;

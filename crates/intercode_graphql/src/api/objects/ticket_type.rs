@@ -1,11 +1,18 @@
+use std::sync::Arc;
+
 use async_graphql::*;
 use intercode_entities::{conventions, tickets, user_con_profiles};
+use intercode_graphql_core::{policy_guard::PolicyGuard, scalars::DateScalar};
+use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::policies::{TicketAction, TicketPolicy};
 use seawater::loaders::ExpectModel;
 
-use crate::{api::scalars::DateScalar, model_backed_type, policy_guard::PolicyGuard, QueryData};
+use crate::{
+  load_one_by_model_id, loader_result_to_optional_single, loader_result_to_required_single,
+  model_backed_type,
+};
 
-use super::{EventType, ModelBackedType, OrderEntryType, TicketTypeType, UserConProfileType};
+use super::{EventType, OrderEntryType, TicketTypeType, UserConProfileType};
 model_backed_type!(TicketType, tickets::Model);
 
 impl TicketType {
@@ -21,12 +28,12 @@ impl TicketType {
     PolicyGuard::new(action, &self.model, move |model, ctx| {
       let model = model.clone();
       let ctx = ctx;
-      let query_data = ctx.data::<QueryData>();
+      let loaders = ctx.data::<Arc<LoaderManager>>();
 
       Box::pin(async {
-        let query_data = query_data?;
-        let ticket_user_con_profile_loader = query_data.loaders().ticket_user_con_profile();
-        let user_con_profile_convention_loader = query_data.loaders().user_con_profile_convention();
+        let loaders = loaders?;
+        let ticket_user_con_profile_loader = loaders.ticket_user_con_profile();
+        let user_con_profile_convention_loader = loaders.user_con_profile_convention();
 
         let user_con_profile_result = ticket_user_con_profile_loader.load_one(model.id).await?;
         let user_con_profile = user_con_profile_result.expect_one()?;
@@ -54,43 +61,26 @@ impl TicketType {
 
   #[graphql(name = "order_entry")]
   async fn order_entry(&self, ctx: &Context<'_>) -> Result<Option<OrderEntryType>> {
-    Ok(
-      ctx
-        .data::<QueryData>()?
-        .loaders()
-        .ticket_order_entry()
-        .load_one(self.model.id)
-        .await?
-        .try_one()
-        .cloned()
-        .map(OrderEntryType::new),
-    )
+    let loader_result = load_one_by_model_id!(ticket_order_entry, ctx, self)?;
+    Ok(loader_result_to_optional_single!(
+      loader_result,
+      OrderEntryType
+    ))
   }
 
   #[graphql(name = "provided_by_event")]
   async fn provided_by_event(&self, ctx: &Context<'_>) -> Result<Option<EventType>> {
-    let loader = ctx
-      .data::<QueryData>()?
-      .loaders()
-      .ticket_provided_by_event();
-
-    Ok(
-      loader
-        .load_one(self.model.id)
-        .await?
-        .try_one()
-        .map(|event| EventType::new(event.clone())),
-    )
+    let loader_result = load_one_by_model_id!(ticket_provided_by_event, ctx, self)?;
+    Ok(loader_result_to_optional_single!(loader_result, EventType))
   }
 
   #[graphql(name = "ticket_type")]
   async fn ticket_type(&self, ctx: &Context<'_>) -> Result<TicketTypeType> {
-    let loader = ctx.data::<QueryData>()?.loaders().ticket_ticket_type();
-    loader
-      .load_one(self.model.id)
-      .await?
-      .expect_one()
-      .map(|ticket_type| TicketTypeType::new(ticket_type.clone()))
+    let loader_result = load_one_by_model_id!(ticket_ticket_type, ctx, self)?;
+    Ok(loader_result_to_required_single!(
+      loader_result,
+      TicketTypeType
+    ))
   }
 
   #[graphql(name = "updated_at")]
@@ -100,11 +90,10 @@ impl TicketType {
 
   #[graphql(name = "user_con_profile")]
   async fn user_con_profile(&self, ctx: &Context<'_>) -> Result<UserConProfileType> {
-    let loader = ctx.data::<QueryData>()?.loaders().ticket_user_con_profile();
-    loader
-      .load_one(self.model.id)
-      .await?
-      .expect_one()
-      .map(|user_con_profile| UserConProfileType::new(user_con_profile.clone()))
+    let loader_result = load_one_by_model_id!(ticket_user_con_profile, ctx, self)?;
+    Ok(loader_result_to_required_single!(
+      loader_result,
+      UserConProfileType
+    ))
   }
 }

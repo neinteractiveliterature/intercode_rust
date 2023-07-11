@@ -1,8 +1,9 @@
 use async_graphql::*;
 use intercode_entities::coupons;
+use intercode_graphql_core::scalars::DateScalar;
 use seawater::loaders::ExpectModel;
 
-use crate::{api::scalars::DateScalar, model_backed_type, QueryData};
+use crate::{load_one_by_model_id, model_backed_type};
 
 use super::{ModelBackedType, MoneyType, ProductType};
 model_backed_type!(CouponType, coupons::Model);
@@ -43,13 +44,7 @@ impl CouponType {
 
   #[graphql(name = "provides_product")]
   async fn provides_product(&self, ctx: &Context<'_>) -> Result<Option<ProductType>> {
-    let loader_result = ctx
-      .data::<QueryData>()?
-      .loaders()
-      .coupon_provides_product()
-      .load_one(self.model.id)
-      .await?;
-
+    let loader_result = load_one_by_model_id!(coupon_provides_product, ctx, self)?;
     Ok(loader_result.try_one().cloned().map(ProductType::new))
   }
 

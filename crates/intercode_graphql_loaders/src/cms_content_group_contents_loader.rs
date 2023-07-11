@@ -8,7 +8,7 @@ use itertools::Itertools;
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter};
 use seawater::{loaders::EntityRelationLoader, ConnectionWrapper};
 
-use crate::loaders::exclusive_arc_utils::loader_result_hashmap_to_model_hashmap;
+use crate::exclusive_arc_utils::loader_result_hashmap_to_model_hashmap;
 
 use super::exclusive_arc_utils::merge_hash_maps;
 

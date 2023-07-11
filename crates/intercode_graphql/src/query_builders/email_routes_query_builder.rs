@@ -1,15 +1,13 @@
 use intercode_entities::email_routes;
+use intercode_graphql_core::filter_utils::string_search;
 use sea_orm::{
   sea_query::{Expr, Func, IntoColumnRef, SimpleExpr},
   IntoIdentity, QueryFilter, QueryOrder, Select,
 };
 
-use crate::{
-  api::{
-    inputs::{EmailRouteFiltersInput, SortInput},
-    objects::EmailRoutesPaginationType,
-  },
-  filter_utils::string_search,
+use crate::api::{
+  inputs::{EmailRouteFiltersInput, SortInput},
+  objects::EmailRoutesPaginationType,
 };
 
 use super::QueryBuilder;

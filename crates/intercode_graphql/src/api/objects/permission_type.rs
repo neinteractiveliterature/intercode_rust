@@ -1,15 +1,19 @@
+use std::sync::Arc;
+
 use async_graphql::*;
 use intercode_entities::{
   model_ext::permissions::{PermissionedModelRef, PermissionedRoleRef},
   permissions,
 };
+use intercode_graphql_loaders::{
+  permissioned_models_loader::PermissionedModel, permissioned_roles_loader::PermissionedRole,
+  LoaderManager,
+};
 use seawater::loaders::ExpectModel;
 
 use crate::{
   api::unions::{PermissionedModelType, PermissionedRoleType},
-  loaders::permissioned_models_loader::PermissionedModel,
-  loaders::permissioned_roles_loader::PermissionedRole,
-  model_backed_type, QueryData,
+  model_backed_type,
 };
 
 use super::{
@@ -27,8 +31,7 @@ impl PermissionType {
   async fn model(&self, ctx: &Context<'_>) -> Result<PermissionedModelType> {
     let model_ref: PermissionedModelRef = (&self.model).try_into()?;
     let result = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .permissioned_models
       .load_one(model_ref)
       .await?;
@@ -53,8 +56,7 @@ impl PermissionType {
   async fn role(&self, ctx: &Context<'_>) -> Result<PermissionedRoleType> {
     let role_ref: PermissionedRoleRef = (&self.model).try_into()?;
     let result = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .permissioned_roles
       .load_one(role_ref)
       .await?;

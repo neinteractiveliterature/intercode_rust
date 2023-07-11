@@ -1,4 +1,7 @@
 {
   "workbench.colorTheme": "United Ubuntu",
-  "rust-analyzer.inlayHints.lifetimeElisionHints.enable": "never"
+  "rust-analyzer.inlayHints.lifetimeElisionHints.enable": "never",
+  "rust-analyzer.linkedProjects": [
+    "./crates/intercode_graphql_loaders/Cargo.toml"
+  ]
 }

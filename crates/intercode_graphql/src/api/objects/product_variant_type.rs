@@ -1,13 +1,17 @@
+use std::sync::Arc;
+
 use super::{
   active_storage_attachment_type::ActiveStorageAttachmentType,
-  pricing_structure_type::PricingStructureType, OrderQuantityByStatusType,
+  pricing_structure_type::PricingStructureType,
 };
 use crate::{
   api::objects::model_backed_type::ModelBackedType, load_one_by_model_id, model_backed_type,
-  QueryData,
 };
 use async_graphql::*;
 use intercode_entities::product_variants;
+use intercode_graphql_loaders::{
+  order_quantity_by_status_loader::OrderQuantityByStatusType, LoaderManager,
+};
 
 model_backed_type!(ProductVariantType, product_variants::Model);
 
@@ -42,8 +46,7 @@ impl ProductVariantType {
   ) -> Result<Vec<OrderQuantityByStatusType>> {
     Ok(
       ctx
-        .data::<QueryData>()?
-        .loaders()
+        .data::<Arc<LoaderManager>>()?
         .product_variant_order_quantity_by_status
         .load_one(self.model.id)
         .await?

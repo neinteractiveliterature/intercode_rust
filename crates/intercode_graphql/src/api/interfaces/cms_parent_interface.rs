@@ -9,6 +9,7 @@ use intercode_entities::{
   cms_content_groups, cms_files, cms_graphql_queries, cms_layouts, cms_parent::CmsParentTrait,
   pages,
 };
+use intercode_graphql_core::{liquid_renderer::LiquidRenderer, query_data::QueryData};
 use intercode_liquid::render_markdown;
 use sea_orm::{ColumnTrait, QueryFilter};
 
@@ -19,7 +20,6 @@ use crate::{
     ModelBackedType, PageType, RootSiteType, SearchResultType,
   },
   cms_rendering_context::CmsRenderingContext,
-  LiquidRenderer, QueryData,
 };
 
 #[derive(Interface)]

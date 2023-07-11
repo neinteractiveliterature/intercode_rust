@@ -1,8 +1,15 @@
+use std::sync::Arc;
+
 use async_graphql::*;
 use async_trait::async_trait;
 use intercode_entities::{
   conventions, event_proposals, forms, model_ext::form_item_permissions::FormItemRole,
 };
+use intercode_graphql_core::{
+  policy_guard::PolicyGuard,
+  scalars::{DateScalar, JsonScalar},
+};
+use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
   policies::{EventProposalAction, EventProposalPolicy},
   AuthorizationInfo, FormResponsePolicy,
@@ -10,14 +17,8 @@ use intercode_policies::{
 use seawater::loaders::ExpectModel;
 
 use crate::{
-  api::{
-    interfaces::FormResponseImplementation,
-    scalars::{DateScalar, JsonScalar},
-  },
-  load_one_by_model_id, loader_result_to_optional_single, loader_result_to_required_single,
-  model_backed_type,
-  policy_guard::PolicyGuard,
-  QueryData,
+  api::interfaces::FormResponseImplementation, load_one_by_model_id,
+  loader_result_to_optional_single, loader_result_to_required_single, model_backed_type,
 };
 
 use super::{
@@ -39,11 +40,11 @@ impl EventProposalType {
     PolicyGuard::new(action, &self.model, move |model, ctx| {
       let model = model.clone();
       let ctx = ctx;
-      let query_data = ctx.data::<QueryData>();
+      let loaders = ctx.data::<Arc<LoaderManager>>();
 
       Box::pin(async {
-        let query_data = query_data?;
-        let convention_loader = query_data.loaders().event_proposal_convention();
+        let loaders = loaders?;
+        let convention_loader = loaders.event_proposal_convention();
         let convention_result = convention_loader.load_one(model.id).await?;
         let convention = convention_result.expect_one()?;
 
@@ -135,8 +136,7 @@ impl EventProposalType {
 
   async fn images(&self, ctx: &Context<'_>) -> Result<Vec<ActiveStorageAttachmentType>> {
     let blobs = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .event_proposal_attached_images
       .load_one(self.model.id)
       .await?
@@ -209,8 +209,7 @@ impl FormResponseImplementation<event_proposals::Model> for EventProposalType {
   async fn get_form(&self, ctx: &Context<'_>) -> Result<forms::Model, Error> {
     let event_category = self.event_category(ctx).await?;
     let form_result = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .event_category_event_proposal_form()
       .load_one(event_category.get_model().id)
       .await?;
@@ -228,8 +227,7 @@ impl FormResponseImplementation<event_proposals::Model> for EventProposalType {
   ) -> Result<FormItemRole, Error> {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
     let convention_result = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .event_proposal_convention()
       .load_one(self.model.id)
       .await?;
@@ -249,8 +247,7 @@ impl FormResponseImplementation<event_proposals::Model> for EventProposalType {
   ) -> Result<FormItemRole, Error> {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
     let convention_result = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .event_proposal_convention()
       .load_one(self.model.id)
       .await?;

@@ -13,9 +13,9 @@ use http::StatusCode;
 use intercode_entities::{
   event_categories, events, runs, signups, team_members, user_con_profiles,
 };
-use intercode_graphql::{
-  presenters::signup_count_presenter::{load_signup_count_data_for_run_ids, RunSignupCounts},
-  rendering_utils::url_with_possible_host,
+use intercode_graphql_core::rendering_utils::url_with_possible_host;
+use intercode_graphql_loaders::signup_count_presenter::{
+  load_signup_count_data_for_run_ids, RunSignupCounts,
 };
 use itertools::Itertools;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};

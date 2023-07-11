@@ -1,15 +1,13 @@
 use intercode_entities::{event_ratings, events, runs, user_con_profiles, users};
+use intercode_graphql_core::filter_utils::{numbered_placeholders, string_search};
 use sea_orm::{
   sea_query::Expr, ColumnTrait, JoinType, Order, QueryFilter, QueryOrder, QuerySelect,
   RelationTrait, Select,
 };
 
-use crate::{
-  api::{
-    inputs::{EventFiltersInput, SortInput},
-    objects::EventsPaginationType,
-  },
-  filter_utils::{numbered_placeholders, string_search},
+use crate::api::{
+  inputs::{EventFiltersInput, SortInput},
+  objects::EventsPaginationType,
 };
 
 use super::QueryBuilder;

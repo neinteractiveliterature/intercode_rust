@@ -1,4 +1,7 @@
-use std::borrow::{Borrow, Cow};
+use std::{
+  borrow::{Borrow, Cow},
+  sync::Arc,
+};
 
 use async_graphql::*;
 use intercode_entities::{
@@ -6,6 +9,8 @@ use intercode_entities::{
   events, forms, notification_templates, orders, organizations, pages, products, rooms, root_sites,
   runs, signups, staff_positions, ticket_types, tickets, user_activity_alerts, user_con_profiles,
 };
+use intercode_graphql_core::{lax_id::LaxId, query_data::QueryData};
+use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
   policies::{
     CmsContentPolicy, ConventionAction, ConventionPolicy, DepartmentPolicy, EmailRoutePolicy,
@@ -20,7 +25,7 @@ use intercode_policies::{
 use sea_orm::{EntityTrait, PaginatorTrait};
 use seawater::loaders::ExpectModel;
 
-use crate::{lax_id::LaxId, load_one_by_id, QueryData};
+use crate::load_one_by_id;
 
 pub struct AbilityType<'a> {
   authorization_info: Cow<'a, AuthorizationInfo>,
@@ -66,26 +71,19 @@ impl<'a> AbilityType<'a> {
     Error,
   > {
     let query_data = ctx.data::<QueryData>()?;
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
     let signup = signups::Entity::find_by_id(LaxId::parse(signup_id)?)
       .one(query_data.db())
       .await?
       .ok_or_else(|| Error::new("Signup not found"))?;
 
-    let run_result = query_data
-      .loaders()
-      .signup_run()
-      .load_one(signup.id)
-      .await?;
+    let run_result = loaders.signup_run().load_one(signup.id).await?;
     let run = run_result.expect_one()?;
 
-    let event_result = query_data.loaders().run_event().load_one(run.id).await?;
+    let event_result = loaders.run_event().load_one(run.id).await?;
     let event = event_result.expect_one()?;
 
-    let convention_result = query_data
-      .loaders()
-      .event_convention()
-      .load_one(event.id)
-      .await?;
+    let convention_result = loaders.event_convention().load_one(event.id).await?;
     let convention = convention_result.expect_one()?;
 
     Ok((convention.clone(), event.clone(), run.clone(), signup))
@@ -97,20 +95,19 @@ impl<'a> AbilityType<'a> {
     ticket_id: ID,
   ) -> Result<(conventions::Model, user_con_profiles::Model, tickets::Model), Error> {
     let query_data = ctx.data::<QueryData>()?;
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
     let ticket = tickets::Entity::find_by_id(LaxId::parse(ticket_id)?)
       .one(query_data.db())
       .await?
       .ok_or_else(|| Error::new("Ticket not found"))?;
 
-    let user_con_profile_result = query_data
-      .loaders()
+    let user_con_profile_result = loaders
       .ticket_user_con_profile()
       .load_one(ticket.id)
       .await?;
     let user_con_profile = user_con_profile_result.expect_one()?;
 
-    let convention_result = query_data
-      .loaders()
+    let convention_result = loaders
       .user_con_profile_convention()
       .load_one(user_con_profile.id)
       .await?;
@@ -125,16 +122,14 @@ impl<'a> AbilityType<'a> {
     event_proposal_id: ID,
     action: &EventProposalAction,
   ) -> Result<bool> {
-    let query_data = ctx.data::<QueryData>()?;
-    let loader_result = query_data
-      .loaders()
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
+    let loader_result = loaders
       .event_proposals_by_id()
       .load_one(LaxId::parse(event_proposal_id)?)
       .await?;
 
     let event_proposal = loader_result.expect_one()?;
-    let convention_result = query_data
-      .loaders()
+    let convention_result = loaders
       .event_proposal_convention()
       .load_one(event_proposal.id)
       .await?;
@@ -157,8 +152,7 @@ impl<'a> AbilityType<'a> {
     action: &UserConProfileAction,
   ) -> Result<bool> {
     let loader_result = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .user_con_profiles_by_id()
       .load_one(LaxId::parse(user_con_profile_id)?)
       .await?;
@@ -439,8 +433,7 @@ impl<'a> AbilityType<'a> {
     let resource = if let Some(event) = event {
       Some((
         ctx
-          .data::<QueryData>()?
-          .loaders()
+          .data::<Arc<LoaderManager>>()?
           .event_convention()
           .load_one(event.id)
           .await?
@@ -582,8 +575,7 @@ impl<'a> AbilityType<'a> {
     let resource = if let Some(event) = event {
       Some((
         ctx
-          .data::<QueryData>()?
-          .loaders()
+          .data::<Arc<LoaderManager>>()?
           .event_convention()
           .load_one(event.id)
           .await?

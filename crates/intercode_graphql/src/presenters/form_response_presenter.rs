@@ -5,12 +5,11 @@ use intercode_entities::{
   active_storage_blobs, form_items,
   model_ext::{form_item_permissions::FormItemRole, FormResponse},
 };
+use intercode_graphql_loaders::LoaderManager;
 use intercode_liquid::render_markdown;
 use sea_orm::EntityTrait;
 use serde_json::Value;
 use std::collections::HashMap;
-
-use crate::QueryData;
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum FormResponsePresentationFormat {
@@ -55,11 +54,10 @@ pub fn form_response_as_json<'a, E: EntityTrait>(
 
 pub async fn attached_images_by_filename<E: EntityTrait>(
   form_response: &dyn FormResponse<Entity = E>,
-  query_data: &QueryData,
+  loaders: &LoaderManager,
 ) -> Result<HashMap<String, active_storage_blobs::Model>, Error> {
   Ok(
-    query_data
-      .loaders()
+    loaders
       .event_attached_images
       .load_one(form_response.get_id())
       .await?

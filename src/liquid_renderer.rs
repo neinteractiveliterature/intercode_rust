@@ -1,8 +1,7 @@
 use crate::drops::{DropContext, IntercodeGlobals};
 use async_graphql::async_trait::async_trait;
-use intercode_graphql::{
-  build_partial_compiler, EmbeddedGraphQLExecutorBuilder, LiquidRenderer, QueryData, SchemaData,
-};
+use intercode_graphql::{build_partial_compiler, EmbeddedGraphQLExecutorBuilder, SchemaData};
+use intercode_graphql_core::{liquid_renderer::LiquidRenderer, query_data::QueryData};
 use intercode_liquid::{build_liquid_parser, cms_parent_partial_source::PreloadPartialsStrategy};
 use intercode_policies::AuthorizationInfo;
 use std::{fmt::Debug, sync::Arc};

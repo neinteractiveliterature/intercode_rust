@@ -1,12 +1,8 @@
+use std::sync::Arc;
+
 use crate::{
-  api::{
-    interfaces::FormResponseImplementation,
-    scalars::{DateScalar, JsonScalar},
-  },
-  loaders::filtered_event_runs_loader::EventRunsLoaderFilter,
-  policy_guard::PolicyGuard,
-  presenters::form_response_presenter::attached_images_by_filename,
-  QueryData,
+  api::interfaces::FormResponseImplementation, load_one_by_id,
+  presenters::form_response_presenter::attached_images_by_filename, QueryData,
 };
 use async_graphql::*;
 use async_trait::async_trait;
@@ -14,6 +10,12 @@ use futures::StreamExt;
 use intercode_entities::{
   conventions, events, forms, model_ext::form_item_permissions::FormItemRole, RegistrationPolicy,
 };
+use intercode_graphql_core::{
+  lax_id::LaxId,
+  policy_guard::PolicyGuard,
+  scalars::{DateScalar, JsonScalar},
+};
+use intercode_graphql_loaders::{filtered_event_runs_loader::EventRunsLoaderFilter, LoaderManager};
 use intercode_liquid::render_markdown;
 use intercode_policies::{
   policies::{EventAction, EventPolicy, MaximumEventProvidedTicketsOverridePolicy},
@@ -37,11 +39,11 @@ impl EventType {
     PolicyGuard::new(action, &self.model, move |model, ctx| {
       let model = model.clone();
       let ctx = ctx;
-      let query_data = ctx.data::<QueryData>();
+      let loaders = ctx.data::<Arc<LoaderManager>>();
 
       Box::pin(async {
-        let query_data = query_data?;
-        let convention_loader = query_data.loaders().event_convention();
+        let loaders = loaders?;
+        let convention_loader = loaders.event_convention();
         let convention_result = convention_loader.load_one(model.id).await?;
         let convention = convention_result.expect_one()?;
 
@@ -85,8 +87,7 @@ impl EventType {
   }
 
   async fn convention(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {
-    let loader = ctx.data::<QueryData>()?.loaders().conventions_by_id();
-    let loader_result = loader.load_one(self.model.convention_id).await?;
+    let loader_result = load_one_by_id!(conventions_by_id, ctx, self.model.convention_id)?;
     Ok(ConventionType::new(loader_result.expect_one()?.clone()))
   }
 
@@ -101,10 +102,10 @@ impl EventType {
 
   #[graphql(name = "description_html")]
   async fn description_html(&self, ctx: &Context<'_>) -> Result<String, Error> {
-    let query_data = ctx.data::<QueryData>()?;
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
     Ok(render_markdown(
       self.model.description.as_deref().unwrap_or_default(),
-      &attached_images_by_filename(&self.model, query_data).await?,
+      &attached_images_by_filename(&self.model, loaders).await?,
     ))
   }
 
@@ -118,7 +119,7 @@ impl EventType {
 
   #[graphql(name = "event_category")]
   async fn event_category(&self, ctx: &Context<'_>) -> Result<EventCategoryType, Error> {
-    let loader = ctx.data::<QueryData>()?.loaders().event_event_category();
+    let loader = ctx.data::<Arc<LoaderManager>>()?.event_event_category();
 
     Ok(EventCategoryType::new(
       loader.load_one(self.model.id).await?.expect_one()?.clone(),
@@ -127,8 +128,7 @@ impl EventType {
 
   async fn images(&self, ctx: &Context<'_>) -> Result<Vec<ActiveStorageAttachmentType>> {
     let blobs = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .event_attached_images
       .load_one(self.model.id)
       .await?
@@ -152,7 +152,7 @@ impl EventType {
     &self,
     ctx: &Context<'_>,
   ) -> Result<Vec<MaximumEventProvidedTicketsOverrideType>> {
-    let loaders = ctx.data::<QueryData>()?.loaders();
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
     let convention_result = loaders.event_convention().load_one(self.model.id).await?;
     let convention = convention_result.expect_one()?;
@@ -185,9 +185,9 @@ impl EventType {
   #[graphql(name = "my_rating")]
   async fn my_rating(&self, ctx: &Context<'_>) -> Result<Option<i32>, Error> {
     let query_data = ctx.data::<QueryData>()?;
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
     if let Some(user_con_profile) = query_data.user_con_profile() {
-      let loader = query_data
-        .loaders()
+      let loader = loaders
         .event_user_con_profile_event_ratings
         .get(user_con_profile.id)
         .await;
@@ -219,7 +219,7 @@ impl EventType {
 
   #[graphql(name = "provided_tickets")]
   async fn provided_tickets(&self, ctx: &Context<'_>) -> Result<Vec<TicketType>> {
-    let loader = ctx.data::<QueryData>()?.loaders().event_provided_tickets();
+    let loader = ctx.data::<Arc<LoaderManager>>()?.event_provided_tickets();
     loader
       .load_one(self.model.id)
       .await?
@@ -240,12 +240,8 @@ impl EventType {
   }
 
   async fn run(&self, ctx: &Context<'_>, id: ID) -> Result<RunType, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-    let loader_result = query_data
-      .loaders()
-      .runs_by_id()
-      .load_one(id.parse()?)
-      .await?;
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
+    let loader_result = loaders.runs_by_id().load_one(LaxId::parse(id)?).await?;
 
     Ok(RunType::new(loader_result.expect_one()?.clone()))
   }
@@ -257,10 +253,9 @@ impl EventType {
     finish: Option<DateScalar>,
     #[graphql(name = "exclude_conflicts")] _exclude_conflicts: Option<DateScalar>,
   ) -> Result<Vec<RunType>, Error> {
-    let query_data = ctx.data::<QueryData>()?;
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
     Ok(
-      query_data
-        .loaders()
+      loaders
         .event_runs_filtered
         .get(EventRunsLoaderFilter {
           start: start.map(|start| start.into()),
@@ -283,10 +278,10 @@ impl EventType {
 
   #[graphql(name = "short_blurb_html")]
   async fn short_blurb_html(&self, ctx: &Context<'_>) -> Result<String, Error> {
-    let query_data = ctx.data::<QueryData>()?;
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
     Ok(render_markdown(
       self.model.short_blurb.as_deref().unwrap_or_default(),
-      &attached_images_by_filename(&self.model, query_data).await?,
+      &attached_images_by_filename(&self.model, loaders).await?,
     ))
   }
 
@@ -296,10 +291,9 @@ impl EventType {
 
   #[graphql(name = "team_members")]
   async fn team_members(&self, ctx: &Context<'_>) -> Result<Vec<TeamMemberType>, Error> {
-    let query_data = ctx.data::<QueryData>()?;
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
     Ok(
-      query_data
-        .loaders()
+      loaders
         .event_team_members()
         .load_one(self.model.id)
         .await?
@@ -368,17 +362,15 @@ impl EventType {
 #[async_trait]
 impl FormResponseImplementation<events::Model> for EventType {
   async fn get_form(&self, ctx: &Context<'_>) -> Result<forms::Model, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-    let event_category_result = query_data
-      .loaders()
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
+    let event_category_result = loaders
       .event_event_category()
       .load_one(self.model.id)
       .await?;
     let event_category = event_category_result.expect_one()?;
 
     Ok(
-      query_data
-        .loaders()
+      loaders
         .event_category_event_form()
         .load_one(event_category.id)
         .await?
@@ -388,9 +380,8 @@ impl FormResponseImplementation<events::Model> for EventType {
   }
 
   async fn get_team_member_name(&self, ctx: &Context<'_>) -> Result<String, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-    let event_category_result = query_data
-      .loaders()
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
+    let event_category_result = loaders
       .event_event_category()
       .load_one(self.model.id)
       .await?;
@@ -405,8 +396,7 @@ impl FormResponseImplementation<events::Model> for EventType {
   ) -> Result<FormItemRole, Error> {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
     let convention_result = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .event_convention()
       .load_one(self.model.id)
       .await?;
@@ -426,8 +416,7 @@ impl FormResponseImplementation<events::Model> for EventType {
   ) -> Result<FormItemRole, Error> {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
     let convention_result = ctx
-      .data::<QueryData>()?
-      .loaders()
+      .data::<Arc<LoaderManager>>()?
       .event_convention()
       .load_one(self.model.id)
       .await?;

@@ -1,7 +1,8 @@
-use crate::api::{enums::PricingStrategy, unions::PricingStructureValueType};
+use crate::api::unions::PricingStructureValueType;
 use async_graphql::Object;
 use chrono::{DateTime, Utc};
 use intercode_entities::PricingStructure;
+use intercode_graphql_core::enums::PricingStrategy;
 
 use super::{MoneyType, PayWhatYouWantValueType, ScheduledMoneyValueType};
 

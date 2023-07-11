@@ -40,7 +40,7 @@ macro_rules! exclusive_arc_variant_loader {
       let results = loader.load_many(ids).await?;
 
       Ok(
-        $crate::loaders::exclusive_arc_utils::loader_result_hashmap_to_model_hashmap(results)
+        $crate::exclusive_arc_utils::loader_result_hashmap_to_model_hashmap(results)
           .into_iter()
           .map(|(id, model)| ($ref_variant(id), $model_variant(model.clone())))
           .collect(),

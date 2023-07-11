@@ -1,12 +1,15 @@
-use crate::{policy_guard::PolicyGuard, QueryData};
+use std::sync::Arc;
+
 use async_graphql::*;
 use intercode_entities::{conventions, events, team_members};
+use intercode_graphql_core::{policy_guard::PolicyGuard, query_data::QueryData};
+use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{policies::TeamMemberPolicy, ReadManageAction};
 use seawater::loaders::ExpectModel;
 
-use crate::model_backed_type;
+use crate::{load_one_by_model_id, loader_result_to_required_single, model_backed_type};
 
-use super::{EventType, ModelBackedType, UserConProfileType};
+use super::{EventType, UserConProfileType};
 model_backed_type!(TeamMemberType, team_members::Model);
 
 impl TeamMemberType {
@@ -22,12 +25,12 @@ impl TeamMemberType {
     PolicyGuard::new(action, &self.model, move |model, ctx| {
       let model = model.clone();
       let ctx = ctx;
-      let query_data = ctx.data::<QueryData>();
+      let loaders = ctx.data::<Arc<LoaderManager>>();
 
       Box::pin(async {
-        let query_data = query_data?;
-        let event_loader = query_data.loaders().team_member_event();
-        let convention_loader = query_data.loaders().event_convention();
+        let loaders = loaders?;
+        let event_loader = loaders.team_member_event();
+        let convention_loader = loaders.event_convention();
         let event_result = event_loader.load_one(model.id).await?;
         let event = event_result.expect_one()?;
         let convention_result = convention_loader.load_one(event.id).await?;
@@ -62,14 +65,14 @@ impl TeamMemberType {
       return Ok(None);
     }
 
-    let user_con_profile_result = query_data
-      .loaders()
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
+
+    let user_con_profile_result = loaders
       .team_member_user_con_profile()
       .load_one(self.model.id)
       .await?;
 
-    let user_result = query_data
-      .loaders()
+    let user_result = loaders
       .user_con_profile_user()
       .load_one(user_con_profile_result.expect_one()?.id)
       .await?;
@@ -78,12 +81,8 @@ impl TeamMemberType {
   }
 
   async fn event(&self, ctx: &Context<'_>) -> Result<EventType, Error> {
-    let loader = ctx.data::<QueryData>()?.loaders().team_member_event();
-
-    let result = loader.load_one(self.model.id).await?;
-    let event = result.expect_one()?;
-
-    Ok(EventType::new(event.to_owned()))
+    let loader_result = load_one_by_model_id!(team_member_event, ctx, self)?;
+    Ok(loader_result_to_required_single!(loader_result, EventType))
   }
 
   #[graphql(name = "receive_con_email")]
@@ -103,14 +102,10 @@ impl TeamMemberType {
 
   #[graphql(name = "user_con_profile")]
   async fn user_con_profile(&self, ctx: &Context<'_>) -> Result<UserConProfileType, Error> {
-    let loader = &ctx
-      .data::<QueryData>()?
-      .loaders()
-      .team_member_user_con_profile();
-
-    let result = loader.load_one(self.model.id).await?;
-    let user_con_profile = result.expect_one()?;
-
-    Ok(UserConProfileType::new(user_con_profile.to_owned()))
+    let loader_result = load_one_by_model_id!(team_member_user_con_profile, ctx, self)?;
+    Ok(loader_result_to_required_single!(
+      loader_result,
+      UserConProfileType
+    ))
   }
 }

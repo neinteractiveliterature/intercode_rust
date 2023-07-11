@@ -10,7 +10,9 @@ use axum::{
   extract::State,
   response::{self, IntoResponse},
 };
-use intercode_graphql::{api, LiquidRenderer, SchemaData};
+use intercode_graphql::{api, SchemaData};
+use intercode_graphql_core::liquid_renderer::LiquidRenderer;
+use intercode_graphql_loaders::LoaderManager;
 
 use crate::{
   liquid_renderer::IntercodeLiquidRenderer, middleware::AuthorizationInfoAndQueryDataFromRequest,
@@ -30,9 +32,11 @@ pub async fn graphql_handler(
 ) -> GraphQLResponse {
   let liquid_renderer =
     IntercodeLiquidRenderer::new(&query_data, &schema_data, authorization_info.clone());
+  let loader_manager = Arc::new(LoaderManager::new(query_data.db().clone()));
   let req = req
     .into_inner()
     .data(query_data)
+    .data(loader_manager)
     .data::<Arc<dyn LiquidRenderer>>(Arc::new(liquid_renderer))
     .data(authorization_info);
 

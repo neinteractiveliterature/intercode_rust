@@ -1,13 +1,35 @@
 use std::collections::HashMap;
 
-use async_graphql::{dataloader::Loader, resolver_utils::parse_enum, EnumType};
+use async_graphql::{dataloader::Loader, resolver_utils::parse_enum, EnumType, Object};
 use async_trait::async_trait;
 use intercode_entities::{order_entries, orders};
+use intercode_graphql_core::enums::OrderStatus;
 use itertools::Itertools;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QuerySelect};
 use seawater::ConnectionWrapper;
 
-use crate::api::{enums::OrderStatus, objects::OrderQuantityByStatusType};
+#[derive(Debug, Clone)]
+pub struct OrderQuantityByStatusType {
+  status: OrderStatus,
+  quantity: i64,
+}
+
+impl OrderQuantityByStatusType {
+  pub fn new(status: OrderStatus, quantity: i64) -> Self {
+    Self { status, quantity }
+  }
+}
+
+#[Object(name = "OrderQuantityByStatus")]
+impl OrderQuantityByStatusType {
+  pub async fn status(&self) -> OrderStatus {
+    self.status
+  }
+
+  pub async fn quantity(&self) -> i64 {
+    self.quantity
+  }
+}
 
 pub enum OrderQuantityByStatusLoaderEntity {
   Product,

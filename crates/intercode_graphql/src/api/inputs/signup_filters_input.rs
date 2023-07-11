@@ -1,8 +1,7 @@
 use async_graphql::{Context, Error, InputObject};
 use intercode_entities::{events, runs, signups, user_con_profiles, users};
+use intercode_graphql_core::filter_utils::string_search_condition;
 use sea_orm::{ColumnTrait, Condition, JoinType, QueryFilter, QuerySelect, RelationTrait, Select};
-
-use crate::filter_utils::string_search_condition;
 
 #[derive(InputObject, Default)]
 pub struct SignupFiltersInput {
