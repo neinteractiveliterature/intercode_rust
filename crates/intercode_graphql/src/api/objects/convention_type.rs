@@ -2,14 +2,14 @@ use std::{str::FromStr, sync::Arc};
 
 use super::{
   active_storage_attachment_type::ActiveStorageAttachmentType,
-  mailing_lists_type::MailingListsType, stripe_account_type::StripeAccountType,
-  user_activity_alert_type::UserActivityAlertType, CmsContentGroupType, CmsContentType,
-  CmsFileType, CmsGraphqlQueryType, CmsLayoutType, CmsNavigationItemType, CmsPartialType,
-  CmsVariableType, CouponsPaginationType, DepartmentType, EventCategoryType, EventProposalType,
-  EventProposalsPaginationType, EventType, EventsPaginationType, FormType, ModelBackedType,
-  OrdersPaginationType, PageType, RoomType, ScheduledStringableValueType,
-  SignupRequestsPaginationType, SignupType, StaffPositionType, TicketTypeType, UserConProfileType,
-  UserConProfilesPaginationType,
+  mailing_lists_type::MailingListsType, notification_template_type::NotificationTemplateType,
+  stripe_account_type::StripeAccountType, user_activity_alert_type::UserActivityAlertType,
+  CmsContentGroupType, CmsContentType, CmsFileType, CmsGraphqlQueryType, CmsLayoutType,
+  CmsNavigationItemType, CmsPartialType, CmsVariableType, CouponsPaginationType, DepartmentType,
+  EventCategoryType, EventProposalType, EventProposalsPaginationType, EventType,
+  EventsPaginationType, FormType, ModelBackedType, OrdersPaginationType, PageType, RoomType,
+  ScheduledStringableValueType, SignupRequestsPaginationType, SignupType, StaffPositionType,
+  TicketTypeType, UserConProfileType, UserConProfilesPaginationType,
 };
 use crate::{
   api::{
@@ -449,6 +449,18 @@ impl ConventionType {
     }
   }
 
+  #[graphql(name = "notification_templates")]
+  async fn notification_templates(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<NotificationTemplateType>> {
+    let loader_result = load_one_by_model_id!(convention_notification_templates, ctx, self)?;
+    Ok(loader_result_to_many!(
+      loader_result,
+      NotificationTemplateType
+    ))
+  }
+
   #[graphql(name = "open_graph_image")]
   async fn open_graph_image(
     &self,
@@ -507,6 +519,27 @@ impl ConventionType {
     } else {
       Ok(None)
     }
+  }
+
+  /// Given a Liquid text string and a notification event, renders the Liquid to HTML using the
+  /// current domain's CMS context as if it were the content for that notification type.
+  #[graphql(
+    name = "preview_notifier_liquid",
+    guard = "self.simple_policy_guard::<ConventionPolicy>(ConventionAction::ViewReports)"
+  )]
+  async fn preview_notifier_liquid(
+    &self,
+    ctx: &Context<'_>,
+    #[graphql(desc = "The key of the notification event to use for generating the preview.")]
+    event_key: String,
+    content: String,
+  ) -> Result<String, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
+    let cms_rendering_context =
+      CmsRenderingContext::new(liquid::object!({}), query_data, liquid_renderer.as_ref());
+
+    cms_rendering_context.render_liquid(&content, None).await
   }
 
   async fn products(&self, ctx: &Context<'_>) -> Result<Vec<ProductType>> {

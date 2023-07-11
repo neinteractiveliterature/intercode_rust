@@ -3,16 +3,17 @@ use std::borrow::{Borrow, Cow};
 use async_graphql::*;
 use intercode_entities::{
   cms_content_model::CmsContentModel, conventions, departments, email_routes, event_categories,
-  events, forms, orders, organizations, pages, products, rooms, root_sites, runs, signups,
-  staff_positions, ticket_types, tickets, user_activity_alerts, user_con_profiles,
+  events, forms, notification_templates, orders, organizations, pages, products, rooms, root_sites,
+  runs, signups, staff_positions, ticket_types, tickets, user_activity_alerts, user_con_profiles,
 };
 use intercode_policies::{
   policies::{
     CmsContentPolicy, ConventionAction, ConventionPolicy, DepartmentPolicy, EmailRoutePolicy,
     EventAction, EventCategoryPolicy, EventPolicy, EventProposalAction, EventProposalPolicy,
-    FormPolicy, OrderAction, OrderPolicy, OrganizationPolicy, ProductPolicy, RoomPolicy, RunAction,
-    RunPolicy, SignupAction, SignupPolicy, StaffPositionPolicy, TicketAction, TicketPolicy,
-    TicketTypePolicy, UserActivityAlertPolicy, UserConProfileAction, UserConProfilePolicy,
+    FormPolicy, NotificationTemplatePolicy, OrderAction, OrderPolicy, OrganizationPolicy,
+    ProductPolicy, RoomPolicy, RunAction, RunPolicy, SignupAction, SignupPolicy,
+    StaffPositionPolicy, TicketAction, TicketPolicy, TicketTypePolicy, UserActivityAlertPolicy,
+    UserConProfileAction, UserConProfilePolicy,
   },
   AuthorizationInfo, EntityPolicy, Policy, ReadManageAction,
 };
@@ -663,10 +664,24 @@ impl<'a> AbilityType<'a> {
   }
 
   #[graphql(name = "can_update_notification_templates")]
-  async fn can_update_notification_templates(&self) -> bool {
-    // TODO
-    false
+  async fn can_update_notification_templates(&self, ctx: &Context<'_>) -> Result<bool> {
+    let Some(convention) = ctx.data::<QueryData>()?.convention() else {
+      return Ok(false);
+    };
+
+    Ok(
+      NotificationTemplatePolicy::action_permitted(
+        self.authorization_info.as_ref(),
+        &ReadManageAction::Manage,
+        &notification_templates::Model {
+          convention_id: convention.id,
+          ..Default::default()
+        },
+      )
+      .await?,
+    )
   }
+
   #[graphql(name = "can_manage_oauth_applications")]
   async fn can_manage_oauth_applications(&self) -> bool {
     // TODO
