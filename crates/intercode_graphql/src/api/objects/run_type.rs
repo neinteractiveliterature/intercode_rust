@@ -9,6 +9,7 @@ use intercode_policies::{
   policies::{RunAction, RunPolicy},
   AuthorizationInfo, Policy,
 };
+use intercode_query_builders::sort_input::SortInput;
 use sea_orm::{
   sea_query::{Expr, Func, SimpleExpr},
   JoinType, ModelTrait, QueryOrder, QuerySelect, RelationTrait,
@@ -16,10 +17,7 @@ use sea_orm::{
 use seawater::loaders::ExpectModel;
 
 use crate::{
-  api::{
-    inputs::{SignupFiltersInput, SortInput},
-    interfaces::PaginationImplementation,
-  },
+  api::{inputs::SignupFiltersInput, interfaces::PaginationImplementation},
   load_one_by_model_id, loader_result_to_many, loader_result_to_required_single, model_backed_type,
   QueryData,
 };

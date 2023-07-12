@@ -25,6 +25,7 @@ members = [
   "./crates/intercode_inflector",
   "./crates/intercode_liquid",
   "./crates/intercode_policies",
+  "./crates/intercode_query_builders",
   "./crates/intercode_timespan",
   "./crates/seawater",
   "./crates/seawater_derive",

@@ -1,3 +1,4 @@
+use async_graphql::InputObject;
 use intercode_entities::email_routes;
 use intercode_graphql_core::filter_utils::string_search;
 use sea_orm::{
@@ -5,10 +6,7 @@ use sea_orm::{
   IntoIdentity, QueryFilter, QueryOrder, Select,
 };
 
-use crate::api::{
-  inputs::{EmailRouteFiltersInput, SortInput},
-  objects::EmailRoutesPaginationType,
-};
+use crate::sort_input::SortInput;
 
 use super::QueryBuilder;
 
@@ -20,6 +18,14 @@ fn forward_addresses_as_string() -> SimpleExpr {
       ))
       .arg(","),
   ))
+}
+
+#[derive(InputObject, Default)]
+pub struct EmailRouteFiltersInput {
+  #[graphql(name = "receiver_address")]
+  pub receiver_address: Option<String>,
+  #[graphql(name = "forward_addresses")]
+  pub forward_addresses: Option<String>,
 }
 
 pub struct EmailRoutesQueryBuilder {
@@ -35,7 +41,6 @@ impl EmailRoutesQueryBuilder {
 
 impl QueryBuilder for EmailRoutesQueryBuilder {
   type Entity = email_routes::Entity;
-  type Pagination = EmailRoutesPaginationType;
 
   fn apply_filters(&self, scope: Select<Self::Entity>) -> Select<Self::Entity> {
     let Some(filters) = &self.filters else {

@@ -1,16 +1,29 @@
+use async_graphql::InputObject;
 use intercode_entities::{event_ratings, events, runs, user_con_profiles, users};
-use intercode_graphql_core::filter_utils::{numbered_placeholders, string_search};
+use intercode_graphql_core::{
+  filter_utils::{numbered_placeholders, string_search},
+  scalars::JsonScalar,
+};
 use sea_orm::{
   sea_query::Expr, ColumnTrait, JoinType, Order, QueryFilter, QueryOrder, QuerySelect,
   RelationTrait, Select,
 };
 
-use crate::api::{
-  inputs::{EventFiltersInput, SortInput},
-  objects::EventsPaginationType,
-};
+use crate::sort_input::SortInput;
 
 use super::QueryBuilder;
+
+#[derive(InputObject, Default)]
+pub struct EventFiltersInput {
+  pub category: Option<Vec<Option<i64>>>,
+  pub title: Option<String>,
+  #[graphql(name = "title_prefix")]
+  pub title_prefix: Option<String>,
+  #[graphql(name = "my_rating")]
+  pub my_rating: Option<Vec<i64>>,
+  #[graphql(name = "form_items")]
+  pub form_items: Option<JsonScalar>,
+}
 
 pub struct EventsQueryBuilder {
   filters: Option<EventFiltersInput>,
@@ -37,7 +50,6 @@ impl EventsQueryBuilder {
 
 impl QueryBuilder for EventsQueryBuilder {
   type Entity = events::Entity;
-  type Pagination = EventsPaginationType;
 
   fn apply_filters(&self, scope: Select<Self::Entity>) -> Select<Self::Entity> {
     let Some(filters) = &self.filters else {

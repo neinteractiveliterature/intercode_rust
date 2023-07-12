@@ -1,12 +1,15 @@
+use async_graphql::InputObject;
 use intercode_entities::signup_requests;
 use sea_orm::{sea_query::Expr, ColumnTrait, QueryFilter, QueryOrder, Select};
 
-use crate::api::{
-  inputs::{SignupRequestFiltersInput, SortInput},
-  objects::SignupRequestsPaginationType,
-};
+use crate::sort_input::SortInput;
 
 use super::QueryBuilder;
+
+#[derive(InputObject, Default)]
+pub struct SignupRequestFiltersInput {
+  pub state: Option<Vec<String>>,
+}
 
 pub struct SignupRequestsQueryBuilder {
   filters: Option<SignupRequestFiltersInput>,
@@ -21,7 +24,6 @@ impl SignupRequestsQueryBuilder {
 
 impl QueryBuilder for SignupRequestsQueryBuilder {
   type Entity = signup_requests::Entity;
-  type Pagination = SignupRequestsPaginationType;
 
   fn apply_filters(&self, scope: Select<Self::Entity>) -> Select<Self::Entity> {
     let Some(filters) = &self.filters else {

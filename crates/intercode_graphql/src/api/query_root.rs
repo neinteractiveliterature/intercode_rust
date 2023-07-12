@@ -1,14 +1,12 @@
 use std::borrow::Cow;
 use std::sync::Arc;
 
-use super::inputs::{EmailRouteFiltersInput, SortInput};
-use super::interfaces::CmsParentInterface;
+use super::interfaces::{CmsParentInterface, PaginationImplementation};
 use super::objects::{
   AbilityType, ConventionType, EmailRoutesPaginationType, EventType, OrganizationType,
   RootSiteType, UserConProfileType, UserType,
 };
 use crate::api::objects::ModelBackedType;
-use crate::query_builders::{EmailRoutesQueryBuilder, QueryBuilder};
 use async_graphql::connection::{query, Connection};
 use async_graphql::*;
 use intercode_entities::cms_parent::CmsParent;
@@ -18,6 +16,8 @@ use intercode_graphql_core::liquid_renderer::LiquidRenderer;
 use intercode_graphql_core::query_data::QueryData;
 use intercode_policies::policies::EmailRoutePolicy;
 use intercode_policies::{AuthorizationInfo, EntityPolicy, ReadManageAction};
+use intercode_query_builders::sort_input::SortInput;
+use intercode_query_builders::{EmailRouteFiltersInput, EmailRoutesQueryBuilder};
 use itertools::Itertools;
 use liquid::object;
 use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect};
@@ -110,7 +110,13 @@ impl QueryRoot {
         .take(),
       ),
     );
-    EmailRoutesQueryBuilder::new(filters, sort).paginate(scope, page, per_page)
+
+    Ok(EmailRoutesPaginationType::from_query_builder(
+      &EmailRoutesQueryBuilder::new(filters, sort),
+      scope,
+      page,
+      per_page,
+    ))
   }
 
   async fn events(

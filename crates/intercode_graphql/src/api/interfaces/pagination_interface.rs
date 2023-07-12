@@ -1,9 +1,14 @@
-use async_graphql::{async_trait::async_trait, Context, Error, Interface};
+use async_graphql::{Context, Error, Interface};
+use async_trait::async_trait;
+use intercode_graphql_core::query_data::QueryData;
+use intercode_policies::{AuthorizationInfo, EntityPolicy, ReadManageAction};
+use intercode_query_builders::QueryBuilder;
 use sea_orm::{ConnectionTrait, EntityTrait, Paginator, Select, SelectorTrait};
 
-use crate::{
-  api::objects::{EventsPaginationType, SignupsPaginationType, UserConProfilesPaginationType},
-  QueryData,
+use crate::api::objects::{
+  CouponsPaginationType, EmailRoutesPaginationType, EventProposalsPaginationType,
+  EventsPaginationType, OrdersPaginationType, SignupRequestsPaginationType, SignupsPaginationType,
+  UserConProfilesPaginationType,
 };
 
 #[derive(Interface)]
@@ -47,7 +52,12 @@ use crate::{
 /// needs, but if a cursor-based approach is desirable in the future, we may also implement Relay
 /// connections alongside our existing pagination fields.
 pub enum PaginationInterface {
+  Coupons(CouponsPaginationType),
+  EmailRoutes(EmailRoutesPaginationType),
+  EventProposals(EventProposalsPaginationType),
   Events(EventsPaginationType),
+  Orders(OrdersPaginationType),
+  SignupRequests(SignupRequestsPaginationType),
   Signups(SignupsPaginationType),
   UserConProfiles(UserConProfilesPaginationType),
 }
@@ -62,6 +72,47 @@ pub trait PaginationImplementation<Entity: EntityTrait + Send + Sync> {
     &'s self,
     db: &'s C,
   ) -> (Paginator<'s, C, Self::Selector>, u64);
+
+  fn from_query_builder<B: QueryBuilder<Entity = Entity>>(
+    query_builder: &B,
+    scope: Select<Entity>,
+    page: Option<u64>,
+    per_page: Option<u64>,
+  ) -> Self
+  where
+    Self: Sized,
+  {
+    let scope = query_builder.apply_filters(scope);
+    let scope = query_builder.apply_sorts(scope);
+
+    Self::new(Some(scope), page, per_page)
+  }
+
+  fn authorized_from_query_builder<
+    B: QueryBuilder<Entity = Entity>,
+    P: EntityPolicy<AuthorizationInfo, <Entity as EntityTrait>::Model, Action = A>,
+    A: From<ReadManageAction>,
+  >(
+    query_builder: &B,
+    ctx: &Context<'_>,
+    scope: Select<Entity>,
+    page: Option<u64>,
+    per_page: Option<u64>,
+    _policy: P,
+  ) -> Result<Self, Error>
+  where
+    <Entity as EntityTrait>::Model: Sync,
+    Self: Sized,
+  {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let scope = P::filter_scope(scope, authorization_info, &A::from(ReadManageAction::Read));
+    Ok(Self::from_query_builder(
+      query_builder,
+      scope,
+      page,
+      per_page,
+    ))
+  }
 
   async fn total_entries(&self, ctx: &Context) -> Result<u64, Error> {
     let db = ctx.data::<QueryData>()?.db();

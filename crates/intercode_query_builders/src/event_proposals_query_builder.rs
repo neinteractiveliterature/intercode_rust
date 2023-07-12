@@ -1,13 +1,20 @@
+use async_graphql::InputObject;
 use intercode_entities::{event_categories, event_proposals, user_con_profiles};
 use intercode_graphql_core::filter_utils::{string_search, string_search_condition};
 use sea_orm::{sea_query::Cond, ColumnTrait, QueryFilter, QueryOrder, Select};
 
-use crate::api::{
-  inputs::{EventProposalFiltersInput, SortInput},
-  objects::EventProposalsPaginationType,
-};
+use crate::sort_input::SortInput;
 
 use super::QueryBuilder;
+
+#[derive(InputObject, Default)]
+pub struct EventProposalFiltersInput {
+  #[graphql(name = "event_category")]
+  pub event_category: Option<Vec<Option<i64>>>,
+  pub title: Option<String>,
+  pub owner: Option<String>,
+  pub status: Option<Vec<Option<String>>>,
+}
 
 pub struct EventProposalsQueryBuilder {
   filters: Option<EventProposalFiltersInput>,
@@ -22,7 +29,6 @@ impl EventProposalsQueryBuilder {
 
 impl QueryBuilder for EventProposalsQueryBuilder {
   type Entity = event_proposals::Entity;
-  type Pagination = EventProposalsPaginationType;
 
   fn apply_filters(&self, scope: Select<Self::Entity>) -> Select<Self::Entity> {
     let Some(filters) = &self.filters else {

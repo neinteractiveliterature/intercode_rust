@@ -17,7 +17,6 @@ use std::{fmt::Debug, future::Future, sync::Arc};
 pub mod api;
 pub mod cms_rendering_context;
 pub mod presenters;
-pub mod query_builders;
 
 #[derive(Clone)]
 pub struct SchemaData {

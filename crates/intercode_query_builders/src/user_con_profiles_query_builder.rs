@@ -1,13 +1,33 @@
+use async_graphql::{InputObject, ID};
 use intercode_entities::user_con_profiles;
 use intercode_graphql_core::filter_utils::string_search_condition;
 use sea_orm::{sea_query::Cond, QueryFilter, Select};
 
-use crate::api::{
-  inputs::{SortInput, UserConProfileFiltersInput},
-  objects::UserConProfilesPaginationType,
-};
+use crate::sort_input::SortInput;
 
 use super::QueryBuilder;
+
+#[derive(InputObject, Default)]
+pub struct UserConProfileFiltersInput {
+  pub id: Option<ID>,
+  pub attending: Option<bool>,
+  pub email: Option<String>,
+  #[graphql(name = "first_name")]
+  pub first_name: Option<String>,
+  #[graphql(name = "is_team_member")]
+  pub is_team_member: Option<bool>,
+  #[graphql(name = "last_name")]
+  pub last_name: Option<String>,
+  #[graphql(name = "payment_amount")]
+  pub payment_amount: Option<f64>,
+  pub privileges: Option<String>,
+  pub name: Option<String>,
+  #[graphql(name = "event_title")]
+  pub ticket: Option<Vec<ID>>,
+  #[graphql(name = "ticket_type")]
+  pub ticket_type: Option<Vec<ID>>,
+  pub user_id: Option<ID>,
+}
 
 pub struct UserConProfilesQueryBuilder {
   filters: Option<UserConProfileFiltersInput>,
@@ -22,7 +42,6 @@ impl UserConProfilesQueryBuilder {
 
 impl QueryBuilder for UserConProfilesQueryBuilder {
   type Entity = user_con_profiles::Entity;
-  type Pagination = UserConProfilesPaginationType;
 
   fn apply_filters(&self, scope: Select<Self::Entity>) -> Select<Self::Entity> {
     let mut scope = scope;

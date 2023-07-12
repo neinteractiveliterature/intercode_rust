@@ -5,15 +5,13 @@ use intercode_policies::{
   policies::{ConventionAction, ConventionPolicy, EventPolicy},
   AuthorizationInfo, Policy,
 };
+use intercode_query_builders::{sort_input::SortInput, EventFiltersInput, EventsQueryBuilder};
 use sea_orm::ModelTrait;
 use seawater::loaders::ExpectModel;
 
 use crate::{
-  api::inputs::{EventFiltersInput, SortInput},
-  load_one_by_model_id, loader_result_to_optional_single, loader_result_to_required_single,
-  model_backed_type,
-  query_builders::{EventsQueryBuilder, QueryBuilder},
-  QueryData,
+  api::interfaces::PaginationImplementation, load_one_by_model_id,
+  loader_result_to_optional_single, loader_result_to_required_single, model_backed_type, QueryData,
 };
 
 use super::{DepartmentType, EventsPaginationType, FormType};
@@ -75,14 +73,14 @@ impl EventCategoryType {
     )
     .await?;
 
-    EventsQueryBuilder::new(filters, sort, user_con_profile.cloned(), can_read_schedule)
-      .paginate_authorized(
-        ctx,
-        self.model.find_related(events::Entity),
-        page,
-        per_page,
-        EventPolicy,
-      )
+    EventsPaginationType::authorized_from_query_builder(
+      &EventsQueryBuilder::new(filters, sort, user_con_profile.cloned(), can_read_schedule),
+      ctx,
+      self.model.find_related(events::Entity),
+      page,
+      per_page,
+      EventPolicy,
+    )
   }
 
   #[graphql(name = "full_color")]

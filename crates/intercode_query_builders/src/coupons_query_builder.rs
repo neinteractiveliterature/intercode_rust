@@ -1,3 +1,4 @@
+use async_graphql::InputObject;
 use intercode_entities::coupons;
 use intercode_graphql_core::filter_utils::string_search;
 use sea_orm::{
@@ -5,12 +6,14 @@ use sea_orm::{
   QueryOrder, Select,
 };
 
-use crate::api::{
-  inputs::{CouponFiltersInput, SortInput},
-  objects::CouponsPaginationType,
-};
+use crate::sort_input::SortInput;
 
 use super::QueryBuilder;
+
+#[derive(InputObject, Default)]
+pub struct CouponFiltersInput {
+  pub code: Option<String>,
+}
 
 pub struct CouponsQueryBuilder {
   filters: Option<CouponFiltersInput>,
@@ -25,7 +28,6 @@ impl CouponsQueryBuilder {
 
 impl QueryBuilder for CouponsQueryBuilder {
   type Entity = coupons::Entity;
-  type Pagination = CouponsPaginationType;
 
   fn apply_filters(&self, scope: Select<Self::Entity>) -> Select<Self::Entity> {
     let Some(filters) = &self.filters else {

@@ -1,3 +1,4 @@
+use async_graphql::{InputObject, ID};
 use intercode_entities::{orders, user_con_profiles};
 use intercode_graphql_core::{filter_utils::string_search_condition, lax_id::LaxId};
 use sea_orm::{
@@ -5,12 +6,17 @@ use sea_orm::{
   ColumnTrait, QueryFilter, QueryOrder, Select,
 };
 
-use crate::api::{
-  inputs::{OrderFiltersInput, SortInput},
-  objects::OrdersPaginationType,
-};
+use crate::sort_input::SortInput;
 
 use super::QueryBuilder;
+
+#[derive(InputObject, Default)]
+pub struct OrderFiltersInput {
+  pub id: Option<ID>,
+  #[graphql(name = "user_name")]
+  pub user_name: Option<String>,
+  pub status: Option<Vec<String>>,
+}
 
 pub struct OrdersQueryBuilder {
   filters: Option<OrderFiltersInput>,
@@ -25,7 +31,6 @@ impl OrdersQueryBuilder {
 
 impl QueryBuilder for OrdersQueryBuilder {
   type Entity = orders::Entity;
-  type Pagination = OrdersPaginationType;
 
   fn apply_filters(&self, scope: Select<Self::Entity>) -> Select<Self::Entity> {
     let Some(filters) = &self.filters else {

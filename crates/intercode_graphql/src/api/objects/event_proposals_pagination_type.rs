@@ -1,8 +1,9 @@
 use async_graphql::{Context, Error, Object};
 use intercode_entities::event_proposals;
+use intercode_graphql_core::query_data::QueryData;
 use sea_orm::{ConnectionTrait, EntityTrait, Paginator, PaginatorTrait, Select, SelectModel};
 
-use crate::{api::interfaces::PaginationImplementation, QueryData};
+use crate::api::interfaces::PaginationImplementation;
 
 use super::{EventProposalType, ModelBackedType};
 
@@ -15,7 +16,7 @@ pub struct EventProposalsPaginationType {
 #[Object(name = "EventProposalsPagination")]
 impl EventProposalsPaginationType {
   #[graphql(name = "current_page")]
-  async fn current_page(&self) -> u64 {
+  pub async fn current_page(&self) -> u64 {
     self.page
   }
 
@@ -33,17 +34,17 @@ impl EventProposalsPaginationType {
   }
 
   #[graphql(name = "per_page")]
-  async fn per_page(&self) -> u64 {
+  pub async fn per_page(&self) -> u64 {
     self.per_page
   }
 
   #[graphql(name = "total_entries")]
-  async fn total_entries(&self, ctx: &Context<'_>) -> Result<u64, Error> {
+  pub async fn total_entries(&self, ctx: &Context<'_>) -> Result<u64, Error> {
     <Self as PaginationImplementation<event_proposals::Entity>>::total_entries(self, ctx).await
   }
 
   #[graphql(name = "total_pages")]
-  async fn total_pages(&self, ctx: &Context<'_>) -> Result<u64, Error> {
+  pub async fn total_pages(&self, ctx: &Context<'_>) -> Result<u64, Error> {
     <Self as PaginationImplementation<event_proposals::Entity>>::total_pages(self, ctx).await
   }
 }

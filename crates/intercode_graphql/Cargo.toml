@@ -22,6 +22,7 @@ intercode_graphql_loaders = {path = "../intercode_graphql_loaders"}
 intercode_inflector = {path = "../intercode_inflector"}
 intercode_liquid = {path = "../intercode_liquid"}
 intercode_policies = {path = "../intercode_policies"}
+intercode_query_builders = {path = "../intercode_query_builders"}
 intercode_timespan = {path = "../intercode_timespan"}
 itertools = {workspace = true}
 liquid = {workspace = true}

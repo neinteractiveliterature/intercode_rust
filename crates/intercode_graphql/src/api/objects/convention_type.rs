@@ -13,20 +13,11 @@ use super::{
 };
 use crate::{
   api::{
-    inputs::{
-      CouponFiltersInput, EventFiltersInput, EventProposalFiltersInput, OrderFiltersInput,
-      SignupRequestFiltersInput, SortInput, UserConProfileFiltersInput,
-    },
-    interfaces::CmsParentImplementation,
+    interfaces::{CmsParentImplementation, PaginationImplementation},
     objects::ProductType,
   },
   cms_rendering_context::CmsRenderingContext,
-  load_one_by_model_id, loader_result_to_many,
-  query_builders::{
-    CouponsQueryBuilder, EventProposalsQueryBuilder, EventsQueryBuilder, OrdersQueryBuilder,
-    QueryBuilder, SignupRequestsQueryBuilder, UserConProfilesQueryBuilder,
-  },
-  SchemaData,
+  load_one_by_model_id, loader_result_to_many, SchemaData,
 };
 use async_graphql::*;
 use chrono::{DateTime, Utc};
@@ -54,6 +45,12 @@ use intercode_policies::{
     EventProposalPolicy, OrderPolicy, SignupRequestPolicy, UserConProfilePolicy,
   },
   AuthorizationInfo, Policy,
+};
+use intercode_query_builders::{
+  sort_input::SortInput, CouponFiltersInput, CouponsQueryBuilder, EventFiltersInput,
+  EventProposalFiltersInput, EventProposalsQueryBuilder, EventsQueryBuilder, OrderFiltersInput,
+  OrdersQueryBuilder, QueryBuilder, SignupRequestFiltersInput, SignupRequestsQueryBuilder,
+  UserConProfileFiltersInput, UserConProfilesQueryBuilder,
 };
 use intercode_timespan::ScheduledValue;
 use liquid::object;
@@ -130,7 +127,8 @@ impl ConventionType {
     filters: Option<CouponFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<CouponsPaginationType, Error> {
-    CouponsQueryBuilder::new(filters, sort).paginate_authorized(
+    CouponsPaginationType::authorized_from_query_builder(
+      &CouponsQueryBuilder::new(filters, sort),
       ctx,
       self.model.find_related(coupons::Entity),
       page,
@@ -305,17 +303,17 @@ impl ConventionType {
     )
     .await?;
 
-    EventsQueryBuilder::new(filters, sort, user_con_profile.cloned(), can_read_schedule)
-      .paginate_authorized(
-        ctx,
-        self
-          .model
-          .find_related(events::Entity)
-          .filter(events::Column::Status.eq("active")),
-        page,
-        per_page,
-        EventPolicy,
-      )
+    EventsPaginationType::authorized_from_query_builder(
+      &EventsQueryBuilder::new(filters, sort, user_con_profile.cloned(), can_read_schedule),
+      ctx,
+      self
+        .model
+        .find_related(events::Entity)
+        .filter(events::Column::Status.eq("active")),
+      page,
+      per_page,
+      EventPolicy,
+    )
   }
 
   /// Finds an event proposal by ID in this convention. If there is no event proposal with that ID
@@ -346,7 +344,8 @@ impl ConventionType {
     filters: Option<EventProposalFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<EventProposalsPaginationType, Error> {
-    EventProposalsQueryBuilder::new(filters, sort).paginate_authorized(
+    EventProposalsPaginationType::authorized_from_query_builder(
+      &EventProposalsQueryBuilder::new(filters, sort),
       ctx,
       self.model.find_related(event_proposals::Entity),
       page,
@@ -489,7 +488,8 @@ impl ConventionType {
     filters: Option<OrderFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<OrdersPaginationType, Error> {
-    OrdersQueryBuilder::new(filters, sort).paginate_authorized(
+    OrdersPaginationType::authorized_from_query_builder(
+      &OrdersQueryBuilder::new(filters, sort),
       ctx,
       self.model.find_linked(ConventionToOrders),
       page,
@@ -597,7 +597,8 @@ impl ConventionType {
     filters: Option<SignupRequestFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<SignupRequestsPaginationType, Error> {
-    SignupRequestsQueryBuilder::new(filters, sort).paginate_authorized(
+    SignupRequestsPaginationType::authorized_from_query_builder(
+      &SignupRequestsQueryBuilder::new(filters, sort),
       ctx,
       self.model.find_linked(ConventionToSignupRequests),
       page,
@@ -772,7 +773,8 @@ impl ConventionType {
     filters: Option<UserConProfileFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<UserConProfilesPaginationType, Error> {
-    UserConProfilesQueryBuilder::new(filters, sort).paginate_authorized(
+    UserConProfilesPaginationType::authorized_from_query_builder(
+      &UserConProfilesQueryBuilder::new(filters, sort),
       ctx,
       self.model.find_related(user_con_profiles::Entity),
       page,
