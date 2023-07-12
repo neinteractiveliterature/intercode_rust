@@ -4,7 +4,8 @@ use axum::{
   response::{self, IntoResponse},
 };
 use intercode_entities::{cms_parent::CmsParentTrait, events};
-use intercode_graphql::{cms_rendering_context::CmsRenderingContext, SchemaData};
+use intercode_graphql::cms_rendering_context::CmsRenderingContext;
+use intercode_graphql_core::schema_data::SchemaData;
 use liquid::object;
 use once_cell::sync::Lazy;
 use regex::Regex;

@@ -1,8 +1,7 @@
 use api::{MutationRoot, QueryRoot};
 use async_graphql::{EmptySubscription, Schema};
-use i18n_embed::fluent::FluentLanguageLoader;
 use intercode_entities::{cms_parent::CmsParent, users};
-use intercode_graphql_core::query_data::QueryData;
+use intercode_graphql_core::{query_data::QueryData, schema_data::SchemaData};
 use intercode_graphql_loaders::LoaderManager;
 use intercode_liquid::{
   cms_parent_partial_source::{LazyCmsPartialSource, PreloadPartialsStrategy},
@@ -17,20 +16,6 @@ use std::{fmt::Debug, future::Future, sync::Arc};
 pub mod api;
 pub mod cms_rendering_context;
 pub mod presenters;
-
-#[derive(Clone)]
-pub struct SchemaData {
-  pub stripe_client: stripe::Client,
-  pub language_loader: Arc<FluentLanguageLoader>,
-}
-
-impl Debug for SchemaData {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    f.debug_struct("SchemaData")
-      .field("language_loader", &self.language_loader)
-      .finish_non_exhaustive()
-  }
-}
 
 #[derive(Debug)]
 pub struct EmbeddedGraphQLExecutor {

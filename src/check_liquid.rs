@@ -12,8 +12,11 @@ use intercode_entities::{
   cms_layouts, cms_parent::CmsParent, conventions, pages, root_sites, user_con_profiles, users,
   UserNames,
 };
-use intercode_graphql::{cms_rendering_context::CmsRenderingContext, SchemaData};
-use intercode_graphql_core::query_data::{ArcQueryData, OwnedQueryData, QueryData};
+use intercode_graphql::cms_rendering_context::CmsRenderingContext;
+use intercode_graphql_core::{
+  query_data::{ArcQueryData, OwnedQueryData, QueryData},
+  schema_data::SchemaData,
+};
 use intercode_liquid::cms_parent_partial_source::PreloadPartialsStrategy;
 use intercode_policies::AuthorizationInfo;
 use itertools::Itertools;

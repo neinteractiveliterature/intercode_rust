@@ -2305,10 +2305,12 @@ name = "intercode_graphql_core"
 version = "0.1.0"
 dependencies = [
  "async-graphql",
+ "async-stripe",
  "async-trait",
  "chrono",
  "chrono-tz",
  "http",
+ "i18n-embed",
  "intercode_entities",
  "intercode_liquid",
  "intercode_policies",

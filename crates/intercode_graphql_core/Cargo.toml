@@ -7,10 +7,12 @@ version = "0.1.0"
 
 [dependencies]
 async-graphql = {workspace = true}
+async-stripe = {workspace = true}
 async-trait = {workspace = true}
 chrono = {workspace = true}
 chrono-tz = {workspace = true}
 http = {workspace = true}
+i18n-embed = {workspace = true}
 intercode_entities = {path = "../intercode_entities"}
 intercode_liquid = {path = "../intercode_liquid"}
 intercode_policies = {path = "../intercode_policies"}

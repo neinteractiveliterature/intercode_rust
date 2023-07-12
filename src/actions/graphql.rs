@@ -10,8 +10,8 @@ use axum::{
   extract::State,
   response::{self, IntoResponse},
 };
-use intercode_graphql::{api, SchemaData};
-use intercode_graphql_core::liquid_renderer::LiquidRenderer;
+use intercode_graphql::api;
+use intercode_graphql_core::{liquid_renderer::LiquidRenderer, schema_data::SchemaData};
 use intercode_graphql_loaders::LoaderManager;
 
 use crate::{
