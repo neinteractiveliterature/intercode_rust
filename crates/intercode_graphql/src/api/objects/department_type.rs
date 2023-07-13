@@ -1,10 +1,11 @@
 use async_graphql::*;
 use intercode_entities::departments;
+use intercode_graphql_core::{
+  load_one_by_model_id, loader_result_to_many, model_backed_type, ModelBackedType,
+};
 use intercode_policies::{policies::DepartmentPolicy, ReadManageAction};
 
-use crate::{load_one_by_model_id, loader_result_to_many, model_backed_type};
-
-use super::{EventCategoryType, ModelBackedType};
+use super::EventCategoryType;
 model_backed_type!(DepartmentType, departments::Model);
 
 #[Object(

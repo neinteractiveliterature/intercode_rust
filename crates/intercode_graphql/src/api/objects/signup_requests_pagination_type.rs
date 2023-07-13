@@ -2,11 +2,11 @@ use async_graphql::{Context, Error, Object};
 use intercode_entities::signup_requests;
 use sea_orm::{ConnectionTrait, EntityTrait, Paginator, PaginatorTrait, Select, SelectModel};
 
-use intercode_graphql_core::query_data::QueryData;
+use intercode_graphql_core::{query_data::QueryData, ModelBackedType};
 
 use crate::api::interfaces::PaginationImplementation;
 
-use super::{ModelBackedType, SignupRequestType};
+use super::SignupRequestType;
 
 pub struct SignupRequestsPaginationType {
   scope: Select<signup_requests::Entity>,

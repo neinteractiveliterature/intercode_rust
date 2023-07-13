@@ -5,20 +5,17 @@ use intercode_entities::{
   model_ext::permissions::{PermissionedModelRef, PermissionedRoleRef},
   permissions,
 };
+use intercode_graphql_core::{model_backed_type, ModelBackedType};
 use intercode_graphql_loaders::{
   permissioned_models_loader::PermissionedModel, permissioned_roles_loader::PermissionedRole,
   LoaderManager,
 };
 use seawater::loaders::ExpectModel;
 
-use crate::{
-  api::unions::{PermissionedModelType, PermissionedRoleType},
-  model_backed_type,
-};
+use crate::api::unions::{PermissionedModelType, PermissionedRoleType};
 
 use super::{
-  CmsContentGroupType, ConventionType, EventCategoryType, ModelBackedType, OrganizationRoleType,
-  StaffPositionType,
+  CmsContentGroupType, ConventionType, EventCategoryType, OrganizationRoleType, StaffPositionType,
 };
 model_backed_type!(PermissionType, permissions::Model);
 

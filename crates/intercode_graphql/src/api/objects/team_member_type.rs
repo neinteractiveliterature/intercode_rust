@@ -2,12 +2,13 @@ use std::sync::Arc;
 
 use async_graphql::*;
 use intercode_entities::{conventions, events, team_members};
-use intercode_graphql_core::{policy_guard::PolicyGuard, query_data::QueryData};
+use intercode_graphql_core::{
+  load_one_by_model_id, loader_result_to_required_single, model_backed_type,
+  policy_guard::PolicyGuard, query_data::QueryData,
+};
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{policies::TeamMemberPolicy, ReadManageAction};
 use seawater::loaders::ExpectModel;
-
-use crate::{load_one_by_model_id, loader_result_to_required_single, model_backed_type};
 
 use super::{EventType, UserConProfileType};
 model_backed_type!(TeamMemberType, team_members::Model);

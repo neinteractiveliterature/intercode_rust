@@ -1,9 +1,8 @@
 use async_graphql::*;
 use intercode_entities::{form_items, model_ext::form_item_permissions::FormItemRole};
-use intercode_graphql_core::scalars::JsonScalar;
+use intercode_graphql_core::{model_backed_type, scalars::JsonScalar};
 use intercode_liquid::render_markdown;
 
-use crate::model_backed_type;
 model_backed_type!(FormItemType, form_items::Model);
 
 #[Object(name = "FormItem")]

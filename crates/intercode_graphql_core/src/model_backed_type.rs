@@ -1,4 +1,4 @@
-use intercode_graphql_core::policy_guard::PolicyGuard;
+use crate::policy_guard::PolicyGuard;
 use intercode_policies::{AuthorizationInfo, Policy};
 use sea_orm::ModelTrait;
 
@@ -30,7 +30,7 @@ macro_rules! model_backed_type {
       model: $model_type,
     }
 
-    impl $crate::api::objects::ModelBackedType for $type_name {
+    impl $crate::ModelBackedType for $type_name {
       type Model = $model_type;
 
       fn new(model: $model_type) -> Self {
@@ -85,14 +85,14 @@ macro_rules! loader_result_to_optional_single {
   ($loader_result: ident, $type: ty) => {
     ::seawater::loaders::ExpectModel::try_one(&$loader_result)
       .cloned()
-      .map(<$type as $crate::api::objects::ModelBackedType>::new)
+      .map(<$type as $crate::ModelBackedType>::new)
   };
 }
 
 #[macro_export]
 macro_rules! loader_result_to_required_single {
   ($loader_result: ident, $type: ty) => {
-    <$type as $crate::api::objects::ModelBackedType>::new(
+    <$type as $crate::ModelBackedType>::new(
       ::seawater::loaders::ExpectModel::expect_one(&$loader_result)?.clone(),
     )
   };
@@ -104,7 +104,7 @@ macro_rules! loader_result_to_many {
     ::seawater::loaders::ExpectModels::expect_models(&$loader_result)?
       .iter()
       .cloned()
-      .map(<$type as $crate::api::objects::ModelBackedType>::new)
+      .map(<$type as $crate::ModelBackedType>::new)
       .collect()
   };
 }

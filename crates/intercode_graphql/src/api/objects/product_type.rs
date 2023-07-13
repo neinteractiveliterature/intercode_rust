@@ -2,20 +2,16 @@ use std::{collections::HashMap, sync::Arc};
 
 use async_graphql::*;
 use intercode_entities::products;
+use intercode_graphql_core::{
+  load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single, model_backed_type,
+  objects::ActiveStorageAttachmentType, ModelBackedType,
+};
 use intercode_graphql_loaders::{
   order_quantity_by_status_loader::OrderQuantityByStatusType, LoaderManager,
 };
 use intercode_liquid::render_markdown;
 
-use crate::{
-  load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single, model_backed_type,
-};
-
-use super::{
-  active_storage_attachment_type::ActiveStorageAttachmentType,
-  pricing_structure_type::PricingStructureType, ModelBackedType, ProductVariantType,
-  TicketTypeType,
-};
+use super::{pricing_structure_type::PricingStructureType, ProductVariantType, TicketTypeType};
 model_backed_type!(ProductType, products::Model);
 
 #[Object(name = "Product")]

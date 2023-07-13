@@ -1,30 +1,23 @@
 use std::{str::FromStr, sync::Arc};
 
 use super::{
-  active_storage_attachment_type::ActiveStorageAttachmentType,
-  mailing_lists_type::MailingListsType, notification_template_type::NotificationTemplateType,
-  stripe_account_type::StripeAccountType, user_activity_alert_type::UserActivityAlertType,
-  CmsContentGroupType, CmsContentType, CmsFileType, CmsGraphqlQueryType, CmsLayoutType,
-  CmsNavigationItemType, CmsPartialType, CmsVariableType, CouponsPaginationType, DepartmentType,
+  mailing_lists_type::MailingListsType, stripe_account_type::StripeAccountType,
+  user_activity_alert_type::UserActivityAlertType, CouponsPaginationType, DepartmentType,
   EventCategoryType, EventProposalType, EventProposalsPaginationType, EventType,
-  EventsPaginationType, FormType, ModelBackedType, OrdersPaginationType, PageType, RoomType,
-  ScheduledStringableValueType, SignupRequestsPaginationType, SignupType, StaffPositionType,
-  TicketTypeType, UserConProfileType, UserConProfilesPaginationType,
+  EventsPaginationType, FormType, OrdersPaginationType, RoomType, ScheduledStringableValueType,
+  SignupRequestsPaginationType, SignupType, StaffPositionType, TicketTypeType, UserConProfileType,
+  UserConProfilesPaginationType,
 };
 use crate::{
-  api::{
-    interfaces::{CmsParentImplementation, PaginationImplementation},
-    objects::ProductType,
-  },
-  cms_rendering_context::CmsRenderingContext,
-  load_one_by_model_id, loader_result_to_many, SchemaData,
+  api::{interfaces::PaginationImplementation, objects::ProductType},
+  SchemaData,
 };
 use async_graphql::*;
 use chrono::{DateTime, Utc};
 use futures::future::try_join_all;
+use intercode_cms::api::{objects::NotificationTemplateType, partial_objects::ConventionCmsFields};
 use intercode_entities::{
-  cms_parent::CmsParentTrait,
-  cms_partials, conventions, coupons, event_proposals, events, forms,
+  conventions, coupons, event_proposals, events, forms,
   links::{
     ConventionToOrders, ConventionToSignupRequests, ConventionToSignups, ConventionToStaffPositions,
   },
@@ -34,9 +27,11 @@ use intercode_entities::{
 use intercode_graphql_core::{
   enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
   lax_id::LaxId,
-  liquid_renderer::LiquidRenderer,
+  load_one_by_model_id, loader_result_to_many, model_backed_type,
+  objects::ActiveStorageAttachmentType,
   query_data::QueryData,
   scalars::DateScalar,
+  ModelBackedType,
 };
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
@@ -53,19 +48,13 @@ use intercode_query_builders::{
   UserConProfileFiltersInput, UserConProfilesQueryBuilder,
 };
 use intercode_timespan::ScheduledValue;
-use liquid::object;
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, ModelTrait, QueryFilter};
 use seawater::loaders::{ExpectModel, ExpectModels};
 
-use crate::model_backed_type;
-model_backed_type!(ConventionType, conventions::Model);
+model_backed_type!(ConventionApiFields, conventions::Model);
 
-#[Object(name = "Convention")]
-impl ConventionType {
-  pub async fn id(&self) -> ID {
-    ID(self.model.id.to_string())
-  }
-
+#[Object]
+impl ConventionApiFields {
   async fn name(&self) -> &Option<String> {
     &self.model.name
   }
@@ -498,52 +487,6 @@ impl ConventionType {
     )
   }
 
-  #[graphql(name = "pre_schedule_content_html")]
-  async fn pre_schedule_content_html(&self, ctx: &Context<'_>) -> Result<Option<String>, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
-
-    let partial = self
-      .model
-      .cms_partials()
-      .filter(cms_partials::Column::Name.eq("pre_schedule_text"))
-      .one(query_data.db())
-      .await?;
-
-    if let Some(partial) = partial {
-      let cms_rendering_context =
-        CmsRenderingContext::new(object!({}), query_data, liquid_renderer.as_ref());
-
-      cms_rendering_context
-        .render_liquid(&partial.content.unwrap_or_default(), None)
-        .await
-        .map(Some)
-    } else {
-      Ok(None)
-    }
-  }
-
-  /// Given a Liquid text string and a notification event, renders the Liquid to HTML using the
-  /// current domain's CMS context as if it were the content for that notification type.
-  #[graphql(
-    name = "preview_notifier_liquid",
-    guard = "self.simple_policy_guard::<ConventionPolicy>(ConventionAction::ViewReports)"
-  )]
-  async fn preview_notifier_liquid(
-    &self,
-    ctx: &Context<'_>,
-    #[graphql(desc = "The key of the notification event to use for generating the preview.")]
-    event_key: String,
-    content: String,
-  ) -> Result<String, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
-    let cms_rendering_context =
-      CmsRenderingContext::new(liquid::object!({}), query_data, liquid_renderer.as_ref());
-
-    cms_rendering_context.render_liquid(&content, None).await
-  }
-
   async fn products(&self, ctx: &Context<'_>) -> Result<Vec<ProductType>> {
     let loader_result = load_one_by_model_id!(convention_products, ctx, self)?;
     Ok(loader_result_to_many!(loader_result, ProductType))
@@ -782,109 +725,22 @@ impl ConventionType {
       UserConProfilePolicy,
     )
   }
-
-  // STUFF FOR IMPLEMENTING CMS_PARENT
-
-  async fn cms_content_groups(&self, ctx: &Context<'_>) -> Result<Vec<CmsContentGroupType>, Error> {
-    <Self as CmsParentImplementation<conventions::Model>>::cms_content_groups(self, ctx).await
-  }
-
-  async fn cms_content_group(
-    &self,
-    ctx: &Context<'_>,
-    id: ID,
-  ) -> Result<CmsContentGroupType, Error> {
-    <Self as CmsParentImplementation<conventions::Model>>::cms_content_group(self, ctx, id).await
-  }
-
-  async fn cms_files(&self, ctx: &Context<'_>) -> Result<Vec<CmsFileType>, Error> {
-    <Self as CmsParentImplementation<conventions::Model>>::cms_files(self, ctx).await
-  }
-
-  async fn cms_file(&self, ctx: &Context<'_>, id: ID) -> Result<CmsFileType, Error> {
-    <Self as CmsParentImplementation<conventions::Model>>::cms_file(self, ctx, id).await
-  }
-
-  async fn cms_graphql_queries(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<Vec<CmsGraphqlQueryType>, Error> {
-    <Self as CmsParentImplementation<conventions::Model>>::cms_graphql_queries(self, ctx).await
-  }
-
-  async fn cms_graphql_query(
-    &self,
-    ctx: &Context<'_>,
-    id: ID,
-  ) -> Result<CmsGraphqlQueryType, Error> {
-    <Self as CmsParentImplementation<conventions::Model>>::cms_graphql_query(self, ctx, id).await
-  }
-
-  async fn cms_layouts(&self, ctx: &Context<'_>) -> Result<Vec<CmsLayoutType>, Error> {
-    <Self as CmsParentImplementation<conventions::Model>>::cms_layouts(self, ctx).await
-  }
-
-  async fn cms_layout(&self, ctx: &Context<'_>, id: ID) -> Result<CmsLayoutType, Error> {
-    <Self as CmsParentImplementation<conventions::Model>>::cms_layout(self, ctx, id).await
-  }
-
-  async fn cms_navigation_items(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<Vec<CmsNavigationItemType>, Error> {
-    <Self as CmsParentImplementation<conventions::Model>>::cms_navigation_items(self, ctx).await
-  }
-
-  async fn cms_pages(&self, ctx: &Context<'_>) -> Result<Vec<PageType>, Error> {
-    <Self as CmsParentImplementation<conventions::Model>>::cms_pages(self, ctx).await
-  }
-
-  async fn cms_page(
-    &self,
-    ctx: &Context<'_>,
-    id: Option<ID>,
-    slug: Option<String>,
-    root_page: Option<bool>,
-  ) -> Result<PageType, Error> {
-    <Self as CmsParentImplementation<conventions::Model>>::cms_page(self, ctx, id, slug, root_page)
-      .await
-  }
-
-  async fn cms_partials(&self, ctx: &Context<'_>) -> Result<Vec<CmsPartialType>, Error> {
-    <Self as CmsParentImplementation<conventions::Model>>::cms_partials(self, ctx).await
-  }
-
-  async fn cms_variables(&self, ctx: &Context<'_>) -> Result<Vec<CmsVariableType>, Error> {
-    <Self as CmsParentImplementation<conventions::Model>>::cms_variables(self, ctx).await
-  }
-
-  async fn default_layout(&self, ctx: &Context<'_>) -> Result<CmsLayoutType, Error> {
-    <Self as CmsParentImplementation<conventions::Model>>::default_layout(self, ctx).await
-  }
-
-  async fn effective_cms_layout(
-    &self,
-    ctx: &Context<'_>,
-    path: String,
-  ) -> Result<CmsLayoutType, Error> {
-    <Self as CmsParentImplementation<conventions::Model>>::effective_cms_layout(self, ctx, path)
-      .await
-  }
-
-  async fn root_page(&self, ctx: &Context<'_>) -> Result<PageType, Error> {
-    <Self as CmsParentImplementation<conventions::Model>>::root_page(self, ctx).await
-  }
-
-  async fn typeahead_search_cms_content(
-    &self,
-    ctx: &Context<'_>,
-    name: Option<String>,
-  ) -> Result<Vec<CmsContentType>, Error> {
-    <Self as CmsParentImplementation<conventions::Model>>::typeahead_search_cms_content(
-      self, ctx, name,
-    )
-    .await
-  }
 }
 
-impl CmsParentImplementation<conventions::Model> for ConventionType {}
+#[derive(MergedObject)]
+pub struct ConventionType(ConventionApiFields, ConventionCmsFields);
+
+impl ModelBackedType for ConventionType {
+  type Model = conventions::Model;
+
+  fn new(model: Self::Model) -> Self {
+    Self(
+      ConventionApiFields::new(model.clone()),
+      ConventionCmsFields::new(model),
+    )
+  }
+
+  fn get_model(&self) -> &Self::Model {
+    self.0.get_model()
+  }
+}

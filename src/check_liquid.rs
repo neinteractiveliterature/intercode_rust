@@ -8,11 +8,11 @@ use async_graphql::Result;
 use chrono_tz::UTC;
 use futures::{FutureExt, StreamExt};
 use indicatif::{ProgressBar, ProgressStyle};
+use intercode_cms::CmsRenderingContext;
 use intercode_entities::{
   cms_layouts, cms_parent::CmsParent, conventions, pages, root_sites, user_con_profiles, users,
   UserNames,
 };
-use intercode_graphql::cms_rendering_context::CmsRenderingContext;
 use intercode_graphql_core::{
   query_data::{ArcQueryData, OwnedQueryData, QueryData},
   schema_data::SchemaData,

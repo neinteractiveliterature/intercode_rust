@@ -1,11 +1,11 @@
 use async_graphql::{Context, Error, Object};
 use intercode_entities::event_proposals;
-use intercode_graphql_core::query_data::QueryData;
+use intercode_graphql_core::{query_data::QueryData, ModelBackedType};
 use sea_orm::{ConnectionTrait, EntityTrait, Paginator, PaginatorTrait, Select, SelectModel};
 
 use crate::api::interfaces::PaginationImplementation;
 
-use super::{EventProposalType, ModelBackedType};
+use super::EventProposalType;
 
 pub struct EventProposalsPaginationType {
   scope: Select<event_proposals::Entity>,

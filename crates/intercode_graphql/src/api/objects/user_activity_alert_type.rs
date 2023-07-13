@@ -1,14 +1,12 @@
 use async_graphql::*;
 use intercode_entities::user_activity_alerts;
+use intercode_graphql_core::{
+  load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single, model_backed_type,
+  ModelBackedType,
+};
 use intercode_policies::{policies::UserActivityAlertPolicy, ReadManageAction};
 
-use crate::{
-  load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single, model_backed_type,
-};
-
-use super::{
-  notification_destination_type::NotificationDestinationType, ModelBackedType, UserType,
-};
+use super::{notification_destination_type::NotificationDestinationType, UserType};
 model_backed_type!(UserActivityAlertType, user_activity_alerts::Model);
 
 #[Object(

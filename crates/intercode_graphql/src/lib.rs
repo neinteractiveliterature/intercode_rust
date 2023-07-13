@@ -14,7 +14,6 @@ use seawater::ConnectionWrapper;
 use std::{fmt::Debug, future::Future, sync::Arc};
 
 pub mod api;
-pub mod cms_rendering_context;
 pub mod presenters;
 
 #[derive(Debug)]

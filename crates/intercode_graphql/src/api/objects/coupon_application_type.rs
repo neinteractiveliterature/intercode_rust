@@ -1,11 +1,12 @@
 use async_graphql::*;
 use intercode_entities::coupon_applications;
+use intercode_graphql_core::{
+  load_one_by_id, load_one_by_model_id, model_backed_type, ModelBackedType,
+};
 use rusty_money::{iso, Money};
 use seawater::loaders::{ExpectModel, ExpectModels};
 
-use crate::{load_one_by_id, load_one_by_model_id, model_backed_type};
-
-use super::{CouponType, ModelBackedType, MoneyType};
+use super::{CouponType, MoneyType};
 model_backed_type!(CouponApplicationType, coupon_applications::Model);
 
 #[Object(name = "CouponApplication")]

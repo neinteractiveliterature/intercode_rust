@@ -1,7 +1,8 @@
 use async_graphql::*;
 use intercode_entities::notification_destinations;
-
-use crate::{load_one_by_model_id, loader_result_to_optional_single, model_backed_type};
+use intercode_graphql_core::{
+  load_one_by_model_id, loader_result_to_optional_single, model_backed_type,
+};
 
 use super::{StaffPositionType, UserConProfileType};
 model_backed_type!(

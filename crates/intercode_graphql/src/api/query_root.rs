@@ -6,7 +6,6 @@ use super::objects::{
   AbilityType, ConventionType, EmailRoutesPaginationType, EventType, OrganizationType,
   RootSiteType, UserConProfileType, UserType,
 };
-use crate::api::objects::ModelBackedType;
 use async_graphql::connection::{query, Connection};
 use async_graphql::*;
 use intercode_entities::cms_parent::CmsParent;
@@ -14,6 +13,7 @@ use intercode_entities::{email_routes, events, oauth_applications, organizations
 use intercode_graphql_core::entity_relay_connection::RelayConnectable;
 use intercode_graphql_core::liquid_renderer::LiquidRenderer;
 use intercode_graphql_core::query_data::QueryData;
+use intercode_graphql_core::ModelBackedType;
 use intercode_policies::policies::EmailRoutePolicy;
 use intercode_policies::{AuthorizationInfo, EntityPolicy, ReadManageAction};
 use intercode_query_builders::sort_input::SortInput;

@@ -1,10 +1,8 @@
 use async_graphql::*;
 use intercode_entities::notification_templates;
+use intercode_graphql_core::{model_backed_type, ModelBackedType};
 use intercode_policies::{policies::NotificationTemplatePolicy, ReadManageAction};
 
-use crate::model_backed_type;
-
-use super::ModelBackedType;
 model_backed_type!(NotificationTemplateType, notification_templates::Model);
 
 #[Object(

@@ -2,16 +2,14 @@ use std::sync::Arc;
 
 use async_graphql::*;
 use intercode_entities::orders;
-use intercode_graphql_core::scalars::DateScalar;
+use intercode_graphql_core::{
+  load_one_by_model_id, model_backed_type, scalars::DateScalar, ModelBackedType,
+};
 use intercode_graphql_loaders::LoaderManager;
 use rusty_money::{iso, Money};
 use seawater::loaders::{ExpectModel, ExpectModels};
 
-use crate::{load_one_by_model_id, model_backed_type};
-
-use super::{
-  money_type::MoneyType, CouponApplicationType, ModelBackedType, OrderEntryType, UserConProfileType,
-};
+use super::{money_type::MoneyType, CouponApplicationType, OrderEntryType, UserConProfileType};
 model_backed_type!(OrderType, orders::Model);
 
 #[Object(name = "Order")]

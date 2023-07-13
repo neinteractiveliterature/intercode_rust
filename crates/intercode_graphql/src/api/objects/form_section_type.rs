@@ -2,12 +2,11 @@ use std::sync::Arc;
 
 use async_graphql::*;
 use intercode_entities::form_sections;
+use intercode_graphql_core::{model_backed_type, ModelBackedType};
 use intercode_graphql_loaders::LoaderManager;
 use seawater::loaders::ExpectModels;
 
-use crate::model_backed_type;
-
-use super::{FormItemType, ModelBackedType};
+use super::FormItemType;
 model_backed_type!(FormSectionType, form_sections::Model);
 
 #[Object(name = "FormSection")]

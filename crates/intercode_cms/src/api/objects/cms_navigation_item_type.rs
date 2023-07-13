@@ -2,12 +2,11 @@ use std::sync::Arc;
 
 use async_graphql::*;
 use intercode_entities::cms_navigation_items;
+use intercode_graphql_core::{model_backed_type, ModelBackedType};
 use intercode_graphql_loaders::LoaderManager;
 use seawater::loaders::ExpectModel;
 
-use crate::model_backed_type;
-
-use super::{ModelBackedType, PageType};
+use super::PageType;
 model_backed_type!(CmsNavigationItemType, cms_navigation_items::Model);
 
 #[Object(name = "CmsNavigationItem")]

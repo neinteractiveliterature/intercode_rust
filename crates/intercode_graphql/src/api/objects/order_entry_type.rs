@@ -2,14 +2,13 @@ use std::sync::Arc;
 
 use async_graphql::*;
 use intercode_entities::order_entries;
+use intercode_graphql_core::{model_backed_type, ModelBackedType};
 use intercode_graphql_loaders::LoaderManager;
 use seawater::loaders::ExpectModel;
 
-use crate::{
-  model_backed_type, presenters::order_summary_presenter::load_and_describe_order_entry,
-};
+use crate::presenters::order_summary_presenter::load_and_describe_order_entry;
 
-use super::{money_type::MoneyType, ModelBackedType, OrderType, ProductType, ProductVariantType};
+use super::{money_type::MoneyType, OrderType, ProductType, ProductVariantType};
 model_backed_type!(OrderEntryType, order_entries::Model);
 
 #[Object(name = "OrderEntry")]

@@ -7,11 +7,12 @@ use intercode_entities::model_ext::form_item_permissions::FormItemRole;
 use intercode_entities::model_ext::FormResponse;
 use intercode_entities::{form_items, forms};
 use intercode_graphql_core::scalars::JsonScalar;
+use intercode_graphql_core::ModelBackedType;
 use intercode_graphql_loaders::LoaderManager;
 use intercode_inflector::IntercodeInflector;
 use seawater::loaders::ExpectModels;
 
-use crate::api::objects::{EventProposalType, EventType, ModelBackedType, UserConProfileType};
+use crate::api::objects::{EventProposalType, EventType, UserConProfileType};
 use crate::presenters::form_response_presenter::{
   attached_images_by_filename, form_response_as_json, FormResponsePresentationFormat,
 };

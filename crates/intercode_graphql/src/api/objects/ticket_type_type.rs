@@ -1,9 +1,10 @@
 use async_graphql::*;
 use intercode_entities::{maximum_event_provided_tickets_overrides, ticket_types};
-use intercode_graphql_core::{lax_id::LaxId, query_data::QueryData};
+use intercode_graphql_core::{
+  lax_id::LaxId, load_one_by_model_id, loader_result_to_many, model_backed_type,
+  query_data::QueryData,
+};
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
-
-use crate::{load_one_by_model_id, loader_result_to_many, model_backed_type};
 
 use super::ProductType;
 model_backed_type!(TicketTypeType, ticket_types::Model);

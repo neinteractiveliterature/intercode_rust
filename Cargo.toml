@@ -18,6 +18,7 @@ debug = 1
 
 [workspace]
 members = [
+  "./crates/intercode_cms",
   "./crates/intercode_entities",
   "./crates/intercode_graphql",
   "./crates/intercode_graphql_core",
@@ -106,6 +107,7 @@ i18n-embed = {workspace = true}
 i18n-embed-fl = {workspace = true}
 ics = "0.5.8"
 indicatif = {version = "0.17.3", features = ["improved_unicode"]}
+intercode_cms = {path = "./crates/intercode_cms"}
 intercode_entities = {path = "./crates/intercode_entities"}
 intercode_graphql = {path = "./crates/intercode_graphql"}
 intercode_graphql_core = {path = "./crates/intercode_graphql_core"}

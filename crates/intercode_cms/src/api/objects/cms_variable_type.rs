@@ -1,9 +1,8 @@
 use async_graphql::*;
 use intercode_entities::cms_variables;
-use intercode_graphql_core::scalars::JsonScalar;
+use intercode_graphql_core::{model_backed_type, scalars::JsonScalar};
 use intercode_policies::{policies::CmsContentPolicy, AuthorizationInfo, Policy, ReadManageAction};
 
-use crate::model_backed_type;
 model_backed_type!(CmsVariableType, cms_variables::Model);
 
 #[Object(name = "CmsVariable")]

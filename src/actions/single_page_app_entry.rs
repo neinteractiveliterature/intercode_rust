@@ -3,8 +3,8 @@ use axum::{
   extract::{OriginalUri, State},
   response::{self, IntoResponse},
 };
+use intercode_cms::CmsRenderingContext;
 use intercode_entities::{cms_parent::CmsParentTrait, events};
-use intercode_graphql::cms_rendering_context::CmsRenderingContext;
 use intercode_graphql_core::schema_data::SchemaData;
 use liquid::object;
 use once_cell::sync::Lazy;

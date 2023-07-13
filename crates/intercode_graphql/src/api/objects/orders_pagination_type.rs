@@ -2,11 +2,11 @@ use async_graphql::{Context, Error, Object};
 use intercode_entities::orders;
 use sea_orm::{ConnectionTrait, EntityTrait, Paginator, PaginatorTrait, Select, SelectModel};
 
-use intercode_graphql_core::query_data::QueryData;
+use intercode_graphql_core::{query_data::QueryData, ModelBackedType};
 
 use crate::api::interfaces::PaginationImplementation;
 
-use super::{ModelBackedType, OrderType};
+use super::OrderType;
 
 pub struct OrdersPaginationType {
   scope: Select<orders::Entity>,

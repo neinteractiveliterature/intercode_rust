@@ -1,8 +1,8 @@
 use crate::users;
 use async_graphql::*;
 use intercode_entities::UserNames;
+use intercode_graphql_core::model_backed_type;
 
-use crate::model_backed_type;
 model_backed_type!(UserType, users::Model);
 
 #[Object(name = "User")]

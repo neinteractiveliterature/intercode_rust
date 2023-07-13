@@ -1,11 +1,11 @@
 use async_graphql::{Context, Error, Object};
 use intercode_entities::coupons;
-use intercode_graphql_core::query_data::QueryData;
+use intercode_graphql_core::{query_data::QueryData, ModelBackedType};
 use sea_orm::{ConnectionTrait, EntityTrait, Paginator, PaginatorTrait, Select, SelectModel};
 
 use crate::api::interfaces::PaginationImplementation;
 
-use super::{CouponType, ModelBackedType};
+use super::CouponType;
 
 pub struct CouponsPaginationType {
   scope: Select<coupons::Entity>,

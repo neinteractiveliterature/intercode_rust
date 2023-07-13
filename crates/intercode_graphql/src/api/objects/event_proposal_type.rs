@@ -6,8 +6,12 @@ use intercode_entities::{
   conventions, event_proposals, forms, model_ext::form_item_permissions::FormItemRole,
 };
 use intercode_graphql_core::{
+  load_one_by_model_id, loader_result_to_optional_single, loader_result_to_required_single,
+  model_backed_type,
+  objects::ActiveStorageAttachmentType,
   policy_guard::PolicyGuard,
   scalars::{DateScalar, JsonScalar},
+  ModelBackedType,
 };
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
@@ -16,15 +20,9 @@ use intercode_policies::{
 };
 use seawater::loaders::ExpectModel;
 
-use crate::{
-  api::interfaces::FormResponseImplementation, load_one_by_model_id,
-  loader_result_to_optional_single, loader_result_to_required_single, model_backed_type,
-};
+use crate::api::interfaces::FormResponseImplementation;
 
-use super::{
-  active_storage_attachment_type::ActiveStorageAttachmentType, EventCategoryType, EventType,
-  ModelBackedType, RegistrationPolicyType, UserConProfileType,
-};
+use super::{EventCategoryType, EventType, RegistrationPolicyType, UserConProfileType};
 model_backed_type!(EventProposalType, event_proposals::Model);
 
 impl EventProposalType {

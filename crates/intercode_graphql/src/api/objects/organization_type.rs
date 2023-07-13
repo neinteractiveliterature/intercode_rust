@@ -1,13 +1,14 @@
 use async_graphql::*;
 use intercode_entities::{organization_roles, organizations};
+use intercode_graphql_core::{
+  load_one_by_model_id, loader_result_to_many, model_backed_type, ModelBackedType,
+};
 use intercode_policies::{
   policies::{OrganizationPolicy, OrganizationRolePolicy},
   AuthorizationInfo, Policy, ReadManageAction,
 };
 
-use crate::{load_one_by_model_id, loader_result_to_many, model_backed_type};
-
-use super::{ConventionType, ModelBackedType, OrganizationRoleType};
+use super::{ConventionType, OrganizationRoleType};
 model_backed_type!(OrganizationType, organizations::Model);
 
 #[Object(

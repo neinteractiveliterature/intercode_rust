@@ -1,26 +1,22 @@
 use async_graphql::*;
-use intercode_entities::cms_partials;
+use intercode_entities::cms_graphql_queries;
+use intercode_graphql_core::{model_backed_type, ModelBackedType};
 use intercode_policies::{policies::CmsContentPolicy, AuthorizationInfo, Policy, ReadManageAction};
 
-use crate::{api::objects::ModelBackedType, model_backed_type};
-model_backed_type!(CmsPartialType, cms_partials::Model);
+model_backed_type!(CmsGraphqlQueryType, cms_graphql_queries::Model);
 
-#[Object(name = "CmsPartial")]
-impl CmsPartialType {
+#[Object(name = "CmsGraphqlQuery")]
+impl CmsGraphqlQueryType {
   async fn id(&self) -> ID {
     self.model.id.into()
   }
 
   #[graphql(
     name = "admin_notes",
-    guard = "self.simple_policy_guard::<CmsContentPolicy<cms_partials::Model>>(ReadManageAction::Manage)"
+    guard = "self.simple_policy_guard::<CmsContentPolicy<cms_graphql_queries::Model>>(ReadManageAction::Manage)"
   )]
   async fn admin_notes(&self) -> Option<&str> {
     self.model.admin_notes.as_deref()
-  }
-
-  async fn content(&self) -> Option<&str> {
-    self.model.content.as_deref()
   }
 
   #[graphql(name = "current_ability_can_delete")]
@@ -51,7 +47,11 @@ impl CmsPartialType {
     )
   }
 
-  async fn name(&self) -> &str {
-    &self.model.name
+  async fn identifier(&self) -> Option<&str> {
+    self.model.identifier.as_deref()
+  }
+
+  async fn query(&self) -> Option<&str> {
+    self.model.query.as_deref()
   }
 }

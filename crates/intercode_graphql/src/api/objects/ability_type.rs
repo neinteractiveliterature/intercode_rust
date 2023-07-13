@@ -9,7 +9,7 @@ use intercode_entities::{
   events, forms, notification_templates, orders, organizations, pages, products, rooms, root_sites,
   runs, signups, staff_positions, ticket_types, tickets, user_activity_alerts, user_con_profiles,
 };
-use intercode_graphql_core::{lax_id::LaxId, query_data::QueryData};
+use intercode_graphql_core::{lax_id::LaxId, load_one_by_id, query_data::QueryData};
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
   policies::{
@@ -24,8 +24,6 @@ use intercode_policies::{
 };
 use sea_orm::{EntityTrait, PaginatorTrait};
 use seawater::loaders::ExpectModel;
-
-use crate::load_one_by_id;
 
 pub struct AbilityType<'a> {
   authorization_info: Cow<'a, AuthorizationInfo>,
