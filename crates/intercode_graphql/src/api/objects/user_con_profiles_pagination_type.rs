@@ -1,10 +1,9 @@
 use async_graphql::{Context, Error, Object};
 use intercode_entities::user_con_profiles;
+use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
 use sea_orm::{ConnectionTrait, EntityTrait, Paginator, PaginatorTrait, Select, SelectModel};
 
-use intercode_graphql_core::{query_data::QueryData, ModelBackedType};
-
-use crate::api::interfaces::PaginationImplementation;
+use intercode_graphql_core::{query_data::QueryData, ModelBackedType, PaginationImplementation};
 
 use super::UserConProfileType;
 
@@ -75,3 +74,5 @@ impl PaginationImplementation<user_con_profiles::Entity> for UserConProfilesPagi
     )
   }
 }
+
+impl PaginationFromQueryBuilder<user_con_profiles::Entity> for UserConProfilesPaginationType {}

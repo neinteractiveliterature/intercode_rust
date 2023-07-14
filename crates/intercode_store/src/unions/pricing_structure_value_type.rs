@@ -1,7 +1,8 @@
 use async_graphql::Union;
 use chrono::Utc;
+use intercode_graphql_core::objects::{MoneyType, ScheduledMoneyValueType};
 
-use crate::api::objects::{MoneyType, PayWhatYouWantValueType, ScheduledMoneyValueType};
+use crate::objects::PayWhatYouWantValueType;
 
 #[derive(Union)]
 #[graphql(name = "PricingStructureValue")]

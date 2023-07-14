@@ -1,9 +1,8 @@
 use async_graphql::{Context, Error, Object};
 use intercode_entities::event_proposals;
-use intercode_graphql_core::{query_data::QueryData, ModelBackedType};
+use intercode_graphql_core::{query_data::QueryData, ModelBackedType, PaginationImplementation};
+use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
 use sea_orm::{ConnectionTrait, EntityTrait, Paginator, PaginatorTrait, Select, SelectModel};
-
-use crate::api::interfaces::PaginationImplementation;
 
 use super::EventProposalType;
 
@@ -74,3 +73,5 @@ impl PaginationImplementation<event_proposals::Entity> for EventProposalsPaginat
     )
   }
 }
+
+impl PaginationFromQueryBuilder<event_proposals::Entity> for EventProposalsPaginationType {}

@@ -5,6 +5,7 @@ use intercode_graphql_core::{
   model_backed_type,
 };
 use intercode_inflector::inflector::string::pluralize;
+use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
 use intercode_policies::{
   policies::{ConventionAction, ConventionPolicy, EventPolicy},
   AuthorizationInfo, Policy,
@@ -13,7 +14,7 @@ use intercode_query_builders::{sort_input::SortInput, EventFiltersInput, EventsQ
 use sea_orm::ModelTrait;
 use seawater::loaders::ExpectModel;
 
-use crate::{api::interfaces::PaginationImplementation, QueryData};
+use crate::QueryData;
 
 use super::{DepartmentType, EventsPaginationType, FormType};
 

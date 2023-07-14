@@ -1,10 +1,14 @@
-use crate::api::unions::PricingStructureValueType;
 use async_graphql::Object;
 use chrono::{DateTime, Utc};
 use intercode_entities::PricingStructure;
-use intercode_graphql_core::enums::PricingStrategy;
+use intercode_graphql_core::{
+  enums::PricingStrategy,
+  objects::{MoneyType, ScheduledMoneyValueType},
+};
 
-use super::{MoneyType, PayWhatYouWantValueType, ScheduledMoneyValueType};
+use crate::unions::PricingStructureValueType;
+
+use super::PayWhatYouWantValueType;
 
 pub struct PricingStructureType {
   pricing_structure: PricingStructure,

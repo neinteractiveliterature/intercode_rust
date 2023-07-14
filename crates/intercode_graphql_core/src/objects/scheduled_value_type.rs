@@ -5,7 +5,9 @@ use chrono::{DateTime, TimeZone};
 use intercode_timespan::{ScheduledValue, TimespanWithValue};
 use rusty_money::{iso::Currency, Money};
 
-use super::{TimespanWithMoneyValueType, TimespanWithStringableValueType};
+use super::timespan_with_value_type::{
+  TimespanWithMoneyValueType, TimespanWithStringableValueType,
+};
 
 pub struct ScheduledStringableValueType<
   Tz: TimeZone + Debug,

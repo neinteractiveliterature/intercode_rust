@@ -1,7 +1,6 @@
 use async_graphql::Object;
 use intercode_entities::PayWhatYouWantValue;
-
-use super::MoneyType;
+use intercode_graphql_core::objects::MoneyType;
 
 pub struct PayWhatYouWantValueType {
   value: PayWhatYouWantValue,

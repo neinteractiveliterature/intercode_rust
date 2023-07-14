@@ -3,13 +3,15 @@ use std::sync::Arc;
 use async_graphql::*;
 use intercode_entities::orders;
 use intercode_graphql_core::{
-  load_one_by_model_id, model_backed_type, scalars::DateScalar, ModelBackedType,
+  load_one_by_model_id, loader_result_to_many, model_backed_type, objects::MoneyType,
+  scalars::DateScalar, ModelBackedType,
 };
 use intercode_graphql_loaders::LoaderManager;
+use intercode_store::objects::CouponApplicationType;
 use rusty_money::{iso, Money};
 use seawater::loaders::{ExpectModel, ExpectModels};
 
-use super::{money_type::MoneyType, CouponApplicationType, OrderEntryType, UserConProfileType};
+use super::{OrderEntryType, UserConProfileType};
 model_backed_type!(OrderType, orders::Model);
 
 #[Object(name = "Order")]
@@ -25,35 +27,14 @@ impl OrderType {
 
   #[graphql(name = "coupon_applications")]
   async fn coupon_applications(&self, ctx: &Context<'_>) -> Result<Vec<CouponApplicationType>> {
-    let loader_result = ctx
-      .data::<Arc<LoaderManager>>()?
-      .order_coupon_applications()
-      .load_one(self.model.id)
-      .await?;
-
-    Ok(
-      loader_result
-        .expect_models()?
-        .iter()
-        .cloned()
-        .map(CouponApplicationType::new)
-        .collect(),
-    )
+    let loader_result = load_one_by_model_id!(order_coupon_applications, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, CouponApplicationType))
   }
 
   #[graphql(name = "order_entries")]
   async fn order_entries(&self, ctx: &Context<'_>) -> Result<Vec<OrderEntryType>, Error> {
-    let loader = &ctx.data::<Arc<LoaderManager>>()?.order_order_entries();
-
-    Ok(
-      loader
-        .load_one(self.model.id)
-        .await?
-        .expect_models()?
-        .iter()
-        .map(|order_entry| OrderEntryType::new(order_entry.to_owned()))
-        .collect(),
-    )
+    let loader_result = load_one_by_model_id!(order_order_entries, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, OrderEntryType))
   }
 
   #[graphql(name = "payment_amount")]

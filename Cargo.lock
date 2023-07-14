@@ -2303,8 +2303,10 @@ dependencies = [
  "intercode_graphql_loaders",
  "intercode_inflector",
  "intercode_liquid",
+ "intercode_pagination_from_query_builder",
  "intercode_policies",
  "intercode_query_builders",
+ "intercode_store",
  "intercode_timespan",
  "itertools",
  "liquid",
@@ -2337,9 +2339,11 @@ dependencies = [
  "intercode_entities",
  "intercode_liquid",
  "intercode_policies",
+ "intercode_timespan",
  "liquid",
  "once_cell",
  "regex",
+ "rusty-money",
  "sea-orm",
  "seawater",
  "serde_json",
@@ -2403,6 +2407,17 @@ dependencies = [
  "tokio",
  "tracing",
  "url",
+]
+
+[[package]]
+name = "intercode_pagination_from_query_builder"
+version = "0.1.0"
+dependencies = [
+ "async-graphql",
+ "intercode_graphql_core",
+ "intercode_policies",
+ "intercode_query_builders",
+ "sea-orm",
 ]
 
 [[package]]
@@ -2509,6 +2524,25 @@ dependencies = [
  "unic-langid",
  "url",
  "uuid",
+]
+
+[[package]]
+name = "intercode_store"
+version = "0.1.0"
+dependencies = [
+ "async-graphql",
+ "chrono",
+ "intercode_entities",
+ "intercode_graphql_core",
+ "intercode_graphql_loaders",
+ "intercode_liquid",
+ "intercode_pagination_from_query_builder",
+ "intercode_policies",
+ "intercode_query_builders",
+ "rusty-money",
+ "sea-orm",
+ "seawater",
+ "serde_json",
 ]
 
 [[package]]

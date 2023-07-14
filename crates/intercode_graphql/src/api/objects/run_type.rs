@@ -6,7 +6,7 @@ use intercode_entities::{events, runs, signups, user_con_profiles, users};
 use intercode_graphql_core::{
   load_one_by_model_id, loader_result_to_many, loader_result_to_required_single, model_backed_type,
   scalars::{DateScalar, JsonScalar},
-  ModelBackedType,
+  ModelBackedType, PaginationImplementation,
 };
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
@@ -20,10 +20,7 @@ use sea_orm::{
 };
 use seawater::loaders::ExpectModel;
 
-use crate::{
-  api::{inputs::SignupFiltersInput, interfaces::PaginationImplementation},
-  QueryData,
-};
+use crate::{api::inputs::SignupFiltersInput, QueryData};
 
 use super::{
   signup_request_type::SignupRequestType, EventType, RoomType, SignupType, SignupsPaginationType,

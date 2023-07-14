@@ -1,9 +1,8 @@
 use async_graphql::{Context, Error, Object};
 use intercode_entities::coupons;
-use intercode_graphql_core::{query_data::QueryData, ModelBackedType};
+use intercode_graphql_core::{query_data::QueryData, ModelBackedType, PaginationImplementation};
+use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
 use sea_orm::{ConnectionTrait, EntityTrait, Paginator, PaginatorTrait, Select, SelectModel};
-
-use crate::api::interfaces::PaginationImplementation;
 
 use super::CouponType;
 
@@ -70,3 +69,5 @@ impl PaginationImplementation<coupons::Entity> for CouponsPaginationType {
     )
   }
 }
+
+impl PaginationFromQueryBuilder<coupons::Entity> for CouponsPaginationType {}

@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use super::TicketTypeType;
 use async_graphql::*;
 use intercode_entities::{conventions, events, maximum_event_provided_tickets_overrides};
 use intercode_graphql_core::{model_backed_type, policy_guard::PolicyGuard, ModelBackedType};
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{policies::MaximumEventProvidedTicketsOverridePolicy, ReadManageAction};
+use intercode_store::objects::TicketTypeType;
 use seawater::loaders::ExpectModel;
 
 model_backed_type!(

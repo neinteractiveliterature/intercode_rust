@@ -1,10 +1,11 @@
-use super::{MoneyType, ProductType};
 use async_graphql::*;
 use intercode_entities::coupons;
 use intercode_graphql_core::{
-  load_one_by_model_id, model_backed_type, scalars::DateScalar, ModelBackedType,
+  load_one_by_model_id, model_backed_type, objects::MoneyType, scalars::DateScalar, ModelBackedType,
 };
 use seawater::loaders::ExpectModel;
+
+use super::ProductType;
 
 model_backed_type!(CouponType, coupons::Model);
 

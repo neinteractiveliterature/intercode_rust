@@ -1,9 +1,8 @@
 use async_graphql::{Context, Error, Object};
 use intercode_entities::email_routes;
-use intercode_graphql_core::{query_data::QueryData, ModelBackedType};
+use intercode_graphql_core::{query_data::QueryData, ModelBackedType, PaginationImplementation};
+use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
 use sea_orm::{ConnectionTrait, EntityTrait, Paginator, PaginatorTrait, Select, SelectModel};
-
-use crate::api::interfaces::PaginationImplementation;
 
 use super::EmailRouteType;
 
@@ -74,3 +73,5 @@ impl PaginationImplementation<email_routes::Entity> for EmailRoutesPaginationTyp
     )
   }
 }
+
+impl PaginationFromQueryBuilder<email_routes::Entity> for EmailRoutesPaginationType {}

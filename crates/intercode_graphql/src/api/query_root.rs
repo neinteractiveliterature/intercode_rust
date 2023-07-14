@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::sync::Arc;
 
-use super::interfaces::{CmsParentInterface, PaginationImplementation};
+use super::interfaces::CmsParentInterface;
 use super::objects::{
   AbilityType, ConventionType, EmailRoutesPaginationType, EventType, OrganizationType,
   RootSiteType, UserConProfileType, UserType,
@@ -14,13 +14,14 @@ use intercode_graphql_core::entity_relay_connection::RelayConnectable;
 use intercode_graphql_core::liquid_renderer::LiquidRenderer;
 use intercode_graphql_core::query_data::QueryData;
 use intercode_graphql_core::ModelBackedType;
+use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
 use intercode_policies::policies::EmailRoutePolicy;
-use intercode_policies::{AuthorizationInfo, EntityPolicy, ReadManageAction};
+use intercode_policies::AuthorizationInfo;
 use intercode_query_builders::sort_input::SortInput;
 use intercode_query_builders::{EmailRouteFiltersInput, EmailRoutesQueryBuilder};
 use itertools::Itertools;
 use liquid::object;
-use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect};
+use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait};
 
 pub struct QueryRoot;
 
@@ -99,24 +100,14 @@ impl QueryRoot {
     filters: Option<EmailRouteFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<EmailRoutesPaginationType, Error> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
-    let scope = email_routes::Entity::find().filter(
-      email_routes::Column::Id.in_subquery(
-        sea_orm::QuerySelect::query(
-          &mut EmailRoutePolicy::accessible_to(authorization_info, &ReadManageAction::Read)
-            .select_only()
-            .column(email_routes::Column::Id),
-        )
-        .take(),
-      ),
-    );
-
-    Ok(EmailRoutesPaginationType::from_query_builder(
+    EmailRoutesPaginationType::authorized_from_query_builder(
       &EmailRoutesQueryBuilder::new(filters, sort),
-      scope,
+      ctx,
+      email_routes::Entity::find(),
       page,
       per_page,
-    ))
+      EmailRoutePolicy,
+    )
   }
 
   async fn events(

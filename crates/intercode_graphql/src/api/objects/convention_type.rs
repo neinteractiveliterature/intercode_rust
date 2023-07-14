@@ -2,22 +2,18 @@ use std::{str::FromStr, sync::Arc};
 
 use super::{
   mailing_lists_type::MailingListsType, stripe_account_type::StripeAccountType,
-  user_activity_alert_type::UserActivityAlertType, CouponsPaginationType, DepartmentType,
-  EventCategoryType, EventProposalType, EventProposalsPaginationType, EventType,
-  EventsPaginationType, FormType, OrdersPaginationType, RoomType, ScheduledStringableValueType,
-  SignupRequestsPaginationType, SignupType, StaffPositionType, TicketTypeType, UserConProfileType,
-  UserConProfilesPaginationType,
+  user_activity_alert_type::UserActivityAlertType, DepartmentType, EventCategoryType,
+  EventProposalType, EventProposalsPaginationType, EventType, EventsPaginationType, FormType,
+  OrdersPaginationType, RoomType, SignupRequestsPaginationType, SignupType, StaffPositionType,
+  UserConProfileType, UserConProfilesPaginationType,
 };
-use crate::{
-  api::{interfaces::PaginationImplementation, objects::ProductType},
-  SchemaData,
-};
+use crate::SchemaData;
 use async_graphql::*;
 use chrono::{DateTime, Utc};
 use futures::future::try_join_all;
 use intercode_cms::api::{objects::NotificationTemplateType, partial_objects::ConventionCmsFields};
 use intercode_entities::{
-  conventions, coupons, event_proposals, events, forms,
+  conventions, event_proposals, events, forms,
   links::{
     ConventionToOrders, ConventionToSignupRequests, ConventionToSignups, ConventionToStaffPositions,
   },
@@ -28,25 +24,27 @@ use intercode_graphql_core::{
   enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
   lax_id::LaxId,
   load_one_by_model_id, loader_result_to_many, model_backed_type,
-  objects::ActiveStorageAttachmentType,
+  objects::{ActiveStorageAttachmentType, ScheduledStringableValueType},
   query_data::QueryData,
   scalars::DateScalar,
   ModelBackedType,
 };
 use intercode_graphql_loaders::LoaderManager;
+use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
 use intercode_policies::{
   policies::{
-    ConventionAction, ConventionPolicy, CouponPolicy, EventPolicy, EventProposalAction,
-    EventProposalPolicy, OrderPolicy, SignupRequestPolicy, UserConProfilePolicy,
+    ConventionAction, ConventionPolicy, EventPolicy, EventProposalAction, EventProposalPolicy,
+    OrderPolicy, SignupRequestPolicy, UserConProfilePolicy,
   },
   AuthorizationInfo, Policy,
 };
 use intercode_query_builders::{
-  sort_input::SortInput, CouponFiltersInput, CouponsQueryBuilder, EventFiltersInput,
-  EventProposalFiltersInput, EventProposalsQueryBuilder, EventsQueryBuilder, OrderFiltersInput,
-  OrdersQueryBuilder, QueryBuilder, SignupRequestFiltersInput, SignupRequestsQueryBuilder,
-  UserConProfileFiltersInput, UserConProfilesQueryBuilder,
+  sort_input::SortInput, EventFiltersInput, EventProposalFiltersInput, EventProposalsQueryBuilder,
+  EventsQueryBuilder, OrderFiltersInput, OrdersQueryBuilder, QueryBuilder,
+  SignupRequestFiltersInput, SignupRequestsQueryBuilder, UserConProfileFiltersInput,
+  UserConProfilesQueryBuilder,
 };
+use intercode_store::partial_objects::ConventionStoreFields;
 use intercode_timespan::ScheduledValue;
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, ModelTrait, QueryFilter};
 use seawater::loaders::{ExpectModel, ExpectModels};
@@ -105,25 +103,6 @@ impl ConventionApiFields {
   #[graphql(name = "clickwrap_agreement")]
   async fn clickwrap_agreement(&self) -> Option<&str> {
     self.model.clickwrap_agreement.as_deref()
-  }
-
-  #[graphql(name = "coupons_paginated")]
-  async fn coupons_paginated(
-    &self,
-    ctx: &Context<'_>,
-    page: Option<u64>,
-    #[graphql(name = "per_page")] per_page: Option<u64>,
-    filters: Option<CouponFiltersInput>,
-    sort: Option<Vec<SortInput>>,
-  ) -> Result<CouponsPaginationType, Error> {
-    CouponsPaginationType::authorized_from_query_builder(
-      &CouponsQueryBuilder::new(filters, sort),
-      ctx,
-      self.model.find_related(coupons::Entity),
-      page,
-      per_page,
-      CouponPolicy,
-    )
   }
 
   async fn departments(&self, ctx: &Context<'_>) -> Result<Vec<DepartmentType>> {
@@ -487,11 +466,6 @@ impl ConventionApiFields {
     )
   }
 
-  async fn products(&self, ctx: &Context<'_>) -> Result<Vec<ProductType>> {
-    let loader_result = load_one_by_model_id!(convention_products, ctx, self)?;
-    Ok(loader_result_to_many!(loader_result, ProductType))
-  }
-
   async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<RoomType>, Error> {
     let loader_result = load_one_by_model_id!(convention_rooms, ctx, self)?;
     Ok(loader_result_to_many!(loader_result, RoomType))
@@ -638,27 +612,6 @@ impl ConventionApiFields {
     intercode_inflector::inflector::Inflector::to_plural(self.model.ticket_name.as_str())
   }
 
-  #[graphql(name = "ticket_types")]
-  async fn ticket_types(&self, ctx: &Context<'_>) -> Result<Vec<TicketTypeType>, Error> {
-    let loaders = ctx.data::<Arc<LoaderManager>>()?;
-
-    Ok(
-      loaders
-        .convention_ticket_types()
-        .load_one(self.model.id)
-        .await?
-        .expect_models()?
-        .iter()
-        .map(|tt| TicketTypeType::new(tt.to_owned()))
-        .collect(),
-    )
-  }
-
-  #[graphql(name = "tickets_available_for_purchase")]
-  async fn tickets_available_for_purchase(&self) -> bool {
-    self.model.tickets_available_for_purchase()
-  }
-
   #[graphql(name = "timezone_mode")]
   async fn timezone_mode(&self) -> Result<TimezoneMode, Error> {
     self.model.timezone_mode.as_str().try_into()
@@ -728,7 +681,12 @@ impl ConventionApiFields {
 }
 
 #[derive(MergedObject)]
-pub struct ConventionType(ConventionApiFields, ConventionCmsFields);
+#[graphql(name = "Convention")]
+pub struct ConventionType(
+  ConventionApiFields,
+  ConventionCmsFields,
+  ConventionStoreFields,
+);
 
 impl ModelBackedType for ConventionType {
   type Model = conventions::Model;
@@ -736,7 +694,8 @@ impl ModelBackedType for ConventionType {
   fn new(model: Self::Model) -> Self {
     Self(
       ConventionApiFields::new(model.clone()),
-      ConventionCmsFields::new(model),
+      ConventionCmsFields::new(model.clone()),
+      ConventionStoreFields::new(model),
     )
   }
 
