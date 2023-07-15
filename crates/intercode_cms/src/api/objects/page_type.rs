@@ -7,11 +7,11 @@ use intercode_graphql_core::{
   ModelBackedType,
 };
 use intercode_liquid::cms_parent_partial_source::PreloadPartialsStrategy;
-use intercode_policies::{policies::CmsContentPolicy, AuthorizationInfo, Policy, ReadManageAction};
+use intercode_policies::{AuthorizationInfo, Policy, ReadManageAction};
 use liquid::object;
 use seawater::loaders::ExpectModel;
 
-use crate::CmsRenderingContext;
+use crate::{api::policies::CmsContentPolicy, CmsRenderingContext};
 
 use super::CmsLayoutType;
 model_backed_type!(PageType, pages::Model);

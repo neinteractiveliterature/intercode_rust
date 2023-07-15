@@ -1,14 +1,11 @@
 use async_graphql::{InputObject, ID};
 use intercode_entities::{orders, user_con_profiles};
 use intercode_graphql_core::{filter_utils::string_search_condition, lax_id::LaxId};
+use intercode_query_builders::{sort_input::SortInput, QueryBuilder};
 use sea_orm::{
   sea_query::{Cond, Expr, Func, SimpleExpr},
   ColumnTrait, QueryFilter, QueryOrder, Select,
 };
-
-use crate::sort_input::SortInput;
-
-use super::QueryBuilder;
 
 #[derive(InputObject, Default)]
 pub struct OrderFiltersInput {

@@ -7,11 +7,11 @@ use intercode_graphql_core::{
   schema_data::SchemaData, ModelBackedType,
 };
 use intercode_liquid::{cms_parent_partial_source::PreloadPartialsStrategy, react_component_tag};
-use intercode_policies::{policies::CmsContentPolicy, AuthorizationInfo, Policy, ReadManageAction};
+use intercode_policies::{AuthorizationInfo, Policy, ReadManageAction};
 use liquid::object;
 use serde_json::json;
 
-use crate::CmsRenderingContext;
+use crate::{api::policies::CmsContentPolicy, CmsRenderingContext};
 
 model_backed_type!(CmsLayoutType, cms_layouts::Model);
 

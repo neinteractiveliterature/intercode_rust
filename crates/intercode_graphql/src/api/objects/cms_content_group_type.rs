@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use async_graphql::*;
-use intercode_cms::api::objects::{CmsContentType, CmsLayoutType, CmsPartialType, PageType};
+use intercode_cms::api::{
+  objects::{CmsContentType, CmsLayoutType, CmsPartialType, PageType},
+  policies::CmsContentPolicy,
+};
 use intercode_entities::cms_content_groups;
 use intercode_graphql_core::{
   load_one_by_model_id, loader_result_to_many, model_backed_type, ModelBackedType,
@@ -9,7 +12,7 @@ use intercode_graphql_core::{
 use intercode_graphql_loaders::{
   cms_content_group_contents_loader::CmsContentGroupItem, LoaderManager,
 };
-use intercode_policies::{policies::CmsContentPolicy, AuthorizationInfo, Policy, ReadManageAction};
+use intercode_policies::{AuthorizationInfo, Policy, ReadManageAction};
 
 use super::PermissionType;
 model_backed_type!(CmsContentGroupType, cms_content_groups::Model);

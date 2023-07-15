@@ -4,15 +4,17 @@ use async_graphql::*;
 use intercode_entities::{conventions, coupons, links::ConventionToOrders};
 use intercode_graphql_core::{load_one_by_model_id, loader_result_to_many, model_backed_type};
 use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
-use intercode_policies::policies::{CouponPolicy, OrderPolicy};
-use intercode_query_builders::{
-  sort_input::SortInput, CouponFiltersInput, CouponsQueryBuilder, OrderFiltersInput,
-  OrdersQueryBuilder,
-};
+use intercode_query_builders::sort_input::SortInput;
 use sea_orm::ModelTrait;
 
-use crate::objects::{
-  CouponsPaginationType, OrdersPaginationType, ProductType, StripeAccountType, TicketTypeType,
+use crate::{
+  objects::{
+    CouponsPaginationType, OrdersPaginationType, ProductType, StripeAccountType, TicketTypeType,
+  },
+  policies::{CouponPolicy, OrderPolicy},
+  query_builders::{
+    CouponFiltersInput, CouponsQueryBuilder, OrderFiltersInput, OrdersQueryBuilder,
+  },
 };
 
 model_backed_type!(ConventionStoreFields, conventions::Model);

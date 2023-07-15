@@ -21,7 +21,7 @@ use intercode_query_builders::sort_input::SortInput;
 use intercode_query_builders::{EmailRouteFiltersInput, EmailRoutesQueryBuilder};
 use itertools::Itertools;
 use liquid::object;
-use sea_orm::{ColumnTrait, EntityTrait, PaginatorTrait};
+use sea_orm::{EntityTrait, PaginatorTrait};
 
 pub struct QueryRoot;
 

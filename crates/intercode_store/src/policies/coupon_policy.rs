@@ -1,11 +1,7 @@
-use axum::async_trait;
+use async_trait::async_trait;
 use intercode_entities::{conventions, coupon_applications, coupons, orders};
+use intercode_policies::{AuthorizationInfo, EntityPolicy, Policy, ReadManageAction};
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect};
-
-use crate::{
-  authorization_info::AuthorizationInfo,
-  policy::{EntityPolicy, Policy, ReadManageAction},
-};
 
 pub struct CouponPolicy;
 

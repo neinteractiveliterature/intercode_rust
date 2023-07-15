@@ -1,56 +1,34 @@
-use std::{
-  borrow::{Borrow, Cow},
-  sync::Arc,
-};
+use std::{borrow::Cow, sync::Arc};
 
 use async_graphql::*;
+use intercode_cms::api::partial_objects::AbilityCmsFields;
 use intercode_entities::{
-  cms_content_model::CmsContentModel, conventions, departments, email_routes, event_categories,
-  events, forms, notification_templates, orders, organizations, pages, products, rooms, root_sites,
-  runs, signups, staff_positions, ticket_types, tickets, user_activity_alerts, user_con_profiles,
+  conventions, departments, email_routes, event_categories, events, forms, notification_templates,
+  organizations, rooms, runs, signups, staff_positions, tickets, user_activity_alerts,
+  user_con_profiles,
 };
-use intercode_graphql_core::{lax_id::LaxId, load_one_by_id, query_data::QueryData};
+use intercode_graphql_core::{lax_id::LaxId, query_data::QueryData};
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
+  model_action_permitted::model_action_permitted,
   policies::{
-    CmsContentPolicy, ConventionAction, ConventionPolicy, DepartmentPolicy, EmailRoutePolicy,
-    EventAction, EventCategoryPolicy, EventPolicy, EventProposalAction, EventProposalPolicy,
-    FormPolicy, NotificationTemplatePolicy, OrderAction, OrderPolicy, OrganizationPolicy,
-    ProductPolicy, RoomPolicy, RunAction, RunPolicy, SignupAction, SignupPolicy,
-    StaffPositionPolicy, TicketAction, TicketPolicy, TicketTypePolicy, UserActivityAlertPolicy,
+    ConventionAction, ConventionPolicy, DepartmentPolicy, EmailRoutePolicy, EventAction,
+    EventCategoryPolicy, EventPolicy, EventProposalAction, EventProposalPolicy, FormPolicy,
+    NotificationTemplatePolicy, OrganizationPolicy, RoomPolicy, RunAction, RunPolicy, SignupAction,
+    SignupPolicy, StaffPositionPolicy, TicketAction, TicketPolicy, UserActivityAlertPolicy,
     UserConProfileAction, UserConProfilePolicy,
   },
-  AuthorizationInfo, EntityPolicy, Policy, ReadManageAction,
+  AuthorizationInfo, Policy, ReadManageAction,
 };
-use sea_orm::{EntityTrait, PaginatorTrait};
+use intercode_store::partial_objects::AbilityStoreFields;
+use sea_orm::EntityTrait;
 use seawater::loaders::ExpectModel;
 
-pub struct AbilityType<'a> {
+pub struct AbilityApiFields<'a> {
   authorization_info: Cow<'a, AuthorizationInfo>,
 }
 
-async fn model_action_permitted<
-  'a,
-  P: Policy<AuthorizationInfo, M>,
-  M: Send + Sync + 'a,
-  R: Borrow<M>,
->(
-  authorization_info: &AuthorizationInfo,
-  _policy: P,
-  ctx: &'a Context<'_>,
-  action: &P::Action,
-  get_model: impl FnOnce(&'a Context<'_>) -> Result<Option<R>, Error>,
-) -> Result<bool, Error> {
-  let model_ref = get_model(ctx)?;
-
-  if let Some(model_ref) = model_ref {
-    Ok(P::action_permitted(authorization_info, action, model_ref.borrow()).await?)
-  } else {
-    Ok(false)
-  }
-}
-
-impl<'a> AbilityType<'a> {
+impl<'a> AbilityApiFields<'a> {
   pub fn new(authorization_info: Cow<'a, AuthorizationInfo>) -> Self {
     Self { authorization_info }
   }
@@ -166,32 +144,10 @@ impl<'a> AbilityType<'a> {
     )
     .await
   }
-
-  async fn can_perform_cms_content_action(
-    &self,
-    ctx: &Context<'_>,
-    action: ReadManageAction,
-  ) -> Result<bool, Error> {
-    let convention = ctx.data::<QueryData>()?.convention();
-
-    Ok(if let Some(convention) = convention {
-      CmsContentPolicy::action_permitted(self.authorization_info.as_ref(), &action, convention)
-        .await?
-    } else {
-      CmsContentPolicy::action_permitted(
-        self.authorization_info.as_ref(),
-        &action,
-        &root_sites::Model {
-          ..Default::default()
-        },
-      )
-      .await?
-    })
-  }
 }
 
-#[Object(name = "Ability")]
-impl<'a> AbilityType<'a> {
+#[Object]
+impl<'a> AbilityApiFields<'a> {
   #[graphql(name = "can_manage_conventions")]
   async fn can_manage_conventions(&self, ctx: &Context<'_>) -> Result<bool, Error> {
     model_action_permitted(
@@ -250,62 +206,6 @@ impl<'a> AbilityType<'a> {
       |ctx| Ok(ctx.data::<QueryData>()?.convention()),
     )
     .await
-  }
-
-  #[graphql(name = "can_create_cms_files")]
-  async fn can_create_cms_files(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    self
-      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
-      .await
-  }
-
-  #[graphql(name = "can_create_pages")]
-  async fn can_create_pages(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    self
-      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
-      .await
-  }
-
-  #[graphql(name = "can_create_cms_partials")]
-  async fn can_create_cms_partials(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    self
-      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
-      .await
-  }
-
-  #[graphql(name = "can_create_cms_layouts")]
-  async fn can_create_cms_layouts(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    self
-      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
-      .await
-  }
-
-  #[graphql(name = "can_create_cms_navigation_items")]
-  async fn can_create_cms_navigation_items(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    self
-      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
-      .await
-  }
-
-  #[graphql(name = "can_create_cms_variables")]
-  async fn can_create_cms_variables(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    self
-      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
-      .await
-  }
-
-  #[graphql(name = "can_create_cms_graphql_queries")]
-  async fn can_create_cms_graphql_queries(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    self
-      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
-      .await
-  }
-
-  #[graphql(name = "can_create_cms_content_groups")]
-  async fn can_create_cms_content_groups(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    self
-      .can_perform_cms_content_action(ctx, ReadManageAction::Manage)
-      .await
   }
 
   #[graphql(name = "can_create_user_con_profiles")]
@@ -690,23 +590,6 @@ impl<'a> AbilityType<'a> {
     .await
   }
 
-  #[graphql(name = "can_update_products")]
-  async fn can_update_products(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    model_action_permitted(
-      self.authorization_info.as_ref(),
-      ProductPolicy,
-      ctx,
-      &ReadManageAction::Manage,
-      |ctx| {
-        Ok(Some(products::Model {
-          convention_id: ctx.data::<QueryData>()?.convention().map(|con| con.id),
-          ..Default::default()
-        }))
-      },
-    )
-    .await
-  }
-
   #[graphql(name = "can_manage_rooms")]
   async fn can_manage_rooms(&self, ctx: &Context<'_>) -> Result<bool, Error> {
     model_action_permitted(
@@ -750,24 +633,6 @@ impl<'a> AbilityType<'a> {
     )
   }
 
-  #[graphql(name = "can_manage_any_cms_content")]
-  async fn can_manage_any_cms_content(&self, ctx: &Context<'_>) -> Result<bool> {
-    let query_data = ctx.data::<QueryData>()?;
-
-    Ok(
-      pages::Model::filter_by_parent(
-        CmsContentPolicy::<pages::Model>::accessible_to(
-          &self.authorization_info,
-          &ReadManageAction::Manage,
-        ),
-        query_data.cms_parent(),
-      )
-      .count(query_data.db())
-      .await?
-        > 0,
-    )
-  }
-
   #[graphql(name = "can_manage_staff_positions")]
   async fn can_manage_staff_positions(&self, ctx: &Context<'_>) -> Result<bool> {
     let authorization_info = self.authorization_info.as_ref();
@@ -780,117 +645,6 @@ impl<'a> AbilityType<'a> {
           convention_id: convention.map(|c| c.id),
           ..Default::default()
         },
-      )
-      .await?,
-    )
-  }
-
-  #[graphql(name = "can_read_orders")]
-  async fn can_read_orders(&self, ctx: &Context<'_>) -> Result<bool> {
-    let authorization_info = self.authorization_info.as_ref();
-    let convention = ctx.data::<QueryData>()?.convention();
-    let Some(convention)= convention else {
-      return Ok(false);
-    };
-
-    Ok(
-      OrderPolicy::action_permitted(
-        authorization_info,
-        &OrderAction::Read,
-        &(
-          convention.clone(),
-          user_con_profiles::Model {
-            convention_id: convention.id,
-            ..Default::default()
-          },
-          orders::Model {
-            ..Default::default()
-          },
-          vec![],
-        ),
-      )
-      .await?,
-    )
-  }
-
-  #[graphql(name = "can_create_orders")]
-  async fn can_create_orders(&self, ctx: &Context<'_>) -> Result<bool> {
-    let authorization_info = self.authorization_info.as_ref();
-    let convention = ctx.data::<QueryData>()?.convention();
-    let Some(convention)= convention else {
-      return Ok(false);
-    };
-
-    Ok(
-      OrderPolicy::action_permitted(
-        authorization_info,
-        &OrderAction::Manage,
-        &(
-          convention.clone(),
-          user_con_profiles::Model {
-            convention_id: convention.id,
-            ..Default::default()
-          },
-          orders::Model {
-            ..Default::default()
-          },
-          vec![],
-        ),
-      )
-      .await?,
-    )
-  }
-
-  #[graphql(name = "can_update_orders")]
-  async fn can_update_orders(&self, ctx: &Context<'_>) -> Result<bool> {
-    let authorization_info = self.authorization_info.as_ref();
-    let convention = ctx.data::<QueryData>()?.convention();
-    let Some(convention)= convention else {
-      return Ok(false);
-    };
-
-    Ok(
-      OrderPolicy::action_permitted(
-        authorization_info,
-        &OrderAction::Manage,
-        &(
-          convention.clone(),
-          user_con_profiles::Model {
-            convention_id: convention.id,
-            ..Default::default()
-          },
-          orders::Model {
-            ..Default::default()
-          },
-          vec![],
-        ),
-      )
-      .await?,
-    )
-  }
-
-  #[graphql(name = "can_manage_ticket_types")]
-  async fn can_manage_ticket_types(&self, ctx: &Context<'_>) -> Result<bool> {
-    let authorization_info = self.authorization_info.as_ref();
-    let convention = ctx.data::<QueryData>()?.convention();
-    let Some(convention)= convention else {
-      return Ok(false);
-    };
-    let single_event_loader_result = load_one_by_id!(convention_single_event, ctx, convention.id)?;
-    let single_event = single_event_loader_result.try_one();
-
-    Ok(
-      TicketTypePolicy::action_permitted(
-        authorization_info,
-        &ReadManageAction::Manage,
-        &(
-          convention.clone(),
-          single_event.cloned(),
-          ticket_types::Model {
-            convention_id: Some(convention.id),
-            ..Default::default()
-          },
-        ),
       )
       .await?,
     )
@@ -1063,5 +817,23 @@ impl<'a> AbilityType<'a> {
       |_ctx| Ok(Some(&policy_model)),
     )
     .await
+  }
+}
+
+#[derive(MergedObject)]
+#[graphql(name = "Ability")]
+pub struct AbilityType<'a>(
+  AbilityStoreFields<'a>,
+  AbilityCmsFields<'a>,
+  AbilityApiFields<'a>,
+);
+
+impl<'a> AbilityType<'a> {
+  pub fn new(authorization_info: Cow<'a, AuthorizationInfo>) -> Self {
+    Self(
+      AbilityStoreFields::new(authorization_info.clone()),
+      AbilityCmsFields::new(authorization_info.clone()),
+      AbilityApiFields::new(authorization_info),
+    )
   }
 }

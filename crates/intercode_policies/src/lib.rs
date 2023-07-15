@@ -1,5 +1,6 @@
 mod authorization_info;
 mod form_response_policy;
+pub mod model_action_permitted;
 mod permissions_loading;
 pub mod policies;
 mod policy;

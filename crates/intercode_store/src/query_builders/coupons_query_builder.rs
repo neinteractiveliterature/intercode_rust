@@ -1,14 +1,11 @@
 use async_graphql::InputObject;
 use intercode_entities::coupons;
 use intercode_graphql_core::filter_utils::string_search;
+use intercode_query_builders::{sort_input::SortInput, QueryBuilder};
 use sea_orm::{
   sea_query::{Expr, Func, SimpleExpr},
   QueryOrder, Select,
 };
-
-use crate::sort_input::SortInput;
-
-use super::QueryBuilder;
 
 #[derive(InputObject, Default)]
 pub struct CouponFiltersInput {

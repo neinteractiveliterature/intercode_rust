@@ -1,11 +1,7 @@
-use axum::async_trait;
+use async_trait::async_trait;
 use intercode_entities::{conventions, events, ticket_types};
+use intercode_policies::{AuthorizationInfo, EntityPolicy, Policy, ReadManageAction};
 use sea_orm::{sea_query::Expr, DbErr, EntityTrait, QueryFilter};
-
-use crate::{
-  authorization_info::AuthorizationInfo,
-  policy::{EntityPolicy, Policy, ReadManageAction},
-};
 
 async fn is_single_event_team_member(
   principal: &AuthorizationInfo,

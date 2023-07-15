@@ -9,6 +9,7 @@ version = "0.1.0"
 sea-orm = {workspace = true, features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"]}
 
 [dependencies]
+async-graphql = {workspace = true}
 async-trait = {workspace = true}
 axum = {workspace = true}
 cached = {workspace = true}

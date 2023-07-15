@@ -5,6 +5,8 @@ use tracing::warn;
 pub mod objects;
 mod order_summary_presenter;
 pub mod partial_objects;
+pub mod policies;
+pub mod query_builders;
 pub mod unions;
 
 static STRIPE_CLIENT: Lazy<Arc<stripe::Client>> = Lazy::new(|| {

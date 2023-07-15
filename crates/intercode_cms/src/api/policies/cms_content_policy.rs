@@ -6,6 +6,9 @@ use intercode_entities::{
   cms_files, cms_graphql_queries, cms_layouts, cms_partials, cms_variables, conventions, pages,
   permissions, root_sites,
 };
+use intercode_policies::{
+  user_permission_scope, AuthorizationInfo, EntityPolicy, Policy, ReadManageAction,
+};
 use sea_orm::{
   sea_query::{Expr, UnionType},
   ColumnTrait, DbErr, EntityTrait, ModelTrait, QueryFilter, QuerySelect, QueryTrait, Select,
@@ -57,8 +60,6 @@ impl CmsContentAuthorizable for root_sites::Model {
     None
   }
 }
-
-use crate::{user_permission_scope, AuthorizationInfo, EntityPolicy, Policy, ReadManageAction};
 
 pub struct CmsContentPolicy<M: CmsContentAuthorizable> {
   _phantom: PhantomData<M>,

@@ -1,7 +1,9 @@
 use async_graphql::*;
 use intercode_entities::cms_partials;
 use intercode_graphql_core::{model_backed_type, ModelBackedType};
-use intercode_policies::{policies::CmsContentPolicy, AuthorizationInfo, Policy, ReadManageAction};
+use intercode_policies::{AuthorizationInfo, Policy, ReadManageAction};
+
+use crate::api::policies::CmsContentPolicy;
 
 model_backed_type!(CmsPartialType, cms_partials::Model);
 

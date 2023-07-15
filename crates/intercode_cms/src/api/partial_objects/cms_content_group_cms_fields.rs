@@ -1,4 +1,7 @@
-use crate::api::objects::{CmsContentType, CmsLayoutType, CmsPartialType, PageType};
+use crate::api::{
+  objects::{CmsContentType, CmsLayoutType, CmsPartialType, PageType},
+  policies::CmsContentPolicy,
+};
 use std::sync::Arc;
 
 use async_graphql::*;
@@ -7,7 +10,7 @@ use intercode_graphql_core::{model_backed_type, ModelBackedType};
 use intercode_graphql_loaders::{
   cms_content_group_contents_loader::CmsContentGroupItem, LoaderManager,
 };
-use intercode_policies::{policies::CmsContentPolicy, AuthorizationInfo, Policy, ReadManageAction};
+use intercode_policies::{AuthorizationInfo, Policy, ReadManageAction};
 
 model_backed_type!(CmsContentGroupCmsFields, cms_content_groups::Model);
 

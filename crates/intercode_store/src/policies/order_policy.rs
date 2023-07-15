@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use futures::future::try_join_all;
 use intercode_entities::{conventions, orders, tickets, user_con_profiles};
+use intercode_policies::{
+  policies::{TicketAction, TicketPolicy},
+  AuthorizationInfo, EntityPolicy, Policy, ReadManageAction,
+};
 use sea_orm::{sea_query::Cond, ColumnTrait, DbErr, EntityTrait, QueryFilter, QuerySelect};
-
-use crate::{AuthorizationInfo, EntityPolicy, Policy, ReadManageAction};
-
-use super::{TicketAction, TicketPolicy};
 
 pub enum OrderAction {
   Read,

@@ -6,7 +6,9 @@ use intercode_graphql_core::{
   model_backed_type, objects::ActiveStorageAttachmentType, ModelBackedType,
 };
 use intercode_graphql_loaders::LoaderManager;
-use intercode_policies::{policies::CmsContentPolicy, AuthorizationInfo, Policy, ReadManageAction};
+use intercode_policies::{AuthorizationInfo, Policy, ReadManageAction};
+
+use crate::api::policies::CmsContentPolicy;
 
 model_backed_type!(CmsFileType, cms_files::Model);
 

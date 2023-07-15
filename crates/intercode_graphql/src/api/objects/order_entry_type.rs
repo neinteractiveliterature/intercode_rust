@@ -5,10 +5,10 @@ use intercode_store::partial_objects::OrderEntryStoreFields;
 
 use super::OrderType;
 
-model_backed_type!(OrderEntryApiFields, order_entries::Model);
+model_backed_type!(OrderEntryGlueFields, order_entries::Model);
 
 #[Object]
-impl OrderEntryApiFields {
+impl OrderEntryGlueFields {
   pub async fn order(&self, ctx: &Context<'_>) -> Result<OrderType> {
     OrderEntryStoreFields::from_type(self.clone())
       .order(ctx)
@@ -19,14 +19,14 @@ impl OrderEntryApiFields {
 
 #[derive(MergedObject)]
 #[graphql(name = "OrderEntryType")]
-pub struct OrderEntryType(OrderEntryApiFields, OrderEntryStoreFields);
+pub struct OrderEntryType(OrderEntryGlueFields, OrderEntryStoreFields);
 
 impl ModelBackedType for OrderEntryType {
   type Model = order_entries::Model;
 
   fn new(model: Self::Model) -> Self {
     Self(
-      OrderEntryApiFields::new(model.clone()),
+      OrderEntryGlueFields::new(model.clone()),
       OrderEntryStoreFields::new(model),
     )
   }

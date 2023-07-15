@@ -5,10 +5,10 @@ use intercode_store::partial_objects::OrderStoreFields;
 
 use super::{OrderEntryType, UserConProfileType};
 
-model_backed_type!(OrderApiFields, orders::Model);
+model_backed_type!(OrderGlueFields, orders::Model);
 
 #[Object]
-impl OrderApiFields {
+impl OrderGlueFields {
   #[graphql(name = "order_entries")]
   pub async fn order_entries(&self, ctx: &Context<'_>) -> Result<Vec<OrderEntryType>, Error> {
     OrderStoreFields::from_type(self.clone())
@@ -28,14 +28,14 @@ impl OrderApiFields {
 
 #[derive(MergedObject)]
 #[graphql(name = "OrderType")]
-pub struct OrderType(OrderApiFields, OrderStoreFields);
+pub struct OrderType(OrderGlueFields, OrderStoreFields);
 
 impl ModelBackedType for OrderType {
   type Model = orders::Model;
 
   fn new(model: Self::Model) -> Self {
     Self(
-      OrderApiFields::new(model.clone()),
+      OrderGlueFields::new(model.clone()),
       OrderStoreFields::new(model),
     )
   }
