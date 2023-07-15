@@ -9,5 +9,4 @@ version = "0.1.0"
 async-graphql = {workspace = true}
 intercode_entities = {path = "../intercode_entities"}
 intercode_graphql_core = {path = "../intercode_graphql_core"}
-intercode_policies = {path = "../intercode_policies"}
 sea-orm = {workspace = true}
