@@ -2,14 +2,13 @@ use std::borrow::Cow;
 use std::sync::Arc;
 
 use super::{
-  AbilityType, ConventionType, OrderType, SignupType, StaffPositionType, TeamMemberType, TicketType,
+  AbilityType, ConventionType, SignupType, StaffPositionType, TeamMemberType, TicketType,
 };
-use crate::presenters::order_summary_presenter::load_and_describe_order_summary_for_user_con_profile;
 use crate::{api::interfaces::FormResponseImplementation, QueryData};
 use async_graphql::*;
 use async_trait::async_trait;
 use intercode_entities::model_ext::form_item_permissions::FormItemRole;
-use intercode_entities::{forms, order_entries, orders, user_con_profiles, UserNames};
+use intercode_entities::{forms, user_con_profiles, UserNames};
 use intercode_graphql_core::scalars::{DateScalar, JsonScalar};
 use intercode_graphql_core::{
   load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single, model_backed_type,
@@ -18,14 +17,15 @@ use intercode_graphql_core::{
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::policies::{UserConProfileAction, UserConProfilePolicy};
 use intercode_policies::{AuthorizationInfo, FormResponsePolicy};
+use intercode_store::partial_objects::UserConProfileStoreFields;
 use pulldown_cmark::{html, Options, Parser};
-use sea_orm::{sea_query::Expr, ColumnTrait, EntityTrait, QueryFilter};
-use seawater::loaders::{ExpectModel, ExpectModels};
+use sea_orm::EntityTrait;
+use seawater::loaders::ExpectModel;
 
-model_backed_type!(UserConProfileType, user_con_profiles::Model);
+model_backed_type!(UserConProfileApiFields, user_con_profiles::Model);
 
 #[Object(name = "UserConProfile")]
-impl UserConProfileType {
+impl UserConProfileApiFields {
   async fn id(&self) -> ID {
     self.model.id.into()
   }
@@ -88,41 +88,6 @@ impl UserConProfileType {
 
   async fn country(&self) -> Option<&str> {
     self.model.country.as_deref()
-  }
-
-  #[graphql(name = "current_pending_order")]
-  async fn current_pending_order(&self, ctx: &Context<'_>) -> Result<Option<OrderType>, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-    let pending_orders = orders::Entity::find()
-      .filter(
-        orders::Column::UserConProfileId
-          .eq(self.model.id)
-          .and(orders::Column::Status.eq("pending")),
-      )
-      .all(query_data.db())
-      .await?;
-
-    if pending_orders.is_empty() {
-      Ok(None)
-    } else if pending_orders.len() > 1 {
-      // combine orders into one cart
-      let (first, rest) = pending_orders.split_at(1);
-      order_entries::Entity::update_many()
-        .col_expr(
-          order_entries::Column::OrderId,
-          Expr::value(sea_orm::Value::BigInt(Some(first[0].id))),
-        )
-        .filter(
-          order_entries::Column::OrderId
-            .is_in(rest.iter().map(|order| order.id).collect::<Vec<i64>>()),
-        )
-        .exec(query_data.db())
-        .await?;
-
-      Ok(Some(OrderType::new(first[0].to_owned())))
-    } else {
-      Ok(Some(OrderType::new(pending_orders[0].to_owned())))
-    }
   }
 
   async fn email(&self, ctx: &Context<'_>) -> Result<String, Error> {
@@ -200,17 +165,6 @@ impl UserConProfileType {
 
   async fn nickname(&self) -> Option<&str> {
     self.model.nickname.as_deref()
-  }
-
-  #[graphql(name = "order_summary")]
-  async fn order_summary(&self, ctx: &Context<'_>) -> Result<String> {
-    let orders = ctx
-      .data::<Arc<LoaderManager>>()?
-      .user_con_profile_orders()
-      .load_one(self.model.id)
-      .await?;
-
-    load_and_describe_order_summary_for_user_con_profile(orders.expect_models()?, ctx, true).await
   }
 
   async fn signups(&self, ctx: &Context<'_>) -> Result<Vec<SignupType>> {
@@ -307,7 +261,7 @@ impl UserConProfileType {
 }
 
 #[async_trait]
-impl FormResponseImplementation<user_con_profiles::Model> for UserConProfileType {
+impl FormResponseImplementation<user_con_profiles::Model> for UserConProfileApiFields {
   async fn get_form(&self, ctx: &Context<'_>) -> Result<forms::Model, Error> {
     let loaders = ctx.data::<Arc<LoaderManager>>()?;
     loaders
@@ -336,5 +290,28 @@ impl FormResponseImplementation<user_con_profiles::Model> for UserConProfileType
   ) -> Result<FormItemRole, Error> {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
     Ok(UserConProfilePolicy::form_item_writer_role(authorization_info, &self.model).await)
+  }
+}
+
+#[derive(MergedObject)]
+#[graphql(name = "UserConProfileType")]
+pub struct UserConProfileType(UserConProfileApiFields, UserConProfileStoreFields);
+
+impl ModelBackedType for UserConProfileType {
+  type Model = user_con_profiles::Model;
+
+  fn new(model: Self::Model) -> Self {
+    Self(
+      UserConProfileApiFields::new(model.clone()),
+      UserConProfileStoreFields::new(model),
+    )
+  }
+
+  fn get_model(&self) -> &Self::Model {
+    self.0.get_model()
+  }
+
+  fn into_model(self) -> Self::Model {
+    self.0.into_model()
   }
 }

@@ -1,12 +1,15 @@
 use async_graphql::*;
-use intercode_entities::{conventions, coupons};
+use intercode_entities::{conventions, coupons, links::ConventionToOrders};
 use intercode_graphql_core::{load_one_by_model_id, loader_result_to_many, model_backed_type};
 use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
-use intercode_policies::policies::CouponPolicy;
-use intercode_query_builders::{sort_input::SortInput, CouponFiltersInput, CouponsQueryBuilder};
+use intercode_policies::policies::{CouponPolicy, OrderPolicy};
+use intercode_query_builders::{
+  sort_input::SortInput, CouponFiltersInput, CouponsQueryBuilder, OrderFiltersInput,
+  OrdersQueryBuilder,
+};
 use sea_orm::ModelTrait;
 
-use crate::objects::{CouponsPaginationType, ProductType, TicketTypeType};
+use crate::objects::{CouponsPaginationType, OrdersPaginationType, ProductType, TicketTypeType};
 
 model_backed_type!(ConventionStoreFields, conventions::Model);
 
@@ -28,6 +31,25 @@ impl ConventionStoreFields {
       page,
       per_page,
       CouponPolicy,
+    )
+  }
+
+  #[graphql(name = "orders_paginated")]
+  async fn orders_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
+    filters: Option<OrderFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<OrdersPaginationType, Error> {
+    OrdersPaginationType::authorized_from_query_builder(
+      &OrdersQueryBuilder::new(filters, sort),
+      ctx,
+      self.model.find_linked(ConventionToOrders),
+      page,
+      per_page,
+      OrderPolicy,
     )
   }
 

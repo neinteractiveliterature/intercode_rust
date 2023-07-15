@@ -7,12 +7,27 @@ use intercode_graphql_core::{
   scalars::DateScalar, ModelBackedType,
 };
 use intercode_graphql_loaders::LoaderManager;
-use intercode_store::objects::CouponApplicationType;
 use rusty_money::{iso, Money};
 use seawater::loaders::{ExpectModel, ExpectModels};
 
-use super::{OrderEntryType, UserConProfileType};
+use crate::partial_objects::UserConProfileStoreFields;
+
+use super::{CouponApplicationType, OrderEntryType};
 model_backed_type!(OrderType, orders::Model);
+
+impl OrderType {
+  pub async fn user_con_profile(&self, ctx: &Context<'_>) -> Result<UserConProfileStoreFields> {
+    let loader_result = ctx
+      .data::<Arc<LoaderManager>>()?
+      .order_user_con_profile()
+      .load_one(self.model.id)
+      .await?;
+
+    Ok(UserConProfileStoreFields::new(
+      loader_result.expect_one()?.clone(),
+    ))
+  }
+}
 
 #[Object(name = "Order")]
 impl OrderType {
@@ -75,16 +90,5 @@ impl OrderType {
       });
 
     Ok(MoneyType::new(total))
-  }
-
-  #[graphql(name = "user_con_profile")]
-  async fn user_con_profile(&self, ctx: &Context<'_>) -> Result<UserConProfileType> {
-    let loader_result = ctx
-      .data::<Arc<LoaderManager>>()?
-      .order_user_con_profile()
-      .load_one(self.model.id)
-      .await?;
-
-    Ok(UserConProfileType::new(loader_result.expect_one()?.clone()))
   }
 }

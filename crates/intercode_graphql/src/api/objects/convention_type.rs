@@ -2,10 +2,10 @@ use std::{str::FromStr, sync::Arc};
 
 use super::{
   mailing_lists_type::MailingListsType, stripe_account_type::StripeAccountType,
-  user_activity_alert_type::UserActivityAlertType, DepartmentType, EventCategoryType,
-  EventProposalType, EventProposalsPaginationType, EventType, EventsPaginationType, FormType,
-  OrdersPaginationType, RoomType, SignupRequestsPaginationType, SignupType, StaffPositionType,
-  UserConProfileType, UserConProfilesPaginationType,
+  user_activity_alert_type::UserActivityAlertType, CmsContentGroupType, DepartmentType,
+  EventCategoryType, EventProposalType, EventProposalsPaginationType, EventType,
+  EventsPaginationType, FormType, RoomType, SignupRequestsPaginationType, SignupType,
+  StaffPositionType, UserConProfileType, UserConProfilesPaginationType,
 };
 use crate::SchemaData;
 use async_graphql::*;
@@ -103,6 +103,29 @@ impl ConventionApiFields {
   #[graphql(name = "clickwrap_agreement")]
   async fn clickwrap_agreement(&self) -> Option<&str> {
     self.model.clickwrap_agreement.as_deref()
+  }
+
+  async fn cms_content_groups(&self, ctx: &Context<'_>) -> Result<Vec<CmsContentGroupType>, Error> {
+    ConventionCmsFields::new(self.model.clone())
+      .cms_content_groups(ctx)
+      .await
+      .map(|partials| {
+        partials
+          .into_iter()
+          .map(CmsContentGroupType::from_type)
+          .collect()
+      })
+  }
+
+  async fn cms_content_group(
+    &self,
+    ctx: &Context<'_>,
+    id: ID,
+  ) -> Result<CmsContentGroupType, Error> {
+    ConventionCmsFields::new(self.model.clone())
+      .cms_content_group(ctx, id)
+      .await
+      .map(CmsContentGroupType::from_type)
   }
 
   async fn departments(&self, ctx: &Context<'_>) -> Result<Vec<DepartmentType>> {
@@ -447,25 +470,6 @@ impl ConventionApiFields {
     )
   }
 
-  #[graphql(name = "orders_paginated")]
-  async fn orders_paginated(
-    &self,
-    ctx: &Context<'_>,
-    page: Option<u64>,
-    #[graphql(name = "per_page")] per_page: Option<u64>,
-    filters: Option<OrderFiltersInput>,
-    sort: Option<Vec<SortInput>>,
-  ) -> Result<OrdersPaginationType, Error> {
-    OrdersPaginationType::authorized_from_query_builder(
-      &OrdersQueryBuilder::new(filters, sort),
-      ctx,
-      self.model.find_linked(ConventionToOrders),
-      page,
-      per_page,
-      OrderPolicy,
-    )
-  }
-
   async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<RoomType>, Error> {
     let loader_result = load_one_by_model_id!(convention_rooms, ctx, self)?;
     Ok(loader_result_to_many!(loader_result, RoomType))
@@ -701,5 +705,9 @@ impl ModelBackedType for ConventionType {
 
   fn get_model(&self) -> &Self::Model {
     self.0.get_model()
+  }
+
+  fn into_model(self) -> Self::Model {
+    self.0.into_model()
   }
 }

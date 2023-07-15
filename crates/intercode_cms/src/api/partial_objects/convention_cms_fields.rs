@@ -22,25 +22,27 @@ use super::CmsContentGroupCmsFields;
 
 model_backed_type!(ConventionCmsFields, conventions::Model);
 
-#[Object]
 impl ConventionCmsFields {
-  pub async fn id(&self) -> ID {
-    ID(self.model.id.to_string())
-  }
-
-  async fn cms_content_groups(
+  pub async fn cms_content_groups(
     &self,
     ctx: &Context<'_>,
   ) -> Result<Vec<CmsContentGroupCmsFields>, Error> {
     <Self as CmsParentImplementation<conventions::Model>>::cms_content_groups(self, ctx).await
   }
 
-  async fn cms_content_group(
+  pub async fn cms_content_group(
     &self,
     ctx: &Context<'_>,
     id: ID,
   ) -> Result<CmsContentGroupCmsFields, Error> {
     <Self as CmsParentImplementation<conventions::Model>>::cms_content_group(self, ctx, id).await
+  }
+}
+
+#[Object]
+impl ConventionCmsFields {
+  pub async fn id(&self) -> ID {
+    ID(self.model.id.to_string())
   }
 
   async fn cms_files(&self, ctx: &Context<'_>) -> Result<Vec<CmsFileType>, Error> {

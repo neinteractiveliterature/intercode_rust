@@ -8,10 +8,10 @@ use intercode_graphql_core::{
 };
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::policies::{TicketAction, TicketPolicy};
-use intercode_store::objects::TicketTypeType;
+use intercode_store::objects::{OrderEntryType, TicketTypeType};
 use seawater::loaders::ExpectModel;
 
-use super::{EventType, OrderEntryType, UserConProfileType};
+use super::{EventType, UserConProfileType};
 model_backed_type!(TicketType, tickets::Model);
 
 impl TicketType {

@@ -7,6 +7,21 @@ pub trait ModelBackedType {
 
   fn new(model: Self::Model) -> Self;
   fn get_model(&self) -> &Self::Model;
+  fn into_model(self) -> Self::Model;
+
+  fn into_type<Other: ModelBackedType<Model = Self::Model>>(self) -> Other
+  where
+    Self: Sized,
+  {
+    Other::new(self.into_model())
+  }
+
+  fn from_type<Other: ModelBackedType<Model = Self::Model>>(other: Other) -> Self
+  where
+    Self: Sized,
+  {
+    other.into_type()
+  }
 
   fn simple_policy_guard<P: Policy<AuthorizationInfo, Self::Model>>(
     &self,
@@ -39,6 +54,10 @@ macro_rules! model_backed_type {
 
       fn get_model(&self) -> &$model_type {
         &self.model
+      }
+
+      fn into_model(self) -> $model_type {
+        self.model
       }
     }
   };

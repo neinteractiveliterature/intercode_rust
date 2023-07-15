@@ -17,4 +17,8 @@ impl ModelBackedType for RootSiteType {
   fn get_model(&self) -> &Self::Model {
     self.0.get_model()
   }
+
+  fn into_model(self) -> Self::Model {
+    self.0.into_model()
+  }
 }
