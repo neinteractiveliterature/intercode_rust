@@ -1,12 +1,9 @@
 use async_graphql::Interface;
-use intercode_graphql_core::PaginationImplementation;
-use intercode_store::objects::CouponsPaginationType;
-use sea_orm::EntityTrait;
+use intercode_store::objects::{CouponsPaginationType, OrdersPaginationType};
 
 use crate::api::objects::{
   EmailRoutesPaginationType, EventProposalsPaginationType, EventsPaginationType,
-  OrdersPaginationType, SignupRequestsPaginationType, SignupsPaginationType,
-  UserConProfilesPaginationType,
+  SignupRequestsPaginationType, SignupsPaginationType, UserConProfilesPaginationType,
 };
 
 #[derive(Interface)]

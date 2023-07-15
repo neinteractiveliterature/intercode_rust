@@ -113,6 +113,7 @@ intercode_graphql_loaders = {path = "./crates/intercode_graphql_loaders"}
 intercode_inflector = {path = "./crates/intercode_inflector"}
 intercode_liquid = {path = "./crates/intercode_liquid"}
 intercode_policies = {path = "./crates/intercode_policies"}
+intercode_store = {path = "./crates/intercode_store"}
 intercode_timespan = {path = "./crates/intercode_timespan"}
 itertools = {workspace = true}
 liquid = {workspace = true}

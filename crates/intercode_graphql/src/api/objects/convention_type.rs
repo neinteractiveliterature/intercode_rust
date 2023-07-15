@@ -1,22 +1,19 @@
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 
 use super::{
-  mailing_lists_type::MailingListsType, stripe_account_type::StripeAccountType,
-  user_activity_alert_type::UserActivityAlertType, CmsContentGroupType, DepartmentType,
-  EventCategoryType, EventProposalType, EventProposalsPaginationType, EventType,
-  EventsPaginationType, FormType, RoomType, SignupRequestsPaginationType, SignupType,
-  StaffPositionType, UserConProfileType, UserConProfilesPaginationType,
+  mailing_lists_type::MailingListsType, user_activity_alert_type::UserActivityAlertType,
+  CmsContentGroupType, DepartmentType, EventCategoryType, EventProposalType,
+  EventProposalsPaginationType, EventType, EventsPaginationType, FormType, RoomType,
+  SignupRequestsPaginationType, SignupType, StaffPositionType, UserConProfileType,
+  UserConProfilesPaginationType,
 };
-use crate::SchemaData;
 use async_graphql::*;
 use chrono::{DateTime, Utc};
 use futures::future::try_join_all;
 use intercode_cms::api::{objects::NotificationTemplateType, partial_objects::ConventionCmsFields};
 use intercode_entities::{
   conventions, event_proposals, events, forms,
-  links::{
-    ConventionToOrders, ConventionToSignupRequests, ConventionToSignups, ConventionToStaffPositions,
-  },
+  links::{ConventionToSignupRequests, ConventionToSignups, ConventionToStaffPositions},
   model_ext::{time_bounds::TimeBoundsSelectExt, user_con_profiles::BioEligibility},
   signups, staff_positions, user_con_profiles, MaximumEventSignupsValue,
 };
@@ -34,15 +31,14 @@ use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
 use intercode_policies::{
   policies::{
     ConventionAction, ConventionPolicy, EventPolicy, EventProposalAction, EventProposalPolicy,
-    OrderPolicy, SignupRequestPolicy, UserConProfilePolicy,
+    SignupRequestPolicy, UserConProfilePolicy,
   },
   AuthorizationInfo, Policy,
 };
 use intercode_query_builders::{
   sort_input::SortInput, EventFiltersInput, EventProposalFiltersInput, EventProposalsQueryBuilder,
-  EventsQueryBuilder, OrderFiltersInput, OrdersQueryBuilder, QueryBuilder,
-  SignupRequestFiltersInput, SignupRequestsQueryBuilder, UserConProfileFiltersInput,
-  UserConProfilesQueryBuilder,
+  EventsQueryBuilder, QueryBuilder, SignupRequestFiltersInput, SignupRequestsQueryBuilder,
+  UserConProfileFiltersInput, UserConProfilesQueryBuilder,
 };
 use intercode_store::partial_objects::ConventionStoreFields;
 use intercode_timespan::ScheduledValue;
@@ -574,32 +570,6 @@ impl ConventionApiFields {
       .model
       .starts_at
       .map(|t| DateTime::<Utc>::from_utc(t, Utc))
-  }
-
-  #[graphql(name = "stripe_account")]
-  async fn stripe_account(&self, ctx: &Context<'_>) -> Result<Option<StripeAccountType>> {
-    if let Some(id) = &self.model.stripe_account_id {
-      let client = &ctx.data::<SchemaData>()?.stripe_client;
-      let acct = stripe::Account::retrieve(client, &stripe::AccountId::from_str(id)?, &[]).await?;
-      Ok(Some(StripeAccountType::new(acct)))
-    } else {
-      Ok(None)
-    }
-  }
-
-  #[graphql(name = "stripe_account_id")]
-  async fn stripe_account_id(&self) -> Option<&str> {
-    self.model.stripe_account_id.as_deref()
-  }
-
-  #[graphql(name = "stripe_account_ready_to_charge")]
-  async fn stripe_account_ready_to_charge(&self) -> bool {
-    self.model.stripe_account_ready_to_charge
-  }
-
-  #[graphql(name = "stripe_publishable_key")]
-  async fn stripe_publishable_key(&self) -> Option<String> {
-    std::env::var("STRIPE_PUBLISHABLE_KEY").ok()
   }
 
   #[graphql(name = "ticket_mode")]

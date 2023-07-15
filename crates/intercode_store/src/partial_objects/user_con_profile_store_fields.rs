@@ -6,20 +6,17 @@ use intercode_graphql_core::{
 use sea_orm::{sea_query::Expr, ColumnTrait, EntityTrait, QueryFilter};
 use seawater::loaders::ExpectModels;
 
-use crate::{
-  objects::OrderType, order_summary_presenter::load_and_describe_order_summary_for_user_con_profile,
-};
+use crate::order_summary_presenter::load_and_describe_order_summary_for_user_con_profile;
+
+use super::OrderStoreFields;
 
 model_backed_type!(UserConProfileStoreFields, user_con_profiles::Model);
 
-#[Object]
 impl UserConProfileStoreFields {
-  async fn id(&self) -> ID {
-    ID(self.model.id.to_string())
-  }
-
-  #[graphql(name = "current_pending_order")]
-  async fn current_pending_order(&self, ctx: &Context<'_>) -> Result<Option<OrderType>, Error> {
+  pub async fn current_pending_order(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Option<OrderStoreFields>, Error> {
     let query_data = ctx.data::<QueryData>()?;
     let pending_orders = orders::Entity::find()
       .filter(
@@ -47,10 +44,17 @@ impl UserConProfileStoreFields {
         .exec(query_data.db())
         .await?;
 
-      Ok(Some(OrderType::new(first[0].to_owned())))
+      Ok(Some(OrderStoreFields::new(first[0].to_owned())))
     } else {
-      Ok(Some(OrderType::new(pending_orders[0].to_owned())))
+      Ok(Some(OrderStoreFields::new(pending_orders[0].to_owned())))
     }
+  }
+}
+
+#[Object]
+impl UserConProfileStoreFields {
+  async fn id(&self) -> ID {
+    ID(self.model.id.to_string())
   }
 
   #[graphql(name = "order_summary")]

@@ -3,7 +3,6 @@ use std::{fmt::Debug, sync::Arc};
 
 #[derive(Clone)]
 pub struct SchemaData {
-  pub stripe_client: stripe::Client,
   pub language_loader: Arc<FluentLanguageLoader>,
 }
 

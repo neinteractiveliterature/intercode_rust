@@ -6,13 +6,29 @@ use intercode_graphql_core::{model_backed_type, objects::MoneyType, ModelBackedT
 use intercode_graphql_loaders::LoaderManager;
 use seawater::loaders::ExpectModel;
 
-use crate::order_summary_presenter::load_and_describe_order_entry;
+use crate::{
+  objects::{ProductType, ProductVariantType},
+  order_summary_presenter::load_and_describe_order_entry,
+};
 
-use super::{OrderType, ProductType, ProductVariantType};
-model_backed_type!(OrderEntryType, order_entries::Model);
+use super::OrderStoreFields;
 
-#[Object(name = "OrderEntry")]
-impl OrderEntryType {
+model_backed_type!(OrderEntryStoreFields, order_entries::Model);
+
+impl OrderEntryStoreFields {
+  pub async fn order(&self, ctx: &Context<'_>) -> Result<OrderStoreFields> {
+    let loader_result = ctx
+      .data::<Arc<LoaderManager>>()?
+      .order_entry_order()
+      .load_one(self.model.id)
+      .await?;
+
+    Ok(OrderStoreFields::new(loader_result.expect_one()?.clone()))
+  }
+}
+
+#[Object]
+impl OrderEntryStoreFields {
   async fn id(&self) -> ID {
     self.model.id.into()
   }
@@ -20,16 +36,6 @@ impl OrderEntryType {
   #[graphql(name = "describe_products")]
   async fn describe_products(&self, ctx: &Context<'_>) -> Result<String> {
     load_and_describe_order_entry(&self.model, ctx, false).await
-  }
-
-  async fn order(&self, ctx: &Context<'_>) -> Result<OrderType> {
-    let loader_result = ctx
-      .data::<Arc<LoaderManager>>()?
-      .order_entry_order()
-      .load_one(self.model.id)
-      .await?;
-
-    Ok(OrderType::new(loader_result.expect_one()?.clone()))
   }
 
   #[graphql(name = "price_per_item")]

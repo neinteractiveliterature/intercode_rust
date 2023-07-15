@@ -2476,6 +2476,7 @@ dependencies = [
  "intercode_inflector",
  "intercode_liquid",
  "intercode_policies",
+ "intercode_store",
  "intercode_timespan",
  "itertools",
  "liquid",
@@ -2510,6 +2511,7 @@ name = "intercode_store"
 version = "0.1.0"
 dependencies = [
  "async-graphql",
+ "async-stripe",
  "chrono",
  "futures",
  "intercode_entities",
@@ -2520,10 +2522,12 @@ dependencies = [
  "intercode_pagination_from_query_builder",
  "intercode_policies",
  "intercode_query_builders",
+ "once_cell",
  "rusty-money",
  "sea-orm",
  "seawater",
  "serde_json",
+ "tracing",
 ]
 
 [[package]]

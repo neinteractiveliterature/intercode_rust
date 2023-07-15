@@ -19,7 +19,6 @@ use intercode_policies::policies::{UserConProfileAction, UserConProfilePolicy};
 use intercode_policies::{AuthorizationInfo, FormResponsePolicy};
 use intercode_store::partial_objects::UserConProfileStoreFields;
 use pulldown_cmark::{html, Options, Parser};
-use sea_orm::EntityTrait;
 use seawater::loaders::ExpectModel;
 
 model_backed_type!(UserConProfileApiFields, user_con_profiles::Model);

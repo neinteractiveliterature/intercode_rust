@@ -5,7 +5,7 @@ use sea_orm::{ConnectionTrait, EntityTrait, Paginator, PaginatorTrait, Select, S
 
 use intercode_graphql_core::{query_data::QueryData, ModelBackedType, PaginationImplementation};
 
-use super::OrderType;
+use crate::partial_objects::OrderStoreFields;
 
 pub struct OrdersPaginationType {
   scope: Select<orders::Entity>,
@@ -20,7 +20,7 @@ impl OrdersPaginationType {
     self.page
   }
 
-  async fn entries(&self, ctx: &Context<'_>) -> Result<Vec<OrderType>, Error> {
+  async fn entries(&self, ctx: &Context<'_>) -> Result<Vec<OrderStoreFields>, Error> {
     let db = ctx.data::<QueryData>()?.db();
     let (paginator, _) = self.paginator_and_page_size(db);
     Ok(
@@ -28,7 +28,7 @@ impl OrdersPaginationType {
         .fetch_page(self.page - 1) // sqlx uses 0-based pagination, intercode uses 1-based
         .await?
         .into_iter()
-        .map(OrderType::new)
+        .map(OrderStoreFields::new)
         .collect(),
     )
   }
