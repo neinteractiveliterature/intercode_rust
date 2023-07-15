@@ -11,10 +11,7 @@ async-graphql-value = {workspace = true}
 async-stripe = {workspace = true}
 async-trait = {workspace = true}
 chrono = {workspace = true}
-chrono-tz = {workspace = true}
 futures = {workspace = true}
-html-escape = {workspace = true}
-http = {workspace = true}
 i18n-embed = {workspace = true}
 i18n-embed-fl = {workspace = true}
 intercode_cms = {path = "../intercode_cms"}
@@ -33,13 +30,8 @@ liquid = {workspace = true}
 liquid-core = {workspace = true}
 mailparse = {workspace = true}
 md5 = {workspace = true}
-once_cell = {workspace = true}
 pulldown-cmark = {workspace = true}
-regex = {workspace = true}
 rusty-money = {workspace = true}
 sea-orm = {workspace = true}
 seawater = {path = "../seawater"}
-serde = {workspace = true}
 serde_json = {workspace = true}
-tokio = {workspace = true}
-url = {workspace = true}
