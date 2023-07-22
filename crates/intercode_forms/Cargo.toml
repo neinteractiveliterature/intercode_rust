@@ -1,25 +1,21 @@
 [package]
 edition = "2021"
-name = "intercode_graphql_core"
+name = "intercode_forms"
 version = "0.1.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 async-graphql = {workspace = true}
-async-stripe = {workspace = true}
 async-trait = {workspace = true}
-chrono = {workspace = true}
-chrono-tz = {workspace = true}
-http = {workspace = true}
 i18n-embed = {workspace = true}
+i18n-embed-fl = {workspace = true}
 intercode_entities = {path = "../intercode_entities"}
+intercode_graphql_core = {path = "../intercode_graphql_core"}
+intercode_graphql_loaders = {path = "../intercode_graphql_loaders"}
+intercode_inflector = {path = "../intercode_inflector"}
 intercode_liquid = {path = "../intercode_liquid"}
-intercode_timespan = {path = "../intercode_timespan"}
-liquid = {workspace = true}
-once_cell = {workspace = true}
-regex = {workspace = true}
-rusty-money = {workspace = true}
+intercode_policies = {path = "../intercode_policies"}
 sea-orm = {workspace = true}
 seawater = {path = "../seawater"}
 serde_json = {workspace = true}

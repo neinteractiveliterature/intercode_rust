@@ -5,6 +5,7 @@ use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter, QuerySelect};
 use crate::{
   authorization_info::AuthorizationInfo,
   policy::{EntityPolicy, Policy, ReadManageAction},
+  SimpleGuardablePolicy,
 };
 
 pub struct DepartmentPolicy;
@@ -70,3 +71,5 @@ impl EntityPolicy<AuthorizationInfo, departments::Model> for DepartmentPolicy {
     }
   }
 }
+
+impl SimpleGuardablePolicy<'_, departments::Model> for DepartmentPolicy {}

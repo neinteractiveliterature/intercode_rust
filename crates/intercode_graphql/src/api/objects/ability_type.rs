@@ -1,7 +1,7 @@
 use std::{borrow::Cow, sync::Arc};
 
 use async_graphql::*;
-use intercode_cms::api::partial_objects::AbilityCmsFields;
+use intercode_cms::api::{partial_objects::AbilityCmsFields, policies::NotificationTemplatePolicy};
 use intercode_entities::{
   conventions, departments, email_routes, event_categories, events, forms, notification_templates,
   organizations, rooms, runs, signups, staff_positions, tickets, user_activity_alerts,
@@ -14,9 +14,9 @@ use intercode_policies::{
   policies::{
     ConventionAction, ConventionPolicy, DepartmentPolicy, EmailRoutePolicy, EventAction,
     EventCategoryPolicy, EventPolicy, EventProposalAction, EventProposalPolicy, FormPolicy,
-    NotificationTemplatePolicy, OrganizationPolicy, RoomPolicy, RunAction, RunPolicy, SignupAction,
-    SignupPolicy, StaffPositionPolicy, TicketAction, TicketPolicy, UserActivityAlertPolicy,
-    UserConProfileAction, UserConProfilePolicy,
+    OrganizationPolicy, RoomPolicy, RunAction, RunPolicy, SignupAction, SignupPolicy,
+    StaffPositionPolicy, TicketAction, TicketPolicy, UserActivityAlertPolicy, UserConProfileAction,
+    UserConProfilePolicy,
   },
   AuthorizationInfo, Policy, ReadManageAction,
 };

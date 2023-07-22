@@ -15,7 +15,10 @@ use intercode_graphql_core::{
   load_many_by_ids, load_many_by_model_ids, loader_result_map_to_required_map, model_backed_type,
   query_data::QueryData, scalars::DateScalar, ModelBackedType,
 };
-use intercode_policies::policies::{ConventionAction, ConventionPolicy};
+use intercode_policies::{
+  policies::{ConventionAction, ConventionPolicy},
+  ModelBackedTypeGuardablePolicy,
+};
 use itertools::Itertools;
 use sea_orm::{
   sea_query::{self, Cond, Expr, Func, SimpleExpr},
@@ -88,7 +91,7 @@ model_backed_type!(MailingListsType, conventions::Model);
 impl MailingListsType {
   #[graphql(
     name = "event_proposers",
-    guard = "self.simple_policy_guard::<ConventionPolicy>(ConventionAction::ReadTeamMembersMailingList)"
+    guard = "ConventionPolicy::model_guard(ConventionAction::ReadTeamMembersMailingList, self)"
   )]
   async fn event_proposers(&self, ctx: &Context<'_>) -> Result<MailingListsResult> {
     let query_data = ctx.data::<QueryData>()?;
@@ -149,7 +152,7 @@ impl MailingListsType {
 
   #[graphql(
     name = "team_members",
-    guard = "self.simple_policy_guard::<ConventionPolicy>(ConventionAction::ReadTeamMembersMailingList)"
+    guard = "ConventionPolicy::model_guard(ConventionAction::ReadTeamMembersMailingList, self)"
   )]
   async fn team_members(&self, ctx: &Context<'_>) -> Result<MailingListsResult> {
     let query_data = ctx.data::<QueryData>()?;
@@ -215,7 +218,7 @@ impl MailingListsType {
 
   #[graphql(
     name = "ticketed_attendees",
-    guard = "self.simple_policy_guard::<ConventionPolicy>(ConventionAction::ReadUserConProfilesMailingList)"
+    guard = "ConventionPolicy::model_guard(ConventionAction::ReadUserConProfilesMailingList, self)"
   )]
   async fn ticketed_attendees(&self, ctx: &Context<'_>) -> Result<MailingListsResult> {
     let query_data = ctx.data::<QueryData>()?;
@@ -248,7 +251,7 @@ impl MailingListsType {
 
   #[graphql(
     name = "users_with_pending_bio",
-    guard = "self.simple_policy_guard::<ConventionPolicy>(ConventionAction::ReadTeamMembersMailingList)"
+    guard = "ConventionPolicy::model_guard(ConventionAction::ReadTeamMembersMailingList, self)"
   )]
   async fn users_with_pending_bio(&self, ctx: &Context<'_>) -> Result<MailingListsResult> {
     let query_data = ctx.data::<QueryData>()?;
@@ -290,7 +293,7 @@ impl MailingListsType {
   }
 
   #[graphql(
-    guard = "self.simple_policy_guard::<ConventionPolicy>(ConventionAction::ReadUserConProfilesMailingList)"
+    guard = "ConventionPolicy::model_guard(ConventionAction::ReadUserConProfilesMailingList, self)"
   )]
   async fn waitlists(&self, ctx: &Context<'_>) -> Result<Vec<MailingListsWaitlistsResult>> {
     let db = ctx.data::<QueryData>()?.db();
@@ -358,7 +361,7 @@ impl MailingListsType {
 
   #[graphql(
     name = "whos_free",
-    guard = "self.simple_policy_guard::<ConventionPolicy>(ConventionAction::ReadUserConProfilesMailingList)"
+    guard = "ConventionPolicy::model_guard(ConventionAction::ReadUserConProfilesMailingList, self)"
   )]
   async fn whos_free(
     &self,

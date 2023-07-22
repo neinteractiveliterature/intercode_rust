@@ -16,6 +16,7 @@ i18n-embed = {workspace = true}
 i18n-embed-fl = {workspace = true}
 intercode_cms = {path = "../intercode_cms"}
 intercode_entities = {path = "../intercode_entities"}
+intercode_forms = {path = "../intercode_forms"}
 intercode_graphql_core = {path = "../intercode_graphql_core"}
 intercode_graphql_loaders = {path = "../intercode_graphql_loaders"}
 intercode_inflector = {path = "../intercode_inflector"}

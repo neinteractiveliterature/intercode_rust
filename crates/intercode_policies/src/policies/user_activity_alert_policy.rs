@@ -5,6 +5,7 @@ use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter, QuerySelect};
 use crate::{
   authorization_info::AuthorizationInfo,
   policy::{EntityPolicy, Policy, ReadManageAction},
+  SimpleGuardablePolicy,
 };
 
 pub struct UserActivityAlertPolicy;
@@ -65,3 +66,5 @@ impl EntityPolicy<AuthorizationInfo, user_activity_alerts::Model> for UserActivi
     )
   }
 }
+
+impl SimpleGuardablePolicy<'_, user_activity_alerts::Model> for UserActivityAlertPolicy {}

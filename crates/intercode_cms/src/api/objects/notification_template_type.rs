@@ -1,13 +1,14 @@
+use crate::api::policies::NotificationTemplatePolicy;
 use async_graphql::*;
 use intercode_entities::notification_templates;
-use intercode_graphql_core::{model_backed_type, ModelBackedType};
-use intercode_policies::{policies::NotificationTemplatePolicy, ReadManageAction};
+use intercode_graphql_core::model_backed_type;
+use intercode_policies::{ModelBackedTypeGuardablePolicy, ReadManageAction};
 
 model_backed_type!(NotificationTemplateType, notification_templates::Model);
 
 #[Object(
   name = "NotificationTemplate",
-  guard = "self.simple_policy_guard::<NotificationTemplatePolicy>(ReadManageAction::Read)"
+  guard = "NotificationTemplatePolicy::model_guard(ReadManageAction::Read, self)"
 )]
 impl NotificationTemplateType {
   async fn id(&self) -> ID {

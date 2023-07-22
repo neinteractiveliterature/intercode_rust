@@ -15,6 +15,8 @@ axum = {workspace = true}
 cached = {workspace = true}
 futures = {workspace = true}
 intercode_entities = {path = "../intercode_entities"}
+intercode_graphql_core = {path = "../intercode_graphql_core"}
+intercode_graphql_loaders = {path = "../intercode_graphql_loaders"}
 itertools = {workspace = true}
 oxide-auth = {workspace = true}
 sea-orm = {workspace = true}

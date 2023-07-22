@@ -1,11 +1,9 @@
 use async_graphql::*;
 use intercode_entities::{organization_roles, organizations};
-use intercode_graphql_core::{
-  load_one_by_model_id, loader_result_to_many, model_backed_type, ModelBackedType,
-};
+use intercode_graphql_core::{load_one_by_model_id, loader_result_to_many, model_backed_type};
 use intercode_policies::{
   policies::{OrganizationPolicy, OrganizationRolePolicy},
-  AuthorizationInfo, Policy, ReadManageAction,
+  AuthorizationInfo, ModelBackedTypeGuardablePolicy, Policy, ReadManageAction,
 };
 
 use super::{ConventionType, OrganizationRoleType};
@@ -13,7 +11,7 @@ model_backed_type!(OrganizationType, organizations::Model);
 
 #[Object(
   name = "Organization",
-  guard = "self.simple_policy_guard::<OrganizationPolicy>(ReadManageAction::Read)"
+  guard = "OrganizationPolicy::model_guard(ReadManageAction::Read, self)"
 )]
 impl OrganizationType {
   async fn id(&self) -> ID {

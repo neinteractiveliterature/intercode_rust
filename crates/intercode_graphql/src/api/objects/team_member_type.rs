@@ -1,51 +1,22 @@
 use std::sync::Arc;
 
 use async_graphql::*;
-use intercode_entities::{conventions, events, team_members};
+use intercode_entities::team_members;
 use intercode_graphql_core::{
-  load_one_by_model_id, loader_result_to_required_single, model_backed_type,
-  policy_guard::PolicyGuard, query_data::QueryData,
+  load_one_by_model_id, loader_result_to_required_single, model_backed_type, query_data::QueryData,
 };
 use intercode_graphql_loaders::LoaderManager;
-use intercode_policies::{policies::TeamMemberPolicy, ReadManageAction};
+use intercode_policies::{
+  policies::TeamMemberPolicy, ModelBackedTypeGuardablePolicy, ReadManageAction,
+};
 use seawater::loaders::ExpectModel;
 
 use super::{EventType, UserConProfileType};
 model_backed_type!(TeamMemberType, team_members::Model);
 
-impl TeamMemberType {
-  fn policy_guard(
-    &self,
-    action: ReadManageAction,
-  ) -> PolicyGuard<
-    '_,
-    TeamMemberPolicy,
-    (conventions::Model, events::Model, team_members::Model),
-    team_members::Model,
-  > {
-    PolicyGuard::new(action, &self.model, move |model, ctx| {
-      let model = model.clone();
-      let ctx = ctx;
-      let loaders = ctx.data::<Arc<LoaderManager>>();
-
-      Box::pin(async {
-        let loaders = loaders?;
-        let event_loader = loaders.team_member_event();
-        let convention_loader = loaders.event_convention();
-        let event_result = event_loader.load_one(model.id).await?;
-        let event = event_result.expect_one()?;
-        let convention_result = convention_loader.load_one(event.id).await?;
-        let convention = convention_result.expect_one()?;
-
-        Ok((convention.clone(), event.clone(), model))
-      })
-    })
-  }
-}
-
 #[Object(
   name = "TeamMember",
-  guard = "self.policy_guard(ReadManageAction::Read)"
+  guard = "TeamMemberPolicy::model_guard(ReadManageAction::Read, self)"
 )]
 impl TeamMemberType {
   async fn id(&self) -> ID {

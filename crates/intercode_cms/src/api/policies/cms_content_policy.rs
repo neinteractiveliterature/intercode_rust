@@ -8,6 +8,7 @@ use intercode_entities::{
 };
 use intercode_policies::{
   user_permission_scope, AuthorizationInfo, EntityPolicy, Policy, ReadManageAction,
+  SimpleGuardablePolicy,
 };
 use sea_orm::{
   sea_query::{Expr, UnionType},
@@ -210,3 +211,13 @@ where
     <M as CmsContentModel>::id_column()
   }
 }
+
+impl<'a, M: CmsContentAuthorizable + 'static> SimpleGuardablePolicy<'a, M> for CmsContentPolicy<M> {}
+
+pub type CmsContentGroupPolicy = CmsContentPolicy<cms_content_groups::Model>;
+pub type CmsFilePolicy = CmsContentPolicy<cms_files::Model>;
+pub type CmsGraphqlQueryPolicy = CmsContentPolicy<cms_graphql_queries::Model>;
+pub type CmsLayoutPolicy = CmsContentPolicy<cms_layouts::Model>;
+pub type CmsPartialPolicy = CmsContentPolicy<cms_partials::Model>;
+pub type CmsVariablePolicy = CmsContentPolicy<cms_variables::Model>;
+pub type PagePolicy = CmsContentPolicy<pages::Model>;

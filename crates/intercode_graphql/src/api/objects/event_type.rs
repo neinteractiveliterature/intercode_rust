@@ -1,28 +1,21 @@
 use std::sync::Arc;
 
-use crate::{
-  api::interfaces::FormResponseImplementation,
-  presenters::form_response_presenter::attached_images_by_filename, QueryData,
-};
+use crate::QueryData;
 use async_graphql::*;
-use async_trait::async_trait;
 use futures::StreamExt;
-use intercode_entities::{
-  conventions, events, forms, model_ext::form_item_permissions::FormItemRole, RegistrationPolicy,
+use intercode_entities::{events, RegistrationPolicy};
+use intercode_forms::{
+  form_response_implementation::attached_images_by_filename, partial_objects::EventFormsFields,
 };
 use intercode_graphql_core::{
-  lax_id::LaxId,
-  load_one_by_id, model_backed_type,
-  objects::ActiveStorageAttachmentType,
-  policy_guard::PolicyGuard,
-  scalars::{DateScalar, JsonScalar},
-  ModelBackedType,
+  lax_id::LaxId, load_one_by_id, model_backed_type, objects::ActiveStorageAttachmentType,
+  scalars::DateScalar, ModelBackedType,
 };
 use intercode_graphql_loaders::{filtered_event_runs_loader::EventRunsLoaderFilter, LoaderManager};
 use intercode_liquid::render_markdown;
 use intercode_policies::{
   policies::{EventAction, EventPolicy, MaximumEventProvidedTicketsOverridePolicy},
-  AuthorizationInfo, FormResponsePolicy, Policy, ReadManageAction,
+  AuthorizationInfo, ModelBackedTypeGuardablePolicy, Policy, ReadManageAction,
 };
 use seawater::loaders::{ExpectModel, ExpectModels};
 
@@ -30,39 +23,18 @@ use super::{
   ConventionType, EventCategoryType, FormType, MaximumEventProvidedTicketsOverrideType,
   RegistrationPolicyType, RunType, TeamMemberType, TicketType,
 };
-model_backed_type!(EventType, events::Model);
 
-impl EventType {
-  fn policy_guard(
-    &self,
-    action: EventAction,
-  ) -> PolicyGuard<'_, EventPolicy, (conventions::Model, events::Model), events::Model> {
-    PolicyGuard::new(action, &self.model, move |model, ctx| {
-      let model = model.clone();
-      let ctx = ctx;
-      let loaders = ctx.data::<Arc<LoaderManager>>();
+model_backed_type!(EventApiFields, events::Model);
 
-      Box::pin(async {
-        let loaders = loaders?;
-        let convention_loader = loaders.event_convention();
-        let convention_result = convention_loader.load_one(model.id).await?;
-        let convention = convention_result.expect_one()?;
-
-        Ok((convention.clone(), model))
-      })
-    })
-  }
-}
-
-#[Object(name = "Event", guard = "self.policy_guard(EventAction::Read)")]
-impl EventType {
+#[Object(guard = "EventPolicy::model_guard(EventAction::Read, self)")]
+impl EventApiFields {
   async fn id(&self) -> ID {
     self.model.id.into()
   }
 
   #[graphql(
     name = "admin_notes",
-    guard = "self.policy_guard(EventAction::ReadAdminNotes)"
+    guard = "EventPolicy::model_guard(EventAction::ReadAdminNotes, self)"
   )]
   async fn admin_notes(&self) -> Option<&str> {
     self.model.admin_notes.as_deref()
@@ -312,122 +284,27 @@ impl EventType {
   async fn url(&self) -> Option<&str> {
     self.model.url.as_deref()
   }
-
-  // STUFF FOR FORM_RESPONSE_INTERFACE
-
-  #[graphql(name = "current_user_form_item_viewer_role")]
-  async fn form_item_viewer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole> {
-    <Self as FormResponseImplementation<events::Model>>::current_user_form_item_viewer_role(
-      self, ctx,
-    )
-    .await
-  }
-
-  #[graphql(name = "current_user_form_item_writer_role")]
-  async fn form_item_writer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole> {
-    <Self as FormResponseImplementation<events::Model>>::current_user_form_item_writer_role(
-      self, ctx,
-    )
-    .await
-  }
-
-  #[graphql(name = "form_response_attrs_json")]
-  async fn form_response_attrs_json(
-    &self,
-    ctx: &Context<'_>,
-    item_identifiers: Option<Vec<String>>,
-  ) -> Result<JsonScalar, Error> {
-    <Self as FormResponseImplementation<events::Model>>::form_response_attrs_json(
-      self,
-      ctx,
-      item_identifiers,
-    )
-    .await
-  }
-
-  #[graphql(name = "form_response_attrs_json_with_rendered_markdown")]
-  async fn form_response_attrs_json_with_rendered_markdown(
-    &self,
-    ctx: &Context<'_>,
-    item_identifiers: Option<Vec<String>>,
-  ) -> Result<JsonScalar, Error> {
-    <Self as FormResponseImplementation<events::Model>>::form_response_attrs_json_with_rendered_markdown(
-      self,
-      ctx,
-      item_identifiers,
-    )
-    .await
-  }
 }
 
-#[async_trait]
-impl FormResponseImplementation<events::Model> for EventType {
-  async fn get_form(&self, ctx: &Context<'_>) -> Result<forms::Model, Error> {
-    let loaders = ctx.data::<Arc<LoaderManager>>()?;
-    let event_category_result = loaders
-      .event_event_category()
-      .load_one(self.model.id)
-      .await?;
-    let event_category = event_category_result.expect_one()?;
+#[derive(MergedObject)]
+#[graphql(name = "Event")]
+pub struct EventType(EventApiFields, EventFormsFields);
 
-    Ok(
-      loaders
-        .event_category_event_form()
-        .load_one(event_category.id)
-        .await?
-        .expect_one()?
-        .clone(),
+impl ModelBackedType for EventType {
+  type Model = events::Model;
+
+  fn new(model: Self::Model) -> Self {
+    Self(
+      EventApiFields::new(model.clone()),
+      EventFormsFields::new(model),
     )
   }
 
-  async fn get_team_member_name(&self, ctx: &Context<'_>) -> Result<String, Error> {
-    let loaders = ctx.data::<Arc<LoaderManager>>()?;
-    let event_category_result = loaders
-      .event_event_category()
-      .load_one(self.model.id)
-      .await?;
-    let event_category = event_category_result.expect_one()?;
-
-    Ok(event_category.team_member_name.clone())
+  fn get_model(&self) -> &Self::Model {
+    self.0.get_model()
   }
 
-  async fn current_user_form_item_viewer_role(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<FormItemRole, Error> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
-    let convention_result = ctx
-      .data::<Arc<LoaderManager>>()?
-      .event_convention()
-      .load_one(self.model.id)
-      .await?;
-    let convention = convention_result.expect_one()?;
-    Ok(
-      EventPolicy::form_item_viewer_role(
-        authorization_info,
-        &(convention.clone(), self.model.clone()),
-      )
-      .await,
-    )
-  }
-
-  async fn current_user_form_item_writer_role(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<FormItemRole, Error> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
-    let convention_result = ctx
-      .data::<Arc<LoaderManager>>()?
-      .event_convention()
-      .load_one(self.model.id)
-      .await?;
-    let convention = convention_result.expect_one()?;
-    Ok(
-      EventPolicy::form_item_writer_role(
-        authorization_info,
-        &(convention.clone(), self.model.clone()),
-      )
-      .await,
-    )
+  fn into_model(self) -> Self::Model {
+    self.0.into_model()
   }
 }

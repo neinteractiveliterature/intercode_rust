@@ -5,6 +5,7 @@ use sea_orm::{sea_query::Expr, DbErr, EntityTrait, QueryFilter};
 use crate::{
   authorization_info::AuthorizationInfo,
   policy::{EntityPolicy, Policy, ReadManageAction},
+  SimpleGuardablePolicy,
 };
 
 pub struct RoomPolicy;
@@ -57,6 +58,8 @@ impl EntityPolicy<AuthorizationInfo, rooms::Model> for RoomPolicy {
     }
   }
 }
+
+impl SimpleGuardablePolicy<'_, rooms::Model> for RoomPolicy {}
 
 #[cfg(test)]
 mod tests {

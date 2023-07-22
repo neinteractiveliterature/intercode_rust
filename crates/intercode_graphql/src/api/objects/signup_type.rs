@@ -2,13 +2,15 @@ use std::sync::Arc;
 
 use async_graphql::{futures_util::try_join, *};
 use chrono::{Datelike, NaiveDate};
-use intercode_entities::{conventions, events, runs, signups};
+use intercode_entities::signups;
 use intercode_graphql_core::{
   enums::SignupState, load_one_by_model_id, loader_result_to_required_single, model_backed_type,
-  policy_guard::PolicyGuard,
 };
 use intercode_graphql_loaders::LoaderManager;
-use intercode_policies::policies::{SignupAction, SignupPolicy};
+use intercode_policies::{
+  policies::{SignupAction, SignupPolicy},
+  ModelBackedTypeGuardablePolicy,
+};
 use seawater::loaders::ExpectModel;
 
 use super::{RunType, UserConProfileType};
@@ -25,45 +27,10 @@ fn age_as_of(birth_date: NaiveDate, date: NaiveDate) -> i32 {
   date.year() - birth_date.year() - subtract_years
 }
 
-impl SignupType {
-  fn policy_guard(
-    &self,
-    action: SignupAction,
-  ) -> PolicyGuard<
-    '_,
-    SignupPolicy,
-    (
-      conventions::Model,
-      events::Model,
-      runs::Model,
-      signups::Model,
-    ),
-    signups::Model,
-  > {
-    PolicyGuard::new(action, &self.model, move |model, ctx| {
-      let model = model.clone();
-      let ctx = ctx;
-      let loaders = ctx.data::<Arc<LoaderManager>>();
-
-      Box::pin(async {
-        let loaders = loaders?;
-        let signup_run_loader = loaders.signup_run();
-        let run_event_loader = loaders.run_event();
-        let event_convention_loader = loaders.event_convention();
-        let run_result = signup_run_loader.load_one(model.id).await?;
-        let run = run_result.expect_one()?;
-        let event_result = run_event_loader.load_one(run.id).await?;
-        let event = event_result.expect_one()?;
-        let convention_result = event_convention_loader.load_one(event.id).await?;
-        let convention = convention_result.expect_one()?;
-
-        Ok((convention.clone(), event.clone(), run.clone(), model))
-      })
-    })
-  }
-}
-
-#[Object(name = "Signup", guard = "self.policy_guard(SignupAction::Read)")]
+#[Object(
+  name = "Signup",
+  guard = "SignupPolicy::model_guard(SignupAction::Read, self)"
+)]
 impl SignupType {
   async fn id(&self) -> ID {
     self.model.id.into()

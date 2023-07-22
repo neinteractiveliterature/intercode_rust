@@ -4,26 +4,25 @@ use std::sync::Arc;
 use super::{
   AbilityType, ConventionType, SignupType, StaffPositionType, TeamMemberType, TicketType,
 };
-use crate::{api::interfaces::FormResponseImplementation, QueryData};
+use crate::QueryData;
 use async_graphql::*;
-use async_trait::async_trait;
-use intercode_entities::model_ext::form_item_permissions::FormItemRole;
-use intercode_entities::{forms, user_con_profiles, UserNames};
-use intercode_graphql_core::scalars::{DateScalar, JsonScalar};
+use intercode_entities::{user_con_profiles, UserNames};
+use intercode_forms::partial_objects::UserConProfileFormsFields;
+use intercode_graphql_core::scalars::DateScalar;
 use intercode_graphql_core::{
   load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single, model_backed_type,
   ModelBackedType,
 };
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::policies::{UserConProfileAction, UserConProfilePolicy};
-use intercode_policies::{AuthorizationInfo, FormResponsePolicy};
+use intercode_policies::{AuthorizationInfo, ModelBackedTypeGuardablePolicy};
 use intercode_store::partial_objects::UserConProfileStoreFields;
 use pulldown_cmark::{html, Options, Parser};
 use seawater::loaders::ExpectModel;
 
 model_backed_type!(UserConProfileApiFields, user_con_profiles::Model);
 
-#[Object(name = "UserConProfile")]
+#[Object(guard = "UserConProfilePolicy::model_guard(UserConProfileAction::Read, self)")]
 impl UserConProfileApiFields {
   async fn id(&self) -> ID {
     self.model.id.into()
@@ -132,7 +131,7 @@ impl UserConProfileApiFields {
 
   #[graphql(
     name = "ical_secret",
-    guard = "self.simple_policy_guard::<UserConProfilePolicy>(UserConProfileAction::ReadPersonalInfo)"
+    guard = "UserConProfilePolicy::model_guard(UserConProfileAction::ReadPersonalInfo, self)"
   )]
   async fn ical_secret(&self) -> &str {
     &self.model.ical_secret
@@ -211,90 +210,15 @@ impl UserConProfileApiFields {
   async fn zipcode(&self) -> Option<&str> {
     self.model.zipcode.as_deref()
   }
-
-  // STUFF FOR FORM_RESPONSE_INTERFACE
-
-  #[graphql(name = "current_user_form_item_viewer_role")]
-  async fn form_item_viewer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole> {
-    <Self as FormResponseImplementation<user_con_profiles::Model>>::current_user_form_item_viewer_role(
-      self, ctx,
-    )
-    .await
-  }
-
-  #[graphql(name = "current_user_form_item_writer_role")]
-  async fn form_item_writer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole> {
-    <Self as FormResponseImplementation<user_con_profiles::Model>>::current_user_form_item_writer_role(
-      self, ctx,
-    )
-    .await
-  }
-
-  #[graphql(name = "form_response_attrs_json")]
-  async fn form_response_attrs_json(
-    &self,
-    ctx: &Context<'_>,
-    item_identifiers: Option<Vec<String>>,
-  ) -> Result<JsonScalar, Error> {
-    <Self as FormResponseImplementation<user_con_profiles::Model>>::form_response_attrs_json(
-      self,
-      ctx,
-      item_identifiers,
-    )
-    .await
-  }
-
-  #[graphql(name = "form_response_attrs_json_with_rendered_markdown")]
-  async fn form_response_attrs_json_with_rendered_markdown(
-    &self,
-    ctx: &Context<'_>,
-    item_identifiers: Option<Vec<String>>,
-  ) -> Result<JsonScalar, Error> {
-    <Self as FormResponseImplementation<user_con_profiles::Model>>::form_response_attrs_json_with_rendered_markdown(
-      self,
-      ctx,
-      item_identifiers,
-    )
-    .await
-  }
-}
-
-#[async_trait]
-impl FormResponseImplementation<user_con_profiles::Model> for UserConProfileApiFields {
-  async fn get_form(&self, ctx: &Context<'_>) -> Result<forms::Model, Error> {
-    let loaders = ctx.data::<Arc<LoaderManager>>()?;
-    loaders
-      .convention_user_con_profile_form()
-      .load_one(self.model.convention_id)
-      .await?
-      .expect_one()
-      .cloned()
-  }
-
-  async fn get_team_member_name(&self, _ctx: &Context<'_>) -> Result<String, Error> {
-    Ok("team member".to_string())
-  }
-
-  async fn current_user_form_item_viewer_role(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<FormItemRole, Error> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
-    Ok(UserConProfilePolicy::form_item_viewer_role(authorization_info, &self.model).await)
-  }
-
-  async fn current_user_form_item_writer_role(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<FormItemRole, Error> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
-    Ok(UserConProfilePolicy::form_item_writer_role(authorization_info, &self.model).await)
-  }
 }
 
 #[derive(MergedObject)]
-#[graphql(name = "UserConProfileType")]
-pub struct UserConProfileType(UserConProfileApiFields, UserConProfileStoreFields);
+#[graphql(name = "UserConProfile")]
+pub struct UserConProfileType(
+  UserConProfileApiFields,
+  UserConProfileFormsFields,
+  UserConProfileStoreFields,
+);
 
 impl ModelBackedType for UserConProfileType {
   type Model = user_con_profiles::Model;
@@ -302,6 +226,7 @@ impl ModelBackedType for UserConProfileType {
   fn new(model: Self::Model) -> Self {
     Self(
       UserConProfileApiFields::new(model.clone()),
+      UserConProfileFormsFields::new(model.clone()),
       UserConProfileStoreFields::new(model),
     )
   }

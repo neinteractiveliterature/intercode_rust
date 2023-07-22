@@ -1,9 +1,11 @@
 use async_graphql::*;
 use intercode_entities::cms_partials;
-use intercode_graphql_core::{model_backed_type, ModelBackedType};
-use intercode_policies::{AuthorizationInfo, Policy, ReadManageAction};
+use intercode_graphql_core::model_backed_type;
+use intercode_policies::{
+  AuthorizationInfo, ModelBackedTypeGuardablePolicy, Policy, ReadManageAction,
+};
 
-use crate::api::policies::CmsContentPolicy;
+use crate::api::policies::CmsPartialPolicy;
 
 model_backed_type!(CmsPartialType, cms_partials::Model);
 
@@ -15,7 +17,7 @@ impl CmsPartialType {
 
   #[graphql(
     name = "admin_notes",
-    guard = "self.simple_policy_guard::<CmsContentPolicy<cms_partials::Model>>(ReadManageAction::Manage)"
+    guard = "CmsPartialPolicy::model_guard(ReadManageAction::Manage, self)"
   )]
   async fn admin_notes(&self) -> Option<&str> {
     self.model.admin_notes.as_deref()
@@ -30,7 +32,7 @@ impl CmsPartialType {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
 
     Ok(
-      CmsContentPolicy::action_permitted(
+      CmsPartialPolicy::action_permitted(
         authorization_info,
         &ReadManageAction::Manage,
         &self.model,
@@ -44,7 +46,7 @@ impl CmsPartialType {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
 
     Ok(
-      CmsContentPolicy::action_permitted(
+      CmsPartialPolicy::action_permitted(
         authorization_info,
         &ReadManageAction::Manage,
         &self.model,

@@ -1,16 +1,16 @@
 use async_graphql::*;
 use intercode_entities::departments;
-use intercode_graphql_core::{
-  load_one_by_model_id, loader_result_to_many, model_backed_type, ModelBackedType,
+use intercode_graphql_core::{load_one_by_model_id, loader_result_to_many, model_backed_type};
+use intercode_policies::{
+  policies::DepartmentPolicy, ModelBackedTypeGuardablePolicy, ReadManageAction,
 };
-use intercode_policies::{policies::DepartmentPolicy, ReadManageAction};
 
 use super::EventCategoryType;
 model_backed_type!(DepartmentType, departments::Model);
 
 #[Object(
   name = "Department",
-  guard = "self.simple_policy_guard::<DepartmentPolicy>(ReadManageAction::Read)"
+  guard = "DepartmentPolicy::model_guard(ReadManageAction::Read, self)"
 )]
 impl DepartmentType {
   async fn id(&self) -> ID {

@@ -2283,6 +2283,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "intercode_forms"
+version = "0.1.0"
+dependencies = [
+ "async-graphql",
+ "async-trait",
+ "i18n-embed",
+ "i18n-embed-fl",
+ "intercode_entities",
+ "intercode_graphql_core",
+ "intercode_graphql_loaders",
+ "intercode_inflector",
+ "intercode_liquid",
+ "intercode_policies",
+ "sea-orm",
+ "seawater",
+ "serde_json",
+]
+
+[[package]]
 name = "intercode_graphql"
 version = "0.1.0"
 dependencies = [
@@ -2296,6 +2315,7 @@ dependencies = [
  "i18n-embed-fl",
  "intercode_cms",
  "intercode_entities",
+ "intercode_forms",
  "intercode_graphql_core",
  "intercode_graphql_loaders",
  "intercode_inflector",
@@ -2330,7 +2350,6 @@ dependencies = [
  "i18n-embed",
  "intercode_entities",
  "intercode_liquid",
- "intercode_policies",
  "intercode_timespan",
  "liquid",
  "once_cell",
@@ -2421,6 +2440,8 @@ dependencies = [
  "cached",
  "futures",
  "intercode_entities",
+ "intercode_graphql_core",
+ "intercode_graphql_loaders",
  "itertools",
  "oxide-auth",
  "sea-orm",

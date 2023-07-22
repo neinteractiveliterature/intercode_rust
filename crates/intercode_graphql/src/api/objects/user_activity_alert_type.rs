@@ -2,16 +2,17 @@ use async_graphql::*;
 use intercode_entities::user_activity_alerts;
 use intercode_graphql_core::{
   load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single, model_backed_type,
-  ModelBackedType,
 };
-use intercode_policies::{policies::UserActivityAlertPolicy, ReadManageAction};
+use intercode_policies::{
+  policies::UserActivityAlertPolicy, ModelBackedTypeGuardablePolicy, ReadManageAction,
+};
 
 use super::{notification_destination_type::NotificationDestinationType, UserType};
 model_backed_type!(UserActivityAlertType, user_activity_alerts::Model);
 
 #[Object(
   name = "UserActivityAlert",
-  guard = "self.simple_policy_guard::<UserActivityAlertPolicy>(ReadManageAction::Read)"
+  guard = "UserActivityAlertPolicy::model_guard(ReadManageAction::Read, self)"
 )]
 impl UserActivityAlertType {
   async fn id(&self) -> ID {

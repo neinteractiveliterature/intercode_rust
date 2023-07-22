@@ -1,7 +1,6 @@
 use async_trait::async_trait;
 use intercode_entities::model_ext::form_item_permissions::FormItemRole;
-
-use crate::Policy;
+use intercode_policies::Policy;
 
 #[async_trait]
 pub trait FormResponsePolicy<Principal: Send + Sync, Resource: Send + Sync>:

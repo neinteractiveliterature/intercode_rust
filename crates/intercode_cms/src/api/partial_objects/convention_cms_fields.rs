@@ -3,9 +3,10 @@ use std::sync::Arc;
 use async_graphql::*;
 use intercode_entities::{cms_parent::CmsParentTrait, cms_partials, conventions};
 use intercode_graphql_core::{
-  liquid_renderer::LiquidRenderer, model_backed_type, query_data::QueryData, ModelBackedType,
+  liquid_renderer::LiquidRenderer, model_backed_type, query_data::QueryData,
 };
 use intercode_policies::policies::{ConventionAction, ConventionPolicy};
+use intercode_policies::ModelBackedTypeGuardablePolicy;
 use liquid::object;
 use sea_orm::{ColumnTrait, QueryFilter};
 
@@ -163,7 +164,7 @@ impl ConventionCmsFields {
   /// current domain's CMS context as if it were the content for that notification type.
   #[graphql(
     name = "preview_notifier_liquid",
-    guard = "self.simple_policy_guard::<ConventionPolicy>(ConventionAction::ViewReports)"
+    guard = "ConventionPolicy::model_guard(ConventionAction::ViewReports, self)"
   )]
   async fn preview_notifier_liquid(
     &self,

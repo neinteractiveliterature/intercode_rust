@@ -5,6 +5,7 @@ use sea_orm::DbErr;
 use crate::{
   authorization_info::AuthorizationInfo,
   policy::{Policy, ReadManageAction},
+  SimpleGuardablePolicy,
 };
 
 async fn can_manage_any_organizations(principal: &AuthorizationInfo) -> Result<bool, DbErr> {
@@ -40,3 +41,5 @@ impl Policy<AuthorizationInfo, organizations::Model> for OrganizationPolicy {
     }
   }
 }
+
+impl SimpleGuardablePolicy<'_, organizations::Model> for OrganizationPolicy {}

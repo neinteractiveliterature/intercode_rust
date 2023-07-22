@@ -1,11 +1,9 @@
-use axum::async_trait;
+use async_trait::async_trait;
 use intercode_entities::{conventions, notification_templates};
-use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter, QuerySelect};
-
-use crate::{
-  authorization_info::AuthorizationInfo,
-  policy::{EntityPolicy, Policy, ReadManageAction},
+use intercode_policies::{
+  AuthorizationInfo, EntityPolicy, Policy, ReadManageAction, SimpleGuardablePolicy,
 };
+use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter, QuerySelect};
 
 pub struct NotificationTemplatePolicy;
 
@@ -76,3 +74,5 @@ impl EntityPolicy<AuthorizationInfo, notification_templates::Model> for Notifica
     }
   }
 }
+
+impl<'a> SimpleGuardablePolicy<'a, notification_templates::Model> for NotificationTemplatePolicy {}

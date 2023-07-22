@@ -20,6 +20,7 @@ debug = 1
 members = [
   "./crates/intercode_cms",
   "./crates/intercode_entities",
+  "./crates/intercode_forms",
   "./crates/intercode_graphql",
   "./crates/intercode_graphql_core",
   "./crates/intercode_graphql_loaders",

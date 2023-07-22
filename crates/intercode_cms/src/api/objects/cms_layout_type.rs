@@ -4,14 +4,16 @@ use async_graphql::*;
 use intercode_entities::cms_layouts;
 use intercode_graphql_core::{
   liquid_renderer::LiquidRenderer, model_backed_type, query_data::QueryData,
-  schema_data::SchemaData, ModelBackedType,
+  schema_data::SchemaData,
 };
 use intercode_liquid::{cms_parent_partial_source::PreloadPartialsStrategy, react_component_tag};
-use intercode_policies::{AuthorizationInfo, Policy, ReadManageAction};
+use intercode_policies::{
+  AuthorizationInfo, ModelBackedTypeGuardablePolicy, Policy, ReadManageAction,
+};
 use liquid::object;
 use serde_json::json;
 
-use crate::{api::policies::CmsContentPolicy, CmsRenderingContext};
+use crate::{api::policies::CmsLayoutPolicy, CmsRenderingContext};
 
 model_backed_type!(CmsLayoutType, cms_layouts::Model);
 
@@ -26,7 +28,7 @@ impl CmsLayoutType {
 
   #[graphql(
     name = "admin_notes",
-    guard = "self.simple_policy_guard::<CmsContentPolicy<cms_layouts::Model>>(ReadManageAction::Manage)"
+    guard = "CmsLayoutPolicy::model_guard(ReadManageAction::Manage, self)"
   )]
   async fn admin_notes(&self) -> Option<&str> {
     self.model.admin_notes.as_deref()
@@ -73,12 +75,8 @@ impl CmsLayoutType {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
 
     Ok(
-      CmsContentPolicy::action_permitted(
-        authorization_info,
-        &ReadManageAction::Manage,
-        &self.model,
-      )
-      .await?,
+      CmsLayoutPolicy::action_permitted(authorization_info, &ReadManageAction::Manage, &self.model)
+        .await?,
     )
   }
 
@@ -87,12 +85,8 @@ impl CmsLayoutType {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
 
     Ok(
-      CmsContentPolicy::action_permitted(
-        authorization_info,
-        &ReadManageAction::Manage,
-        &self.model,
-      )
-      .await?,
+      CmsLayoutPolicy::action_permitted(authorization_info, &ReadManageAction::Manage, &self.model)
+        .await?,
     )
   }
 

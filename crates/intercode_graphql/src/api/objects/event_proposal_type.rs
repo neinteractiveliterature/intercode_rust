@@ -1,92 +1,33 @@
 use std::sync::Arc;
 
 use async_graphql::*;
-use async_trait::async_trait;
-use intercode_entities::{
-  conventions, event_proposals, forms, model_ext::form_item_permissions::FormItemRole,
-};
+use intercode_entities::event_proposals;
+use intercode_forms::partial_objects::EventProposalFormsFields;
 use intercode_graphql_core::{
   load_one_by_model_id, loader_result_to_optional_single, loader_result_to_required_single,
-  model_backed_type,
-  objects::ActiveStorageAttachmentType,
-  policy_guard::PolicyGuard,
-  scalars::{DateScalar, JsonScalar},
-  ModelBackedType,
+  model_backed_type, objects::ActiveStorageAttachmentType, scalars::DateScalar, ModelBackedType,
 };
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
   policies::{EventProposalAction, EventProposalPolicy},
-  AuthorizationInfo, FormResponsePolicy,
+  ModelBackedTypeGuardablePolicy,
 };
-use seawater::loaders::ExpectModel;
-
-use crate::api::interfaces::FormResponseImplementation;
 
 use super::{EventCategoryType, EventType, RegistrationPolicyType, UserConProfileType};
-model_backed_type!(EventProposalType, event_proposals::Model);
+model_backed_type!(EventProposalApiFields, event_proposals::Model);
 
-impl EventProposalType {
-  fn policy_guard(
-    &self,
-    action: EventProposalAction,
-  ) -> PolicyGuard<
-    '_,
-    EventProposalPolicy,
-    (conventions::Model, event_proposals::Model),
-    event_proposals::Model,
-  > {
-    PolicyGuard::new(action, &self.model, move |model, ctx| {
-      let model = model.clone();
-      let ctx = ctx;
-      let loaders = ctx.data::<Arc<LoaderManager>>();
-
-      Box::pin(async {
-        let loaders = loaders?;
-        let convention_loader = loaders.event_proposal_convention();
-        let convention_result = convention_loader.load_one(model.id).await?;
-        let convention = convention_result.expect_one()?;
-
-        Ok((convention.clone(), model))
-      })
-    })
-  }
-}
-
-#[Object(
-  name = "EventProposal",
-  guard = "self.policy_guard(EventProposalAction::Read)"
-)]
-impl EventProposalType {
+#[Object(guard = "EventProposalPolicy::model_guard(EventProposalAction::Read, self)")]
+impl EventProposalApiFields {
   async fn id(&self) -> ID {
     self.model.id.into()
   }
 
   #[graphql(
     name = "admin_notes",
-    guard = "self.policy_guard(EventProposalAction::ReadAdminNotes)"
+    guard = "EventProposalPolicy::model_guard(EventProposalAction::ReadAdminNotes, self)"
   )]
   async fn admin_notes(&self) -> Option<&str> {
     self.model.admin_notes.as_deref()
-  }
-
-  #[graphql(name = "current_user_form_item_viewer_role")]
-  async fn current_user_form_item_viewer_role(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<FormItemRole, Error> {
-    <Self as FormResponseImplementation<event_proposals::Model>>::current_user_form_item_viewer_role(
-      self, ctx,
-    ).await
-  }
-
-  #[graphql(name = "current_user_form_item_writer_role")]
-  async fn current_user_form_item_writer_role(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<FormItemRole, Error> {
-    <Self as FormResponseImplementation<event_proposals::Model>>::current_user_form_item_writer_role(
-      self, ctx,
-    ).await
   }
 
   #[graphql(name = "event")]
@@ -102,34 +43,6 @@ impl EventProposalType {
       loader_result,
       EventCategoryType
     ))
-  }
-
-  #[graphql(name = "form_response_attrs_json")]
-  async fn form_response_attrs_json(
-    &self,
-    ctx: &Context<'_>,
-    item_identifiers: Option<Vec<String>>,
-  ) -> Result<JsonScalar, Error> {
-    <Self as FormResponseImplementation<event_proposals::Model>>::form_response_attrs_json(
-      self,
-      ctx,
-      item_identifiers,
-    )
-    .await
-  }
-
-  #[graphql(name = "form_response_attrs_json_with_rendered_markdown")]
-  async fn form_response_attrs_json_with_rendered_markdown(
-    &self,
-    ctx: &Context<'_>,
-    item_identifiers: Option<Vec<String>>,
-  ) -> Result<JsonScalar, Error> {
-    <Self as FormResponseImplementation<event_proposals::Model>>::form_response_attrs_json_with_rendered_markdown(
-      self,
-      ctx,
-      item_identifiers,
-    )
-    .await
   }
 
   async fn images(&self, ctx: &Context<'_>) -> Result<Vec<ActiveStorageAttachmentType>> {
@@ -202,60 +115,25 @@ impl EventProposalType {
   }
 }
 
-#[async_trait]
-impl FormResponseImplementation<event_proposals::Model> for EventProposalType {
-  async fn get_form(&self, ctx: &Context<'_>) -> Result<forms::Model, Error> {
-    let event_category = self.event_category(ctx).await?;
-    let form_result = ctx
-      .data::<Arc<LoaderManager>>()?
-      .event_category_event_proposal_form()
-      .load_one(event_category.get_model().id)
-      .await?;
-    Ok(form_result.expect_one()?.clone())
-  }
+#[derive(MergedObject)]
+#[graphql(name = "EventProposal")]
+pub struct EventProposalType(EventProposalApiFields, EventProposalFormsFields);
 
-  async fn get_team_member_name(&self, ctx: &Context<'_>) -> Result<String, Error> {
-    let event_category = self.event_category(ctx).await?;
-    Ok(event_category.get_model().team_member_name.to_string())
-  }
+impl ModelBackedType for EventProposalType {
+  type Model = event_proposals::Model;
 
-  async fn current_user_form_item_viewer_role(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<FormItemRole, Error> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
-    let convention_result = ctx
-      .data::<Arc<LoaderManager>>()?
-      .event_proposal_convention()
-      .load_one(self.model.id)
-      .await?;
-    let convention = convention_result.expect_one()?;
-    Ok(
-      EventProposalPolicy::form_item_viewer_role(
-        authorization_info,
-        &(convention.clone(), self.model.clone()),
-      )
-      .await,
+  fn new(model: Self::Model) -> Self {
+    Self(
+      EventProposalApiFields::new(model.clone()),
+      EventProposalFormsFields::new(model),
     )
   }
 
-  async fn current_user_form_item_writer_role(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<FormItemRole, Error> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
-    let convention_result = ctx
-      .data::<Arc<LoaderManager>>()?
-      .event_proposal_convention()
-      .load_one(self.model.id)
-      .await?;
-    let convention = convention_result.expect_one()?;
-    Ok(
-      EventProposalPolicy::form_item_writer_role(
-        authorization_info,
-        &(convention.clone(), self.model.clone()),
-      )
-      .await,
-    )
+  fn get_model(&self) -> &Self::Model {
+    self.0.get_model()
+  }
+
+  fn into_model(self) -> Self::Model {
+    self.0.into_model()
   }
 }

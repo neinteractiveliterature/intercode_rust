@@ -1,15 +1,51 @@
-use async_graphql::Error;
+use std::{
+  collections::{HashMap, HashSet},
+  sync::Arc,
+};
+
+use async_graphql::{Context, Error};
+use async_trait::async_trait;
 use i18n_embed::fluent::FluentLanguageLoader;
 use i18n_embed_fl::fl;
 use intercode_entities::{
-  active_storage_blobs, form_items,
+  active_storage_blobs, form_items, forms,
   model_ext::{form_item_permissions::FormItemRole, FormResponse},
 };
+use intercode_graphql_core::{scalars::JsonScalar, schema_data::SchemaData, ModelBackedType};
 use intercode_graphql_loaders::LoaderManager;
+use intercode_inflector::IntercodeInflector;
 use intercode_liquid::render_markdown;
 use sea_orm::EntityTrait;
+use seawater::loaders::ExpectModels;
 use serde_json::Value;
-use std::collections::HashMap;
+
+async fn load_filtered_form_items(
+  loaders: &LoaderManager,
+  form_id: i64,
+  item_identifiers: Option<Vec<String>>,
+) -> Result<Vec<form_items::Model>, Error> {
+  let form_items_result = loaders.form_form_items().load_one(form_id).await?;
+  let form_items = form_items_result.expect_models()?;
+  let form_items: Vec<form_items::Model> = match item_identifiers {
+    Some(item_identifiers) => {
+      let item_identifiers: HashSet<String> = HashSet::from_iter(item_identifiers.into_iter());
+      form_items
+        .iter()
+        .filter(|item| {
+          item
+            .identifier
+            .as_ref()
+            .map(|identifier| item_identifiers.contains(identifier))
+            .unwrap_or(false)
+        })
+        .cloned()
+        .collect()
+    }
+    None => form_items.to_vec(),
+  };
+
+  Ok(form_items)
+}
 
 #[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum FormResponsePresentationFormat {
@@ -155,5 +191,79 @@ fn replacement_content_for_form_item(
       Some(Value::String(format!("<em>{}</em>", hidden_text)))
     }
     _ => Some(Value::String(hidden_text)),
+  }
+}
+
+#[async_trait]
+pub trait FormResponseImplementation<M>
+where
+  Self: ModelBackedType<Model = M>,
+  M: sea_orm::ModelTrait + FormResponse + Send + Sync,
+{
+  async fn get_form(&self, ctx: &Context<'_>) -> Result<forms::Model, Error>;
+  async fn get_team_member_name(&self, ctx: &Context<'_>) -> Result<String, Error>;
+
+  async fn current_user_form_item_viewer_role(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<FormItemRole, Error>;
+
+  async fn current_user_form_item_writer_role(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<FormItemRole, Error>;
+
+  async fn form_response_attrs_json(
+    &self,
+    ctx: &Context<'_>,
+    item_identifiers: Option<Vec<String>>,
+  ) -> Result<JsonScalar, Error> {
+    let schema_data = ctx.data::<SchemaData>()?;
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
+    let form = self.get_form(ctx).await?;
+
+    let model = self.get_model();
+    let attached_images = attached_images_by_filename(model, loaders).await?;
+
+    let viewer_role = self.current_user_form_item_viewer_role(ctx).await?;
+
+    let form_items = load_filtered_form_items(loaders, form.id, item_identifiers).await?;
+
+    Ok(JsonScalar(form_response_as_json(
+      model,
+      form_items.iter(),
+      &attached_images,
+      viewer_role,
+      FormResponsePresentationFormat::Plain,
+      &schema_data.language_loader,
+      &IntercodeInflector::new().pluralize(&self.get_team_member_name(ctx).await?),
+    )))
+  }
+
+  async fn form_response_attrs_json_with_rendered_markdown(
+    &self,
+    ctx: &Context<'_>,
+    item_identifiers: Option<Vec<String>>,
+  ) -> Result<JsonScalar, Error> {
+    let schema_data = ctx.data::<SchemaData>()?;
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
+    let form = self.get_form(ctx).await?;
+
+    let model = self.get_model();
+    let attached_images = attached_images_by_filename(model, loaders).await?;
+
+    let viewer_role = self.current_user_form_item_viewer_role(ctx).await?;
+
+    let form_items = load_filtered_form_items(loaders, form.id, item_identifiers).await?;
+
+    Ok(JsonScalar(form_response_as_json(
+      model,
+      form_items.iter(),
+      &attached_images,
+      viewer_role,
+      FormResponsePresentationFormat::Html,
+      &schema_data.language_loader,
+      &IntercodeInflector::new().pluralize(&self.get_team_member_name(ctx).await?),
+    )))
   }
 }

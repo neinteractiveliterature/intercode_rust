@@ -1,21 +1,23 @@
 use async_graphql::*;
 use intercode_entities::cms_graphql_queries;
-use intercode_graphql_core::{model_backed_type, ModelBackedType};
-use intercode_policies::{AuthorizationInfo, Policy, ReadManageAction};
+use intercode_graphql_core::model_backed_type;
+use intercode_policies::{
+  AuthorizationInfo, ModelBackedTypeGuardablePolicy, Policy, ReadManageAction,
+};
 
-use crate::api::policies::CmsContentPolicy;
+use crate::api::policies::CmsGraphqlQueryPolicy;
 
 model_backed_type!(CmsGraphqlQueryType, cms_graphql_queries::Model);
 
 #[Object(name = "CmsGraphqlQuery")]
 impl CmsGraphqlQueryType {
-  async fn id(&self) -> ID {
+  async fn id(&self, ctx: &Context<'_>) -> ID {
     self.model.id.into()
   }
 
   #[graphql(
     name = "admin_notes",
-    guard = "self.simple_policy_guard::<CmsContentPolicy<cms_graphql_queries::Model>>(ReadManageAction::Manage)"
+    guard = "CmsGraphqlQueryPolicy::model_guard(ReadManageAction::Manage, self)"
   )]
   async fn admin_notes(&self) -> Option<&str> {
     self.model.admin_notes.as_deref()
@@ -26,7 +28,7 @@ impl CmsGraphqlQueryType {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
 
     Ok(
-      CmsContentPolicy::action_permitted(
+      CmsGraphqlQueryPolicy::action_permitted(
         authorization_info,
         &ReadManageAction::Manage,
         &self.model,
@@ -40,7 +42,7 @@ impl CmsGraphqlQueryType {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
 
     Ok(
-      CmsContentPolicy::action_permitted(
+      CmsGraphqlQueryPolicy::action_permitted(
         authorization_info,
         &ReadManageAction::Manage,
         &self.model,

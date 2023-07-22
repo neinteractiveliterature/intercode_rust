@@ -5,7 +5,7 @@ use sea_orm::{sea_query::Expr, DbErr, EntityTrait, QueryFilter};
 use crate::{
   authorization_info::AuthorizationInfo,
   policy::{Policy, ReadManageAction},
-  EntityPolicy,
+  EntityPolicy, SimpleGuardablePolicy,
 };
 
 pub struct EmailRoutePolicy;
@@ -60,3 +60,5 @@ impl EntityPolicy<AuthorizationInfo, email_routes::Model> for EmailRoutePolicy {
     scope.filter(Expr::cust("1 = 0"))
   }
 }
+
+impl SimpleGuardablePolicy<'_, email_routes::Model> for EmailRoutePolicy {}

@@ -4,7 +4,7 @@ use async_graphql::*;
 use intercode_entities::rooms;
 use intercode_graphql_core::{model_backed_type, ModelBackedType};
 use intercode_graphql_loaders::LoaderManager;
-use intercode_policies::{policies::RoomPolicy, ReadManageAction};
+use intercode_policies::{policies::RoomPolicy, ModelBackedTypeGuardablePolicy, ReadManageAction};
 use seawater::loaders::ExpectModels;
 
 use super::RunType;
@@ -12,7 +12,7 @@ model_backed_type!(RoomType, rooms::Model);
 
 #[Object(
   name = "Room",
-  guard = "self.simple_policy_guard::<RoomPolicy>(ReadManageAction::Read)"
+  guard = "RoomPolicy::model_guard(ReadManageAction::Read, self)"
 )]
 impl RoomType {
   async fn id(&self) -> ID {

@@ -1,14 +1,19 @@
+use std::sync::Arc;
+
+use async_graphql::{Context, Error};
 use axum::async_trait;
 use intercode_entities::{conventions, events, team_members, user_con_profiles};
+use intercode_graphql_loaders::LoaderManager;
 use sea_orm::{
   sea_query::{Cond, Expr},
   ColumnTrait, DbErr, EntityTrait, QueryFilter, QuerySelect,
 };
+use seawater::loaders::ExpectModel;
 
 use crate::{
   authorization_info::AuthorizationInfo,
   policy::{Policy, ReadManageAction},
-  EntityPolicy,
+  EntityPolicy, GuardablePolicy, PolicyGuard,
 };
 
 use super::{EventAction, EventPolicy};
@@ -142,4 +147,60 @@ impl EntityPolicy<AuthorizationInfo, team_members::Model> for TeamMemberPolicy {
   fn id_column() -> team_members::Column {
     team_members::Column::Id
   }
+}
+
+pub struct TeamMemberGuard {
+  action: ReadManageAction,
+  model: team_members::Model,
+}
+
+#[async_trait]
+impl
+  PolicyGuard<
+    '_,
+    TeamMemberPolicy,
+    (conventions::Model, events::Model, team_members::Model),
+    team_members::Model,
+  > for TeamMemberGuard
+{
+  fn new(action: ReadManageAction, model: &team_members::Model) -> Self
+  where
+    Self: Sized,
+  {
+    TeamMemberGuard {
+      action,
+      model: model.clone(),
+    }
+  }
+
+  fn get_action(&self) -> &ReadManageAction {
+    &self.action
+  }
+
+  fn get_model(&self) -> &team_members::Model {
+    &self.model
+  }
+
+  async fn get_resource(
+    &self,
+    model: &team_members::Model,
+    ctx: &Context<'_>,
+  ) -> Result<(conventions::Model, events::Model, team_members::Model), Error> {
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
+    let event_loader = loaders.team_member_event();
+    let convention_loader = loaders.event_convention();
+    let event_result = event_loader.load_one(model.id).await?;
+    let event = event_result.expect_one()?;
+    let convention_result = convention_loader.load_one(event.id).await?;
+    let convention = convention_result.expect_one()?;
+
+    Ok((convention.clone(), event.clone(), model.clone()))
+  }
+}
+
+impl
+  GuardablePolicy<'_, (conventions::Model, events::Model, team_members::Model), team_members::Model>
+  for TeamMemberPolicy
+{
+  type Guard = TeamMemberGuard;
 }

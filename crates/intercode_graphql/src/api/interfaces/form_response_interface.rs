@@ -1,56 +1,13 @@
 use std::borrow::Cow;
-use std::collections::HashSet;
-use std::sync::Arc;
 
 use async_graphql::parser::types::Field;
 use async_graphql::registry::{MetaField, MetaType, MetaTypeId, Registry};
 use async_graphql::{
-  ContainerType, Context, ContextSelectionSet, Error, InterfaceType, OutputType, Positioned,
+  ContainerType, Context, ContextSelectionSet, InterfaceType, OutputType, Positioned,
 };
 use async_graphql_value::indexmap::IndexMap;
-use async_trait::async_trait;
-use intercode_entities::model_ext::form_item_permissions::FormItemRole;
-use intercode_entities::model_ext::FormResponse;
-use intercode_entities::{form_items, forms};
-use intercode_graphql_core::scalars::JsonScalar;
-use intercode_graphql_core::ModelBackedType;
-use intercode_graphql_loaders::LoaderManager;
-use intercode_inflector::IntercodeInflector;
-use seawater::loaders::ExpectModels;
 
 use crate::api::objects::{EventProposalType, EventType, UserConProfileType};
-use crate::presenters::form_response_presenter::{
-  attached_images_by_filename, form_response_as_json, FormResponsePresentationFormat,
-};
-use crate::SchemaData;
-
-async fn load_filtered_form_items(
-  loaders: &LoaderManager,
-  form_id: i64,
-  item_identifiers: Option<Vec<String>>,
-) -> Result<Vec<form_items::Model>, Error> {
-  let form_items_result = loaders.form_form_items().load_one(form_id).await?;
-  let form_items = form_items_result.expect_models()?;
-  let form_items: Vec<form_items::Model> = match item_identifiers {
-    Some(item_identifiers) => {
-      let item_identifiers: HashSet<String> = HashSet::from_iter(item_identifiers.into_iter());
-      form_items
-        .iter()
-        .filter(|item| {
-          item
-            .identifier
-            .as_ref()
-            .map(|identifier| item_identifiers.contains(identifier))
-            .unwrap_or(false)
-        })
-        .cloned()
-        .collect()
-    }
-    None => form_items.to_vec(),
-  };
-
-  Ok(form_items)
-}
 
 pub enum FormResponseInterface {
   Event(EventType),
@@ -170,77 +127,3 @@ impl ContainerType for FormResponseInterface {
 }
 
 impl InterfaceType for FormResponseInterface {}
-
-#[async_trait]
-pub trait FormResponseImplementation<M>
-where
-  Self: ModelBackedType<Model = M>,
-  M: sea_orm::ModelTrait + FormResponse + Send + Sync,
-{
-  async fn get_form(&self, ctx: &Context<'_>) -> Result<forms::Model, Error>;
-  async fn get_team_member_name(&self, ctx: &Context<'_>) -> Result<String, Error>;
-
-  async fn current_user_form_item_viewer_role(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<FormItemRole, Error>;
-
-  async fn current_user_form_item_writer_role(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<FormItemRole, Error>;
-
-  async fn form_response_attrs_json(
-    &self,
-    ctx: &Context<'_>,
-    item_identifiers: Option<Vec<String>>,
-  ) -> Result<JsonScalar, Error> {
-    let schema_data = ctx.data::<SchemaData>()?;
-    let loaders = ctx.data::<Arc<LoaderManager>>()?;
-    let form = self.get_form(ctx).await?;
-
-    let model = self.get_model();
-    let attached_images = attached_images_by_filename(model, loaders).await?;
-
-    let viewer_role = self.current_user_form_item_viewer_role(ctx).await?;
-
-    let form_items = load_filtered_form_items(loaders, form.id, item_identifiers).await?;
-
-    Ok(JsonScalar(form_response_as_json(
-      model,
-      form_items.iter(),
-      &attached_images,
-      viewer_role,
-      FormResponsePresentationFormat::Plain,
-      &schema_data.language_loader,
-      &IntercodeInflector::new().pluralize(&self.get_team_member_name(ctx).await?),
-    )))
-  }
-
-  async fn form_response_attrs_json_with_rendered_markdown(
-    &self,
-    ctx: &Context<'_>,
-    item_identifiers: Option<Vec<String>>,
-  ) -> Result<JsonScalar, Error> {
-    let schema_data = ctx.data::<SchemaData>()?;
-    let loaders = ctx.data::<Arc<LoaderManager>>()?;
-    let form = self.get_form(ctx).await?;
-
-    let model = self.get_model();
-    let attached_images = attached_images_by_filename(model, loaders).await?;
-
-    let viewer_role = self.current_user_form_item_viewer_role(ctx).await?;
-
-    let form_items = load_filtered_form_items(loaders, form.id, item_identifiers).await?;
-
-    Ok(JsonScalar(form_response_as_json(
-      model,
-      form_items.iter(),
-      &attached_images,
-      viewer_role,
-      FormResponsePresentationFormat::Html,
-      &schema_data.language_loader,
-      &IntercodeInflector::new().pluralize(&self.get_team_member_name(ctx).await?),
-    )))
-  }
-}

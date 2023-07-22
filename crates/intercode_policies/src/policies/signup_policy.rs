@@ -1,8 +1,13 @@
+use std::sync::Arc;
+
+use async_graphql::{Context, Error};
 use async_trait::async_trait;
 use intercode_entities::{conventions, events, runs, signups};
+use intercode_graphql_loaders::LoaderManager;
 use sea_orm::DbErr;
+use seawater::loaders::ExpectModel;
 
-use crate::{AuthorizationInfo, Policy, ReadManageAction};
+use crate::{AuthorizationInfo, GuardablePolicy, Policy, PolicyGuard, ReadManageAction};
 
 pub enum SignupAction {
   Read,
@@ -132,4 +137,89 @@ impl
       ),
     }
   }
+}
+
+pub struct SignupGuard {
+  action: SignupAction,
+  model: signups::Model,
+}
+
+#[async_trait]
+impl<'a>
+  PolicyGuard<
+    'a,
+    SignupPolicy,
+    (
+      conventions::Model,
+      events::Model,
+      runs::Model,
+      signups::Model,
+    ),
+    signups::Model,
+  > for SignupGuard
+{
+  fn new(action: SignupAction, model: &'a signups::Model) -> Self
+  where
+    Self: Sized,
+  {
+    SignupGuard {
+      action,
+      model: model.clone(),
+    }
+  }
+
+  fn get_action(&self) -> &SignupAction {
+    &self.action
+  }
+
+  fn get_model(&self) -> &signups::Model {
+    &self.model
+  }
+
+  async fn get_resource(
+    &self,
+    model: &signups::Model,
+    ctx: &Context<'_>,
+  ) -> Result<
+    (
+      conventions::Model,
+      events::Model,
+      runs::Model,
+      signups::Model,
+    ),
+    Error,
+  > {
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
+    let signup_run_loader = loaders.signup_run();
+    let run_event_loader = loaders.run_event();
+    let event_convention_loader = loaders.event_convention();
+    let run_result = signup_run_loader.load_one(model.id).await?;
+    let run = run_result.expect_one()?;
+    let event_result = run_event_loader.load_one(run.id).await?;
+    let event = event_result.expect_one()?;
+    let convention_result = event_convention_loader.load_one(event.id).await?;
+    let convention = convention_result.expect_one()?;
+
+    Ok((
+      convention.clone(),
+      event.clone(),
+      run.clone(),
+      model.clone(),
+    ))
+  }
+}
+
+impl
+  GuardablePolicy<
+    '_,
+    (
+      conventions::Model,
+      events::Model,
+      runs::Model,
+      signups::Model,
+    ),
+    signups::Model,
+  > for SignupPolicy
+{
+  type Guard = SignupGuard;
 }
