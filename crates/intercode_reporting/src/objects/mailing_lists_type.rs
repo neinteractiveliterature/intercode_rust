@@ -85,6 +85,7 @@ use super::{
   contact_email_type::{ContactEmail, ContactEmailType},
   RunType,
 };
+
 model_backed_type!(MailingListsType, conventions::Model);
 
 #[Object(name = "MailingLists")]

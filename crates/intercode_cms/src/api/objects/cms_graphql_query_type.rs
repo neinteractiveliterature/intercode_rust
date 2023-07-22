@@ -11,7 +11,7 @@ model_backed_type!(CmsGraphqlQueryType, cms_graphql_queries::Model);
 
 #[Object(name = "CmsGraphqlQuery")]
 impl CmsGraphqlQueryType {
-  async fn id(&self, ctx: &Context<'_>) -> ID {
+  async fn id(&self) -> ID {
     self.model.id.into()
   }
 

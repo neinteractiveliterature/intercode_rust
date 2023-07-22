@@ -2461,6 +2461,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "intercode_reporting"
+version = "0.1.0"
+dependencies = [
+ "async-graphql",
+ "intercode_entities",
+ "intercode_graphql_core",
+ "intercode_policies",
+ "itertools",
+ "mailparse",
+ "sea-orm",
+ "seawater",
+ "serde_json",
+]
+
+[[package]]
 name = "intercode_rust"
 version = "0.1.0"
 dependencies = [

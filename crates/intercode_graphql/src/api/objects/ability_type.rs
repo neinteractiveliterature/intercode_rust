@@ -1,21 +1,21 @@
 use std::{borrow::Cow, sync::Arc};
 
 use async_graphql::*;
-use intercode_cms::api::{partial_objects::AbilityCmsFields, policies::NotificationTemplatePolicy};
+use intercode_cms::api::partial_objects::AbilityCmsFields;
 use intercode_entities::{
-  conventions, departments, email_routes, event_categories, events, forms, notification_templates,
-  organizations, rooms, runs, signups, staff_positions, tickets, user_activity_alerts,
-  user_con_profiles,
+  conventions, departments, email_routes, event_categories, events, organizations, rooms, runs,
+  signups, staff_positions, tickets, user_activity_alerts, user_con_profiles,
 };
+use intercode_forms::partial_objects::AbilityFormsFields;
 use intercode_graphql_core::{lax_id::LaxId, query_data::QueryData};
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
   model_action_permitted::model_action_permitted,
   policies::{
     ConventionAction, ConventionPolicy, DepartmentPolicy, EmailRoutePolicy, EventAction,
-    EventCategoryPolicy, EventPolicy, EventProposalAction, EventProposalPolicy, FormPolicy,
-    OrganizationPolicy, RoomPolicy, RunAction, RunPolicy, SignupAction, SignupPolicy,
-    StaffPositionPolicy, TicketAction, TicketPolicy, UserActivityAlertPolicy, UserConProfileAction,
+    EventCategoryPolicy, EventPolicy, EventProposalAction, EventProposalPolicy, OrganizationPolicy,
+    RoomPolicy, RunAction, RunPolicy, SignupAction, SignupPolicy, StaffPositionPolicy,
+    TicketAction, TicketPolicy, UserActivityAlertPolicy, UserConProfileAction,
     UserConProfilePolicy,
   },
   AuthorizationInfo, Policy, ReadManageAction,
@@ -520,23 +520,6 @@ impl<'a> AbilityApiFields<'a> {
     )
   }
 
-  #[graphql(name = "can_manage_forms")]
-  async fn can_manage_forms(&self, ctx: &Context<'_>) -> Result<bool> {
-    let convention = ctx.data::<QueryData>()?.convention();
-
-    Ok(
-      FormPolicy::action_permitted(
-        self.authorization_info.as_ref(),
-        &ReadManageAction::Manage,
-        &forms::Model {
-          convention_id: convention.map(|convention| convention.id),
-          ..Default::default()
-        },
-      )
-      .await?,
-    )
-  }
-
   #[graphql(name = "can_read_any_mailing_list")]
   async fn can_read_any_mailing_list(&self, ctx: &Context<'_>) -> Result<bool> {
     let Some(convention) = ctx.data::<QueryData>()?.convention() else {
@@ -548,25 +531,6 @@ impl<'a> AbilityApiFields<'a> {
         &self.authorization_info,
         &ConventionAction::ReadAnyMailingList,
         convention,
-      )
-      .await?,
-    )
-  }
-
-  #[graphql(name = "can_update_notification_templates")]
-  async fn can_update_notification_templates(&self, ctx: &Context<'_>) -> Result<bool> {
-    let Some(convention) = ctx.data::<QueryData>()?.convention() else {
-      return Ok(false);
-    };
-
-    Ok(
-      NotificationTemplatePolicy::action_permitted(
-        self.authorization_info.as_ref(),
-        &ReadManageAction::Manage,
-        &notification_templates::Model {
-          convention_id: convention.id,
-          ..Default::default()
-        },
       )
       .await?,
     )
@@ -825,14 +789,16 @@ impl<'a> AbilityApiFields<'a> {
 pub struct AbilityType<'a>(
   AbilityStoreFields<'a>,
   AbilityCmsFields<'a>,
+  AbilityFormsFields<'a>,
   AbilityApiFields<'a>,
 );
 
 impl<'a> AbilityType<'a> {
   pub fn new(authorization_info: Cow<'a, AuthorizationInfo>) -> Self {
     Self(
-      AbilityStoreFields::new(authorization_info.clone()),
-      AbilityCmsFields::new(authorization_info.clone()),
+      AbilityStoreFields::new(Cow::Borrowed(&authorization_info)),
+      AbilityCmsFields::new(Cow::Borrowed(&authorization_info)),
+      AbilityFormsFields::new(Cow::Borrowed(&authorization_info)),
       AbilityApiFields::new(authorization_info),
     )
   }

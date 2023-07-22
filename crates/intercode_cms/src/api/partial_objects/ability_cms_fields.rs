@@ -1,6 +1,8 @@
-use crate::api::policies::CmsContentPolicy;
+use crate::api::policies::{CmsContentPolicy, NotificationTemplatePolicy};
 use async_graphql::{Context, Error, Object};
-use intercode_entities::{cms_content_model::CmsContentModel, pages, root_sites};
+use intercode_entities::{
+  cms_content_model::CmsContentModel, notification_templates, pages, root_sites,
+};
 use intercode_graphql_core::query_data::QueryData;
 use intercode_policies::{AuthorizationInfo, EntityPolicy, Policy, ReadManageAction};
 use sea_orm::PaginatorTrait;
@@ -111,6 +113,25 @@ impl<'a> AbilityCmsFields<'a> {
       .count(query_data.db())
       .await?
         > 0,
+    )
+  }
+
+  #[graphql(name = "can_update_notification_templates")]
+  async fn can_update_notification_templates(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    let Some(convention) = ctx.data::<QueryData>()?.convention() else {
+      return Ok(false);
+    };
+
+    Ok(
+      NotificationTemplatePolicy::action_permitted(
+        self.authorization_info.as_ref(),
+        &ReadManageAction::Manage,
+        &notification_templates::Model {
+          convention_id: convention.id,
+          ..Default::default()
+        },
+      )
+      .await?,
     )
   }
 }
