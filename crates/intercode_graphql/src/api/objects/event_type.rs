@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use crate::QueryData;
+use crate::{
+  api::merged_objects::{FormType, TicketType},
+  QueryData,
+};
 use async_graphql::*;
 use futures::StreamExt;
 use intercode_entities::{events, RegistrationPolicy};
@@ -20,8 +23,8 @@ use intercode_policies::{
 use seawater::loaders::{ExpectModel, ExpectModels};
 
 use super::{
-  ConventionType, EventCategoryType, FormType, MaximumEventProvidedTicketsOverrideType,
-  RegistrationPolicyType, RunType, TeamMemberType, TicketType,
+  ConventionType, EventCategoryType, MaximumEventProvidedTicketsOverrideType,
+  RegistrationPolicyType, RunType, TeamMemberType,
 };
 
 model_backed_type!(EventApiFields, events::Model);

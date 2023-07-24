@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
+use crate::api::merged_objects::{FormType, MailingListsType};
+
 use super::{
-  mailing_lists_type::MailingListsType, user_activity_alert_type::UserActivityAlertType,
-  CmsContentGroupType, DepartmentType, EventCategoryType, EventProposalType,
-  EventProposalsPaginationType, EventType, EventsPaginationType, FormType, RoomType,
-  SignupRequestsPaginationType, SignupType, StaffPositionType, UserConProfileType,
-  UserConProfilesPaginationType,
+  user_activity_alert_type::UserActivityAlertType, CmsContentGroupType, DepartmentType,
+  EventCategoryType, EventProposalType, EventProposalsPaginationType, EventType,
+  EventsPaginationType, RoomType, SignupRequestsPaginationType, SignupType, StaffPositionType,
+  UserConProfileType, UserConProfilesPaginationType,
 };
 use async_graphql::*;
 use chrono::{DateTime, Utc};

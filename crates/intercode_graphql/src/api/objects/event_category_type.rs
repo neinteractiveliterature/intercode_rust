@@ -14,9 +14,9 @@ use intercode_query_builders::{sort_input::SortInput, EventFiltersInput, EventsQ
 use sea_orm::ModelTrait;
 use seawater::loaders::ExpectModel;
 
-use crate::QueryData;
+use crate::{api::merged_objects::FormType, QueryData};
 
-use super::{DepartmentType, EventsPaginationType, FormType};
+use super::{DepartmentType, EventsPaginationType};
 
 model_backed_type!(EventCategoryType, event_categories::Model);
 

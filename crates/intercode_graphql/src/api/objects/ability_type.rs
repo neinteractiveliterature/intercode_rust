@@ -799,7 +799,7 @@ impl AbilityType {
       AbilityStoreFields::new(authorization_info.clone()),
       AbilityCmsFields::new(authorization_info.clone()),
       AbilityFormsFields::new(authorization_info.clone()),
-      AbilityApiFields::new(authorization_info.clone()),
+      AbilityApiFields::new(authorization_info),
     )
   }
 }

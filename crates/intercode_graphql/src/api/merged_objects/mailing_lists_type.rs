@@ -6,7 +6,7 @@ use intercode_reporting::{
   partial_objects::{waitlists, MailingListsReportingFields, MailingListsWaitlistsResult},
 };
 
-use super::RunType;
+use crate::api::objects::RunType;
 
 struct MailingListsWaitlistsResultWrapper(MailingListsWaitlistsResult);
 

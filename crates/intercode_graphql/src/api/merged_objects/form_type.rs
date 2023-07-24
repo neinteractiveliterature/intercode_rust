@@ -5,7 +5,7 @@ use intercode_graphql_core::{
   load_one_by_model_id, loader_result_to_many, model_backed_type, ModelBackedType,
 };
 
-use super::{ConventionType, EventCategoryType};
+use crate::api::objects::{ConventionType, EventCategoryType};
 
 model_backed_type!(FormGlueFields, forms::Model);
 

@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
-use super::{
-  AbilityType, ConventionType, OrderType, SignupType, StaffPositionType, TeamMemberType, TicketType,
-};
+use super::{AbilityType, ConventionType, SignupType, StaffPositionType, TeamMemberType};
+use crate::api::merged_objects::{OrderType, TicketType};
 use crate::QueryData;
 use async_graphql::*;
 use intercode_entities::{user_con_profiles, UserNames};
