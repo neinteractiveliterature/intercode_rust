@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use super::{
-  AbilityType, ConventionType, SignupType, StaffPositionType, TeamMemberType, TicketType,
+  AbilityType, ConventionType, OrderType, SignupType, StaffPositionType, TeamMemberType, TicketType,
 };
 use crate::QueryData;
 use async_graphql::*;
@@ -81,6 +81,14 @@ impl UserConProfileApiFields {
     let loader = &ctx.data::<Arc<LoaderManager>>()?.conventions_by_id();
     let loader_result = loader.load_one(self.model.convention_id).await?;
     Ok(ConventionType::new(loader_result.expect_one()?.clone()))
+  }
+
+  #[graphql(name = "current_pending_order")]
+  async fn current_pending_order(&self, ctx: &Context<'_>) -> Result<Option<OrderType>, Error> {
+    UserConProfileStoreFields::from_type(self.clone())
+      .current_pending_order(ctx)
+      .await
+      .map(|res| res.map(OrderType::from_type))
   }
 
   async fn country(&self) -> Option<&str> {

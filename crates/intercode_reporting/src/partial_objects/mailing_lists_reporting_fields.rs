@@ -135,7 +135,7 @@ pub async fn waitlists(
   Ok(results)
 }
 
-#[Object(name = "MailingLists")]
+#[Object]
 impl MailingListsReportingFields {
   #[graphql(
     name = "event_proposers",
