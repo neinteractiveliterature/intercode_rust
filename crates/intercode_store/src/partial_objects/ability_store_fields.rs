@@ -1,9 +1,13 @@
 use async_graphql::*;
-use intercode_entities::{orders, products, ticket_types, user_con_profiles};
-use intercode_graphql_core::{load_one_by_id, query_data::QueryData};
+use intercode_entities::{conventions, orders, products, ticket_types, tickets, user_con_profiles};
+use intercode_graphql_core::{lax_id::LaxId, load_one_by_id, query_data::QueryData};
+use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
-  model_action_permitted::model_action_permitted, AuthorizationInfo, Policy, ReadManageAction,
+  model_action_permitted::model_action_permitted,
+  policies::{TicketAction, TicketPolicy},
+  AuthorizationInfo, Policy, ReadManageAction,
 };
+use sea_orm::EntityTrait;
 use seawater::loaders::ExpectModel;
 use std::sync::Arc;
 
@@ -16,6 +20,33 @@ pub struct AbilityStoreFields {
 impl AbilityStoreFields {
   pub fn new(authorization_info: Arc<AuthorizationInfo>) -> Self {
     Self { authorization_info }
+  }
+
+  async fn get_ticket_policy_model(
+    &self,
+    ctx: &Context<'_>,
+    ticket_id: ID,
+  ) -> Result<(conventions::Model, user_con_profiles::Model, tickets::Model), Error> {
+    let query_data = ctx.data::<QueryData>()?;
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
+    let ticket = tickets::Entity::find_by_id(LaxId::parse(ticket_id)?)
+      .one(query_data.db())
+      .await?
+      .ok_or_else(|| Error::new("Ticket not found"))?;
+
+    let user_con_profile_result = loaders
+      .ticket_user_con_profile()
+      .load_one(ticket.id)
+      .await?;
+    let user_con_profile = user_con_profile_result.expect_one()?;
+
+    let convention_result = loaders
+      .user_con_profile_convention()
+      .load_one(user_con_profile.id)
+      .await?;
+    let convention = convention_result.expect_one()?;
+
+    Ok((convention.clone(), user_con_profile.clone(), ticket))
   }
 }
 
@@ -144,6 +175,56 @@ impl AbilityStoreFields {
             ..Default::default()
           },
         ),
+      )
+      .await?,
+    )
+  }
+
+  #[graphql(name = "can_create_tickets")]
+  async fn can_create_tickets(&self, ctx: &Context<'_>) -> Result<bool> {
+    let convention = ctx.data::<QueryData>()?.convention();
+
+    if let Some(convention) = convention {
+      let user_con_profile = user_con_profiles::Model {
+        convention_id: convention.id,
+        ..Default::default()
+      };
+      let ticket = tickets::Model {
+        ..Default::default()
+      };
+
+      model_action_permitted(
+        &self.authorization_info,
+        TicketPolicy,
+        ctx,
+        &TicketAction::Manage,
+        |_ctx| Ok(Some((convention.clone(), user_con_profile, ticket))),
+      )
+      .await
+    } else {
+      Ok(false)
+    }
+  }
+
+  #[graphql(name = "can_delete_ticket")]
+  async fn can_delete_ticket(&self, ctx: &Context<'_>, ticket_id: ID) -> Result<bool> {
+    Ok(
+      TicketPolicy::action_permitted(
+        &self.authorization_info,
+        &TicketAction::Manage,
+        &(self.get_ticket_policy_model(ctx, ticket_id).await?),
+      )
+      .await?,
+    )
+  }
+
+  #[graphql(name = "can_update_ticket")]
+  async fn can_update_ticket(&self, ctx: &Context<'_>, ticket_id: ID) -> Result<bool> {
+    Ok(
+      TicketPolicy::action_permitted(
+        &self.authorization_info,
+        &TicketAction::Manage,
+        &(self.get_ticket_policy_model(ctx, ticket_id).await?),
       )
       .await?,
     )

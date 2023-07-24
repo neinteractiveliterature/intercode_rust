@@ -3,19 +3,18 @@ use std::sync::Arc;
 use async_graphql::*;
 use intercode_cms::api::partial_objects::AbilityCmsFields;
 use intercode_entities::{
-  conventions, departments, email_routes, event_categories, events, organizations, rooms, runs,
-  signups, staff_positions, tickets, user_activity_alerts, user_con_profiles,
+  conventions, departments, email_routes, events, organizations, runs, signups, staff_positions,
+  user_activity_alerts, user_con_profiles,
 };
+use intercode_events::partial_objects::AbilityEventsFields;
 use intercode_forms::partial_objects::AbilityFormsFields;
 use intercode_graphql_core::{lax_id::LaxId, query_data::QueryData};
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
   model_action_permitted::model_action_permitted,
   policies::{
-    ConventionAction, ConventionPolicy, DepartmentPolicy, EmailRoutePolicy, EventAction,
-    EventCategoryPolicy, EventPolicy, EventProposalAction, EventProposalPolicy, OrganizationPolicy,
-    RoomPolicy, RunAction, RunPolicy, SignupAction, SignupPolicy, StaffPositionPolicy,
-    TicketAction, TicketPolicy, UserActivityAlertPolicy, UserConProfileAction,
+    ConventionAction, ConventionPolicy, DepartmentPolicy, EmailRoutePolicy, OrganizationPolicy,
+    SignupAction, SignupPolicy, StaffPositionPolicy, UserActivityAlertPolicy, UserConProfileAction,
     UserConProfilePolicy,
   },
   AuthorizationInfo, Policy, ReadManageAction,
@@ -65,62 +64,6 @@ impl AbilityApiFields {
     Ok((convention.clone(), event.clone(), run.clone(), signup))
   }
 
-  async fn get_ticket_policy_model(
-    &self,
-    ctx: &Context<'_>,
-    ticket_id: ID,
-  ) -> Result<(conventions::Model, user_con_profiles::Model, tickets::Model), Error> {
-    let query_data = ctx.data::<QueryData>()?;
-    let loaders = ctx.data::<Arc<LoaderManager>>()?;
-    let ticket = tickets::Entity::find_by_id(LaxId::parse(ticket_id)?)
-      .one(query_data.db())
-      .await?
-      .ok_or_else(|| Error::new("Ticket not found"))?;
-
-    let user_con_profile_result = loaders
-      .ticket_user_con_profile()
-      .load_one(ticket.id)
-      .await?;
-    let user_con_profile = user_con_profile_result.expect_one()?;
-
-    let convention_result = loaders
-      .user_con_profile_convention()
-      .load_one(user_con_profile.id)
-      .await?;
-    let convention = convention_result.expect_one()?;
-
-    Ok((convention.clone(), user_con_profile.clone(), ticket))
-  }
-
-  async fn can_perform_event_proposal_action(
-    &self,
-    ctx: &Context<'_>,
-    event_proposal_id: ID,
-    action: &EventProposalAction,
-  ) -> Result<bool> {
-    let loaders = ctx.data::<Arc<LoaderManager>>()?;
-    let loader_result = loaders
-      .event_proposals_by_id()
-      .load_one(LaxId::parse(event_proposal_id)?)
-      .await?;
-
-    let event_proposal = loader_result.expect_one()?;
-    let convention_result = loaders
-      .event_proposal_convention()
-      .load_one(event_proposal.id)
-      .await?;
-    let convention = convention_result.expect_one()?;
-
-    model_action_permitted(
-      self.authorization_info.as_ref(),
-      EventProposalPolicy,
-      ctx,
-      action,
-      |_ctx| Ok(Some((convention.clone(), event_proposal.clone()))),
-    )
-    .await
-  }
-
   async fn can_perform_user_con_profile_action(
     &self,
     ctx: &Context<'_>,
@@ -156,42 +99,6 @@ impl AbilityApiFields {
       ctx,
       &ConventionAction::Update,
       |_ctx| Ok(Some(conventions::Model::default())),
-    )
-    .await
-  }
-
-  #[graphql(name = "can_read_schedule")]
-  async fn can_read_schedule(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    model_action_permitted(
-      self.authorization_info.as_ref(),
-      ConventionPolicy,
-      ctx,
-      &ConventionAction::Schedule,
-      |ctx| Ok(ctx.data::<QueryData>()?.convention()),
-    )
-    .await
-  }
-
-  #[graphql(name = "can_read_schedule_with_counts")]
-  async fn can_read_schedule_with_counts(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    model_action_permitted(
-      self.authorization_info.as_ref(),
-      ConventionPolicy,
-      ctx,
-      &ConventionAction::ScheduleWithCounts,
-      |ctx| Ok(ctx.data::<QueryData>()?.convention()),
-    )
-    .await
-  }
-
-  #[graphql(name = "can_list_events")]
-  async fn can_list_events(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    model_action_permitted(
-      self.authorization_info.as_ref(),
-      ConventionPolicy,
-      ctx,
-      &ConventionAction::ListEvents,
-      |ctx| Ok(ctx.data::<QueryData>()?.convention()),
     )
     .await
   }
@@ -321,205 +228,6 @@ impl AbilityApiFields {
     )
   }
 
-  #[graphql(name = "can_update_event")]
-  async fn can_update_event(&self, ctx: &Context<'_>, event_id: ID) -> Result<bool, Error> {
-    let db = ctx.data::<QueryData>()?.db();
-    let event = events::Entity::find_by_id(LaxId::parse(event_id)?)
-      .one(db)
-      .await?;
-
-    let resource = if let Some(event) = event {
-      Some((
-        ctx
-          .data::<Arc<LoaderManager>>()?
-          .event_convention()
-          .load_one(event.id)
-          .await?
-          .expect_one()?
-          .clone(),
-        event,
-      ))
-    } else {
-      None
-    };
-
-    model_action_permitted(
-      self.authorization_info.as_ref(),
-      EventPolicy,
-      ctx,
-      &EventAction::Update,
-      |_ctx| Ok(resource),
-    )
-    .await
-  }
-
-  #[graphql(
-    name = "can_delete_event",
-    deprecation = "Deleting events is never allowed; this always returns false"
-  )]
-  async fn can_delete_event(&self, _event_id: ID) -> Result<bool, Error> {
-    Ok(false)
-  }
-
-  #[graphql(name = "can_read_admin_notes_on_event_proposal")]
-  async fn can_read_admin_notes_on_event_proposal(
-    &self,
-    ctx: &Context<'_>,
-    event_proposal_id: ID,
-  ) -> Result<bool, Error> {
-    self
-      .can_perform_event_proposal_action(
-        ctx,
-        event_proposal_id,
-        &EventProposalAction::ReadAdminNotes,
-      )
-      .await
-  }
-
-  #[graphql(name = "can_update_event_proposal")]
-  async fn can_update_event_proposal(
-    &self,
-    ctx: &Context<'_>,
-    event_proposal_id: ID,
-  ) -> Result<bool, Error> {
-    self
-      .can_perform_event_proposal_action(ctx, event_proposal_id, &EventProposalAction::Update)
-      .await
-  }
-
-  #[graphql(name = "can_delete_event_proposal")]
-  async fn can_delete_event_proposal(
-    &self,
-    ctx: &Context<'_>,
-    event_proposal_id: ID,
-  ) -> Result<bool, Error> {
-    self
-      .can_perform_event_proposal_action(ctx, event_proposal_id, &EventProposalAction::Delete)
-      .await
-  }
-
-  #[graphql(name = "can_override_maximum_event_provided_tickets")]
-  async fn can_override_maximum_event_provided_tickets(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<bool, Error> {
-    let convention = ctx.data::<QueryData>()?.convention();
-    let Some(convention) = convention else {
-      return Ok(false);
-    };
-
-    let event = events::Model {
-      id: 0,
-      convention_id: convention.id,
-      event_category_id: 0,
-      can_play_concurrently: false,
-      private_signup_list: false,
-      length_seconds: 3600,
-      status: "active".to_string(),
-      title: "Null event".to_string(),
-      ..Default::default()
-    };
-
-    let resource = (convention.clone(), event);
-
-    model_action_permitted(
-      self.authorization_info.as_ref(),
-      EventPolicy,
-      ctx,
-      &EventAction::OverrideMaximumEventProvidedTickets,
-      |_ctx| Ok(Some(resource)),
-    )
-    .await
-  }
-
-  #[graphql(name = "can_update_event_categories")]
-  async fn can_update_event_categories(&self, ctx: &Context<'_>) -> Result<bool> {
-    let Some(convention) = ctx.data::<QueryData>()?.convention() else {
-      return Ok(false);
-    };
-
-    Ok(
-      EventCategoryPolicy::action_permitted(
-        &self.authorization_info,
-        &ReadManageAction::Manage,
-        &event_categories::Model {
-          convention_id: convention.id,
-          ..Default::default()
-        },
-      )
-      .await?,
-    )
-  }
-
-  #[graphql(name = "can_read_event_proposals")]
-  async fn can_read_event_proposals(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    model_action_permitted(
-      self.authorization_info.as_ref(),
-      ConventionPolicy,
-      ctx,
-      &ConventionAction::ViewEventProposals,
-      |ctx| Ok(ctx.data::<QueryData>()?.convention()),
-    )
-    .await
-  }
-
-  #[graphql(name = "can_read_event_signups")]
-  async fn can_read_event_signups(&self, ctx: &Context<'_>, event_id: ID) -> Result<bool, Error> {
-    let db = ctx.data::<QueryData>()?.db();
-    let event = events::Entity::find_by_id(LaxId::parse(event_id)?)
-      .one(db)
-      .await?;
-
-    let resource = if let Some(event) = event {
-      Some((
-        ctx
-          .data::<Arc<LoaderManager>>()?
-          .event_convention()
-          .load_one(event.id)
-          .await?
-          .expect_one()?
-          .clone(),
-        event,
-      ))
-    } else {
-      None
-    };
-
-    model_action_permitted(
-      self.authorization_info.as_ref(),
-      EventPolicy,
-      ctx,
-      &EventAction::ReadSignups,
-      |_ctx| Ok(resource),
-    )
-    .await
-  }
-
-  #[graphql(name = "can_manage_runs")]
-  async fn can_manage_runs(&self, ctx: &Context<'_>) -> Result<bool> {
-    let authorization_info = self.authorization_info.as_ref();
-    let convention = ctx.data::<QueryData>()?.convention();
-    let Some(convention) = convention else {
-      return Ok(false);
-    };
-
-    Ok(
-      RunPolicy::action_permitted(
-        authorization_info,
-        &RunAction::Manage,
-        &(
-          convention.clone(),
-          events::Model {
-            convention_id: convention.id,
-            ..Default::default()
-          },
-          runs::Model::default(),
-        ),
-      )
-      .await?,
-    )
-  }
-
   #[graphql(name = "can_read_any_mailing_list")]
   async fn can_read_any_mailing_list(&self, ctx: &Context<'_>) -> Result<bool> {
     let Some(convention) = ctx.data::<QueryData>()?.convention() else {
@@ -550,23 +258,6 @@ impl AbilityApiFields {
       ctx,
       &ConventionAction::ViewReports,
       |ctx| Ok(ctx.data::<QueryData>()?.convention()),
-    )
-    .await
-  }
-
-  #[graphql(name = "can_manage_rooms")]
-  async fn can_manage_rooms(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    model_action_permitted(
-      self.authorization_info.as_ref(),
-      RoomPolicy,
-      ctx,
-      &ReadManageAction::Manage,
-      |ctx| {
-        Ok(Some(rooms::Model {
-          convention_id: ctx.data::<QueryData>()?.convention().map(|con| con.id),
-          ..Default::default()
-        }))
-      },
     )
     .await
   }
@@ -674,56 +365,6 @@ impl AbilityApiFields {
     }
   }
 
-  #[graphql(name = "can_create_tickets")]
-  async fn can_create_tickets(&self, ctx: &Context<'_>) -> Result<bool> {
-    let convention = ctx.data::<QueryData>()?.convention();
-
-    if let Some(convention) = convention {
-      let user_con_profile = user_con_profiles::Model {
-        convention_id: convention.id,
-        ..Default::default()
-      };
-      let ticket = tickets::Model {
-        ..Default::default()
-      };
-
-      model_action_permitted(
-        &self.authorization_info,
-        TicketPolicy,
-        ctx,
-        &TicketAction::Manage,
-        |_ctx| Ok(Some((convention.clone(), user_con_profile, ticket))),
-      )
-      .await
-    } else {
-      Ok(false)
-    }
-  }
-
-  #[graphql(name = "can_delete_ticket")]
-  async fn can_delete_ticket(&self, ctx: &Context<'_>, ticket_id: ID) -> Result<bool> {
-    Ok(
-      TicketPolicy::action_permitted(
-        &self.authorization_info,
-        &TicketAction::Manage,
-        &(self.get_ticket_policy_model(ctx, ticket_id).await?),
-      )
-      .await?,
-    )
-  }
-
-  #[graphql(name = "can_update_ticket")]
-  async fn can_update_ticket(&self, ctx: &Context<'_>, ticket_id: ID) -> Result<bool> {
-    Ok(
-      TicketPolicy::action_permitted(
-        &self.authorization_info,
-        &TicketAction::Manage,
-        &(self.get_ticket_policy_model(ctx, ticket_id).await?),
-      )
-      .await?,
-    )
-  }
-
   #[graphql(name = "can_read_users")]
   async fn can_read_users(&self) -> bool {
     false
@@ -787,6 +428,7 @@ impl AbilityApiFields {
 #[derive(MergedObject)]
 #[graphql(name = "Ability")]
 pub struct AbilityType(
+  AbilityEventsFields,
   AbilityStoreFields,
   AbilityCmsFields,
   AbilityFormsFields,
@@ -796,6 +438,7 @@ pub struct AbilityType(
 impl AbilityType {
   pub fn new(authorization_info: Arc<AuthorizationInfo>) -> Self {
     Self(
+      AbilityEventsFields::new(authorization_info.clone()),
       AbilityStoreFields::new(authorization_info.clone()),
       AbilityCmsFields::new(authorization_info.clone()),
       AbilityFormsFields::new(authorization_info.clone()),

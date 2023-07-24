@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
-use crate::api::merged_objects::{FormType, MailingListsType};
+use crate::api::merged_objects::{
+  EventCategoryType, EventProposalType, EventType, FormType, MailingListsType,
+};
 
 use super::{
   user_activity_alert_type::UserActivityAlertType, CmsContentGroupType, DepartmentType,
-  EventCategoryType, EventProposalType, EventProposalsPaginationType, EventType,
-  EventsPaginationType, RoomType, SignupRequestsPaginationType, SignupType, StaffPositionType,
-  UserConProfileType, UserConProfilesPaginationType,
+  EventProposalsPaginationType, EventsPaginationType, SignupRequestsPaginationType, SignupType,
+  StaffPositionType, UserConProfileType, UserConProfilesPaginationType,
 };
 use async_graphql::*;
 use chrono::{DateTime, Utc};
@@ -18,6 +19,7 @@ use intercode_entities::{
   model_ext::{time_bounds::TimeBoundsSelectExt, user_con_profiles::BioEligibility},
   signups, staff_positions, user_con_profiles, MaximumEventSignupsValue,
 };
+use intercode_events::objects::RoomType;
 use intercode_graphql_core::{
   enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
   lax_id::LaxId,

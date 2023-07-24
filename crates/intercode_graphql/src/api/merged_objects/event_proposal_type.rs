@@ -1,0 +1,62 @@
+use async_graphql::*;
+use intercode_entities::event_proposals;
+use intercode_events::partial_objects::EventProposalEventsFields;
+use intercode_forms::partial_objects::EventProposalFormsFields;
+use intercode_graphql_core::{model_backed_type, ModelBackedType};
+use intercode_policies::{
+  policies::{EventProposalAction, EventProposalPolicy},
+  ModelBackedTypeGuardablePolicy,
+};
+
+use crate::api::objects::UserConProfileType;
+
+use super::{EventCategoryType, EventType};
+model_backed_type!(EventProposalGlueFields, event_proposals::Model);
+
+#[Object(guard = "EventProposalPolicy::model_guard(EventProposalAction::Read, self)")]
+impl EventProposalGlueFields {
+  #[graphql(name = "event")]
+  async fn event(&self, ctx: &Context<'_>) -> Result<Option<EventType>> {
+    EventProposalEventsFields::from_type(self.clone())
+      .event(ctx)
+      .await
+      .map(|opt| opt.map(EventType::from_type))
+  }
+
+  #[graphql(name = "event_category")]
+  async fn event_category(&self, ctx: &Context<'_>) -> Result<EventCategoryType> {
+    EventProposalEventsFields::from_type(self.clone())
+      .event_category(ctx)
+      .await
+      .map(EventCategoryType::from_type)
+  }
+  async fn owner(&self, ctx: &Context<'_>) -> Result<UserConProfileType> {
+    EventProposalEventsFields::from_type(self.clone())
+      .owner(ctx)
+      .await
+      .map(UserConProfileType::new)
+  }
+}
+
+#[derive(MergedObject)]
+#[graphql(name = "EventProposal")]
+pub struct EventProposalType(EventProposalGlueFields, EventProposalFormsFields);
+
+impl ModelBackedType for EventProposalType {
+  type Model = event_proposals::Model;
+
+  fn new(model: Self::Model) -> Self {
+    Self(
+      EventProposalGlueFields::new(model.clone()),
+      EventProposalFormsFields::new(model),
+    )
+  }
+
+  fn get_model(&self) -> &Self::Model {
+    self.0.get_model()
+  }
+
+  fn into_model(self) -> Self::Model {
+    self.0.into_model()
+  }
+}

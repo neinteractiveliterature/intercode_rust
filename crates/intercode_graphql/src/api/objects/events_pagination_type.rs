@@ -4,7 +4,7 @@ use intercode_graphql_core::{query_data::QueryData, ModelBackedType, PaginationI
 use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
 use sea_orm::{ConnectionTrait, EntityTrait, Paginator, PaginatorTrait, Select, SelectModel};
 
-use super::EventType;
+use crate::api::merged_objects::EventType;
 
 pub struct EventsPaginationType {
   scope: Select<events::Entity>,

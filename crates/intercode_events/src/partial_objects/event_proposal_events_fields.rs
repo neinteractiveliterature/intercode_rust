@@ -1,8 +1,7 @@
 use std::sync::Arc;
 
 use async_graphql::*;
-use intercode_entities::event_proposals;
-use intercode_forms::partial_objects::EventProposalFormsFields;
+use intercode_entities::{event_proposals, user_con_profiles};
 use intercode_graphql_core::{
   load_one_by_model_id, loader_result_to_optional_single, loader_result_to_required_single,
   model_backed_type, objects::ActiveStorageAttachmentType, scalars::DateScalar, ModelBackedType,
@@ -12,12 +11,39 @@ use intercode_policies::{
   policies::{EventProposalAction, EventProposalPolicy},
   ModelBackedTypeGuardablePolicy,
 };
+use seawater::loaders::ExpectModel;
 
-use super::{EventCategoryType, EventType, RegistrationPolicyType, UserConProfileType};
-model_backed_type!(EventProposalApiFields, event_proposals::Model);
+use crate::objects::RegistrationPolicyType;
+
+use super::{EventCategoryEventsFields, EventEventsFields};
+
+model_backed_type!(EventProposalEventsFields, event_proposals::Model);
+
+impl EventProposalEventsFields {
+  pub async fn event(&self, ctx: &Context<'_>) -> Result<Option<EventEventsFields>> {
+    let loader_result = load_one_by_model_id!(event_proposal_event, ctx, self)?;
+    Ok(loader_result_to_optional_single!(
+      loader_result,
+      EventEventsFields
+    ))
+  }
+
+  pub async fn event_category(&self, ctx: &Context<'_>) -> Result<EventCategoryEventsFields> {
+    let loader_result = load_one_by_model_id!(event_proposal_event_category, ctx, self)?;
+    Ok(loader_result_to_required_single!(
+      loader_result,
+      EventCategoryEventsFields
+    ))
+  }
+
+  pub async fn owner(&self, ctx: &Context<'_>) -> Result<user_con_profiles::Model> {
+    let loader_result = load_one_by_model_id!(event_proposal_owner, ctx, self)?;
+    Ok(loader_result.expect_one()?.clone())
+  }
+}
 
 #[Object(guard = "EventProposalPolicy::model_guard(EventProposalAction::Read, self)")]
-impl EventProposalApiFields {
+impl EventProposalEventsFields {
   async fn id(&self) -> ID {
     self.model.id.into()
   }
@@ -28,21 +54,6 @@ impl EventProposalApiFields {
   )]
   async fn admin_notes(&self) -> Option<&str> {
     self.model.admin_notes.as_deref()
-  }
-
-  #[graphql(name = "event")]
-  async fn event(&self, ctx: &Context<'_>) -> Result<Option<EventType>> {
-    let loader_result = load_one_by_model_id!(event_proposal_event, ctx, self)?;
-    Ok(loader_result_to_optional_single!(loader_result, EventType))
-  }
-
-  #[graphql(name = "event_category")]
-  async fn event_category(&self, ctx: &Context<'_>) -> Result<EventCategoryType> {
-    let loader_result = load_one_by_model_id!(event_proposal_event_category, ctx, self)?;
-    Ok(loader_result_to_required_single!(
-      loader_result,
-      EventCategoryType
-    ))
   }
 
   async fn images(&self, ctx: &Context<'_>) -> Result<Vec<ActiveStorageAttachmentType>> {
@@ -64,14 +75,6 @@ impl EventProposalApiFields {
   #[graphql(name = "length_seconds")]
   async fn length_seconds(&self) -> Option<i32> {
     self.model.length_seconds
-  }
-
-  async fn owner(&self, ctx: &Context<'_>) -> Result<UserConProfileType> {
-    let loader_result = load_one_by_model_id!(event_proposal_owner, ctx, self)?;
-    Ok(loader_result_to_required_single!(
-      loader_result,
-      UserConProfileType
-    ))
   }
 
   #[graphql(name = "registration_policy")]
@@ -112,28 +115,5 @@ impl EventProposalApiFields {
   #[graphql(name = "updated_at")]
   async fn updated_at(&self) -> Result<DateScalar> {
     self.model.updated_at.try_into()
-  }
-}
-
-#[derive(MergedObject)]
-#[graphql(name = "EventProposal")]
-pub struct EventProposalType(EventProposalApiFields, EventProposalFormsFields);
-
-impl ModelBackedType for EventProposalType {
-  type Model = event_proposals::Model;
-
-  fn new(model: Self::Model) -> Self {
-    Self(
-      EventProposalApiFields::new(model.clone()),
-      EventProposalFormsFields::new(model),
-    )
-  }
-
-  fn get_model(&self) -> &Self::Model {
-    self.0.get_model()
-  }
-
-  fn into_model(self) -> Self::Model {
-    self.0.into_model()
   }
 }

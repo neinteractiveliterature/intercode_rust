@@ -5,7 +5,8 @@ use intercode_policies::{
   policies::DepartmentPolicy, ModelBackedTypeGuardablePolicy, ReadManageAction,
 };
 
-use super::EventCategoryType;
+use crate::api::merged_objects::EventCategoryType;
+
 model_backed_type!(DepartmentType, departments::Model);
 
 #[Object(

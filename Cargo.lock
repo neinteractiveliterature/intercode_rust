@@ -2283,6 +2283,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "intercode_events"
+version = "0.1.0"
+dependencies = [
+ "async-graphql",
+ "chrono",
+ "futures",
+ "intercode_entities",
+ "intercode_graphql_core",
+ "intercode_graphql_loaders",
+ "intercode_inflector",
+ "intercode_liquid",
+ "intercode_policies",
+ "intercode_query_builders",
+ "sea-orm",
+ "seawater",
+ "serde_json",
+]
+
+[[package]]
 name = "intercode_forms"
 version = "0.1.0"
 dependencies = [
@@ -2307,14 +2326,11 @@ version = "0.1.0"
 dependencies = [
  "async-graphql",
  "async-graphql-value",
- "async-stripe",
- "async-trait",
  "chrono",
  "futures",
- "i18n-embed",
- "i18n-embed-fl",
  "intercode_cms",
  "intercode_entities",
+ "intercode_events",
  "intercode_forms",
  "intercode_graphql_core",
  "intercode_graphql_loaders",
@@ -2329,10 +2345,8 @@ dependencies = [
  "itertools",
  "liquid",
  "liquid-core",
- "mailparse",
  "md5",
  "pulldown-cmark",
- "rusty-money",
  "sea-orm",
  "seawater",
  "serde_json",
@@ -2491,7 +2505,6 @@ version = "0.1.0"
 dependencies = [
  "async-graphql",
  "async-graphql-axum",
- "async-stripe",
  "axum",
  "axum-extra",
  "axum-server",

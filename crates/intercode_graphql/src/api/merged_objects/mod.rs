@@ -1,11 +1,21 @@
+mod event_category_type;
+mod event_proposal_type;
+mod event_type;
 mod form_type;
 mod mailing_lists_type;
 mod order_entry_type;
 mod order_type;
+mod run_type;
+mod team_member_type;
 mod ticket_type;
 
+pub use event_category_type::*;
+pub use event_proposal_type::*;
+pub use event_type::*;
 pub use form_type::*;
 pub use mailing_lists_type::*;
 pub use order_entry_type::*;
 pub use order_type::*;
+pub use run_type::*;
+pub use team_member_type::*;
 pub use ticket_type::*;

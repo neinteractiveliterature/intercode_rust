@@ -1,9 +1,10 @@
 use std::sync::Arc;
 
 use super::interfaces::CmsParentInterface;
+use super::merged_objects::EventType;
 use super::objects::{
-  AbilityType, ConventionType, EmailRoutesPaginationType, EventType, OrganizationType,
-  RootSiteType, UserConProfileType, UserType,
+  AbilityType, ConventionType, EmailRoutesPaginationType, OrganizationType, RootSiteType,
+  UserConProfileType, UserType,
 };
 use async_graphql::connection::{query, Connection};
 use async_graphql::*;

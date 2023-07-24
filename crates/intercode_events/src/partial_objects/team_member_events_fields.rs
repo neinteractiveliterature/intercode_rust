@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_graphql::*;
-use intercode_entities::team_members;
+use intercode_entities::{team_members, user_con_profiles};
 use intercode_graphql_core::{
   load_one_by_model_id, loader_result_to_required_single, model_backed_type, query_data::QueryData,
 };
@@ -11,14 +11,29 @@ use intercode_policies::{
 };
 use seawater::loaders::ExpectModel;
 
-use super::{EventType, UserConProfileType};
-model_backed_type!(TeamMemberType, team_members::Model);
+use super::EventEventsFields;
+model_backed_type!(TeamMemberEventsFields, team_members::Model);
 
-#[Object(
-  name = "TeamMember",
-  guard = "TeamMemberPolicy::model_guard(ReadManageAction::Read, self)"
-)]
-impl TeamMemberType {
+impl TeamMemberEventsFields {
+  pub async fn event(&self, ctx: &Context<'_>) -> Result<EventEventsFields, Error> {
+    let loader_result = load_one_by_model_id!(team_member_event, ctx, self)?;
+    Ok(loader_result_to_required_single!(
+      loader_result,
+      EventEventsFields
+    ))
+  }
+
+  pub async fn user_con_profile(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<user_con_profiles::Model, Error> {
+    let loader_result = load_one_by_model_id!(team_member_user_con_profile, ctx, self)?;
+    Ok(loader_result.expect_one()?.clone())
+  }
+}
+
+#[Object(guard = "TeamMemberPolicy::model_guard(ReadManageAction::Read, self)")]
+impl TeamMemberEventsFields {
   async fn id(&self) -> ID {
     self.model.id.into()
   }
@@ -52,11 +67,6 @@ impl TeamMemberType {
     Ok(Some(user_result.expect_one()?.email.clone()))
   }
 
-  async fn event(&self, ctx: &Context<'_>) -> Result<EventType, Error> {
-    let loader_result = load_one_by_model_id!(team_member_event, ctx, self)?;
-    Ok(loader_result_to_required_single!(loader_result, EventType))
-  }
-
   #[graphql(name = "receive_con_email")]
   async fn receive_con_email(&self) -> bool {
     self.model.receive_con_email.unwrap_or(false)
@@ -70,14 +80,5 @@ impl TeamMemberType {
   #[graphql(name = "show_email")]
   async fn show_email(&self) -> bool {
     self.model.show_email.unwrap_or(false)
-  }
-
-  #[graphql(name = "user_con_profile")]
-  async fn user_con_profile(&self, ctx: &Context<'_>) -> Result<UserConProfileType, Error> {
-    let loader_result = load_one_by_model_id!(team_member_user_con_profile, ctx, self)?;
-    Ok(loader_result_to_required_single!(
-      loader_result,
-      UserConProfileType
-    ))
   }
 }

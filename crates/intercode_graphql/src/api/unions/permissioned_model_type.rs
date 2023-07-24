@@ -1,6 +1,9 @@
 use async_graphql::Union;
 
-use crate::api::objects::{CmsContentGroupType, ConventionType, EventCategoryType};
+use crate::api::{
+  merged_objects::EventCategoryType,
+  objects::{CmsContentGroupType, ConventionType},
+};
 
 #[derive(Union)]
 #[graphql(name = "PermissionedModel")]

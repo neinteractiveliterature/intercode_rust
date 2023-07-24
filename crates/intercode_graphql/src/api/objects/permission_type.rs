@@ -12,11 +12,12 @@ use intercode_graphql_loaders::{
 };
 use seawater::loaders::ExpectModel;
 
-use crate::api::unions::{PermissionedModelType, PermissionedRoleType};
-
-use super::{
-  CmsContentGroupType, ConventionType, EventCategoryType, OrganizationRoleType, StaffPositionType,
+use crate::api::{
+  merged_objects::EventCategoryType,
+  unions::{PermissionedModelType, PermissionedRoleType},
 };
+
+use super::{CmsContentGroupType, ConventionType, OrganizationRoleType, StaffPositionType};
 model_backed_type!(PermissionType, permissions::Model);
 
 #[Object(name = "Permission")]

@@ -13,7 +13,9 @@ use intercode_policies::{
 };
 use seawater::loaders::ExpectModel;
 
-use super::{RunType, UserConProfileType};
+use crate::api::merged_objects::RunType;
+
+use super::UserConProfileType;
 
 model_backed_type!(SignupType, signups::Model);
 

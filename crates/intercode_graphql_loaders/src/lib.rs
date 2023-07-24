@@ -1,4 +1,5 @@
 mod active_storage_attached_blobs_loader;
+pub mod attached_images_by_filename;
 pub mod cms_content_group_contents_loader;
 mod event_user_con_profile_event_rating_loader;
 mod exclusive_arc_utils;

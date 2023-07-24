@@ -12,7 +12,9 @@ use intercode_entities::{
   model_ext::{form_item_permissions::FormItemRole, FormResponse},
 };
 use intercode_graphql_core::{scalars::JsonScalar, schema_data::SchemaData, ModelBackedType};
-use intercode_graphql_loaders::LoaderManager;
+use intercode_graphql_loaders::{
+  attached_images_by_filename::attached_images_by_filename, LoaderManager,
+};
 use intercode_inflector::IntercodeInflector;
 use intercode_liquid::render_markdown;
 use sea_orm::EntityTrait;
@@ -84,22 +86,6 @@ pub fn form_response_as_json<'a, E: EntityTrait>(
           })
         })
       })
-      .collect(),
-  )
-}
-
-pub async fn attached_images_by_filename<E: EntityTrait>(
-  form_response: &dyn FormResponse<Entity = E>,
-  loaders: &LoaderManager,
-) -> Result<HashMap<String, active_storage_blobs::Model>, Error> {
-  Ok(
-    loaders
-      .event_attached_images
-      .load_one(form_response.get_id())
-      .await?
-      .unwrap_or_default()
-      .into_iter()
-      .map(|blob| (blob.filename.clone(), blob))
       .collect(),
   )
 }

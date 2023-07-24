@@ -20,6 +20,7 @@ debug = 1
 members = [
   "./crates/intercode_cms",
   "./crates/intercode_entities",
+  "./crates/intercode_events",
   "./crates/intercode_forms",
   "./crates/intercode_graphql",
   "./crates/intercode_graphql_core",
@@ -85,7 +86,6 @@ tokio-console = ["dep:console-subscriber", "tokio/full", "tokio/tracing"]
 [dependencies]
 async-graphql = {workspace = true}
 async-graphql-axum = "~5.0.10"
-async-stripe = {workspace = true}
 axum = {workspace = true}
 axum-extra = {version = "~0.7.4", features = ["cookie"]}
 axum-server = {version = "0.5.1", features = ["tls-rustls"]}

@@ -5,7 +5,9 @@ use intercode_graphql_core::{
   model_backed_type, scalars::DateScalar,
 };
 
-use super::{RunType, SignupType, UserConProfileType};
+use crate::api::merged_objects::RunType;
+
+use super::{SignupType, UserConProfileType};
 
 model_backed_type!(SignupRequestType, signup_requests::Model);
 
