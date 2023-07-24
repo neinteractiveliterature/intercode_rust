@@ -1,4 +1,4 @@
-use std::{borrow::Cow, sync::Arc};
+use std::sync::Arc;
 
 use async_graphql::*;
 use intercode_cms::api::partial_objects::AbilityCmsFields;
@@ -24,12 +24,12 @@ use intercode_store::partial_objects::AbilityStoreFields;
 use sea_orm::EntityTrait;
 use seawater::loaders::ExpectModel;
 
-pub struct AbilityApiFields<'a> {
-  authorization_info: Cow<'a, AuthorizationInfo>,
+pub struct AbilityApiFields {
+  authorization_info: Arc<AuthorizationInfo>,
 }
 
-impl<'a> AbilityApiFields<'a> {
-  pub fn new(authorization_info: Cow<'a, AuthorizationInfo>) -> Self {
+impl AbilityApiFields {
+  pub fn new(authorization_info: Arc<AuthorizationInfo>) -> Self {
     Self { authorization_info }
   }
 
@@ -147,7 +147,7 @@ impl<'a> AbilityApiFields<'a> {
 }
 
 #[Object]
-impl<'a> AbilityApiFields<'a> {
+impl AbilityApiFields {
   #[graphql(name = "can_manage_conventions")]
   async fn can_manage_conventions(&self, ctx: &Context<'_>) -> Result<bool, Error> {
     model_action_permitted(
@@ -786,20 +786,20 @@ impl<'a> AbilityApiFields<'a> {
 
 #[derive(MergedObject)]
 #[graphql(name = "Ability")]
-pub struct AbilityType<'a>(
-  AbilityStoreFields<'a>,
-  AbilityCmsFields<'a>,
-  AbilityFormsFields<'a>,
-  AbilityApiFields<'a>,
+pub struct AbilityType(
+  AbilityStoreFields,
+  AbilityCmsFields,
+  AbilityFormsFields,
+  AbilityApiFields,
 );
 
-impl<'a> AbilityType<'a> {
-  pub fn new(authorization_info: Cow<'a, AuthorizationInfo>) -> Self {
+impl AbilityType {
+  pub fn new(authorization_info: Arc<AuthorizationInfo>) -> Self {
     Self(
-      AbilityStoreFields::new(Cow::Borrowed(&authorization_info)),
-      AbilityCmsFields::new(Cow::Borrowed(&authorization_info)),
-      AbilityFormsFields::new(Cow::Borrowed(&authorization_info)),
-      AbilityApiFields::new(authorization_info),
+      AbilityStoreFields::new(authorization_info.clone()),
+      AbilityCmsFields::new(authorization_info.clone()),
+      AbilityFormsFields::new(authorization_info.clone()),
+      AbilityApiFields::new(authorization_info.clone()),
     )
   }
 }

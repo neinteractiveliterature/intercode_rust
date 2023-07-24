@@ -24,6 +24,7 @@ intercode_liquid = {path = "../intercode_liquid"}
 intercode_pagination_from_query_builder = {path = "../intercode_pagination_from_query_builder"}
 intercode_policies = {path = "../intercode_policies"}
 intercode_query_builders = {path = "../intercode_query_builders"}
+intercode_reporting = {path = "../intercode_reporting"}
 intercode_store = {path = "../intercode_store"}
 intercode_timespan = {path = "../intercode_timespan"}
 itertools = {workspace = true}

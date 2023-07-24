@@ -2,20 +2,20 @@ use async_graphql::*;
 use intercode_entities::forms;
 use intercode_graphql_core::query_data::QueryData;
 use intercode_policies::{policies::FormPolicy, AuthorizationInfo, Policy, ReadManageAction};
-use std::borrow::Cow;
+use std::sync::Arc;
 
-pub struct AbilityFormsFields<'a> {
-  authorization_info: Cow<'a, AuthorizationInfo>,
+pub struct AbilityFormsFields {
+  authorization_info: Arc<AuthorizationInfo>,
 }
 
-impl<'a> AbilityFormsFields<'a> {
-  pub fn new(authorization_info: Cow<'a, AuthorizationInfo>) -> Self {
+impl AbilityFormsFields {
+  pub fn new(authorization_info: Arc<AuthorizationInfo>) -> Self {
     Self { authorization_info }
   }
 }
 
 #[Object]
-impl<'a> AbilityFormsFields<'a> {
+impl AbilityFormsFields {
   #[graphql(name = "can_manage_forms")]
   async fn can_manage_forms(&self, ctx: &Context<'_>) -> Result<bool> {
     let convention = ctx.data::<QueryData>()?.convention();

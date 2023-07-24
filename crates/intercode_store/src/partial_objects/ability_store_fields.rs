@@ -5,22 +5,22 @@ use intercode_policies::{
   model_action_permitted::model_action_permitted, AuthorizationInfo, Policy, ReadManageAction,
 };
 use seawater::loaders::ExpectModel;
-use std::borrow::Cow;
+use std::sync::Arc;
 
 use crate::policies::{OrderAction, OrderPolicy, ProductPolicy, TicketTypePolicy};
 
-pub struct AbilityStoreFields<'a> {
-  authorization_info: Cow<'a, AuthorizationInfo>,
+pub struct AbilityStoreFields {
+  authorization_info: Arc<AuthorizationInfo>,
 }
 
-impl<'a> AbilityStoreFields<'a> {
-  pub fn new(authorization_info: Cow<'a, AuthorizationInfo>) -> Self {
+impl AbilityStoreFields {
+  pub fn new(authorization_info: Arc<AuthorizationInfo>) -> Self {
     Self { authorization_info }
   }
 }
 
 #[Object]
-impl<'a> AbilityStoreFields<'a> {
+impl AbilityStoreFields {
   #[graphql(name = "can_read_orders")]
   async fn can_read_orders(&self, ctx: &Context<'_>) -> Result<bool> {
     let authorization_info = self.authorization_info.as_ref();

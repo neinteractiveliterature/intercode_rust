@@ -6,12 +6,21 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+askama = {workspace = true}
+askama_axum = {workspace = true}
 async-graphql = {workspace = true}
+axum = {workspace = true}
+chrono = {workspace = true}
+futures = {workspace = true}
+http = {workspace = true}
 intercode_entities = {path = "../intercode_entities"}
 intercode_graphql_core = {path = "../intercode_graphql_core"}
+intercode_graphql_loaders = {path = "../intercode_graphql_loaders"}
+intercode_inflector = {path = "../intercode_inflector"}
 intercode_policies = {path = "../intercode_policies"}
 itertools = {workspace = true}
 mailparse = {workspace = true}
 sea-orm = {workspace = true}
 seawater = {path = "../seawater"}
 serde_json = {workspace = true}
+tracing = {workspace = true}

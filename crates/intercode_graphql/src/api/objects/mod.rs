@@ -1,6 +1,5 @@
 mod ability_type;
 mod cms_content_group_type;
-mod contact_email_type;
 mod convention_type;
 mod department_type;
 mod email_route_type;

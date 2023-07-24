@@ -7,7 +7,7 @@ use intercode_entities::{
 use intercode_graphql_loaders::signup_count_presenter::RunSignupCounts;
 use intercode_inflector::IntercodeInflector;
 
-use crate::actions::reports::filters;
+use crate::actions::filters;
 
 use super::event_run_helpers::EventRunHelpers;
 

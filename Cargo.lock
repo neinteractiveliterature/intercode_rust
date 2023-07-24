@@ -2323,6 +2323,7 @@ dependencies = [
  "intercode_pagination_from_query_builder",
  "intercode_policies",
  "intercode_query_builders",
+ "intercode_reporting",
  "intercode_store",
  "intercode_timespan",
  "itertools",
@@ -2464,23 +2465,30 @@ dependencies = [
 name = "intercode_reporting"
 version = "0.1.0"
 dependencies = [
+ "askama",
+ "askama_axum",
  "async-graphql",
+ "axum",
+ "chrono",
+ "futures",
+ "http",
  "intercode_entities",
  "intercode_graphql_core",
+ "intercode_graphql_loaders",
+ "intercode_inflector",
  "intercode_policies",
  "itertools",
  "mailparse",
  "sea-orm",
  "seawater",
  "serde_json",
+ "tracing",
 ]
 
 [[package]]
 name = "intercode_rust"
 version = "0.1.0"
 dependencies = [
- "askama",
- "askama_axum",
  "async-graphql",
  "async-graphql-axum",
  "async-stripe",
@@ -2513,6 +2521,7 @@ dependencies = [
  "intercode_inflector",
  "intercode_liquid",
  "intercode_policies",
+ "intercode_reporting",
  "intercode_store",
  "intercode_timespan",
  "itertools",

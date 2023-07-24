@@ -13,7 +13,7 @@ use intercode_entities::{
 };
 use intercode_graphql_core::{
   load_many_by_ids, load_many_by_model_ids, loader_result_map_to_required_map, model_backed_type,
-  query_data::QueryData, scalars::DateScalar, ModelBackedType,
+  query_data::QueryData, scalars::DateScalar,
 };
 use intercode_policies::{
   policies::{ConventionAction, ConventionPolicy},
@@ -26,6 +26,8 @@ use sea_orm::{
 };
 use seawater::loaders::ExpectModel;
 
+use crate::objects::{ContactEmail, ContactEmailType};
+
 #[derive(Iden)]
 #[iden = "TRIM"]
 struct TrimFunction;
@@ -33,22 +35,6 @@ struct TrimFunction;
 pub struct MailingListsWaitlistsResult {
   pub emails: Vec<ContactEmailType>,
   pub run: runs::Model,
-}
-
-#[Object]
-impl MailingListsWaitlistsResult {
-  async fn emails(&self) -> &Vec<ContactEmailType> {
-    &self.emails
-  }
-
-  #[graphql(name = "metadata_fields")]
-  async fn metadata_fields(&self) -> &'static [&'static str] {
-    &[]
-  }
-
-  async fn run(&self) -> RunType {
-    RunType::new(self.run.clone())
-  }
 }
 
 pub enum MailingListsResult {
@@ -81,15 +67,76 @@ impl MailingListsResult {
   }
 }
 
-use super::{
-  contact_email_type::{ContactEmail, ContactEmailType},
-  RunType,
-};
+model_backed_type!(MailingListsReportingFields, conventions::Model);
 
-model_backed_type!(MailingListsType, conventions::Model);
+pub async fn waitlists(
+  model: &conventions::Model,
+  ctx: &Context<'_>,
+) -> Result<Vec<MailingListsWaitlistsResult>> {
+  let db = ctx.data::<QueryData>()?.db();
+  let signups = model
+    .find_linked(ConventionToSignups)
+    .filter(signups::Column::State.eq("waitlisted"))
+    .all(db)
+    .await?;
+
+  let runs_by_signup_id_result = load_many_by_model_ids!(signup_run, ctx, signups.iter())?;
+  let runs_by_signup_id = loader_result_map_to_required_map!(runs_by_signup_id_result)?;
+  let runs_by_id = runs_by_signup_id
+    .values()
+    .map(|run| (run.id, run))
+    .collect::<HashMap<_, _>>();
+
+  let user_con_profiles_by_signup_id_result =
+    load_many_by_model_ids!(signup_user_con_profile, ctx, signups.iter())?;
+  let user_con_profiles_by_signup_id =
+    loader_result_map_to_required_map!(user_con_profiles_by_signup_id_result)?;
+
+  let users_by_user_con_profile_id_result = load_many_by_model_ids!(
+    user_con_profile_user,
+    ctx,
+    user_con_profiles_by_signup_id.values()
+  )?;
+  let users_by_user_con_profile_id =
+    loader_result_map_to_required_map!(users_by_user_con_profile_id_result)?;
+
+  let signups_by_id = signups
+    .iter()
+    .map(|signup| (signup.id, signup))
+    .collect::<HashMap<_, _>>();
+  let signups_by_run_id = runs_by_signup_id
+    .iter()
+    .map(|(signup_id, run)| (run.id, signups_by_id.get(signup_id).unwrap()))
+    .into_group_map();
+
+  let mut results = signups_by_run_id
+    .iter()
+    .map(|(run_id, signups)| MailingListsWaitlistsResult {
+      emails: signups
+        .iter()
+        .map(|signup| {
+          let user_con_profile = user_con_profiles_by_signup_id.get(&signup.id).unwrap();
+          let user = users_by_user_con_profile_id
+            .get(&user_con_profile.id)
+            .unwrap();
+          ContactEmailType(ContactEmail::new(
+            user.email.clone(),
+            user_con_profile.name_inverted(),
+            Some(user_con_profile.name_without_nickname()),
+            std::iter::empty(),
+          ))
+        })
+        .collect(),
+      run: (*runs_by_id.get(run_id).unwrap()).clone(),
+    })
+    .collect::<Vec<_>>();
+
+  results.sort_by_key(|result| (result.run.starts_at.unwrap_or_default(), result.run.id));
+  Ok(results)
+}
 
 #[Object(name = "MailingLists")]
-impl MailingListsType {
+impl MailingListsReportingFields {
   #[graphql(
     name = "event_proposers",
     guard = "ConventionPolicy::model_guard(ConventionAction::ReadTeamMembersMailingList, self)"
@@ -291,73 +338,6 @@ impl MailingListsType {
         .map(ContactEmailType)
         .collect(),
     ))
-  }
-
-  #[graphql(
-    guard = "ConventionPolicy::model_guard(ConventionAction::ReadUserConProfilesMailingList, self)"
-  )]
-  async fn waitlists(&self, ctx: &Context<'_>) -> Result<Vec<MailingListsWaitlistsResult>> {
-    let db = ctx.data::<QueryData>()?.db();
-    let signups = self
-      .model
-      .find_linked(ConventionToSignups)
-      .filter(signups::Column::State.eq("waitlisted"))
-      .all(db)
-      .await?;
-
-    let runs_by_signup_id_result = load_many_by_model_ids!(signup_run, ctx, signups.iter())?;
-    let runs_by_signup_id = loader_result_map_to_required_map!(runs_by_signup_id_result)?;
-    let runs_by_id = runs_by_signup_id
-      .values()
-      .map(|run| (run.id, run))
-      .collect::<HashMap<_, _>>();
-
-    let user_con_profiles_by_signup_id_result =
-      load_many_by_model_ids!(signup_user_con_profile, ctx, signups.iter())?;
-    let user_con_profiles_by_signup_id =
-      loader_result_map_to_required_map!(user_con_profiles_by_signup_id_result)?;
-
-    let users_by_user_con_profile_id_result = load_many_by_model_ids!(
-      user_con_profile_user,
-      ctx,
-      user_con_profiles_by_signup_id.values()
-    )?;
-    let users_by_user_con_profile_id =
-      loader_result_map_to_required_map!(users_by_user_con_profile_id_result)?;
-
-    let signups_by_id = signups
-      .iter()
-      .map(|signup| (signup.id, signup))
-      .collect::<HashMap<_, _>>();
-    let signups_by_run_id = runs_by_signup_id
-      .iter()
-      .map(|(signup_id, run)| (run.id, signups_by_id.get(signup_id).unwrap()))
-      .into_group_map();
-
-    let mut results = signups_by_run_id
-      .iter()
-      .map(|(run_id, signups)| MailingListsWaitlistsResult {
-        emails: signups
-          .iter()
-          .map(|signup| {
-            let user_con_profile = user_con_profiles_by_signup_id.get(&signup.id).unwrap();
-            let user = users_by_user_con_profile_id
-              .get(&user_con_profile.id)
-              .unwrap();
-            ContactEmailType(ContactEmail::new(
-              user.email.clone(),
-              user_con_profile.name_inverted(),
-              Some(user_con_profile.name_without_nickname()),
-              std::iter::empty(),
-            ))
-          })
-          .collect(),
-        run: (*runs_by_id.get(run_id).unwrap()).clone(),
-      })
-      .collect::<Vec<_>>();
-
-    results.sort_by_key(|result| (result.run.starts_at.unwrap_or_default(), result.run.id));
-    Ok(results)
   }
 
   #[graphql(

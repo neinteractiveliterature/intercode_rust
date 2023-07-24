@@ -38,6 +38,8 @@ members = [
 
 [workspace.dependencies]
 Inflector = "*"
+askama = {version = "0.12.0", features = ["with-axum"]}
+askama_axum = "0.3.0"
 async-graphql = {version = "~5.0.10", features = ["tracing", "dataloader", "chrono"]}
 async-graphql-value = {version = "~5.0.10"}
 async-stripe = {version = "0.21.0", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
@@ -81,8 +83,6 @@ flamegraph = ["dep:tracing-flame"]
 tokio-console = ["dep:console-subscriber", "tokio/full", "tokio/tracing"]
 
 [dependencies]
-askama = {version = "0.12.0", features = ["with-axum"]}
-askama_axum = "0.3.0"
 async-graphql = {workspace = true}
 async-graphql-axum = "~5.0.10"
 async-stripe = {workspace = true}
@@ -115,6 +115,7 @@ intercode_graphql_loaders = {path = "./crates/intercode_graphql_loaders"}
 intercode_inflector = {path = "./crates/intercode_inflector"}
 intercode_liquid = {path = "./crates/intercode_liquid"}
 intercode_policies = {path = "./crates/intercode_policies"}
+intercode_reporting = {path = "./crates/intercode_reporting"}
 intercode_store = {path = "./crates/intercode_store"}
 intercode_timespan = {path = "./crates/intercode_timespan"}
 itertools = {workspace = true}

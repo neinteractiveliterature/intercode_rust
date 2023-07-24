@@ -6,14 +6,14 @@ use intercode_entities::{
 use intercode_graphql_core::query_data::QueryData;
 use intercode_policies::{AuthorizationInfo, EntityPolicy, Policy, ReadManageAction};
 use sea_orm::PaginatorTrait;
-use std::borrow::Cow;
+use std::sync::Arc;
 
-pub struct AbilityCmsFields<'a> {
-  authorization_info: Cow<'a, AuthorizationInfo>,
+pub struct AbilityCmsFields {
+  authorization_info: Arc<AuthorizationInfo>,
 }
 
-impl<'a> AbilityCmsFields<'a> {
-  pub fn new(authorization_info: Cow<'a, AuthorizationInfo>) -> Self {
+impl AbilityCmsFields {
+  pub fn new(authorization_info: Arc<AuthorizationInfo>) -> Self {
     Self { authorization_info }
   }
 
@@ -41,7 +41,7 @@ impl<'a> AbilityCmsFields<'a> {
 }
 
 #[Object]
-impl<'a> AbilityCmsFields<'a> {
+impl AbilityCmsFields {
   #[graphql(name = "can_create_cms_files")]
   async fn can_create_cms_files(&self, ctx: &Context<'_>) -> Result<bool, Error> {
     self

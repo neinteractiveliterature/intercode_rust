@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::sync::Arc;
 
 use super::interfaces::CmsParentInterface;
@@ -77,9 +76,9 @@ impl QueryRoot {
     }
   }
 
-  async fn current_ability<'a>(&'a self, ctx: &'a Context<'a>) -> Result<AbilityType<'a>> {
+  async fn current_ability(&self, ctx: &Context<'_>) -> Result<AbilityType> {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
-    Ok(AbilityType::new(Cow::Borrowed(authorization_info)))
+    Ok(AbilityType::new(Arc::new(authorization_info.clone())))
   }
 
   async fn current_user(&self, ctx: &Context<'_>) -> Result<Option<UserType>, Error> {

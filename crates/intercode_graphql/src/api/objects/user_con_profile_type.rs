@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::sync::Arc;
 
 use super::{
@@ -34,7 +33,7 @@ impl UserConProfileApiFields {
     let authorization_info =
       AuthorizationInfo::new(query_data.db().clone(), user.try_one().cloned(), None, None);
 
-    Ok(AbilityType::new(Cow::Owned(authorization_info)))
+    Ok(AbilityType::new(Arc::new(authorization_info)))
   }
 
   #[graphql(name = "accepted_clickwrap_agreement")]
