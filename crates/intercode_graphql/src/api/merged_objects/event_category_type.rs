@@ -4,7 +4,10 @@ use intercode_events::partial_objects::EventCategoryEventsFields;
 use intercode_graphql_core::{model_backed_type, ModelBackedType, ModelPaginator};
 use intercode_query_builders::{sort_input::SortInput, EventFiltersInput};
 
-use crate::api::{merged_objects::FormType, objects::DepartmentType};
+use crate::{
+  api::{merged_objects::FormType, objects::DepartmentType},
+  merged_model_backed_type,
+};
 
 use super::EventType;
 
@@ -51,25 +54,10 @@ impl EventCategoryGlueFields {
   }
 }
 
-#[derive(MergedObject)]
-#[graphql(name = "EventCategory")]
-pub struct EventCategoryType(EventCategoryGlueFields, EventCategoryEventsFields);
-
-impl ModelBackedType for EventCategoryType {
-  type Model = event_categories::Model;
-
-  fn new(model: Self::Model) -> Self {
-    Self(
-      EventCategoryGlueFields::new(model.clone()),
-      EventCategoryEventsFields::new(model),
-    )
-  }
-
-  fn get_model(&self) -> &Self::Model {
-    self.0.get_model()
-  }
-
-  fn into_model(self) -> Self::Model {
-    self.0.into_model()
-  }
-}
+merged_model_backed_type!(
+  EventCategoryType,
+  event_categories::Model,
+  "EventCategory",
+  EventCategoryGlueFields,
+  EventCategoryEventsFields
+);

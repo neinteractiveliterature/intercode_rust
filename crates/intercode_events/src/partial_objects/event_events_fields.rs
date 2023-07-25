@@ -66,7 +66,7 @@ impl EventEventsFields {
         MaximumEventProvidedTicketsOverridePolicy::action_permitted(
           authorization_info,
           &ReadManageAction::Read,
-          &(convention.clone(), self.model.clone(), mepto),
+          &(convention.clone(), self.get_model().clone(), mepto),
         )
         .await
         .unwrap_or(false)
@@ -173,7 +173,7 @@ impl EventEventsFields {
     let loaders = ctx.data::<Arc<LoaderManager>>()?;
     Ok(render_markdown(
       self.model.description.as_deref().unwrap_or_default(),
-      &attached_images_by_filename(&self.model, loaders).await?,
+      &attached_images_by_filename(self.get_model(), loaders).await?,
     ))
   }
 
@@ -259,7 +259,7 @@ impl EventEventsFields {
     let loaders = ctx.data::<Arc<LoaderManager>>()?;
     Ok(render_markdown(
       self.model.short_blurb.as_deref().unwrap_or_default(),
-      &attached_images_by_filename(&self.model, loaders).await?,
+      &attached_images_by_filename(self.get_model(), loaders).await?,
     ))
   }
 

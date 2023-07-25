@@ -67,9 +67,55 @@ impl Policy<AuthorizationInfo, user_con_profiles::Model> for UserConProfilePolic
     }
 
     match action {
-      UserConProfileAction::Read => todo!(),
-      UserConProfileAction::ReadEmail => todo!(),
-      UserConProfileAction::ReadBirthDate => todo!(),
+      UserConProfileAction::Read => Ok(
+        UserConProfilePolicy::action_permitted(
+          principal,
+          &UserConProfileAction::ReadEmail,
+          user_con_profile,
+        )
+        .await?
+          || principal
+            .is_user_con_profile_bio_eligible(user_con_profile.id, user_con_profile.convention_id)
+            .await?
+          || (principal.has_scope("read_events")
+            && principal
+              .user_con_profile_ids_in_signed_up_runs()
+              .await?
+              .contains(&user_con_profile.id))
+          || principal
+            .has_scope_and_convention_permission(
+              "read_conventions",
+              "read_user_con_profiles",
+              user_con_profile.convention_id,
+            )
+            .await?,
+      ),
+      UserConProfileAction::ReadEmail => Ok(
+        UserConProfilePolicy::action_permitted(
+          principal,
+          &UserConProfileAction::ReadPersonalInfo,
+          user_con_profile,
+        )
+        .await?
+          || principal
+            .has_scope_and_convention_permission(
+              "read_conventions",
+              "read_user_con_profile_email",
+              user_con_profile.convention_id,
+            )
+            .await?,
+      ),
+      UserConProfileAction::ReadBirthDate => Ok(
+        (principal.has_scope("read_profile")
+          && profile_is_user_or_identity_assumer(principal, user_con_profile))
+          || (principal.has_scope("read_conventions")
+            && (principal.has_convention_permission(
+              "read_user_con_profile_birth_date",
+              user_con_profile.convention_id,
+            ))
+            .await?)
+          || principal.site_admin_read(),
+      ),
       UserConProfileAction::ReadPersonalInfo => Ok(
         (principal.has_scope("read_profile")
           && profile_is_user_or_identity_assumer(principal, user_con_profile))

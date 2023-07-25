@@ -1,6 +1,8 @@
 use async_graphql::*;
 use intercode_entities::{organization_roles, organizations};
-use intercode_graphql_core::{load_one_by_model_id, loader_result_to_many, model_backed_type};
+use intercode_graphql_core::{
+  load_one_by_model_id, loader_result_to_many, model_backed_type, ModelBackedType,
+};
 use intercode_policies::{
   policies::{OrganizationPolicy, OrganizationRolePolicy},
   AuthorizationInfo, ModelBackedTypeGuardablePolicy, Policy, ReadManageAction,
@@ -31,7 +33,7 @@ impl OrganizationType {
         authorization_info,
         &ReadManageAction::Manage,
         &(
-          self.model.clone(),
+          self.get_model().clone(),
           organization_roles::Model {
             organization_id: Some(self.model.id),
             ..Default::default()

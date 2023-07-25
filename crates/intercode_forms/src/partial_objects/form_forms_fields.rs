@@ -12,7 +12,7 @@ use crate::objects::FormSectionType;
 
 model_backed_type!(FormFormsFields, forms::Model);
 
-#[Object(name = "Form")]
+#[Object]
 impl FormFormsFields {
   async fn id(&self) -> ID {
     self.model.id.into()

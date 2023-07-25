@@ -14,9 +14,12 @@ use sea_orm::{
   JoinType, ModelTrait, QueryOrder, QuerySelect, RelationTrait,
 };
 
-use crate::api::{
-  inputs::SignupFiltersInput,
-  objects::{SignupRequestType, SignupType},
+use crate::{
+  api::{
+    inputs::SignupFiltersInput,
+    objects::{SignupRequestType, SignupType},
+  },
+  merged_model_backed_type,
 };
 
 use super::EventType;
@@ -147,25 +150,4 @@ impl RunGlueFields {
   }
 }
 
-#[derive(MergedObject)]
-#[graphql(name = "Run")]
-pub struct RunType(RunGlueFields, RunEventsFields);
-
-impl ModelBackedType for RunType {
-  type Model = runs::Model;
-
-  fn new(model: Self::Model) -> Self {
-    Self(
-      RunGlueFields::new(model.clone()),
-      RunEventsFields::new(model),
-    )
-  }
-
-  fn get_model(&self) -> &Self::Model {
-    self.0.get_model()
-  }
-
-  fn into_model(self) -> Self::Model {
-    self.0.into_model()
-  }
-}
+merged_model_backed_type!(RunType, runs::Model, "Run", RunGlueFields, RunEventsFields);

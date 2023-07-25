@@ -5,7 +5,7 @@ use intercode_graphql_core::{
   load_one_by_model_id, loader_result_to_many, model_backed_type, ModelBackedType,
 };
 
-use crate::api::objects::ConventionType;
+use crate::{api::objects::ConventionType, merged_model_backed_type};
 
 use super::EventCategoryType;
 
@@ -38,25 +38,10 @@ impl FormGlueFields {
   }
 }
 
-#[derive(MergedObject)]
-#[graphql(name = "FormType")]
-pub struct FormType(FormGlueFields, FormFormsFields);
-
-impl ModelBackedType for FormType {
-  type Model = forms::Model;
-
-  fn new(model: Self::Model) -> Self {
-    Self(
-      FormGlueFields::new(model.clone()),
-      FormFormsFields::new(model),
-    )
-  }
-
-  fn get_model(&self) -> &Self::Model {
-    self.0.get_model()
-  }
-
-  fn into_model(self) -> Self::Model {
-    self.0.into_model()
-  }
-}
+merged_model_backed_type!(
+  FormType,
+  forms::Model,
+  "Form",
+  FormGlueFields,
+  FormFormsFields
+);

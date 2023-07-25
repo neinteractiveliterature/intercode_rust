@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use super::{AbilityType, ConventionType, SignupType, StaffPositionType};
 use crate::api::merged_objects::{OrderType, TeamMemberType, TicketType};
-use crate::QueryData;
+use crate::{merged_model_backed_type, QueryData};
 use async_graphql::*;
 use intercode_entities::{user_con_profiles, UserNames};
 use intercode_forms::partial_objects::UserConProfileFormsFields;
@@ -218,30 +218,11 @@ impl UserConProfileApiFields {
   }
 }
 
-#[derive(MergedObject)]
-#[graphql(name = "UserConProfile")]
-pub struct UserConProfileType(
+merged_model_backed_type!(
+  UserConProfileType,
+  user_con_profiles::Model,
+  "UserConProfile",
   UserConProfileApiFields,
   UserConProfileFormsFields,
-  UserConProfileStoreFields,
+  UserConProfileStoreFields
 );
-
-impl ModelBackedType for UserConProfileType {
-  type Model = user_con_profiles::Model;
-
-  fn new(model: Self::Model) -> Self {
-    Self(
-      UserConProfileApiFields::new(model.clone()),
-      UserConProfileFormsFields::new(model.clone()),
-      UserConProfileStoreFields::new(model),
-    )
-  }
-
-  fn get_model(&self) -> &Self::Model {
-    self.0.get_model()
-  }
-
-  fn into_model(self) -> Self::Model {
-    self.0.into_model()
-  }
-}

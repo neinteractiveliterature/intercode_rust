@@ -3,7 +3,7 @@ use intercode_entities::orders;
 use intercode_graphql_core::{model_backed_type, ModelBackedType};
 use intercode_store::partial_objects::OrderStoreFields;
 
-use crate::api::objects::UserConProfileType;
+use crate::{api::objects::UserConProfileType, merged_model_backed_type};
 
 use super::OrderEntryType;
 
@@ -28,25 +28,10 @@ impl OrderGlueFields {
   }
 }
 
-#[derive(MergedObject)]
-#[graphql(name = "OrderType")]
-pub struct OrderType(OrderGlueFields, OrderStoreFields);
-
-impl ModelBackedType for OrderType {
-  type Model = orders::Model;
-
-  fn new(model: Self::Model) -> Self {
-    Self(
-      OrderGlueFields::new(model.clone()),
-      OrderStoreFields::new(model),
-    )
-  }
-
-  fn get_model(&self) -> &Self::Model {
-    self.0.get_model()
-  }
-
-  fn into_model(self) -> Self::Model {
-    self.0.into_model()
-  }
-}
+merged_model_backed_type!(
+  OrderType,
+  orders::Model,
+  "Order",
+  OrderGlueFields,
+  OrderStoreFields
+);

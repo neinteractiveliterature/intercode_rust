@@ -7,7 +7,7 @@ use intercode_policies::{
 };
 use intercode_store::partial_objects::TicketStoreFields;
 
-use crate::api::objects::UserConProfileType;
+use crate::{api::objects::UserConProfileType, merged_model_backed_type};
 
 use super::{EventType, OrderEntryType};
 
@@ -40,25 +40,10 @@ impl TicketGlueFields {
   }
 }
 
-#[derive(MergedObject)]
-#[graphql(name = "Ticket")]
-pub struct TicketType(TicketStoreFields, TicketGlueFields);
-
-impl ModelBackedType for TicketType {
-  type Model = tickets::Model;
-
-  fn new(model: Self::Model) -> Self {
-    Self(
-      TicketStoreFields::new(model.clone()),
-      TicketGlueFields::new(model),
-    )
-  }
-
-  fn get_model(&self) -> &Self::Model {
-    self.0.get_model()
-  }
-
-  fn into_model(self) -> Self::Model {
-    self.0.into_model()
-  }
-}
+merged_model_backed_type!(
+  TicketType,
+  tickets::Model,
+  "Ticket",
+  TicketStoreFields,
+  TicketGlueFields
+);

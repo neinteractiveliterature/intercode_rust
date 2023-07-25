@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use async_graphql::ObjectType;
 use sea_orm::ModelTrait;
 
@@ -6,13 +8,14 @@ pub trait ModelBackedType: ObjectType {
 
   fn new(model: Self::Model) -> Self;
   fn get_model(&self) -> &Self::Model;
-  fn into_model(self) -> Self::Model;
+  fn from_arc(arc: Arc<Self::Model>) -> Self;
+  fn clone_model_arc(&self) -> Arc<Self::Model>;
 
   fn into_type<Other: ModelBackedType<Model = Self::Model>>(self) -> Other
   where
     Self: Sized,
   {
-    Other::new(self.into_model())
+    Other::from_arc(self.clone_model_arc())
   }
 
   fn from_type<Other: ModelBackedType<Model = Self::Model>>(other: Other) -> Self
@@ -28,22 +31,28 @@ macro_rules! model_backed_type {
   ($type_name: ident, $model_type: ty) => {
     #[derive(Clone, Debug)]
     pub struct $type_name {
-      model: $model_type,
+      model: ::std::sync::Arc<$model_type>,
     }
 
     impl $crate::ModelBackedType for $type_name {
       type Model = $model_type;
 
       fn new(model: $model_type) -> Self {
-        $type_name { model }
+        Self {
+          model: ::std::sync::Arc::new(model),
+        }
+      }
+
+      fn from_arc(arc: ::std::sync::Arc<$model_type>) -> Self {
+        Self { model: arc }
       }
 
       fn get_model(&self) -> &$model_type {
-        &self.model
+        self.model.as_ref()
       }
 
-      fn into_model(self) -> $model_type {
-        self.model
+      fn clone_model_arc(&self) -> ::std::sync::Arc<$model_type> {
+        self.model.clone()
       }
     }
   };

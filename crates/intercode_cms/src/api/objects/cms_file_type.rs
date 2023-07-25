@@ -24,7 +24,7 @@ impl CmsFileType {
       CmsContentPolicy::action_permitted(
         ctx.data::<AuthorizationInfo>()?,
         &ReadManageAction::Manage,
-        &self.model,
+        self.model.as_ref(),
       )
       .await?,
     )

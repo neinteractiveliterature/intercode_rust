@@ -8,7 +8,7 @@ use intercode_policies::{
   ModelBackedTypeGuardablePolicy,
 };
 
-use crate::api::objects::UserConProfileType;
+use crate::{api::objects::UserConProfileType, merged_model_backed_type};
 
 use super::{EventCategoryType, EventType};
 model_backed_type!(EventProposalGlueFields, event_proposals::Model);
@@ -38,25 +38,10 @@ impl EventProposalGlueFields {
   }
 }
 
-#[derive(MergedObject)]
-#[graphql(name = "EventProposal")]
-pub struct EventProposalType(EventProposalGlueFields, EventProposalFormsFields);
-
-impl ModelBackedType for EventProposalType {
-  type Model = event_proposals::Model;
-
-  fn new(model: Self::Model) -> Self {
-    Self(
-      EventProposalGlueFields::new(model.clone()),
-      EventProposalFormsFields::new(model),
-    )
-  }
-
-  fn get_model(&self) -> &Self::Model {
-    self.0.get_model()
-  }
-
-  fn into_model(self) -> Self::Model {
-    self.0.into_model()
-  }
-}
+merged_model_backed_type!(
+  EventProposalType,
+  event_proposals::Model,
+  "EventProposal",
+  EventProposalGlueFields,
+  EventProposalFormsFields
+);

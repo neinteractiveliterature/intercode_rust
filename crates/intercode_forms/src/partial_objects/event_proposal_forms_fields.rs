@@ -4,7 +4,7 @@ use async_graphql::*;
 use async_trait::async_trait;
 use intercode_entities::{event_proposals, forms, model_ext::form_item_permissions::FormItemRole};
 use intercode_graphql_core::{
-  load_one_by_id, load_one_by_model_id, model_backed_type, scalars::JsonScalar,
+  load_one_by_id, load_one_by_model_id, model_backed_type, scalars::JsonScalar, ModelBackedType,
 };
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
@@ -101,7 +101,7 @@ impl FormResponseImplementation<event_proposals::Model> for EventProposalFormsFi
     Ok(
       EventProposalPolicy::form_item_viewer_role(
         authorization_info,
-        &(convention.clone(), self.model.clone()),
+        &(convention.clone(), self.get_model().clone()),
       )
       .await,
     )
@@ -121,7 +121,7 @@ impl FormResponseImplementation<event_proposals::Model> for EventProposalFormsFi
     Ok(
       EventProposalPolicy::form_item_writer_role(
         authorization_info,
-        &(convention.clone(), self.model.clone()),
+        &(convention.clone(), self.get_model().clone()),
       )
       .await,
     )

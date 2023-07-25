@@ -27,7 +27,7 @@ impl PermissionType {
   }
 
   async fn model(&self, ctx: &Context<'_>) -> Result<PermissionedModelType> {
-    let model_ref: PermissionedModelRef = (&self.model).try_into()?;
+    let model_ref: PermissionedModelRef = self.get_model().try_into()?;
     let result = ctx
       .data::<Arc<LoaderManager>>()?
       .permissioned_models
@@ -52,7 +52,7 @@ impl PermissionType {
   }
 
   async fn role(&self, ctx: &Context<'_>) -> Result<PermissionedRoleType> {
-    let role_ref: PermissionedRoleRef = (&self.model).try_into()?;
+    let role_ref: PermissionedRoleRef = self.get_model().try_into()?;
     let result = ctx
       .data::<Arc<LoaderManager>>()?
       .permissioned_roles

@@ -13,8 +13,8 @@ pub struct WaitlistPositionLoaderKey {
   run_id: i64,
 }
 
-impl From<signups::Model> for WaitlistPositionLoaderKey {
-  fn from(value: signups::Model) -> Self {
+impl From<&signups::Model> for WaitlistPositionLoaderKey {
+  fn from(value: &signups::Model) -> Self {
     WaitlistPositionLoaderKey {
       signup_id: value.id,
       run_id: value.run_id,

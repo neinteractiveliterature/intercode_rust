@@ -52,7 +52,7 @@ impl CmsContentGroupCmsFields {
       CmsContentPolicy::action_permitted(
         authorization_info,
         &ReadManageAction::Manage,
-        &self.model,
+        self.model.as_ref(),
       )
       .await?,
     )
@@ -66,7 +66,7 @@ impl CmsContentGroupCmsFields {
       CmsContentPolicy::action_permitted(
         authorization_info,
         &ReadManageAction::Manage,
-        &self.model,
+        self.model.as_ref(),
       )
       .await?,
     )

@@ -70,7 +70,7 @@ impl RunEventsFields {
     RunPolicy::action_permitted(
       authorization_info,
       &RunAction::SignupSummary,
-      &(convention, event, self.model.clone()),
+      &(convention, event, self.get_model().clone()),
     )
     .await
     .map_err(|err| err.into())

@@ -19,3 +19,34 @@ pub use order_type::*;
 pub use run_type::*;
 pub use team_member_type::*;
 pub use ticket_type::*;
+
+#[macro_export]
+macro_rules! merged_model_backed_type {
+  ($name: ident, $model: path, $graphql_name: expr, $($types: path),+) => {
+    #[derive(MergedObject)]
+    #[graphql(name = $graphql_name)]
+    pub struct $name($($types),+);
+
+    impl ModelBackedType for $name {
+      type Model = $model;
+
+      fn from_arc(arc: ::std::sync::Arc<Self::Model>) -> Self {
+        Self(
+          $(<$types>::from_arc(arc.clone())),*
+        )
+      }
+
+      fn new(model: Self::Model) -> Self {
+        Self::from_arc(::std::sync::Arc::new(model))
+      }
+
+      fn get_model(&self) -> &Self::Model {
+        self.0.get_model()
+      }
+
+      fn clone_model_arc(&self) -> ::std::sync::Arc<Self::Model> {
+        self.0.clone_model_arc()
+      }
+    }
+  };
+}

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use async_graphql::*;
 use async_trait::async_trait;
 use intercode_entities::{events, forms, model_ext::form_item_permissions::FormItemRole};
-use intercode_graphql_core::{model_backed_type, scalars::JsonScalar};
+use intercode_graphql_core::{model_backed_type, scalars::JsonScalar, ModelBackedType};
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
   policies::{EventAction, EventPolicy},
@@ -109,7 +109,7 @@ impl FormResponseImplementation<events::Model> for EventFormsFields {
     Ok(
       EventPolicy::form_item_viewer_role(
         authorization_info,
-        &(convention.clone(), self.model.clone()),
+        &(convention.clone(), self.get_model().clone()),
       )
       .await,
     )
@@ -129,7 +129,7 @@ impl FormResponseImplementation<events::Model> for EventFormsFields {
     Ok(
       EventPolicy::form_item_writer_role(
         authorization_info,
-        &(convention.clone(), self.model.clone()),
+        &(convention.clone(), self.get_model().clone()),
       )
       .await,
     )

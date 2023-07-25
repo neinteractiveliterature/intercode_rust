@@ -186,8 +186,8 @@ type Convention {
 	ends_at: DateTime
 	event_mailing_list_domain: String
 	favicon: ActiveStorageAttachment
-	form(id: ID!): FormType!
-	forms: [FormType!]!
+	form(id: ID!): Form!
+	forms: [Form!]!
 	hidden: Boolean!
 	language: String!
 	location: JSON
@@ -213,7 +213,7 @@ type Convention {
 	timezone_name: String
 	user_activity_alerts: [UserActivityAlert!]!
 	user_con_profile(id: ID!): UserConProfile!
-	user_con_profile_form: FormType!
+	user_con_profile_form: Form!
 	user_con_profiles_paginated(page: Int, per_page: Int, filters: UserConProfileFiltersInput, sort: [SortInput!]): UserConProfilesPagination!
 	id: ID!
 	cmsFiles: [CmsFile!]!
@@ -255,7 +255,7 @@ type Convention {
 	"""
 	event_proposal(id: ID!): EventProposal!
 	event_proposals_paginated(page: Int, per_page: Int, filters: EventProposalFiltersInput, sort: [SortInput!]): EventProposalsPagination!
-	ordersPaginated(page: Int, perPage: Int, filters: OrderFiltersInput, sort: [SortInput!]): OrderTypesPagination!
+	ordersPaginated(page: Int, perPage: Int, filters: OrderFiltersInput, sort: [SortInput!]): OrdersPagination!
 	stripe_account: StripeAccount
 	stripe_account_id: String
 	stripe_account_ready_to_charge: Boolean!
@@ -311,7 +311,7 @@ type EmailRoutesPagination {
 
 type Event {
 	convention: Convention!
-	form: FormType!
+	form: Form!
 	event_category: EventCategory!
 	maximum_event_provided_tickets_overrides: [MaximumEventProvidedTicketsOverride!]!
 	provided_tickets: [Ticket!]!
@@ -348,8 +348,8 @@ type Event {
 
 type EventCategory {
 	department: Department
-	event_form: FormType!
-	event_proposal_form: FormType
+	event_form: Form!
+	event_proposal_form: Form
 	events_paginated(page: Int, per_page: Int, filters: EventFiltersInput, sort: [SortInput!]): EventsPagination!
 	id: ID!
 	can_provide_tickets: Boolean!
@@ -434,6 +434,17 @@ type EventsPagination {
 }
 
 
+type Form {
+	event_categories: [EventCategory!]!
+	proposal_event_categories: [EventCategory!]!
+	user_con_profile_conventions: [Convention!]!
+	id: ID!
+	export_json: Json!
+	form_sections: [FormSection!]!
+	form_type: String!
+	title: String
+}
+
 type FormItem {
 	id: ID!
 	admin_description: String
@@ -461,17 +472,6 @@ type FormSection {
 	id: ID!
 	form_items: [FormItem!]!
 	position: Int!
-	title: String
-}
-
-type FormType {
-	event_categories: [EventCategory!]!
-	proposal_event_categories: [EventCategory!]!
-	user_con_profile_conventions: [Convention!]!
-	id: ID!
-	export_json: Json!
-	form_sections: [FormSection!]!
-	form_type: String!
 	title: String
 }
 
@@ -530,8 +530,21 @@ type NotificationTemplate {
 	subject: String
 }
 
-type OrderEntryType {
-	order: OrderType!
+type Order {
+	order_entries: [OrderEntry!]!
+	user_con_profile: UserConProfile!
+	id: ID!
+	charge_id: String
+	coupon_applications: [CouponApplication!]!
+	payment_amount: Money
+	payment_note: String
+	status: String!
+	submitted_at: Date
+	total_price: Money!
+}
+
+type OrderEntry {
+	order: Order!
 	id: ID!
 	describe_products: String!
 	price_per_item: Money
@@ -570,22 +583,9 @@ enum OrderStatus {
 	cancelled
 }
 
-type OrderType {
-	order_entries: [OrderEntryType!]!
-	user_con_profile: UserConProfile!
-	id: ID!
-	charge_id: String
-	coupon_applications: [CouponApplication!]!
-	payment_amount: Money
-	payment_note: String
-	status: String!
-	submitted_at: Date
-	total_price: Money!
-}
-
-type OrderTypesPagination {
+type OrdersPagination {
 	current_page: Int!
-	entries: [OrderType!]!
+	entries: [Order!]!
 	per_page: Int!
 	total_entries: Int!
 	total_pages: Int!
@@ -963,7 +963,7 @@ type Ticket {
 	created_at: Date!
 	ticket_type: TicketType!
 	updated_at: Date!
-	order_entry: OrderEntryType
+	order_entry: OrderEntry
 	provided_by_event: Event
 	user_con_profile: UserConProfile!
 }
@@ -1045,7 +1045,7 @@ type UserConProfile {
 	birth_date: Date
 	city: String
 	convention: Convention!
-	current_pending_order: OrderType
+	current_pending_order: Order
 	country: String
 	email: String!
 	first_name: String!

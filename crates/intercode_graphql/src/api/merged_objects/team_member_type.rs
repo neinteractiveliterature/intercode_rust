@@ -6,7 +6,10 @@ use intercode_policies::{
   policies::TeamMemberPolicy, ModelBackedTypeGuardablePolicy, ReadManageAction,
 };
 
-use crate::api::{merged_objects::EventType, objects::UserConProfileType};
+use crate::{
+  api::{merged_objects::EventType, objects::UserConProfileType},
+  merged_model_backed_type,
+};
 
 model_backed_type!(TeamMemberGlueFields, team_members::Model);
 
@@ -28,25 +31,10 @@ impl TeamMemberGlueFields {
   }
 }
 
-#[derive(MergedObject)]
-#[graphql(name = "TeamMember")]
-pub struct TeamMemberType(TeamMemberGlueFields, TeamMemberEventsFields);
-
-impl ModelBackedType for TeamMemberType {
-  type Model = team_members::Model;
-
-  fn new(model: Self::Model) -> Self {
-    Self(
-      TeamMemberGlueFields::new(model.clone()),
-      TeamMemberEventsFields::new(model),
-    )
-  }
-
-  fn get_model(&self) -> &Self::Model {
-    self.0.get_model()
-  }
-
-  fn into_model(self) -> Self::Model {
-    self.0.into_model()
-  }
-}
+merged_model_backed_type!(
+  TeamMemberType,
+  team_members::Model,
+  "TeamMember",
+  TeamMemberGlueFields,
+  TeamMemberEventsFields
+);

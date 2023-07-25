@@ -55,7 +55,7 @@ impl CmsContentGroupType {
       CmsContentPolicy::action_permitted(
         authorization_info,
         &ReadManageAction::Manage,
-        &self.model,
+        self.get_model(),
       )
       .await?,
     )
@@ -69,7 +69,7 @@ impl CmsContentGroupType {
       CmsContentPolicy::action_permitted(
         authorization_info,
         &ReadManageAction::Manage,
-        &self.model,
+        self.get_model(),
       )
       .await?,
     )

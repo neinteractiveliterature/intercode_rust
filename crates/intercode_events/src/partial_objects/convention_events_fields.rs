@@ -145,7 +145,7 @@ impl ConventionEventsFields {
               EventProposalPolicy::action_permitted(
                 principal,
                 &EventProposalAction::Read,
-                &(self.model.clone(), event_proposal),
+                &(self.get_model().clone(), event_proposal),
               )
               .await?,
             ))

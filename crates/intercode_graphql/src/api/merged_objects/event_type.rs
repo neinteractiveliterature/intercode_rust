@@ -1,6 +1,9 @@
-use crate::api::{
-  merged_objects::{FormType, TicketType},
-  objects::{ConventionType, MaximumEventProvidedTicketsOverrideType},
+use crate::{
+  api::{
+    merged_objects::{FormType, TicketType},
+    objects::{ConventionType, MaximumEventProvidedTicketsOverrideType},
+  },
+  merged_model_backed_type,
 };
 use async_graphql::*;
 use intercode_entities::events;
@@ -93,26 +96,11 @@ impl EventGlueFields {
   }
 }
 
-#[derive(MergedObject)]
-#[graphql(name = "Event")]
-pub struct EventType(EventGlueFields, EventEventsFields, EventFormsFields);
-
-impl ModelBackedType for EventType {
-  type Model = events::Model;
-
-  fn new(model: Self::Model) -> Self {
-    Self(
-      EventGlueFields::new(model.clone()),
-      EventEventsFields::new(model.clone()),
-      EventFormsFields::new(model),
-    )
-  }
-
-  fn get_model(&self) -> &Self::Model {
-    self.0.get_model()
-  }
-
-  fn into_model(self) -> Self::Model {
-    self.0.into_model()
-  }
-}
+merged_model_backed_type!(
+  EventType,
+  events::Model,
+  "Event",
+  EventGlueFields,
+  EventEventsFields,
+  EventFormsFields
+);

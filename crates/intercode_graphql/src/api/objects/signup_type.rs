@@ -5,6 +5,7 @@ use chrono::{Datelike, NaiveDate};
 use intercode_entities::signups;
 use intercode_graphql_core::{
   enums::SignupState, load_one_by_model_id, loader_result_to_required_single, model_backed_type,
+  ModelBackedType,
 };
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
@@ -123,7 +124,7 @@ impl SignupType {
       ctx
         .data::<Arc<LoaderManager>>()?
         .signup_waitlist_position
-        .load_one(self.model.clone().into())
+        .load_one(self.get_model().into())
         .await?
         .flatten(),
     )

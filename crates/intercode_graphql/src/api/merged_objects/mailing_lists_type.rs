@@ -6,6 +6,8 @@ use intercode_reporting::{
   partial_objects::{waitlists, MailingListsReportingFields, MailingListsWaitlistsResult},
 };
 
+use crate::merged_model_backed_type;
+
 use super::run_type::RunType;
 
 struct MailingListsWaitlistsResultWrapper(MailingListsWaitlistsResult);
@@ -41,25 +43,10 @@ impl MailingListsGlueFields {
   }
 }
 
-#[derive(MergedObject)]
-#[graphql(name = "MailingLists")]
-pub struct MailingListsType(MailingListsReportingFields, MailingListsGlueFields);
-
-impl ModelBackedType for MailingListsType {
-  type Model = conventions::Model;
-
-  fn new(model: Self::Model) -> Self {
-    Self(
-      MailingListsReportingFields::new(model.clone()),
-      MailingListsGlueFields::new(model),
-    )
-  }
-
-  fn get_model(&self) -> &Self::Model {
-    self.0.get_model()
-  }
-
-  fn into_model(self) -> Self::Model {
-    self.0.into_model()
-  }
-}
+merged_model_backed_type!(
+  MailingListsType,
+  conventions::Model,
+  "MailingLists",
+  MailingListsReportingFields,
+  MailingListsGlueFields
+);

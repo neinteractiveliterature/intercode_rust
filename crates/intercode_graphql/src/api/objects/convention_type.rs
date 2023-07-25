@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
-use crate::api::merged_objects::{
-  EventCategoryType, EventProposalType, EventType, FormType, MailingListsType, OrderType,
+use crate::{
+  api::merged_objects::{
+    EventCategoryType, EventProposalType, EventType, FormType, MailingListsType, OrderType,
+  },
+  merged_model_backed_type,
 };
 
 use super::{
@@ -48,7 +51,7 @@ model_backed_type!(ConventionGlueFields, conventions::Model);
 #[Object]
 impl ConventionGlueFields {
   async fn cms_content_groups(&self, ctx: &Context<'_>) -> Result<Vec<CmsContentGroupType>, Error> {
-    ConventionCmsFields::new(self.model.clone())
+    ConventionCmsFields::from_type(self.clone())
       .cms_content_groups(ctx)
       .await
       .map(|partials| {
@@ -64,7 +67,7 @@ impl ConventionGlueFields {
     ctx: &Context<'_>,
     id: ID,
   ) -> Result<CmsContentGroupType, Error> {
-    ConventionCmsFields::new(self.model.clone())
+    ConventionCmsFields::from_type(self.clone())
       .cms_content_group(ctx, id)
       .await
       .map(CmsContentGroupType::from_type)
@@ -113,7 +116,7 @@ impl ConventionGlueFields {
     &self,
     ctx: &Context<'_>,
     page: Option<u64>,
-    per_page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
     filters: Option<EventFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<ModelPaginator<EventType>, Error> {
@@ -174,7 +177,7 @@ impl ConventionGlueFields {
     &self,
     ctx: &Context<'_>,
     page: Option<u64>,
-    per_page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
     filters: Option<OrderFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<ModelPaginator<OrderType>, Error> {
@@ -320,7 +323,7 @@ impl ConventionApiFields {
 
   #[graphql(name = "mailing_lists")]
   async fn mailing_lists(&self) -> MailingListsType {
-    MailingListsType::new(self.model.clone())
+    MailingListsType::from_type(self.clone())
   }
 
   #[graphql(name = "maximum_event_signups")]
@@ -569,32 +572,12 @@ impl ConventionApiFields {
   }
 }
 
-#[derive(MergedObject)]
-#[graphql(name = "Convention")]
-pub struct ConventionType(
+merged_model_backed_type!(
+  ConventionType,
+  conventions::Model,
+  "Convention",
   ConventionApiFields,
   ConventionCmsFields,
   ConventionGlueFields,
-  ConventionStoreFields,
+  ConventionStoreFields
 );
-
-impl ModelBackedType for ConventionType {
-  type Model = conventions::Model;
-
-  fn new(model: Self::Model) -> Self {
-    Self(
-      ConventionApiFields::new(model.clone()),
-      ConventionCmsFields::new(model.clone()),
-      ConventionGlueFields::new(model.clone()),
-      ConventionStoreFields::new(model),
-    )
-  }
-
-  fn get_model(&self) -> &Self::Model {
-    self.0.get_model()
-  }
-
-  fn into_model(self) -> Self::Model {
-    self.0.into_model()
-  }
-}
