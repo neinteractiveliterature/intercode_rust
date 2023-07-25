@@ -1,8 +1,10 @@
 use async_graphql::{Context, Error, MergedObject, Object};
 use intercode_entities::event_categories;
-use intercode_events::partial_objects::EventCategoryEventsFields;
+use intercode_events::{
+  partial_objects::EventCategoryEventsFields, query_builders::EventFiltersInput,
+};
 use intercode_graphql_core::{model_backed_type, ModelBackedType, ModelPaginator};
-use intercode_query_builders::{sort_input::SortInput, EventFiltersInput};
+use intercode_query_builders::sort_input::SortInput;
 
 use crate::{
   api::{merged_objects::FormType, objects::DepartmentType},

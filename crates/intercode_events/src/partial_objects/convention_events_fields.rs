@@ -7,20 +7,21 @@ use intercode_graphql_core::{
   lax_id::LaxId, load_one_by_model_id, loader_result_to_many, model_backed_type,
   query_data::QueryData, scalars::DateScalar, ModelBackedType, ModelPaginator,
 };
-use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
 use intercode_policies::{
   policies::{
     ConventionAction, ConventionPolicy, EventPolicy, EventProposalAction, EventProposalPolicy,
   },
-  AuthorizationInfo, Policy,
+  AuthorizationInfo, AuthorizedFromQueryBuilder, Policy,
 };
-use intercode_query_builders::{
-  sort_input::SortInput, EventFiltersInput, EventProposalFiltersInput, EventProposalsQueryBuilder,
-  EventsQueryBuilder, QueryBuilder,
-};
+use intercode_query_builders::{sort_input::SortInput, QueryBuilder};
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, ModelTrait, QueryFilter};
 
-use crate::objects::RoomType;
+use crate::{
+  objects::RoomType,
+  query_builders::{
+    EventFiltersInput, EventProposalFiltersInput, EventProposalsQueryBuilder, EventsQueryBuilder,
+  },
+};
 
 use super::{EventCategoryEventsFields, EventEventsFields, EventProposalEventsFields};
 

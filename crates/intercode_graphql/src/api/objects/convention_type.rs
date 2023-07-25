@@ -20,7 +20,10 @@ use intercode_entities::{
   model_ext::user_con_profiles::BioEligibility,
   signups, staff_positions, user_con_profiles, MaximumEventSignupsValue,
 };
-use intercode_events::partial_objects::ConventionEventsFields;
+use intercode_events::{
+  partial_objects::ConventionEventsFields,
+  query_builders::{EventFiltersInput, EventProposalFiltersInput},
+};
 use intercode_graphql_core::{
   enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
   lax_id::LaxId,
@@ -31,11 +34,13 @@ use intercode_graphql_core::{
   ModelBackedType, ModelPaginator,
 };
 use intercode_graphql_loaders::LoaderManager;
-use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
-use intercode_policies::policies::{SignupRequestPolicy, UserConProfilePolicy};
+use intercode_policies::{
+  policies::{SignupRequestPolicy, UserConProfilePolicy},
+  AuthorizedFromQueryBuilder,
+};
 use intercode_query_builders::{
-  sort_input::SortInput, EventFiltersInput, EventProposalFiltersInput, SignupRequestFiltersInput,
-  SignupRequestsQueryBuilder, UserConProfileFiltersInput, UserConProfilesQueryBuilder,
+  sort_input::SortInput, SignupRequestFiltersInput, SignupRequestsQueryBuilder,
+  UserConProfileFiltersInput, UserConProfilesQueryBuilder,
 };
 use intercode_store::{
   objects::CouponType,

@@ -17,6 +17,7 @@ futures = {workspace = true}
 intercode_entities = {path = "../intercode_entities"}
 intercode_graphql_core = {path = "../intercode_graphql_core"}
 intercode_graphql_loaders = {path = "../intercode_graphql_loaders"}
+intercode_query_builders = {path = "../intercode_query_builders"}
 itertools = {workspace = true}
 oxide-auth = {workspace = true}
 sea-orm = {workspace = true}

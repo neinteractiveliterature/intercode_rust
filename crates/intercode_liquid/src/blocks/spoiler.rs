@@ -12,7 +12,7 @@ pub struct SpoilerBlock;
 
 impl SpoilerBlock {
   pub fn new() -> Self {
-    Self::default()
+    Self
   }
 }
 

@@ -14,7 +14,7 @@ pub struct LongFormEventDetailsTag;
 
 impl LongFormEventDetailsTag {
   pub fn new() -> Self {
-    Self::default()
+    Self
   }
 }
 

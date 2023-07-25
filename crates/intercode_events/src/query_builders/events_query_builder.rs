@@ -4,14 +4,11 @@ use intercode_graphql_core::{
   filter_utils::{numbered_placeholders, string_search},
   scalars::JsonScalar,
 };
+use intercode_query_builders::{sort_input::SortInput, QueryBuilder};
 use sea_orm::{
   sea_query::Expr, ColumnTrait, JoinType, Order, QueryFilter, QueryOrder, QuerySelect,
   RelationTrait, Select,
 };
-
-use crate::sort_input::SortInput;
-
-use super::QueryBuilder;
 
 #[derive(InputObject, Default)]
 pub struct EventFiltersInput {

@@ -4,14 +4,15 @@ use intercode_graphql_core::{
   load_one_by_model_id, model_backed_type, query_data::QueryData, ModelPaginator,
 };
 use intercode_inflector::inflector::string::pluralize;
-use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
 use intercode_policies::{
   policies::{ConventionAction, ConventionPolicy, EventPolicy},
-  AuthorizationInfo, Policy,
+  AuthorizationInfo, AuthorizedFromQueryBuilder, Policy,
 };
-use intercode_query_builders::{sort_input::SortInput, EventFiltersInput, EventsQueryBuilder};
+use intercode_query_builders::sort_input::SortInput;
 use sea_orm::ModelTrait;
 use seawater::loaders::ExpectModel;
+
+use crate::query_builders::{EventFiltersInput, EventsQueryBuilder};
 
 use super::EventEventsFields;
 

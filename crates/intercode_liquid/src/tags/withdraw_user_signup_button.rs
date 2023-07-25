@@ -15,7 +15,7 @@ pub struct WithdrawUserSignupButtonTag;
 
 impl WithdrawUserSignupButtonTag {
   pub fn new() -> Self {
-    Self::default()
+    Self
   }
 }
 

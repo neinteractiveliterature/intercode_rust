@@ -16,7 +16,6 @@ intercode_graphql_core = {path = "../intercode_graphql_core"}
 intercode_graphql_loaders = {path = "../intercode_graphql_loaders"}
 intercode_inflector = {path = "../intercode_inflector"}
 intercode_liquid = {path = "../intercode_liquid"}
-intercode_pagination_from_query_builder = {path = "../intercode_pagination_from_query_builder"}
 intercode_policies = {path = "../intercode_policies"}
 intercode_query_builders = {path = "../intercode_query_builders"}
 once_cell = {workspace = true}

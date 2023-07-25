@@ -12,7 +12,7 @@ pub struct YouTubeTag;
 
 impl YouTubeTag {
   pub fn new() -> Self {
-    Self::default()
+    Self
   }
 }
 

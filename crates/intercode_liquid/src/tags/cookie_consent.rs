@@ -14,7 +14,7 @@ pub struct CookieConsentTag;
 
 impl CookieConsentTag {
   pub fn new() -> Self {
-    Self::default()
+    Self
   }
 }
 

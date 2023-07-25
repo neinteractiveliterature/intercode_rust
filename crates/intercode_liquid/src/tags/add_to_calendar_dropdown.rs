@@ -14,7 +14,7 @@ pub struct AddToCalendarDropdownTag;
 
 impl AddToCalendarDropdownTag {
   pub fn new() -> Self {
-    Self::default()
+    Self
   }
 }
 
