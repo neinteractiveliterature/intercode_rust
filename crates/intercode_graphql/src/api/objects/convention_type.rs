@@ -1,25 +1,23 @@
 use std::sync::Arc;
 
 use crate::api::merged_objects::{
-  EventCategoryType, EventProposalType, EventType, FormType, MailingListsType,
+  EventCategoryType, EventProposalType, EventType, FormType, MailingListsType, OrderType,
 };
 
 use super::{
   user_activity_alert_type::UserActivityAlertType, CmsContentGroupType, DepartmentType,
-  EventProposalsPaginationType, EventsPaginationType, SignupRequestsPaginationType, SignupType,
-  StaffPositionType, UserConProfileType, UserConProfilesPaginationType,
+  SignupRequestType, SignupType, StaffPositionType, UserConProfileType,
 };
 use async_graphql::*;
 use chrono::{DateTime, Utc};
-use futures::future::try_join_all;
-use intercode_cms::api::{objects::NotificationTemplateType, partial_objects::ConventionCmsFields};
+use intercode_cms::api::partial_objects::ConventionCmsFields;
 use intercode_entities::{
-  conventions, event_proposals, events, forms,
+  conventions, forms,
   links::{ConventionToSignupRequests, ConventionToSignups, ConventionToStaffPositions},
-  model_ext::{time_bounds::TimeBoundsSelectExt, user_con_profiles::BioEligibility},
+  model_ext::user_con_profiles::BioEligibility,
   signups, staff_positions, user_con_profiles, MaximumEventSignupsValue,
 };
-use intercode_events::objects::RoomType;
+use intercode_events::partial_objects::ConventionEventsFields;
 use intercode_graphql_core::{
   enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
   lax_id::LaxId,
@@ -27,26 +25,165 @@ use intercode_graphql_core::{
   objects::{ActiveStorageAttachmentType, ScheduledStringableValueType},
   query_data::QueryData,
   scalars::DateScalar,
-  ModelBackedType,
+  ModelBackedType, ModelPaginator,
 };
 use intercode_graphql_loaders::LoaderManager;
 use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
-use intercode_policies::{
-  policies::{
-    ConventionAction, ConventionPolicy, EventPolicy, EventProposalAction, EventProposalPolicy,
-    SignupRequestPolicy, UserConProfilePolicy,
-  },
-  AuthorizationInfo, Policy,
-};
+use intercode_policies::policies::{SignupRequestPolicy, UserConProfilePolicy};
 use intercode_query_builders::{
-  sort_input::SortInput, EventFiltersInput, EventProposalFiltersInput, EventProposalsQueryBuilder,
-  EventsQueryBuilder, QueryBuilder, SignupRequestFiltersInput, SignupRequestsQueryBuilder,
-  UserConProfileFiltersInput, UserConProfilesQueryBuilder,
+  sort_input::SortInput, EventFiltersInput, EventProposalFiltersInput, SignupRequestFiltersInput,
+  SignupRequestsQueryBuilder, UserConProfileFiltersInput, UserConProfilesQueryBuilder,
 };
-use intercode_store::partial_objects::ConventionStoreFields;
+use intercode_store::{
+  objects::CouponType,
+  partial_objects::ConventionStoreFields,
+  query_builders::{CouponFiltersInput, OrderFiltersInput},
+};
 use intercode_timespan::ScheduledValue;
-use sea_orm::{ColumnTrait, DbErr, EntityTrait, ModelTrait, QueryFilter};
+use sea_orm::{ColumnTrait, EntityTrait, ModelTrait, QueryFilter};
 use seawater::loaders::{ExpectModel, ExpectModels};
+
+model_backed_type!(ConventionGlueFields, conventions::Model);
+
+#[Object]
+impl ConventionGlueFields {
+  async fn cms_content_groups(&self, ctx: &Context<'_>) -> Result<Vec<CmsContentGroupType>, Error> {
+    ConventionCmsFields::new(self.model.clone())
+      .cms_content_groups(ctx)
+      .await
+      .map(|partials| {
+        partials
+          .into_iter()
+          .map(CmsContentGroupType::from_type)
+          .collect()
+      })
+  }
+
+  async fn cms_content_group(
+    &self,
+    ctx: &Context<'_>,
+    id: ID,
+  ) -> Result<CmsContentGroupType, Error> {
+    ConventionCmsFields::new(self.model.clone())
+      .cms_content_group(ctx, id)
+      .await
+      .map(CmsContentGroupType::from_type)
+  }
+
+  #[graphql(name = "coupons_paginated")]
+  async fn coupons_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
+    filters: Option<CouponFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<ModelPaginator<CouponType>, Error> {
+    ConventionStoreFields::from_type(self.clone())
+      .coupons_paginated(ctx, page, per_page, filters, sort)
+      .await
+      .map(ModelPaginator::into_type)
+  }
+
+  /// Finds an active event by ID in this convention. If there is no event with that ID in this
+  /// convention, or the event is no longer active, errors out.
+  pub async fn event(&self, ctx: &Context<'_>, id: ID) -> Result<EventType, Error> {
+    ConventionEventsFields::from_type(self.clone())
+      .event(ctx, id)
+      .await
+      .map(EventType::from_type)
+  }
+
+  pub async fn events(
+    &self,
+    ctx: &Context<'_>,
+    start: Option<DateScalar>,
+    finish: Option<DateScalar>,
+    include_dropped: Option<bool>,
+    filters: Option<EventFiltersInput>,
+  ) -> Result<Vec<EventType>, Error> {
+    ConventionEventsFields::from_type(self.clone())
+      .events(ctx, start, finish, include_dropped, filters)
+      .await
+      .map(|items| items.into_iter().map(EventType::from_type).collect())
+  }
+
+  #[graphql(name = "events_paginated")]
+  pub async fn events_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<u64>,
+    per_page: Option<u64>,
+    filters: Option<EventFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<ModelPaginator<EventType>, Error> {
+    ConventionEventsFields::from_type(self.clone())
+      .events_paginated(ctx, page, per_page, filters, sort)
+      .await
+      .map(ModelPaginator::into_type)
+  }
+
+  #[graphql(name = "event_categories")]
+  async fn event_categories(
+    &self,
+    ctx: &Context<'_>,
+    #[graphql(name = "current_ability_can_read_event_proposals")]
+    current_ability_can_read_event_proposals: Option<bool>,
+  ) -> Result<Vec<EventCategoryType>, Error> {
+    ConventionEventsFields::from_type(self.clone())
+      .event_categories(ctx, current_ability_can_read_event_proposals)
+      .await
+      .map(|items| {
+        items
+          .into_iter()
+          .map(EventCategoryType::from_type)
+          .collect()
+      })
+  }
+
+  /// Finds an event proposal by ID in this convention. If there is no event proposal with that ID
+  /// in this convention, errors out.
+  #[graphql(name = "event_proposal")]
+  async fn event_proposal(
+    &self,
+    ctx: &Context<'_>,
+    #[graphql(desc = "The ID of the event proposal to find.")] id: ID,
+  ) -> Result<EventProposalType> {
+    ConventionEventsFields::from_type(self.clone())
+      .event_proposal(ctx, id)
+      .await
+      .map(EventProposalType::from_type)
+  }
+
+  #[graphql(name = "event_proposals_paginated")]
+  pub async fn event_proposals_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
+    filters: Option<EventProposalFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<ModelPaginator<EventProposalType>, Error> {
+    ConventionEventsFields::from_type(self.clone())
+      .event_proposals_paginated(ctx, page, per_page, filters, sort)
+      .await
+      .map(ModelPaginator::into_type)
+  }
+
+  pub async fn orders_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<u64>,
+    per_page: Option<u64>,
+    filters: Option<OrderFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<ModelPaginator<OrderType>, Error> {
+    ConventionStoreFields::from_type(self.clone())
+      .orders_paginated(ctx, page, per_page, filters, sort)
+      .await
+      .map(ModelPaginator::into_type)
+  }
+}
 
 model_backed_type!(ConventionApiFields, conventions::Model);
 
@@ -104,29 +241,6 @@ impl ConventionApiFields {
     self.model.clickwrap_agreement.as_deref()
   }
 
-  async fn cms_content_groups(&self, ctx: &Context<'_>) -> Result<Vec<CmsContentGroupType>, Error> {
-    ConventionCmsFields::new(self.model.clone())
-      .cms_content_groups(ctx)
-      .await
-      .map(|partials| {
-        partials
-          .into_iter()
-          .map(CmsContentGroupType::from_type)
-          .collect()
-      })
-  }
-
-  async fn cms_content_group(
-    &self,
-    ctx: &Context<'_>,
-    id: ID,
-  ) -> Result<CmsContentGroupType, Error> {
-    ConventionCmsFields::new(self.model.clone())
-      .cms_content_group(ctx, id)
-      .await
-      .map(CmsContentGroupType::from_type)
-  }
-
   async fn departments(&self, ctx: &Context<'_>) -> Result<Vec<DepartmentType>> {
     let loader_result = load_one_by_model_id!(convention_departments, ctx, self)?;
     Ok(loader_result_to_many!(loader_result, DepartmentType))
@@ -154,194 +268,9 @@ impl ConventionApiFields {
       .map(|t| DateTime::<Utc>::from_utc(t, Utc))
   }
 
-  #[graphql(name = "event_categories")]
-  async fn event_categories(
-    &self,
-    ctx: &Context<'_>,
-    #[graphql(name = "current_ability_can_read_event_proposals")]
-    current_ability_can_read_event_proposals: Option<bool>,
-  ) -> Result<Vec<EventCategoryType>, Error> {
-    let loader_result = load_one_by_model_id!(convention_event_categories, ctx, self)?;
-    let event_categories: Vec<_> = loader_result_to_many!(loader_result, EventCategoryType);
-
-    match current_ability_can_read_event_proposals {
-      Some(true) => {
-        let principal = ctx.data::<AuthorizationInfo>()?;
-        let futures = event_categories
-          .into_iter()
-          .map(|graphql_object| async {
-            let event_category = graphql_object.get_model();
-            let event_proposal = event_proposals::Model {
-              convention_id: Some(self.model.id),
-              event_category_id: event_category.id,
-              ..Default::default()
-            };
-            Ok::<_, DbErr>((
-              graphql_object,
-              EventProposalPolicy::action_permitted(
-                principal,
-                &EventProposalAction::Read,
-                &(self.model.clone(), event_proposal),
-              )
-              .await?,
-            ))
-          })
-          .collect::<Vec<_>>();
-
-        let results = try_join_all(futures.into_iter()).await?;
-        let event_categories_with_permission = results
-          .into_iter()
-          .filter_map(
-            |(graphql_object, can_read)| {
-              if can_read {
-                Some(graphql_object)
-              } else {
-                None
-              }
-            },
-          )
-          .collect::<Vec<_>>();
-        Ok(event_categories_with_permission)
-      }
-      _ => Ok(event_categories),
-    }
-  }
-
   #[graphql(name = "event_mailing_list_domain")]
   async fn event_mailing_list_domain(&self) -> Option<&str> {
     self.model.event_mailing_list_domain.as_deref()
-  }
-
-  /// Finds an active event by ID in this convention. If there is no event with that ID in this
-  /// convention, or the event is no longer active, errors out.
-  async fn event(&self, ctx: &Context<'_>, id: ID) -> Result<EventType, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-    let event_id: i64 = LaxId::parse(id)?;
-
-    Ok(EventType::new(
-      self
-        .model
-        .find_related(events::Entity)
-        .filter(events::Column::Status.eq("active"))
-        .filter(events::Column::Id.eq(event_id))
-        .one(query_data.db())
-        .await?
-        .ok_or_else(|| {
-          Error::new(format!(
-            "Could not find active event with ID {} in convention",
-            event_id
-          ))
-        })?,
-    ))
-  }
-
-  async fn events(
-    &self,
-    ctx: &Context<'_>,
-    start: Option<DateScalar>,
-    finish: Option<DateScalar>,
-    include_dropped: Option<bool>,
-    filters: Option<EventFiltersInput>,
-  ) -> Result<Vec<EventType>, Error> {
-    let mut scope = self
-      .model
-      .find_related(events::Entity)
-      .between(start.map(Into::into), finish.map(Into::into));
-
-    if include_dropped != Some(true) {
-      scope = scope.filter(events::Column::Status.eq("active"));
-    }
-
-    let query_builder = EventsQueryBuilder::new(
-      filters,
-      None,
-      ctx.data::<QueryData>()?.user_con_profile().cloned(),
-      ConventionPolicy::action_permitted(
-        ctx.data::<AuthorizationInfo>()?,
-        &ConventionAction::Schedule,
-        &self.model,
-      )
-      .await?,
-    );
-
-    scope = query_builder.apply_filters(scope);
-
-    Ok(
-      scope
-        .all(ctx.data::<QueryData>()?.db())
-        .await?
-        .into_iter()
-        .map(EventType::new)
-        .collect(),
-    )
-  }
-
-  #[graphql(name = "events_paginated")]
-  async fn events_paginated(
-    &self,
-    ctx: &Context<'_>,
-    page: Option<u64>,
-    #[graphql(name = "per_page")] per_page: Option<u64>,
-    filters: Option<EventFiltersInput>,
-    sort: Option<Vec<SortInput>>,
-  ) -> Result<EventsPaginationType, Error> {
-    let user_con_profile = ctx.data::<QueryData>()?.user_con_profile();
-    let can_read_schedule = ConventionPolicy::action_permitted(
-      ctx.data::<AuthorizationInfo>()?,
-      &ConventionAction::Schedule,
-      &self.model,
-    )
-    .await?;
-
-    EventsPaginationType::authorized_from_query_builder(
-      &EventsQueryBuilder::new(filters, sort, user_con_profile.cloned(), can_read_schedule),
-      ctx,
-      self
-        .model
-        .find_related(events::Entity)
-        .filter(events::Column::Status.eq("active")),
-      page,
-      per_page,
-      EventPolicy,
-    )
-  }
-
-  /// Finds an event proposal by ID in this convention. If there is no event proposal with that ID
-  /// in this convention, errors out.
-  #[graphql(name = "event_proposal")]
-  async fn event_proposal(
-    &self,
-    ctx: &Context<'_>,
-    #[graphql(desc = "The ID of the event proposal to find.")] id: ID,
-  ) -> Result<EventProposalType> {
-    let db = ctx.data::<QueryData>()?.db();
-    let id = LaxId::parse(id)?;
-    let event_proposal = event_proposals::Entity::find()
-      .filter(event_proposals::Column::ConventionId.eq(self.model.id))
-      .filter(event_proposals::Column::Id.eq(id))
-      .one(db)
-      .await?
-      .ok_or_else(|| Error::new(format!("Event proposal {} not found", id)))?;
-    Ok(EventProposalType::new(event_proposal))
-  }
-
-  #[graphql(name = "event_proposals_paginated")]
-  async fn event_proposals_paginated(
-    &self,
-    ctx: &Context<'_>,
-    page: Option<u64>,
-    #[graphql(name = "per_page")] per_page: Option<u64>,
-    filters: Option<EventProposalFiltersInput>,
-    sort: Option<Vec<SortInput>>,
-  ) -> Result<EventProposalsPaginationType, Error> {
-    EventProposalsPaginationType::authorized_from_query_builder(
-      &EventProposalsQueryBuilder::new(filters, sort),
-      ctx,
-      self.model.find_related(event_proposals::Entity),
-      page,
-      per_page,
-      EventProposalPolicy,
-    )
   }
 
   async fn favicon(&self, ctx: &Context<'_>) -> Result<Option<ActiveStorageAttachmentType>> {
@@ -441,18 +370,6 @@ impl ConventionApiFields {
     }
   }
 
-  #[graphql(name = "notification_templates")]
-  async fn notification_templates(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<Vec<NotificationTemplateType>> {
-    let loader_result = load_one_by_model_id!(convention_notification_templates, ctx, self)?;
-    Ok(loader_result_to_many!(
-      loader_result,
-      NotificationTemplateType
-    ))
-  }
-
   #[graphql(name = "open_graph_image")]
   async fn open_graph_image(
     &self,
@@ -467,11 +384,6 @@ impl ConventionApiFields {
         .and_then(|models| models.get(0).cloned())
         .map(ActiveStorageAttachmentType::new),
     )
-  }
-
-  async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<RoomType>, Error> {
-    let loader_result = load_one_by_model_id!(convention_rooms, ctx, self)?;
-    Ok(loader_result_to_many!(loader_result, RoomType))
   }
 
   async fn signup(&self, ctx: &Context<'_>, id: ID) -> Result<SignupType, Error> {
@@ -516,8 +428,8 @@ impl ConventionApiFields {
     #[graphql(name = "per_page")] per_page: Option<u64>,
     filters: Option<SignupRequestFiltersInput>,
     sort: Option<Vec<SortInput>>,
-  ) -> Result<SignupRequestsPaginationType, Error> {
-    SignupRequestsPaginationType::authorized_from_query_builder(
+  ) -> Result<ModelPaginator<SignupRequestType>, Error> {
+    ModelPaginator::authorized_from_query_builder(
       &SignupRequestsQueryBuilder::new(filters, sort),
       ctx,
       self.model.find_linked(ConventionToSignupRequests),
@@ -645,8 +557,8 @@ impl ConventionApiFields {
     #[graphql(name = "per_page")] per_page: Option<u64>,
     filters: Option<UserConProfileFiltersInput>,
     sort: Option<Vec<SortInput>>,
-  ) -> Result<UserConProfilesPaginationType, Error> {
-    UserConProfilesPaginationType::authorized_from_query_builder(
+  ) -> Result<ModelPaginator<UserConProfileType>, Error> {
+    ModelPaginator::authorized_from_query_builder(
       &UserConProfilesQueryBuilder::new(filters, sort),
       ctx,
       self.model.find_related(user_con_profiles::Entity),
@@ -662,6 +574,7 @@ impl ConventionApiFields {
 pub struct ConventionType(
   ConventionApiFields,
   ConventionCmsFields,
+  ConventionGlueFields,
   ConventionStoreFields,
 );
 
@@ -672,6 +585,7 @@ impl ModelBackedType for ConventionType {
     Self(
       ConventionApiFields::new(model.clone()),
       ConventionCmsFields::new(model.clone()),
+      ConventionGlueFields::new(model.clone()),
       ConventionStoreFields::new(model),
     )
   }

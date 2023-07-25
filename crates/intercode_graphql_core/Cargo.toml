@@ -14,6 +14,7 @@ chrono-tz = {workspace = true}
 http = {workspace = true}
 i18n-embed = {workspace = true}
 intercode_entities = {path = "../intercode_entities"}
+intercode_inflector = {path = "../intercode_inflector"}
 intercode_liquid = {path = "../intercode_liquid"}
 intercode_timespan = {path = "../intercode_timespan"}
 liquid = {workspace = true}

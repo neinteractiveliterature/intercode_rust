@@ -1,15 +1,16 @@
 use async_graphql::{Context, Error};
-use intercode_graphql_core::PaginationImplementation;
+use intercode_graphql_core::{ModelBackedType, ModelPaginator, PaginationImplementation};
 use intercode_policies::{AuthorizationInfo, EntityPolicy, ReadManageAction};
 use intercode_query_builders::QueryBuilder;
-use sea_orm::{EntityTrait, Select};
+use sea_orm::{FromQueryResult, ModelTrait, Select};
 
-pub trait PaginationFromQueryBuilder<Entity: EntityTrait>:
-  PaginationImplementation<Entity>
+pub trait PaginationFromQueryBuilder<Model: ModelTrait>: PaginationImplementation<Model>
+where
+  Model: Sync,
 {
-  fn from_query_builder<B: QueryBuilder<Entity = Entity>>(
+  fn from_query_builder<B: QueryBuilder<Entity = Model::Entity>>(
     query_builder: &B,
-    scope: Select<Entity>,
+    scope: Select<Model::Entity>,
     page: Option<u64>,
     per_page: Option<u64>,
   ) -> Self
@@ -23,19 +24,18 @@ pub trait PaginationFromQueryBuilder<Entity: EntityTrait>:
   }
 
   fn authorized_from_query_builder<
-    B: QueryBuilder<Entity = Entity>,
-    P: EntityPolicy<AuthorizationInfo, <Entity as EntityTrait>::Model, Action = A>,
+    B: QueryBuilder<Entity = Model::Entity>,
+    P: EntityPolicy<AuthorizationInfo, Model, Action = A>,
     A: From<ReadManageAction>,
   >(
     query_builder: &B,
     ctx: &Context<'_>,
-    scope: Select<Entity>,
+    scope: Select<Model::Entity>,
     page: Option<u64>,
     per_page: Option<u64>,
     _policy: P,
   ) -> Result<Self, Error>
   where
-    <Entity as EntityTrait>::Model: Sync,
     Self: Sized,
   {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
@@ -47,4 +47,9 @@ pub trait PaginationFromQueryBuilder<Entity: EntityTrait>:
       per_page,
     ))
   }
+}
+
+impl<Item: ModelBackedType> PaginationFromQueryBuilder<Item::Model> for ModelPaginator<Item> where
+  Item::Model: Sync + FromQueryResult
+{
 }

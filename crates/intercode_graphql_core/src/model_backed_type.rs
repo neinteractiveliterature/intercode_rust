@@ -1,6 +1,7 @@
+use async_graphql::ObjectType;
 use sea_orm::ModelTrait;
 
-pub trait ModelBackedType {
+pub trait ModelBackedType: ObjectType {
   type Model: ModelTrait;
 
   fn new(model: Self::Model) -> Self;
@@ -20,19 +21,6 @@ pub trait ModelBackedType {
   {
     other.into_type()
   }
-
-  // fn simple_policy_guard<P: Policy<AuthorizationInfo, Self::Model>>(
-  //   &self,
-  //   action: P::Action,
-  // ) -> PolicyGuard<P, Self::Model, Self::Model>
-  // where
-  //   Self::Model: std::marker::Sync,
-  // {
-  //   PolicyGuard::new(action, self.get_model(), move |model, _ctx| {
-  //     let model = model.clone();
-  //     Box::pin(async { Ok(model) })
-  //   })
-  // }
 }
 
 #[macro_export]

@@ -1,13 +1,19 @@
 use async_graphql::{Context, Error, Object, ID};
-use intercode_entities::{departments, event_categories, forms};
-use intercode_graphql_core::{load_one_by_model_id, model_backed_type, query_data::QueryData};
+use intercode_entities::{departments, event_categories, events, forms};
+use intercode_graphql_core::{
+  load_one_by_model_id, model_backed_type, query_data::QueryData, ModelPaginator,
+};
 use intercode_inflector::inflector::string::pluralize;
+use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
 use intercode_policies::{
-  policies::{ConventionAction, ConventionPolicy},
+  policies::{ConventionAction, ConventionPolicy, EventPolicy},
   AuthorizationInfo, Policy,
 };
 use intercode_query_builders::{sort_input::SortInput, EventFiltersInput, EventsQueryBuilder};
+use sea_orm::ModelTrait;
 use seawater::loaders::ExpectModel;
+
+use super::EventEventsFields;
 
 model_backed_type!(EventCategoryEventsFields, event_categories::Model);
 
@@ -30,12 +36,14 @@ impl EventCategoryEventsFields {
     Ok(loader_result.try_one().cloned())
   }
 
-  pub async fn events_paginated_query_builder(
+  pub async fn events_paginated(
     &self,
     ctx: &Context<'_>,
+    page: Option<u64>,
+    per_page: Option<u64>,
     filters: Option<EventFiltersInput>,
     sort: Option<Vec<SortInput>>,
-  ) -> Result<EventsQueryBuilder, Error> {
+  ) -> Result<ModelPaginator<EventEventsFields>, Error> {
     let user_con_profile = ctx.data::<QueryData>()?.user_con_profile();
     let convention_loader_result = load_one_by_model_id!(event_category_convention, ctx, self)?;
     let convention = convention_loader_result.expect_one()?;
@@ -46,12 +54,14 @@ impl EventCategoryEventsFields {
     )
     .await?;
 
-    Ok(EventsQueryBuilder::new(
-      filters,
-      sort,
-      user_con_profile.cloned(),
-      can_read_schedule,
-    ))
+    ModelPaginator::authorized_from_query_builder(
+      &EventsQueryBuilder::new(filters, sort, user_con_profile.cloned(), can_read_schedule),
+      ctx,
+      self.model.find_related(events::Entity),
+      page,
+      per_page,
+      EventPolicy,
+    )
   }
 }
 

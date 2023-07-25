@@ -19,6 +19,7 @@ use intercode_policies::{
   },
   AuthorizationInfo, Policy, ReadManageAction,
 };
+use intercode_reporting::partial_objects::AbilityReportingFields;
 use intercode_store::partial_objects::AbilityStoreFields;
 use sea_orm::EntityTrait;
 use seawater::loaders::ExpectModel;
@@ -228,38 +229,10 @@ impl AbilityApiFields {
     )
   }
 
-  #[graphql(name = "can_read_any_mailing_list")]
-  async fn can_read_any_mailing_list(&self, ctx: &Context<'_>) -> Result<bool> {
-    let Some(convention) = ctx.data::<QueryData>()?.convention() else {
-      return Ok(false);
-    };
-
-    Ok(
-      ConventionPolicy::action_permitted(
-        &self.authorization_info,
-        &ConventionAction::ReadAnyMailingList,
-        convention,
-      )
-      .await?,
-    )
-  }
-
   #[graphql(name = "can_manage_oauth_applications")]
   async fn can_manage_oauth_applications(&self) -> bool {
     // TODO
     false
-  }
-
-  #[graphql(name = "can_read_reports")]
-  async fn can_read_reports(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    model_action_permitted(
-      self.authorization_info.as_ref(),
-      ConventionPolicy,
-      ctx,
-      &ConventionAction::ViewReports,
-      |ctx| Ok(ctx.data::<QueryData>()?.convention()),
-    )
-    .await
   }
 
   #[graphql(name = "can_manage_signups")]
@@ -367,6 +340,7 @@ impl AbilityApiFields {
 
   #[graphql(name = "can_read_users")]
   async fn can_read_users(&self) -> bool {
+    // TODO
     false
   }
 
@@ -432,6 +406,7 @@ pub struct AbilityType(
   AbilityStoreFields,
   AbilityCmsFields,
   AbilityFormsFields,
+  AbilityReportingFields,
   AbilityApiFields,
 );
 
@@ -442,6 +417,7 @@ impl AbilityType {
       AbilityStoreFields::new(authorization_info.clone()),
       AbilityCmsFields::new(authorization_info.clone()),
       AbilityFormsFields::new(authorization_info.clone()),
+      AbilityReportingFields::new(authorization_info.clone()),
       AbilityApiFields::new(authorization_info),
     )
   }

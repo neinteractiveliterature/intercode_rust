@@ -4,7 +4,8 @@ use async_graphql::*;
 use intercode_entities::{events, runs, signups, user_con_profiles, users};
 use intercode_events::partial_objects::RunEventsFields;
 use intercode_graphql_core::{
-  model_backed_type, query_data::QueryData, ModelBackedType, PaginationImplementation,
+  model_backed_type, query_data::QueryData, ModelBackedType, ModelPaginator,
+  PaginationImplementation,
 };
 use intercode_graphql_loaders::LoaderManager;
 use intercode_query_builders::sort_input::SortInput;
@@ -15,7 +16,7 @@ use sea_orm::{
 
 use crate::api::{
   inputs::SignupFiltersInput,
-  objects::{SignupRequestType, SignupType, SignupsPaginationType},
+  objects::{SignupRequestType, SignupType},
 };
 
 use super::EventType;
@@ -89,7 +90,7 @@ impl RunGlueFields {
     #[graphql(name = "per_page")] per_page: Option<u64>,
     filters: Option<SignupFiltersInput>,
     sort: Option<Vec<SortInput>>,
-  ) -> Result<SignupsPaginationType, Error> {
+  ) -> Result<ModelPaginator<SignupType>, Error> {
     let mut scope = self.model.find_related(signups::Entity);
 
     if let Some(filters) = filters {
@@ -142,7 +143,7 @@ impl RunGlueFields {
       }
     }
 
-    Ok(SignupsPaginationType::new(Some(scope), page, per_page))
+    Ok(ModelPaginator::new(Some(scope), page, per_page))
   }
 }
 

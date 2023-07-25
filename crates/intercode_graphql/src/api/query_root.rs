@@ -3,8 +3,8 @@ use std::sync::Arc;
 use super::interfaces::CmsParentInterface;
 use super::merged_objects::EventType;
 use super::objects::{
-  AbilityType, ConventionType, EmailRoutesPaginationType, OrganizationType, RootSiteType,
-  UserConProfileType, UserType,
+  AbilityType, ConventionType, EmailRouteType, OrganizationType, RootSiteType, UserConProfileType,
+  UserType,
 };
 use async_graphql::connection::{query, Connection};
 use async_graphql::*;
@@ -13,7 +13,7 @@ use intercode_entities::{email_routes, events, oauth_applications, organizations
 use intercode_graphql_core::entity_relay_connection::RelayConnectable;
 use intercode_graphql_core::liquid_renderer::LiquidRenderer;
 use intercode_graphql_core::query_data::QueryData;
-use intercode_graphql_core::ModelBackedType;
+use intercode_graphql_core::{ModelBackedType, ModelPaginator};
 use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
 use intercode_policies::policies::EmailRoutePolicy;
 use intercode_policies::AuthorizationInfo;
@@ -99,8 +99,8 @@ impl QueryRoot {
     #[graphql(name = "per_page")] per_page: Option<u64>,
     filters: Option<EmailRouteFiltersInput>,
     sort: Option<Vec<SortInput>>,
-  ) -> Result<EmailRoutesPaginationType, Error> {
-    EmailRoutesPaginationType::authorized_from_query_builder(
+  ) -> Result<ModelPaginator<EmailRouteType>, Error> {
+    ModelPaginator::authorized_from_query_builder(
       &EmailRoutesQueryBuilder::new(filters, sort),
       ctx,
       email_routes::Entity::find(),

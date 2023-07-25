@@ -2,24 +2,44 @@ use std::{str::FromStr, sync::Arc};
 
 use async_graphql::*;
 use intercode_entities::{conventions, coupons, links::ConventionToOrders};
-use intercode_graphql_core::{load_one_by_model_id, loader_result_to_many, model_backed_type};
+use intercode_graphql_core::{
+  load_one_by_model_id, loader_result_to_many, model_backed_type, ModelPaginator,
+};
 use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
 use intercode_query_builders::sort_input::SortInput;
 use sea_orm::ModelTrait;
 
 use crate::{
-  objects::{
-    CouponsPaginationType, OrdersPaginationType, ProductType, StripeAccountType, TicketTypeType,
-  },
+  objects::{CouponType, ProductType, StripeAccountType, TicketTypeType},
   policies::{CouponPolicy, OrderPolicy},
   query_builders::{
     CouponFiltersInput, CouponsQueryBuilder, OrderFiltersInput, OrdersQueryBuilder,
   },
 };
 
+use super::OrderStoreFields;
+
 model_backed_type!(ConventionStoreFields, conventions::Model);
 
 impl ConventionStoreFields {
+  pub async fn coupons_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<u64>,
+    per_page: Option<u64>,
+    filters: Option<CouponFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<ModelPaginator<CouponType>, Error> {
+    ModelPaginator::authorized_from_query_builder(
+      &CouponsQueryBuilder::new(filters, sort),
+      ctx,
+      self.model.find_related(coupons::Entity),
+      page,
+      per_page,
+      CouponPolicy,
+    )
+  }
+
   pub async fn orders_paginated(
     &self,
     ctx: &Context<'_>,
@@ -27,8 +47,8 @@ impl ConventionStoreFields {
     per_page: Option<u64>,
     filters: Option<OrderFiltersInput>,
     sort: Option<Vec<SortInput>>,
-  ) -> Result<OrdersPaginationType, Error> {
-    OrdersPaginationType::authorized_from_query_builder(
+  ) -> Result<ModelPaginator<OrderStoreFields>, Error> {
+    ModelPaginator::authorized_from_query_builder(
       &OrdersQueryBuilder::new(filters, sort),
       ctx,
       self.model.find_linked(ConventionToOrders),
@@ -42,23 +62,6 @@ impl ConventionStoreFields {
 #[Object]
 impl ConventionStoreFields {
   #[graphql(name = "coupons_paginated")]
-  async fn coupons_paginated(
-    &self,
-    ctx: &Context<'_>,
-    page: Option<u64>,
-    #[graphql(name = "per_page")] per_page: Option<u64>,
-    filters: Option<CouponFiltersInput>,
-    sort: Option<Vec<SortInput>>,
-  ) -> Result<CouponsPaginationType, Error> {
-    CouponsPaginationType::authorized_from_query_builder(
-      &CouponsQueryBuilder::new(filters, sort),
-      ctx,
-      self.model.find_related(coupons::Entity),
-      page,
-      per_page,
-      CouponPolicy,
-    )
-  }
 
   async fn products(&self, ctx: &Context<'_>) -> Result<Vec<ProductType>> {
     let loader_result = load_one_by_model_id!(convention_products, ctx, self)?;

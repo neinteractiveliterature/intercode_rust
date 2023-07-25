@@ -5,11 +5,13 @@ use intercode_entities::{cms_parent::CmsParentTrait, cms_partials, conventions};
 use intercode_graphql_core::{
   liquid_renderer::LiquidRenderer, model_backed_type, query_data::QueryData,
 };
+use intercode_graphql_core::{load_one_by_model_id, loader_result_to_many};
 use intercode_policies::policies::{ConventionAction, ConventionPolicy};
 use intercode_policies::ModelBackedTypeGuardablePolicy;
 use liquid::object;
 use sea_orm::{ColumnTrait, QueryFilter};
 
+use crate::api::objects::NotificationTemplateType;
 use crate::{
   api::objects::{
     CmsContentType, CmsFileType, CmsGraphqlQueryType, CmsLayoutType, CmsNavigationItemType,
@@ -118,6 +120,18 @@ impl ConventionCmsFields {
   ) -> Result<CmsLayoutType, Error> {
     <Self as CmsParentImplementation<conventions::Model>>::effective_cms_layout(self, ctx, path)
       .await
+  }
+
+  #[graphql(name = "notification_templates")]
+  async fn notification_templates(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<NotificationTemplateType>> {
+    let loader_result = load_one_by_model_id!(convention_notification_templates, ctx, self)?;
+    Ok(loader_result_to_many!(
+      loader_result,
+      NotificationTemplateType
+    ))
   }
 
   async fn root_page(&self, ctx: &Context<'_>) -> Result<PageType, Error> {

@@ -1,16 +1,12 @@
 use async_graphql::{Context, Error, MergedObject, Object};
-use intercode_entities::{event_categories, events};
+use intercode_entities::event_categories;
 use intercode_events::partial_objects::EventCategoryEventsFields;
-use intercode_graphql_core::{model_backed_type, ModelBackedType};
-use intercode_pagination_from_query_builder::PaginationFromQueryBuilder;
-use intercode_policies::policies::EventPolicy;
+use intercode_graphql_core::{model_backed_type, ModelBackedType, ModelPaginator};
 use intercode_query_builders::{sort_input::SortInput, EventFiltersInput};
-use sea_orm::ModelTrait;
 
-use crate::api::{
-  merged_objects::FormType,
-  objects::{DepartmentType, EventsPaginationType},
-};
+use crate::api::{merged_objects::FormType, objects::DepartmentType};
+
+use super::EventType;
 
 model_backed_type!(EventCategoryGlueFields, event_categories::Model);
 
@@ -47,19 +43,11 @@ impl EventCategoryGlueFields {
     #[graphql(name = "per_page")] per_page: Option<u64>,
     filters: Option<EventFiltersInput>,
     sort: Option<Vec<SortInput>>,
-  ) -> Result<EventsPaginationType, Error> {
-    let query_builder = EventCategoryEventsFields::from_type(self.clone())
-      .events_paginated_query_builder(ctx, filters, sort)
-      .await?;
-
-    EventsPaginationType::authorized_from_query_builder(
-      &query_builder,
-      ctx,
-      self.model.find_related(events::Entity),
-      page,
-      per_page,
-      EventPolicy,
-    )
+  ) -> Result<ModelPaginator<EventType>, Error> {
+    EventCategoryEventsFields::from_type(self.clone())
+      .events_paginated(ctx, page, per_page, filters, sort)
+      .await
+      .map(ModelPaginator::into_type)
   }
 }
 
