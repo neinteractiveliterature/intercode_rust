@@ -1,10 +1,7 @@
 use async_graphql::InputObject;
 use intercode_entities::signup_requests;
+use intercode_query_builders::{sort_input::SortInput, QueryBuilder};
 use sea_orm::{sea_query::Expr, ColumnTrait, QueryFilter, QueryOrder, Select};
-
-use crate::sort_input::SortInput;
-
-use super::QueryBuilder;
 
 #[derive(InputObject, Default)]
 pub struct SignupRequestFiltersInput {

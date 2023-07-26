@@ -209,6 +209,11 @@ impl ConventionEventsFields {
 
 #[Object]
 impl ConventionEventsFields {
+  #[graphql(name = "accepting_proposals")]
+  async fn accepting_proposals(&self) -> bool {
+    self.model.accepting_proposals.unwrap_or(false)
+  }
+
   async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<RoomType>, Error> {
     let loader_result = load_one_by_model_id!(convention_rooms, ctx, self)?;
     Ok(loader_result_to_many!(loader_result, RoomType))

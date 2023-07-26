@@ -73,7 +73,7 @@ where
 }
 
 #[async_trait]
-impl<Item: ModelBackedType> OutputType for ModelPaginator<Item>
+impl<Item: ModelBackedType + OutputType> OutputType for ModelPaginator<Item>
 where
   Item::Model: Send + Sync + FromQueryResult,
   <<Item::Model as ModelTrait>::Entity as EntityTrait>::Model: Sync,
@@ -226,7 +226,7 @@ where
 }
 
 #[async_trait]
-impl<Item: ModelBackedType> ContainerType for ModelPaginator<Item>
+impl<Item: ModelBackedType + OutputType> ContainerType for ModelPaginator<Item>
 where
   Item::Model: Sync + FromQueryResult,
   <Item::Model as ModelTrait>::Entity: Sync,
@@ -271,7 +271,7 @@ where
   }
 }
 
-impl<Item: ModelBackedType> ObjectType for ModelPaginator<Item>
+impl<Item: ModelBackedType + OutputType> ObjectType for ModelPaginator<Item>
 where
   Item::Model: Sync + FromQueryResult,
   <Item::Model as ModelTrait>::Entity: Sync,

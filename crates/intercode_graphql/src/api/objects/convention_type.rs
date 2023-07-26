@@ -15,39 +15,35 @@ use async_graphql::*;
 use chrono::{DateTime, Utc};
 use intercode_cms::api::partial_objects::ConventionCmsFields;
 use intercode_entities::{
-  conventions, forms,
-  links::{ConventionToSignupRequests, ConventionToSignups, ConventionToStaffPositions},
-  model_ext::user_con_profiles::BioEligibility,
-  signups, staff_positions, user_con_profiles, MaximumEventSignupsValue,
+  conventions, links::ConventionToStaffPositions, model_ext::user_con_profiles::BioEligibility,
+  staff_positions, user_con_profiles,
 };
 use intercode_events::{
   partial_objects::ConventionEventsFields,
   query_builders::{EventFiltersInput, EventProposalFiltersInput},
 };
+use intercode_forms::partial_objects::ConventionFormsFields;
 use intercode_graphql_core::{
-  enums::{SignupMode, SiteMode, TicketMode, TimezoneMode},
-  lax_id::LaxId,
+  enums::{SiteMode, TicketMode, TimezoneMode},
   load_one_by_model_id, loader_result_to_many, model_backed_type,
-  objects::{ActiveStorageAttachmentType, ScheduledStringableValueType},
+  objects::ActiveStorageAttachmentType,
   query_data::QueryData,
   scalars::DateScalar,
   ModelBackedType, ModelPaginator,
 };
 use intercode_graphql_loaders::LoaderManager;
-use intercode_policies::{
-  policies::{SignupRequestPolicy, UserConProfilePolicy},
-  AuthorizedFromQueryBuilder,
-};
+use intercode_policies::{policies::UserConProfilePolicy, AuthorizedFromQueryBuilder};
 use intercode_query_builders::{
-  sort_input::SortInput, SignupRequestFiltersInput, SignupRequestsQueryBuilder,
-  UserConProfileFiltersInput, UserConProfilesQueryBuilder,
+  sort_input::SortInput, UserConProfileFiltersInput, UserConProfilesQueryBuilder,
+};
+use intercode_signups::{
+  partial_objects::ConventionSignupsFields, query_builders::SignupRequestFiltersInput,
 };
 use intercode_store::{
   objects::CouponType,
   partial_objects::ConventionStoreFields,
   query_builders::{CouponFiltersInput, OrderFiltersInput},
 };
-use intercode_timespan::ScheduledValue;
 use sea_orm::{ColumnTrait, EntityTrait, ModelTrait, QueryFilter};
 use seawater::loaders::{ExpectModel, ExpectModels};
 
@@ -178,6 +174,20 @@ impl ConventionGlueFields {
       .map(ModelPaginator::into_type)
   }
 
+  pub async fn form(&self, ctx: &Context<'_>, id: ID) -> Result<FormType> {
+    ConventionFormsFields::from_type(self.clone())
+      .form(ctx, id)
+      .await
+      .map(FormType::from_type)
+  }
+
+  pub async fn forms(&self, ctx: &Context<'_>) -> Result<Vec<FormType>> {
+    ConventionFormsFields::from_type(self.clone())
+      .forms(ctx)
+      .await
+      .map(|items| items.into_iter().map(FormType::from_type).collect())
+  }
+
   pub async fn orders_paginated(
     &self,
     ctx: &Context<'_>,
@@ -191,6 +201,36 @@ impl ConventionGlueFields {
       .await
       .map(ModelPaginator::into_type)
   }
+
+  async fn signup(&self, ctx: &Context<'_>, id: ID) -> Result<SignupType, Error> {
+    ConventionSignupsFields::from_type(self.clone())
+      .signup(ctx, id)
+      .await
+      .map(SignupType::from_type)
+  }
+
+  #[graphql(name = "signup_requests_paginated")]
+  async fn signup_requests_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
+    filters: Option<SignupRequestFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<ModelPaginator<SignupRequestType>, Error> {
+    ConventionSignupsFields::from_type(self.clone())
+      .signup_requests_paginated(ctx, page, per_page, filters, sort)
+      .await
+      .map(ModelPaginator::into_type)
+  }
+
+  #[graphql(name = "user_con_profile_form")]
+  pub async fn user_con_profile_form(&self, ctx: &Context<'_>) -> Result<FormType> {
+    ConventionFormsFields::from_type(self.clone())
+      .user_con_profile_form(ctx)
+      .await
+      .map(FormType::from_type)
+  }
 }
 
 model_backed_type!(ConventionApiFields, conventions::Model);
@@ -199,11 +239,6 @@ model_backed_type!(ConventionApiFields, conventions::Model);
 impl ConventionApiFields {
   async fn name(&self) -> &Option<String> {
     &self.model.name
-  }
-
-  #[graphql(name = "accepting_proposals")]
-  async fn accepting_proposals(&self) -> bool {
-    self.model.accepting_proposals.unwrap_or(false)
   }
 
   #[graphql(name = "bio_eligible_user_con_profiles")]
@@ -293,27 +328,6 @@ impl ConventionApiFields {
     )
   }
 
-  async fn form(&self, ctx: &Context<'_>, id: ID) -> Result<FormType> {
-    let form = self
-      .model
-      .all_forms()
-      .filter(forms::Column::Id.eq(LaxId::parse(id.clone())?))
-      .one(ctx.data::<QueryData>()?.db())
-      .await?;
-    form
-      .ok_or_else(|| Error::new(format!("Form {:?} not found in convention", id)))
-      .map(FormType::new)
-  }
-
-  async fn forms(&self, ctx: &Context<'_>) -> Result<Vec<FormType>> {
-    let forms = self
-      .model
-      .all_forms()
-      .all(ctx.data::<QueryData>()?.db())
-      .await?;
-    Ok(forms.into_iter().map(FormType::new).collect())
-  }
-
   async fn hidden(&self) -> bool {
     self.model.hidden
   }
@@ -329,20 +343,6 @@ impl ConventionApiFields {
   #[graphql(name = "mailing_lists")]
   async fn mailing_lists(&self) -> MailingListsType {
     MailingListsType::from_type(self.clone())
-  }
-
-  #[graphql(name = "maximum_event_signups")]
-  async fn maximum_event_signups(
-    &self,
-  ) -> Result<Option<ScheduledStringableValueType<Utc, MaximumEventSignupsValue>>> {
-    let scheduled_value: Option<ScheduledValue<Utc, MaximumEventSignupsValue>> = self
-      .model
-      .maximum_event_signups
-      .clone()
-      .map(serde_json::from_value)
-      .transpose()?;
-
-    Ok(scheduled_value.map(ScheduledStringableValueType::new))
   }
 
   #[graphql(name = "maximum_tickets")]
@@ -394,30 +394,6 @@ impl ConventionApiFields {
     )
   }
 
-  async fn signup(&self, ctx: &Context<'_>, id: ID) -> Result<SignupType, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-
-    Ok(SignupType::new(
-      self
-        .model
-        .find_linked(ConventionToSignups)
-        .filter(signups::Column::Id.eq(id.parse::<i64>()?))
-        .one(query_data.db())
-        .await?
-        .ok_or_else(|| Error::new("Signup not found"))?,
-    ))
-  }
-
-  #[graphql(name = "signup_mode")]
-  async fn signup_mode(&self) -> Result<SignupMode, Error> {
-    self.model.signup_mode.as_str().try_into()
-  }
-
-  #[graphql(name = "signup_requests_open")]
-  async fn signup_requests_open(&self) -> bool {
-    self.model.signup_requests_open
-  }
-
   #[graphql(name = "show_event_list")]
   async fn show_event_list(&self) -> &str {
     self.model.show_event_list.as_str()
@@ -426,25 +402,6 @@ impl ConventionApiFields {
   #[graphql(name = "show_schedule")]
   async fn show_schedule(&self) -> &str {
     self.model.show_schedule.as_str()
-  }
-
-  #[graphql(name = "signup_requests_paginated")]
-  async fn signup_requests_paginated(
-    &self,
-    ctx: &Context<'_>,
-    page: Option<u64>,
-    #[graphql(name = "per_page")] per_page: Option<u64>,
-    filters: Option<SignupRequestFiltersInput>,
-    sort: Option<Vec<SortInput>>,
-  ) -> Result<ModelPaginator<SignupRequestType>, Error> {
-    ModelPaginator::authorized_from_query_builder(
-      &SignupRequestsQueryBuilder::new(filters, sort),
-      ctx,
-      self.model.find_linked(ConventionToSignupRequests),
-      page,
-      per_page,
-      SignupRequestPolicy,
-    )
   }
 
   #[graphql(name = "site_mode")]
@@ -542,19 +499,6 @@ impl ConventionApiFields {
         ))
       })
       .map(UserConProfileType::new)
-  }
-
-  #[graphql(name = "user_con_profile_form")]
-  async fn user_con_profile_form(&self, ctx: &Context<'_>) -> Result<FormType> {
-    Ok(FormType::new(
-      ctx
-        .data::<Arc<LoaderManager>>()?
-        .convention_user_con_profile_form()
-        .load_one(self.model.id)
-        .await?
-        .expect_one()?
-        .clone(),
-    ))
   }
 
   #[graphql(name = "user_con_profiles_paginated")]

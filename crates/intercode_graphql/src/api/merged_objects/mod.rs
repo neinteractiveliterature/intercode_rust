@@ -5,6 +5,7 @@ mod form_type;
 mod mailing_lists_type;
 mod order_entry_type;
 mod order_type;
+mod root_site_type;
 mod run_type;
 mod team_member_type;
 mod ticket_type;
@@ -16,6 +17,7 @@ pub use form_type::*;
 pub use mailing_lists_type::*;
 pub use order_entry_type::*;
 pub use order_type::*;
+pub use root_site_type::*;
 pub use run_type::*;
 pub use team_member_type::*;
 pub use ticket_type::*;
@@ -27,7 +29,7 @@ macro_rules! merged_model_backed_type {
     #[graphql(name = $graphql_name)]
     pub struct $name($($types),+);
 
-    impl ModelBackedType for $name {
+    impl ::intercode_graphql_core::ModelBackedType for $name {
       type Model = $model;
 
       fn from_arc(arc: ::std::sync::Arc<Self::Model>) -> Self {

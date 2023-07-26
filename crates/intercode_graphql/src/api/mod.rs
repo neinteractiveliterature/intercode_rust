@@ -1,4 +1,3 @@
-pub(crate) mod inputs;
 pub(crate) mod interfaces;
 pub(crate) mod merged_objects;
 pub(crate) mod mutation_root;

@@ -1,11 +1,9 @@
 mod email_routes_query_builder;
-mod signup_requests_query_builder;
 pub mod sort_input;
 mod user_con_profiles_query_builder;
 
 pub use email_routes_query_builder::*;
 use intercode_graphql_core::{ModelBackedType, ModelPaginator, PaginationImplementation};
-pub use signup_requests_query_builder::*;
 pub use user_con_profiles_query_builder::*;
 
 use sea_orm::{EntityTrait, FromQueryResult, ModelTrait, Select};

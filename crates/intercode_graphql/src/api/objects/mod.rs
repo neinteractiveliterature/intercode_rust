@@ -8,7 +8,6 @@ mod notification_destination_type;
 mod organization_role_type;
 mod organization_type;
 mod permission_type;
-mod root_site_type;
 mod search_result_type;
 mod signup_request_type;
 mod signup_type;
@@ -26,7 +25,6 @@ pub use maximum_event_provided_tickets_override_type::MaximumEventProvidedTicket
 pub use organization_role_type::OrganizationRoleType;
 pub use organization_type::OrganizationType;
 pub use permission_type::PermissionType;
-pub use root_site_type::RootSiteType;
 pub use search_result_type::SearchResultType;
 pub use signup_request_type::SignupRequestType;
 pub use signup_type::SignupType;

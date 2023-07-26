@@ -8,7 +8,7 @@ use async_graphql::{
 use async_graphql_value::indexmap::IndexMap;
 use intercode_cms::api::partial_objects::ConventionCmsFields;
 
-use crate::api::objects::{ConventionType, RootSiteType};
+use crate::api::{merged_objects::RootSiteType, objects::ConventionType};
 
 /// A CMS parent is a web site managed by Intercode. It acts as a container for CMS content, such
 /// as pages, partials, files, layouts, variables, content groups, and user-defined GraphQL queries.
@@ -19,7 +19,7 @@ use crate::api::objects::{ConventionType, RootSiteType};
 /// object for more details about this.)
 pub enum CmsParentInterface {
   RootSite(RootSiteType),
-  Convention(Box<ConventionType>),
+  Convention(ConventionType),
 }
 
 // Hacks: Interface doesn't support MergedObject, so instead we're going to declare ConventionCmsFields as the canonical

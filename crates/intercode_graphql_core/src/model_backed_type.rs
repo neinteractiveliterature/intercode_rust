@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
-use async_graphql::ObjectType;
 use sea_orm::ModelTrait;
 
-pub trait ModelBackedType: ObjectType {
+pub trait ModelBackedType {
   type Model: ModelTrait;
 
   fn new(model: Self::Model) -> Self;

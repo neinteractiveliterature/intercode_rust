@@ -1,10 +1,9 @@
 use std::sync::Arc;
 
 use super::interfaces::CmsParentInterface;
-use super::merged_objects::EventType;
+use super::merged_objects::{EventType, RootSiteType};
 use super::objects::{
-  AbilityType, ConventionType, EmailRouteType, OrganizationType, RootSiteType, UserConProfileType,
-  UserType,
+  AbilityType, ConventionType, EmailRouteType, OrganizationType, UserConProfileType, UserType,
 };
 use async_graphql::connection::{query, Connection};
 use async_graphql::*;
@@ -47,7 +46,7 @@ impl QueryRoot {
 
     Ok(match query_data.cms_parent() {
       CmsParent::Convention(convention) => {
-        CmsParentInterface::Convention(Box::new(ConventionType::new(*convention.to_owned())))
+        CmsParentInterface::Convention(ConventionType::new(*convention.to_owned()))
       }
       CmsParent::RootSite(root_site) => {
         CmsParentInterface::RootSite(RootSiteType::new(*root_site.to_owned()))

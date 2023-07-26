@@ -30,6 +30,7 @@ members = [
   "./crates/intercode_policies",
   "./crates/intercode_query_builders",
   "./crates/intercode_reporting",
+  "./crates/intercode_signups",
   "./crates/intercode_store",
   "./crates/intercode_timespan",
   "./crates/seawater",
