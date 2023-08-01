@@ -7,6 +7,8 @@ use async_graphql::{
 };
 use async_graphql_value::indexmap::IndexMap;
 use intercode_cms::api::partial_objects::ConventionCmsFields;
+use intercode_entities::cms_parent::CmsParent;
+use intercode_graphql_core::ModelBackedType;
 
 use crate::api::{merged_objects::RootSiteType, objects::ConventionType};
 
@@ -20,6 +22,19 @@ use crate::api::{merged_objects::RootSiteType, objects::ConventionType};
 pub enum CmsParentInterface {
   RootSite(RootSiteType),
   Convention(ConventionType),
+}
+
+impl From<CmsParent> for CmsParentInterface {
+  fn from(value: CmsParent) -> Self {
+    match value {
+      CmsParent::Convention(convention) => {
+        CmsParentInterface::Convention(ConventionType::new(*convention.to_owned()))
+      }
+      CmsParent::RootSite(root_site) => {
+        CmsParentInterface::RootSite(RootSiteType::new(*root_site.to_owned()))
+      }
+    }
+  }
 }
 
 // Hacks: Interface doesn't support MergedObject, so instead we're going to declare ConventionCmsFields as the canonical

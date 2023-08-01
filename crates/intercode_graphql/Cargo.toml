@@ -23,13 +23,10 @@ intercode_query_builders = {path = "../intercode_query_builders"}
 intercode_reporting = {path = "../intercode_reporting"}
 intercode_signups = {path = "../intercode_signups"}
 intercode_store = {path = "../intercode_store"}
-intercode_timespan = {path = "../intercode_timespan"}
 intercode_users = {path = "../intercode_users"}
 itertools = {workspace = true}
 liquid = {workspace = true}
 liquid-core = {workspace = true}
-md5 = {workspace = true}
-pulldown-cmark = {workspace = true}
 sea-orm = {workspace = true}
 seawater = {path = "../seawater"}
 serde_json = {workspace = true}

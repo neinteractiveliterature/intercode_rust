@@ -1,14 +1,12 @@
-use std::sync::Arc;
-
 use super::interfaces::CmsParentInterface;
 use super::merged_objects::{EventType, RootSiteType, UserConProfileType, UserType};
 use super::objects::{AbilityType, ConventionType, EmailRouteType, OrganizationType};
-use async_graphql::connection::{query, Connection};
+use async_graphql::connection::Connection;
 use async_graphql::*;
-use intercode_entities::cms_parent::CmsParent;
-use intercode_entities::{email_routes, events, oauth_applications, organizations, root_sites};
-use intercode_graphql_core::entity_relay_connection::RelayConnectable;
-use intercode_graphql_core::liquid_renderer::LiquidRenderer;
+use intercode_cms::api::partial_objects::QueryRootCmsFields;
+use intercode_entities::{email_routes, oauth_applications, organizations};
+use intercode_events::partial_objects::QueryRootEventsFields;
+use intercode_graphql_core::entity_relay_connection::type_converting_query;
 use intercode_graphql_core::query_data::QueryData;
 use intercode_graphql_core::{ModelBackedType, ModelPaginator};
 use intercode_policies::policies::EmailRoutePolicy;
@@ -17,7 +15,6 @@ use intercode_query_builders::sort_input::SortInput;
 use intercode_query_builders::{EmailRouteFiltersInput, EmailRoutesQueryBuilder};
 use intercode_users::partial_objects::QueryRootUsersFields;
 use itertools::Itertools;
-use liquid::object;
 use sea_orm::{EntityTrait, PaginatorTrait};
 
 #[derive(Default)]
@@ -38,16 +35,9 @@ impl QueryRootGlueFields {
     &self,
     ctx: &Context<'_>,
   ) -> Result<CmsParentInterface, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-
-    Ok(match query_data.cms_parent() {
-      CmsParent::Convention(convention) => {
-        CmsParentInterface::Convention(ConventionType::new(*convention.to_owned()))
-      }
-      CmsParent::RootSite(root_site) => {
-        CmsParentInterface::RootSite(RootSiteType::new(*root_site.to_owned()))
-      }
-    })
+    QueryRootCmsFields::cms_parent_by_request_host(ctx)
+      .await
+      .map(CmsParentInterface::from)
   }
 
   async fn convention_by_request_host(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {
@@ -110,22 +100,9 @@ impl QueryRootGlueFields {
     first: Option<i32>,
     last: Option<i32>,
   ) -> Result<Connection<u64, EventType>> {
-    query(
-      after,
-      before,
-      first,
-      last,
-      |after, before, first, last| async move {
-        let db = ctx.data::<QueryData>()?.db();
-
-        let connection = events::Entity::find()
-          .relay_connection(db, EventType::new, after, before, first, last)
-          .to_connection()
-          .await?;
-
-        Ok::<_, Error>(connection)
-      },
-    )
+    type_converting_query(after, before, first, last, |after, before, first, last| {
+      QueryRootEventsFields::events(ctx, after, before, first, last)
+    })
     .await
   }
 
@@ -151,26 +128,13 @@ impl QueryRootGlueFields {
     )
   }
 
-  async fn preview_liquid(&self, ctx: &Context<'_>, content: String) -> Result<String, Error> {
-    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
-    liquid_renderer
-      .render_liquid(content.as_str(), object!({}), None)
-      .await
-  }
-
   async fn root_site(&self, ctx: &Context<'_>) -> Result<RootSiteType, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-
-    let root_site = root_sites::Entity::find().one(query_data.db()).await?;
-
-    if let Some(root_site) = root_site {
-      Ok(RootSiteType::new(root_site))
-    } else {
-      Err(Error::new("No root site found in database"))
-    }
+    QueryRootCmsFields::root_site(ctx)
+      .await
+      .map(RootSiteType::from_type)
   }
 }
 
 #[derive(MergedObject, Default)]
 #[graphql(name = "Query")]
-pub struct QueryRoot(QueryRootGlueFields);
+pub struct QueryRoot(QueryRootGlueFields, QueryRootCmsFields);
