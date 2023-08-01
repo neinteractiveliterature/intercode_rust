@@ -4,9 +4,8 @@ use intercode_graphql_core::{
   load_one_by_model_id, loader_result_to_optional_single, model_backed_type,
 };
 
-use crate::api::merged_objects::UserConProfileType;
+use crate::api::merged_objects::{StaffPositionType, UserConProfileType};
 
-use super::StaffPositionType;
 model_backed_type!(
   NotificationDestinationType,
   notification_destinations::Model

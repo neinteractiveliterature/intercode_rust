@@ -3,22 +3,16 @@ use std::sync::Arc;
 use crate::{
   api::merged_objects::{
     EventCategoryType, EventProposalType, EventType, FormType, MailingListsType, OrderType,
-    SignupRequestType, SignupType, UserConProfileType,
+    SignupRequestType, SignupType, StaffPositionType, UserConProfileType,
   },
   merged_model_backed_type,
 };
 
-use super::{
-  user_activity_alert_type::UserActivityAlertType, CmsContentGroupType, DepartmentType,
-  StaffPositionType,
-};
+use super::{user_activity_alert_type::UserActivityAlertType, CmsContentGroupType, DepartmentType};
 use async_graphql::*;
 use chrono::{DateTime, Utc};
 use intercode_cms::api::partial_objects::ConventionCmsFields;
-use intercode_entities::{
-  conventions, links::ConventionToStaffPositions, model_ext::user_con_profiles::BioEligibility,
-  staff_positions, user_con_profiles,
-};
+use intercode_entities::conventions;
 use intercode_events::{
   partial_objects::ConventionEventsFields,
   query_builders::{EventFiltersInput, EventProposalFiltersInput},
@@ -28,15 +22,11 @@ use intercode_graphql_core::{
   enums::{SiteMode, TicketMode, TimezoneMode},
   load_one_by_model_id, loader_result_to_many, model_backed_type,
   objects::ActiveStorageAttachmentType,
-  query_data::QueryData,
   scalars::DateScalar,
   ModelBackedType, ModelPaginator,
 };
 use intercode_graphql_loaders::LoaderManager;
-use intercode_policies::{policies::UserConProfilePolicy, AuthorizedFromQueryBuilder};
-use intercode_query_builders::{
-  sort_input::SortInput, UserConProfileFiltersInput, UserConProfilesQueryBuilder,
-};
+use intercode_query_builders::sort_input::SortInput;
 use intercode_signups::{
   partial_objects::ConventionSignupsFields, query_builders::SignupRequestFiltersInput,
 };
@@ -45,13 +35,35 @@ use intercode_store::{
   partial_objects::ConventionStoreFields,
   query_builders::{CouponFiltersInput, OrderFiltersInput},
 };
-use sea_orm::{ColumnTrait, EntityTrait, ModelTrait, QueryFilter};
-use seawater::loaders::{ExpectModel, ExpectModels};
+use intercode_users::partial_objects::ConventionUsersFields;
 
 model_backed_type!(ConventionGlueFields, conventions::Model);
 
 #[Object]
 impl ConventionGlueFields {
+  #[graphql(name = "bio_eligible_user_con_profiles")]
+  pub async fn bio_eligible_user_con_profiles(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<UserConProfileType>, Error> {
+    ConventionUsersFields::from_type(self.clone())
+      .bio_eligible_user_con_profiles(ctx)
+      .await
+      .map(|res| res.into_iter().map(UserConProfileType::from_type).collect())
+  }
+
+  #[graphql(name = "catch_all_staff_position")]
+  pub async fn catch_all_staff_position(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Option<StaffPositionType>> {
+    ConventionUsersFields::from_type(self.clone())
+      .catch_all_staff_position(ctx)
+      .await
+      .map(|res| res.map(StaffPositionType::from_type))
+  }
+
+  #[graphql(name = "cms_content_groups")]
   async fn cms_content_groups(&self, ctx: &Context<'_>) -> Result<Vec<CmsContentGroupType>, Error> {
     ConventionCmsFields::from_type(self.clone())
       .cms_content_groups(ctx)
@@ -64,6 +76,7 @@ impl ConventionGlueFields {
       })
   }
 
+  #[graphql(name = "cms_content_group")]
   async fn cms_content_group(
     &self,
     ctx: &Context<'_>,
@@ -189,6 +202,15 @@ impl ConventionGlueFields {
       .map(|items| items.into_iter().map(FormType::from_type).collect())
   }
 
+  #[graphql(name = "my_profile")]
+  pub async fn my_profile(&self, ctx: &Context<'_>) -> Result<Option<UserConProfileType>, Error> {
+    ConventionUsersFields::from_type(self.clone())
+      .my_profile(ctx)
+      .await
+      .map(|res| res.map(UserConProfileType::from_type))
+  }
+
+  #[graphql(name = "orders_paginated")]
   pub async fn orders_paginated(
     &self,
     ctx: &Context<'_>,
@@ -225,6 +247,26 @@ impl ConventionGlueFields {
       .map(ModelPaginator::into_type)
   }
 
+  #[graphql(name = "staff_position")]
+  pub async fn staff_position(
+    &self,
+    ctx: &Context<'_>,
+    id: ID,
+  ) -> Result<StaffPositionType, Error> {
+    ConventionUsersFields::from_type(self.clone())
+      .staff_position(ctx, id)
+      .await
+      .map(StaffPositionType::from_type)
+  }
+
+  #[graphql(name = "staff_positions")]
+  pub async fn staff_positions(&self, ctx: &Context<'_>) -> Result<Vec<StaffPositionType>, Error> {
+    ConventionUsersFields::from_type(self.clone())
+      .staff_positions(ctx)
+      .await
+      .map(|res| res.into_iter().map(StaffPositionType::from_type).collect())
+  }
+
   #[graphql(name = "user_con_profile_form")]
   pub async fn user_con_profile_form(&self, ctx: &Context<'_>) -> Result<FormType> {
     ConventionFormsFields::from_type(self.clone())
@@ -242,42 +284,8 @@ impl ConventionApiFields {
     &self.model.name
   }
 
-  #[graphql(name = "bio_eligible_user_con_profiles")]
-  async fn bio_eligible_user_con_profiles(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<Vec<UserConProfileType>, Error> {
-    let db = ctx.data::<QueryData>()?.db();
-
-    let profiles: Vec<UserConProfileType> = self
-      .model
-      .find_related(user_con_profiles::Entity)
-      .bio_eligible()
-      .all(db.as_ref())
-      .await?
-      .iter()
-      .map(|model| UserConProfileType::new(model.to_owned()))
-      .collect::<Vec<UserConProfileType>>();
-
-    Ok(profiles)
-  }
-
   async fn canceled(&self) -> bool {
     self.model.canceled
-  }
-
-  #[graphql(name = "catch_all_staff_position")]
-  async fn catch_all_staff_position(&self, ctx: &Context<'_>) -> Result<Option<StaffPositionType>> {
-    Ok(
-      ctx
-        .data::<Arc<LoaderManager>>()?
-        .convention_catch_all_staff_position()
-        .load_one(self.model.id)
-        .await?
-        .try_one()
-        .cloned()
-        .map(StaffPositionType::new),
-    )
   }
 
   #[graphql(name = "clickwrap_agreement")]
@@ -351,34 +359,6 @@ impl ConventionApiFields {
     self.model.maximum_tickets
   }
 
-  #[graphql(name = "my_profile")]
-  async fn my_profile(&self, ctx: &Context<'_>) -> Result<Option<UserConProfileType>, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-    let convention_id = query_data.convention().map(|c| c.id);
-
-    if convention_id == Some(self.model.id) {
-      Ok(
-        query_data
-          .user_con_profile()
-          .cloned()
-          .map(UserConProfileType::new),
-      )
-    } else if let Some(user) = query_data.current_user() {
-      user_con_profiles::Entity::find()
-        .filter(
-          user_con_profiles::Column::ConventionId
-            .eq(self.model.id)
-            .and(user_con_profiles::Column::UserId.eq(user.id)),
-        )
-        .one(query_data.db())
-        .await
-        .map(|result| result.map(UserConProfileType::new))
-        .map_err(|e| async_graphql::Error::new(e.to_string()))
-    } else {
-      Ok(None)
-    }
-  }
-
   #[graphql(name = "open_graph_image")]
   async fn open_graph_image(
     &self,
@@ -408,41 +388,6 @@ impl ConventionApiFields {
   #[graphql(name = "site_mode")]
   async fn site_mode(&self) -> Result<SiteMode, Error> {
     self.model.site_mode.as_str().try_into()
-  }
-
-  #[graphql(name = "staff_position")]
-  async fn staff_position(&self, ctx: &Context<'_>, id: ID) -> Result<StaffPositionType, Error> {
-    let db = ctx.data::<QueryData>()?.db();
-
-    self
-      .model
-      .find_linked(ConventionToStaffPositions)
-      .filter(staff_positions::Column::Id.eq(id.parse::<u64>()?))
-      .one(db.as_ref())
-      .await?
-      .ok_or_else(|| {
-        Error::new(format!(
-          "Staff position with ID {} not found in convention",
-          id.as_str()
-        ))
-      })
-      .map(StaffPositionType::new)
-  }
-
-  #[graphql(name = "staff_positions")]
-  async fn staff_positions(&self, ctx: &Context<'_>) -> Result<Vec<StaffPositionType>, Error> {
-    let loaders = &ctx.data::<Arc<LoaderManager>>()?;
-
-    Ok(
-      loaders
-        .convention_staff_positions()
-        .load_one(self.model.id)
-        .await?
-        .expect_models()?
-        .iter()
-        .map(|model| StaffPositionType::new(model.clone()))
-        .collect(),
-    )
   }
 
   #[graphql(name = "starts_at")]
@@ -481,44 +426,6 @@ impl ConventionApiFields {
   async fn user_activity_alerts(&self, ctx: &Context<'_>) -> Result<Vec<UserActivityAlertType>> {
     let loader_result = load_one_by_model_id!(convention_user_activity_alerts, ctx, self)?;
     Ok(loader_result_to_many!(loader_result, UserActivityAlertType))
-  }
-
-  #[graphql(name = "user_con_profile")]
-  async fn user_con_profile(&self, ctx: &Context<'_>, id: ID) -> Result<UserConProfileType, Error> {
-    let db = ctx.data::<QueryData>()?.db();
-
-    self
-      .model
-      .find_related(user_con_profiles::Entity)
-      .filter(user_con_profiles::Column::Id.eq(id.parse::<u64>()?))
-      .one(db.as_ref())
-      .await?
-      .ok_or_else(|| {
-        Error::new(format!(
-          "No user con profile with ID {} in convention",
-          id.as_str()
-        ))
-      })
-      .map(UserConProfileType::new)
-  }
-
-  #[graphql(name = "user_con_profiles_paginated")]
-  async fn user_con_profiles_paginated(
-    &self,
-    ctx: &Context<'_>,
-    page: Option<u64>,
-    #[graphql(name = "per_page")] per_page: Option<u64>,
-    filters: Option<UserConProfileFiltersInput>,
-    sort: Option<Vec<SortInput>>,
-  ) -> Result<ModelPaginator<UserConProfileType>, Error> {
-    ModelPaginator::authorized_from_query_builder(
-      &UserConProfilesQueryBuilder::new(filters, sort),
-      ctx,
-      self.model.find_related(user_con_profiles::Entity),
-      page,
-      per_page,
-      UserConProfilePolicy,
-    )
   }
 }
 

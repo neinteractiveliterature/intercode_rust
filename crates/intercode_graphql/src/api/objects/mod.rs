@@ -8,9 +8,7 @@ mod notification_destination_type;
 mod organization_role_type;
 mod organization_type;
 mod search_result_type;
-mod staff_position_type;
 mod user_activity_alert_type;
-mod user_type;
 
 pub use ability_type::AbilityType;
 pub use cms_content_group_type::CmsContentGroupType;
@@ -21,5 +19,3 @@ pub use maximum_event_provided_tickets_override_type::MaximumEventProvidedTicket
 pub use organization_role_type::OrganizationRoleType;
 pub use organization_type::OrganizationType;
 pub use search_result_type::SearchResultType;
-pub use staff_position_type::StaffPositionType;
-pub use user_type::UserType;

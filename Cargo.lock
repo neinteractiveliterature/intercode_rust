@@ -2617,8 +2617,10 @@ dependencies = [
  "intercode_graphql_core",
  "intercode_graphql_loaders",
  "intercode_policies",
+ "intercode_query_builders",
  "md5",
  "pulldown-cmark",
+ "sea-orm",
  "seawater",
 ]
 

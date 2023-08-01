@@ -1,11 +1,8 @@
 use async_graphql::{InputObject, ID};
 use intercode_entities::user_con_profiles;
 use intercode_graphql_core::filter_utils::string_search_condition;
+use intercode_query_builders::{sort_input::SortInput, QueryBuilder};
 use sea_orm::{sea_query::Cond, QueryFilter, Select};
-
-use crate::sort_input::SortInput;
-
-use super::QueryBuilder;
 
 #[derive(InputObject, Default)]
 pub struct UserConProfileFiltersInput {

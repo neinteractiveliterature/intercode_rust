@@ -9,11 +9,13 @@ use intercode_users::partial_objects::PermissionUsersFields;
 use crate::{
   api::{
     merged_objects::EventCategoryType,
-    objects::{CmsContentGroupType, ConventionType, OrganizationRoleType, StaffPositionType},
+    objects::{CmsContentGroupType, ConventionType, OrganizationRoleType},
     unions::{PermissionedModelType, PermissionedRoleType},
   },
   merged_model_backed_type,
 };
+
+use super::StaffPositionType;
 
 model_backed_type!(PermissionGlueFields, permissions::Model);
 

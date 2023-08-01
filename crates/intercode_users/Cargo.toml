@@ -11,6 +11,8 @@ intercode_entities = {path = "../intercode_entities"}
 intercode_graphql_core = {path = "../intercode_graphql_core"}
 intercode_graphql_loaders = {path = "../intercode_graphql_loaders"}
 intercode_policies = {path = "../intercode_policies"}
+intercode_query_builders = {path = "../intercode_query_builders"}
 md5 = {workspace = true}
 pulldown-cmark = {workspace = true}
+sea-orm = {workspace = true}
 seawater = {path = "../seawater"}

@@ -225,7 +225,8 @@ fn main() -> Result<()> {
     Subcommands::ExportSchema => {
       // just build the schema without any data or extras
       let schema =
-        async_graphql::Schema::build(api::QueryRoot, EmptyMutation, EmptySubscription).finish();
+        async_graphql::Schema::build(api::QueryRoot::default(), EmptyMutation, EmptySubscription)
+          .finish();
 
       println!("{}", schema.sdl());
     }

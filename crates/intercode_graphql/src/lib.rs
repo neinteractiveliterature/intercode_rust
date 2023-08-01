@@ -1,6 +1,6 @@
 use api::{MutationRoot, QueryRoot};
 use async_graphql::{EmptySubscription, Schema};
-use intercode_entities::{cms_parent::CmsParent, users};
+use intercode_entities::cms_parent::CmsParent;
 use intercode_graphql_core::{query_data::QueryData, schema_data::SchemaData};
 use intercode_graphql_loaders::LoaderManager;
 use intercode_liquid::{
@@ -25,10 +25,14 @@ pub struct EmbeddedGraphQLExecutor {
 pub fn build_intercode_graphql_schema(
   schema_data: SchemaData,
 ) -> Schema<QueryRoot, MutationRoot, EmptySubscription> {
-  async_graphql::Schema::build(api::QueryRoot, api::MutationRoot, EmptySubscription)
-    .extension(async_graphql::extensions::Tracing)
-    .data(schema_data)
-    .finish()
+  async_graphql::Schema::build(
+    api::QueryRoot::default(),
+    api::MutationRoot,
+    EmptySubscription,
+  )
+  .extension(async_graphql::extensions::Tracing)
+  .data(schema_data)
+  .finish()
 }
 
 impl GraphQLExecutor for EmbeddedGraphQLExecutor {

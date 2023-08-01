@@ -1,4 +1,4 @@
-use async_graphql::{Context, Error, MergedObject, Object};
+use async_graphql::{Context, Error, Object};
 use intercode_entities::event_categories;
 use intercode_events::{
   partial_objects::EventCategoryEventsFields, query_builders::EventFiltersInput,

@@ -10,9 +10,11 @@ mod root_site_type;
 mod run_type;
 mod signup_request_type;
 mod signup_type;
+mod staff_position_type;
 mod team_member_type;
 mod ticket_type;
 mod user_con_profile_type;
+mod user_type;
 
 pub use event_category_type::*;
 pub use event_proposal_type::*;
@@ -26,14 +28,16 @@ pub use root_site_type::*;
 pub use run_type::*;
 pub use signup_request_type::*;
 pub use signup_type::*;
+pub use staff_position_type::*;
 pub use team_member_type::*;
 pub use ticket_type::*;
 pub use user_con_profile_type::*;
+pub use user_type::*;
 
 #[macro_export]
 macro_rules! merged_model_backed_type {
   ($name: ident, $model: path, $graphql_name: expr, $($types: path),+) => {
-    #[derive(MergedObject)]
+    #[derive(::async_graphql::MergedObject)]
     #[graphql(name = $graphql_name)]
     pub struct $name($($types),+);
 

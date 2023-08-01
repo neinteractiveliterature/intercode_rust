@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use super::interfaces::CmsParentInterface;
-use super::merged_objects::{EventType, RootSiteType, UserConProfileType};
-use super::objects::{AbilityType, ConventionType, EmailRouteType, OrganizationType, UserType};
+use super::merged_objects::{EventType, RootSiteType, UserConProfileType, UserType};
+use super::objects::{AbilityType, ConventionType, EmailRouteType, OrganizationType};
 use async_graphql::connection::{query, Connection};
 use async_graphql::*;
 use intercode_entities::cms_parent::CmsParent;
@@ -12,28 +12,26 @@ use intercode_graphql_core::liquid_renderer::LiquidRenderer;
 use intercode_graphql_core::query_data::QueryData;
 use intercode_graphql_core::{ModelBackedType, ModelPaginator};
 use intercode_policies::policies::EmailRoutePolicy;
-use intercode_policies::{AuthorizationInfo, AuthorizedFromQueryBuilder};
+use intercode_policies::AuthorizedFromQueryBuilder;
 use intercode_query_builders::sort_input::SortInput;
 use intercode_query_builders::{EmailRouteFiltersInput, EmailRoutesQueryBuilder};
+use intercode_users::partial_objects::QueryRootUsersFields;
 use itertools::Itertools;
 use liquid::object;
 use sea_orm::{EntityTrait, PaginatorTrait};
 
-pub struct QueryRoot;
+#[derive(Default)]
+pub struct QueryRootGlueFields;
 
-#[Object(name = "Query")]
-impl QueryRoot {
+#[Object]
+impl QueryRootGlueFields {
   pub async fn assumed_identity_from_profile(
     &self,
     ctx: &Context<'_>,
   ) -> Result<Option<UserConProfileType>> {
-    Ok(
-      ctx
-        .data::<AuthorizationInfo>()?
-        .assumed_identity_from_profile
-        .as_ref()
-        .map(|profile| UserConProfileType::new(profile.clone())),
-    )
+    QueryRootUsersFields::assumed_identity_from_profile(ctx)
+      .await
+      .map(|res| res.map(UserConProfileType::from_type))
   }
 
   pub async fn cms_parent_by_request_host(
@@ -73,18 +71,16 @@ impl QueryRoot {
     }
   }
 
-  async fn current_ability(&self, ctx: &Context<'_>) -> Result<AbilityType> {
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
-    Ok(AbilityType::new(Arc::new(authorization_info.clone())))
+  pub async fn current_ability(&self, ctx: &Context<'_>) -> Result<AbilityType> {
+    QueryRootUsersFields::current_ability(ctx)
+      .await
+      .map(AbilityType::from)
   }
 
-  async fn current_user(&self, ctx: &Context<'_>) -> Result<Option<UserType>, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-
-    match query_data.current_user() {
-      Some(user) => Ok(Some(UserType::new(user.to_owned()))),
-      None => Ok(None),
-    }
+  pub async fn current_user(&self, ctx: &Context<'_>) -> Result<Option<UserType>, Error> {
+    QueryRootUsersFields::current_user(ctx)
+      .await
+      .map(|res| res.map(UserType::from_type))
   }
 
   #[graphql(name = "email_routes_paginated")]
@@ -174,3 +170,7 @@ impl QueryRoot {
     }
   }
 }
+
+#[derive(MergedObject, Default)]
+#[graphql(name = "Query")]
+pub struct QueryRoot(QueryRootGlueFields);

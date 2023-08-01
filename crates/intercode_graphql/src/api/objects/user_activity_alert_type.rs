@@ -7,7 +7,9 @@ use intercode_policies::{
   policies::UserActivityAlertPolicy, ModelBackedTypeGuardablePolicy, ReadManageAction,
 };
 
-use super::{notification_destination_type::NotificationDestinationType, UserType};
+use crate::api::merged_objects::UserType;
+
+use super::notification_destination_type::NotificationDestinationType;
 model_backed_type!(UserActivityAlertType, user_activity_alerts::Model);
 
 #[Object(
