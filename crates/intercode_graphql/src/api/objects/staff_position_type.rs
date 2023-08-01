@@ -2,7 +2,8 @@ use async_graphql::*;
 use intercode_entities::staff_positions;
 use intercode_graphql_core::{load_one_by_model_id, loader_result_to_many, model_backed_type};
 
-use super::{PermissionType, UserConProfileType};
+use crate::api::merged_objects::{PermissionType, UserConProfileType};
+
 model_backed_type!(StaffPositionType, staff_positions::Model);
 
 #[Object(name = "StaffPosition")]

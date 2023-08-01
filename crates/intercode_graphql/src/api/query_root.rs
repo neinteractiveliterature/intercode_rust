@@ -1,10 +1,8 @@
 use std::sync::Arc;
 
 use super::interfaces::CmsParentInterface;
-use super::merged_objects::{EventType, RootSiteType};
-use super::objects::{
-  AbilityType, ConventionType, EmailRouteType, OrganizationType, UserConProfileType, UserType,
-};
+use super::merged_objects::{EventType, RootSiteType, UserConProfileType};
+use super::objects::{AbilityType, ConventionType, EmailRouteType, OrganizationType, UserType};
 use async_graphql::connection::{query, Connection};
 use async_graphql::*;
 use intercode_entities::cms_parent::CmsParent;

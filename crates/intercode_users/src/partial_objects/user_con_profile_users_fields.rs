@@ -1,38 +1,66 @@
 use std::sync::Arc;
 
-use super::{AbilityType, ConventionType, SignupType, StaffPositionType};
-use crate::api::merged_objects::{OrderType, TeamMemberType, TicketType};
-use crate::{merged_model_backed_type, QueryData};
 use async_graphql::*;
-use intercode_entities::{user_con_profiles, UserNames};
-use intercode_forms::partial_objects::UserConProfileFormsFields;
-use intercode_graphql_core::scalars::DateScalar;
-use intercode_graphql_core::{
-  load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single, model_backed_type,
-  ModelBackedType,
+use intercode_entities::{
+  conventions, signups, staff_positions, team_members, tickets, user_con_profiles, UserNames,
 };
+use intercode_graphql_core::query_data::QueryData;
+use intercode_graphql_core::scalars::DateScalar;
+use intercode_graphql_core::{load_one_by_model_id, model_backed_type};
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::policies::{UserConProfileAction, UserConProfilePolicy};
 use intercode_policies::{AuthorizationInfo, ModelBackedTypeGuardablePolicy};
-use intercode_store::partial_objects::UserConProfileStoreFields;
 use pulldown_cmark::{html, Options, Parser};
-use seawater::loaders::ExpectModel;
+use seawater::loaders::{ExpectModel, ExpectModels};
 
-model_backed_type!(UserConProfileApiFields, user_con_profiles::Model);
+use super::ability_users_fields::AbilityUsersFields;
 
-#[Object(guard = "UserConProfilePolicy::model_guard(UserConProfileAction::Read, self)")]
-impl UserConProfileApiFields {
-  async fn id(&self) -> ID {
-    self.model.id.into()
-  }
+model_backed_type!(UserConProfileUsersFields, user_con_profiles::Model);
 
-  async fn ability(&self, ctx: &Context<'_>) -> Result<AbilityType> {
+impl UserConProfileUsersFields {
+  pub async fn ability(&self, ctx: &Context<'_>) -> Result<AbilityUsersFields> {
     let query_data = ctx.data::<QueryData>()?;
     let user = load_one_by_model_id!(user_con_profile_user, ctx, self)?;
     let authorization_info =
       AuthorizationInfo::new(query_data.db().clone(), user.try_one().cloned(), None, None);
 
-    Ok(AbilityType::new(Arc::new(authorization_info)))
+    Ok(AbilityUsersFields::new(Arc::new(authorization_info)))
+  }
+
+  pub async fn convention(&self, ctx: &Context<'_>) -> Result<conventions::Model, Error> {
+    let loader = &ctx.data::<Arc<LoaderManager>>()?.conventions_by_id();
+    let loader_result = loader.load_one(self.model.convention_id).await?;
+    Ok(loader_result.expect_one()?.clone())
+  }
+
+  pub async fn signups(&self, ctx: &Context<'_>) -> Result<Vec<signups::Model>> {
+    let signups_result = load_one_by_model_id!(user_con_profile_signups, ctx, self)?;
+    signups_result.expect_models().cloned()
+  }
+
+  pub async fn staff_positions(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<staff_positions::Model>, Error> {
+    let loader_result = load_one_by_model_id!(user_con_profile_staff_positions, ctx, self)?;
+    loader_result.expect_models().cloned()
+  }
+
+  pub async fn team_members(&self, ctx: &Context<'_>) -> Result<Vec<team_members::Model>, Error> {
+    let loader_result = load_one_by_model_id!(user_con_profile_team_members, ctx, self)?;
+    loader_result.expect_models().cloned()
+  }
+
+  pub async fn ticket(&self, ctx: &Context<'_>) -> Result<Option<tickets::Model>, Error> {
+    let loader_result = load_one_by_model_id!(user_con_profile_ticket, ctx, self)?;
+    Ok(loader_result.try_one().cloned())
+  }
+}
+
+#[Object(guard = "UserConProfilePolicy::model_guard(UserConProfileAction::Read, self)")]
+impl UserConProfileUsersFields {
+  async fn id(&self) -> ID {
+    self.model.id.into()
   }
 
   #[graphql(name = "accepted_clickwrap_agreement")]
@@ -74,20 +102,6 @@ impl UserConProfileApiFields {
 
   async fn city(&self) -> Option<&str> {
     self.model.city.as_deref()
-  }
-
-  async fn convention(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {
-    let loader = &ctx.data::<Arc<LoaderManager>>()?.conventions_by_id();
-    let loader_result = loader.load_one(self.model.convention_id).await?;
-    Ok(ConventionType::new(loader_result.expect_one()?.clone()))
-  }
-
-  #[graphql(name = "current_pending_order")]
-  async fn current_pending_order(&self, ctx: &Context<'_>) -> Result<Option<OrderType>, Error> {
-    UserConProfileStoreFields::from_type(self.clone())
-      .current_pending_order(ctx)
-      .await
-      .map(|res| res.map(OrderType::from_type))
   }
 
   async fn country(&self) -> Option<&str> {
@@ -171,11 +185,6 @@ impl UserConProfileApiFields {
     self.model.nickname.as_deref()
   }
 
-  async fn signups(&self, ctx: &Context<'_>) -> Result<Vec<SignupType>> {
-    let signups_result = load_one_by_model_id!(user_con_profile_signups, ctx, self)?;
-    Ok(loader_result_to_many!(signups_result, SignupType))
-  }
-
   #[graphql(name = "site_admin")]
   async fn site_admin(&self, ctx: &Context<'_>) -> Result<bool> {
     let user = ctx
@@ -187,25 +196,8 @@ impl UserConProfileApiFields {
     Ok(user.expect_one()?.site_admin.unwrap_or(false))
   }
 
-  #[graphql(name = "staff_positions")]
-  async fn staff_positions(&self, ctx: &Context<'_>) -> Result<Vec<StaffPositionType>, Error> {
-    let loader_result = load_one_by_model_id!(user_con_profile_staff_positions, ctx, self)?;
-    Ok(loader_result_to_many!(loader_result, StaffPositionType))
-  }
-
   async fn state(&self) -> Option<&str> {
     self.model.state.as_deref()
-  }
-
-  #[graphql(name = "team_members")]
-  async fn team_members(&self, ctx: &Context<'_>) -> Result<Vec<TeamMemberType>, Error> {
-    let loader_result = load_one_by_model_id!(user_con_profile_team_members, ctx, self)?;
-    Ok(loader_result_to_many!(loader_result, TeamMemberType))
-  }
-
-  async fn ticket(&self, ctx: &Context<'_>) -> Result<Option<TicketType>, Error> {
-    let loader_result = load_one_by_model_id!(user_con_profile_ticket, ctx, self)?;
-    Ok(loader_result_to_optional_single!(loader_result, TicketType))
   }
 
   #[graphql(name = "user_id")]
@@ -217,12 +209,3 @@ impl UserConProfileApiFields {
     self.model.zipcode.as_deref()
   }
 }
-
-merged_model_backed_type!(
-  UserConProfileType,
-  user_con_profiles::Model,
-  "UserConProfile",
-  UserConProfileApiFields,
-  UserConProfileFormsFields,
-  UserConProfileStoreFields
-);

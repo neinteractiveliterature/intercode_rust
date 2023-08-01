@@ -3,13 +3,14 @@ use std::sync::Arc;
 use crate::{
   api::merged_objects::{
     EventCategoryType, EventProposalType, EventType, FormType, MailingListsType, OrderType,
+    SignupRequestType, SignupType, UserConProfileType,
   },
   merged_model_backed_type,
 };
 
 use super::{
   user_activity_alert_type::UserActivityAlertType, CmsContentGroupType, DepartmentType,
-  SignupRequestType, SignupType, StaffPositionType, UserConProfileType,
+  StaffPositionType,
 };
 use async_graphql::*;
 use chrono::{DateTime, Utc};

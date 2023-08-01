@@ -14,7 +14,8 @@ use intercode_graphql_loaders::{
 };
 use intercode_policies::{AuthorizationInfo, Policy, ReadManageAction};
 
-use super::PermissionType;
+use crate::api::merged_objects::PermissionType;
+
 model_backed_type!(CmsContentGroupType, cms_content_groups::Model);
 
 #[Object(name = "CmsContentGroup")]

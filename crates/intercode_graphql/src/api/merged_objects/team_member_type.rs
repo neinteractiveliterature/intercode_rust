@@ -6,10 +6,9 @@ use intercode_policies::{
   policies::TeamMemberPolicy, ModelBackedTypeGuardablePolicy, ReadManageAction,
 };
 
-use crate::{
-  api::{merged_objects::EventType, objects::UserConProfileType},
-  merged_model_backed_type,
-};
+use crate::{api::merged_objects::EventType, merged_model_backed_type};
+
+use super::UserConProfileType;
 
 model_backed_type!(TeamMemberGlueFields, team_members::Model);
 

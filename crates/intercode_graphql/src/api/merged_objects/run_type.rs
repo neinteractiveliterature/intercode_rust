@@ -1,18 +1,13 @@
 use async_graphql::*;
-use intercode_entities::{events, runs, signups, user_con_profiles, users};
+use intercode_entities::runs;
 use intercode_events::partial_objects::RunEventsFields;
-use intercode_graphql_core::{
-  model_backed_type, query_data::QueryData, ModelBackedType, ModelPaginator,
-};
+use intercode_graphql_core::{model_backed_type, ModelBackedType, ModelPaginator};
 use intercode_query_builders::sort_input::SortInput;
 use intercode_signups::{partial_objects::RunSignupsFields, query_builders::SignupFiltersInput};
 
-use crate::{
-  api::objects::{SignupRequestType, SignupType},
-  merged_model_backed_type,
-};
+use crate::merged_model_backed_type;
 
-use super::EventType;
+use super::{EventType, SignupRequestType, SignupType};
 
 model_backed_type!(RunGlueFields, runs::Model);
 

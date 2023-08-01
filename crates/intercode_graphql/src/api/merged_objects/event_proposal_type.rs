@@ -8,9 +8,9 @@ use intercode_policies::{
   ModelBackedTypeGuardablePolicy,
 };
 
-use crate::{api::objects::UserConProfileType, merged_model_backed_type};
+use crate::merged_model_backed_type;
 
-use super::{EventCategoryType, EventType};
+use super::{EventCategoryType, EventType, UserConProfileType};
 model_backed_type!(EventProposalGlueFields, event_proposals::Model);
 
 #[Object(guard = "EventProposalPolicy::model_guard(EventProposalAction::Read, self)")]

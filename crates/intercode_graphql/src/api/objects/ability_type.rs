@@ -4,24 +4,23 @@ use async_graphql::*;
 use intercode_cms::api::partial_objects::AbilityCmsFields;
 use intercode_entities::{
   conventions, departments, email_routes, organizations, staff_positions, user_activity_alerts,
-  user_con_profiles,
 };
 use intercode_events::partial_objects::AbilityEventsFields;
 use intercode_forms::partial_objects::AbilityFormsFields;
-use intercode_graphql_core::{lax_id::LaxId, query_data::QueryData};
-use intercode_graphql_loaders::LoaderManager;
+use intercode_graphql_core::query_data::QueryData;
+
 use intercode_policies::{
   model_action_permitted::model_action_permitted,
   policies::{
     ConventionAction, ConventionPolicy, DepartmentPolicy, EmailRoutePolicy, OrganizationPolicy,
-    StaffPositionPolicy, UserActivityAlertPolicy, UserConProfileAction, UserConProfilePolicy,
+    StaffPositionPolicy, UserActivityAlertPolicy,
   },
   AuthorizationInfo, Policy, ReadManageAction,
 };
 use intercode_reporting::partial_objects::AbilityReportingFields;
 use intercode_signups::partial_objects::AbilitySignupsFields;
 use intercode_store::partial_objects::AbilityStoreFields;
-use seawater::loaders::ExpectModel;
+use intercode_users::partial_objects::AbilityUsersFields;
 
 pub struct AbilityApiFields {
   authorization_info: Arc<AuthorizationInfo>,
@@ -30,30 +29,6 @@ pub struct AbilityApiFields {
 impl AbilityApiFields {
   pub fn new(authorization_info: Arc<AuthorizationInfo>) -> Self {
     Self { authorization_info }
-  }
-
-  async fn can_perform_user_con_profile_action(
-    &self,
-    ctx: &Context<'_>,
-    user_con_profile_id: ID,
-    action: &UserConProfileAction,
-  ) -> Result<bool> {
-    let loader_result = ctx
-      .data::<Arc<LoaderManager>>()?
-      .user_con_profiles_by_id()
-      .load_one(LaxId::parse(user_con_profile_id)?)
-      .await?;
-
-    let user_con_profile = loader_result.expect_one()?;
-
-    model_action_permitted(
-      self.authorization_info.as_ref(),
-      UserConProfilePolicy,
-      ctx,
-      action,
-      |_ctx| Ok(Some(user_con_profile)),
-    )
-    .await
   }
 }
 
@@ -69,72 +44,6 @@ impl AbilityApiFields {
       |_ctx| Ok(Some(conventions::Model::default())),
     )
     .await
-  }
-
-  #[graphql(name = "can_read_user_con_profiles")]
-  async fn can_read_user_con_profiles(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    model_action_permitted(
-      self.authorization_info.as_ref(),
-      ConventionPolicy,
-      ctx,
-      &ConventionAction::ViewAttendees,
-      |ctx| Ok(ctx.data::<QueryData>()?.convention()),
-    )
-    .await
-  }
-
-  #[graphql(name = "can_create_user_con_profiles")]
-  async fn can_create_user_con_profiles(&self, ctx: &Context<'_>) -> Result<bool, Error> {
-    let convention = ctx.data::<QueryData>()?.convention();
-
-    let Some(convention) = convention else { return Ok(false); };
-
-    let user_con_profile = user_con_profiles::Model {
-      convention_id: convention.id,
-      ..Default::default()
-    };
-
-    model_action_permitted(
-      self.authorization_info.as_ref(),
-      UserConProfilePolicy,
-      ctx,
-      &UserConProfileAction::Create,
-      |_ctx| Ok(Some(user_con_profile)),
-    )
-    .await
-  }
-
-  #[graphql(name = "can_become_user_con_profile")]
-  async fn can_become_user_con_profile(
-    &self,
-    ctx: &Context<'_>,
-    user_con_profile_id: ID,
-  ) -> Result<bool, Error> {
-    self
-      .can_perform_user_con_profile_action(ctx, user_con_profile_id, &UserConProfileAction::Become)
-      .await
-  }
-
-  #[graphql(name = "can_delete_user_con_profile")]
-  async fn can_delete_user_con_profile(
-    &self,
-    ctx: &Context<'_>,
-    user_con_profile_id: ID,
-  ) -> Result<bool, Error> {
-    self
-      .can_perform_user_con_profile_action(ctx, user_con_profile_id, &UserConProfileAction::Delete)
-      .await
-  }
-
-  #[graphql(name = "can_update_user_con_profile")]
-  async fn can_update_user_con_profile(
-    &self,
-    ctx: &Context<'_>,
-    user_con_profile_id: ID,
-  ) -> Result<bool, Error> {
-    self
-      .can_perform_user_con_profile_action(ctx, user_con_profile_id, &UserConProfileAction::Update)
-      .await
   }
 
   #[graphql(name = "can_update_convention")]
@@ -238,27 +147,6 @@ impl AbilityApiFields {
       .await?,
     )
   }
-
-  #[graphql(name = "can_read_users")]
-  async fn can_read_users(&self) -> bool {
-    // TODO
-    false
-  }
-
-  #[graphql(name = "can_withdraw_all_user_con_profile_signups")]
-  async fn can_withdraw_all_user_con_profile_signups(
-    &self,
-    ctx: &Context<'_>,
-    user_con_profile_id: ID,
-  ) -> Result<bool, Error> {
-    self
-      .can_perform_user_con_profile_action(
-        ctx,
-        user_con_profile_id,
-        &UserConProfileAction::WithdrawAllSignups,
-      )
-      .await
-  }
 }
 
 #[derive(MergedObject)]
@@ -270,6 +158,7 @@ pub struct AbilityType(
   AbilityFormsFields,
   AbilityReportingFields,
   AbilitySignupsFields,
+  AbilityUsersFields,
   AbilityApiFields,
 );
 
@@ -282,7 +171,14 @@ impl AbilityType {
       AbilityFormsFields::new(authorization_info.clone()),
       AbilityReportingFields::new(authorization_info.clone()),
       AbilitySignupsFields::new(authorization_info.clone()),
+      AbilityUsersFields::new(authorization_info.clone()),
       AbilityApiFields::new(authorization_info),
     )
+  }
+}
+
+impl From<AbilityUsersFields> for AbilityType {
+  fn from(value: AbilityUsersFields) -> Self {
+    Self::new(value.into_authorization_info())
   }
 }

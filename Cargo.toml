@@ -33,6 +33,7 @@ members = [
   "./crates/intercode_signups",
   "./crates/intercode_store",
   "./crates/intercode_timespan",
+  "./crates/intercode_users",
   "./crates/seawater",
   "./crates/seawater_derive",
 ]

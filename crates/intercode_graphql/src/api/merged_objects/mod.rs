@@ -5,10 +5,14 @@ mod form_type;
 mod mailing_lists_type;
 mod order_entry_type;
 mod order_type;
+mod permission_type;
 mod root_site_type;
 mod run_type;
+mod signup_request_type;
+mod signup_type;
 mod team_member_type;
 mod ticket_type;
+mod user_con_profile_type;
 
 pub use event_category_type::*;
 pub use event_proposal_type::*;
@@ -17,10 +21,14 @@ pub use form_type::*;
 pub use mailing_lists_type::*;
 pub use order_entry_type::*;
 pub use order_type::*;
+pub use permission_type::*;
 pub use root_site_type::*;
 pub use run_type::*;
+pub use signup_request_type::*;
+pub use signup_type::*;
 pub use team_member_type::*;
 pub use ticket_type::*;
+pub use user_con_profile_type::*;
 
 #[macro_export]
 macro_rules! merged_model_backed_type {

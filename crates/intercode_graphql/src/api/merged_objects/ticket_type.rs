@@ -7,9 +7,9 @@ use intercode_policies::{
 };
 use intercode_store::partial_objects::TicketStoreFields;
 
-use crate::{api::objects::UserConProfileType, merged_model_backed_type};
+use crate::merged_model_backed_type;
 
-use super::{EventType, OrderEntryType};
+use super::{EventType, OrderEntryType, UserConProfileType};
 
 model_backed_type!(TicketGlueFields, tickets::Model);
 

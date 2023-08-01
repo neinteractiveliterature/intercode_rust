@@ -3,9 +3,9 @@ use intercode_entities::orders;
 use intercode_graphql_core::{model_backed_type, ModelBackedType};
 use intercode_store::partial_objects::OrderStoreFields;
 
-use crate::{api::objects::UserConProfileType, merged_model_backed_type};
+use crate::merged_model_backed_type;
 
-use super::OrderEntryType;
+use super::{OrderEntryType, UserConProfileType};
 
 model_backed_type!(OrderGlueFields, orders::Model);
 

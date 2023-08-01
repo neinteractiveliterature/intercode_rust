@@ -2,7 +2,9 @@ use async_graphql::*;
 use intercode_entities::organization_roles;
 use intercode_graphql_core::{load_one_by_model_id, loader_result_to_many, model_backed_type};
 
-use super::{PermissionType, UserType};
+use crate::api::merged_objects::PermissionType;
+
+use super::UserType;
 model_backed_type!(OrganizationRoleType, organization_roles::Model);
 
 #[Object(name = "OrganizationRole")]
