@@ -465,13 +465,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-stripe-dynamic"
-version = "0.1.0"
-dependencies = [
- "async-stripe",
-]
-
-[[package]]
 name = "async-trait"
 version = "0.1.68"
 source = "registry+https://github.com/rust-lang/crates.io-index"

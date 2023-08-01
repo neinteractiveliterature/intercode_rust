@@ -36,7 +36,6 @@ members = [
   "./crates/intercode_users",
   "./crates/seawater",
   "./crates/seawater_derive",
-  "async-stripe-dynamic",
 ]
 
 [workspace.dependencies]
