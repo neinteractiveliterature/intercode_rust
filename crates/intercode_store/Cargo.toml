@@ -7,7 +7,6 @@ version = "0.1.0"
 
 [dependencies]
 async-graphql = {workspace = true}
-async-stripe = {workspace = true}
 async-trait = {workspace = true}
 chrono = {workspace = true}
 futures = {workspace = true}
@@ -23,4 +22,5 @@ rusty-money = {workspace = true}
 sea-orm = {workspace = true}
 seawater = {path = "../seawater"}
 serde_json = {workspace = true}
+stripe = {workspace = true}
 tracing = {workspace = true}
