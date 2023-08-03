@@ -462,15 +462,3 @@ impl AuthorizationInfo {
     )
   }
 }
-
-#[cfg(test)]
-impl AuthorizationInfo {
-  pub async fn for_test(
-    db: ConnectionWrapper,
-    user: Option<users::Model>,
-    oauth_scope: Option<Scope>,
-    assumed_identity_from_profile: Option<user_con_profiles::Model>,
-  ) -> Self {
-    Self::new(db, user, oauth_scope, assumed_identity_from_profile)
-  }
-}

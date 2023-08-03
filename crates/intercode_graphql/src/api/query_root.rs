@@ -1,10 +1,13 @@
 use super::interfaces::CmsParentInterface;
-use super::merged_objects::{EventType, RootSiteType, UserConProfileType, UserType};
-use super::objects::{AbilityType, ConventionType, EmailRouteType, OrganizationType};
+use super::merged_objects::{
+  ConventionType, EventType, OrganizationType, RootSiteType, UserConProfileType, UserType,
+};
+use super::objects::{AbilityType, EmailRouteType};
 use async_graphql::connection::Connection;
 use async_graphql::*;
 use intercode_cms::api::partial_objects::QueryRootCmsFields;
-use intercode_entities::{email_routes, oauth_applications, organizations};
+use intercode_conventions::partial_objects::QueryRootConventionsFields;
+use intercode_entities::{email_routes, oauth_applications};
 use intercode_events::partial_objects::QueryRootEventsFields;
 use intercode_graphql_core::entity_relay_connection::type_converting_query;
 use intercode_graphql_core::query_data::QueryData;
@@ -14,7 +17,6 @@ use intercode_policies::AuthorizedFromQueryBuilder;
 use intercode_query_builders::sort_input::SortInput;
 use intercode_query_builders::{EmailRouteFiltersInput, EmailRoutesQueryBuilder};
 use intercode_users::partial_objects::QueryRootUsersFields;
-use itertools::Itertools;
 use sea_orm::{EntityTrait, PaginatorTrait};
 
 #[derive(Default)]
@@ -41,24 +43,18 @@ impl QueryRootGlueFields {
   }
 
   async fn convention_by_request_host(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {
-    let convention = self.convention_by_request_host_if_present(ctx).await?;
-
-    match convention {
-      Some(convention) => Ok(convention),
-      None => Err(Error::new("No convention found for this domain name")),
-    }
+    QueryRootConventionsFields::convention_by_request_host(ctx)
+      .await
+      .map(ConventionType::from_type)
   }
 
   async fn convention_by_request_host_if_present(
     &self,
     ctx: &Context<'_>,
   ) -> Result<Option<ConventionType>, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-
-    match query_data.convention() {
-      Some(convention) => Ok(Some(ConventionType::new(convention.to_owned()))),
-      None => Ok(None),
-    }
+    QueryRootConventionsFields::convention_by_request_host_if_present(ctx)
+      .await
+      .map(|res| res.map(ConventionType::from_type))
   }
 
   pub async fn current_ability(&self, ctx: &Context<'_>) -> Result<AbilityType> {
@@ -116,16 +112,9 @@ impl QueryRootGlueFields {
   }
 
   async fn organizations(&self, ctx: &Context<'_>) -> Result<Vec<OrganizationType>> {
-    let query_data = ctx.data::<QueryData>()?;
-
-    Ok(
-      organizations::Entity::find()
-        .all(query_data.db())
-        .await?
-        .into_iter()
-        .map(OrganizationType::new)
-        .collect_vec(),
-    )
+    QueryRootConventionsFields::organizations(ctx)
+      .await
+      .map(|res| res.into_iter().map(OrganizationType::from_type).collect())
   }
 
   async fn root_site(&self, ctx: &Context<'_>) -> Result<RootSiteType, Error> {

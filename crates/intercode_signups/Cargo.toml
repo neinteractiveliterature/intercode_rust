@@ -8,12 +8,12 @@ version = "0.1.0"
 [dependencies]
 async-graphql = {workspace = true}
 chrono = {workspace = true}
-intercode_entities = {path = "../intercode_entities"}
-intercode_graphql_core = {path = "../intercode_graphql_core"}
-intercode_graphql_loaders = {path = "../intercode_graphql_loaders"}
-intercode_policies = {path = "../intercode_policies"}
-intercode_query_builders = {path = "../intercode_query_builders"}
-intercode_timespan = {path = "../intercode_timespan"}
+intercode_entities = {workspace = true}
+intercode_graphql_core = {workspace = true}
+intercode_graphql_loaders = {workspace = true}
+intercode_policies = {workspace = true}
+intercode_query_builders = {workspace = true}
+intercode_timespan = {workspace = true}
 sea-orm = {workspace = true}
-seawater = {path = "../seawater"}
+seawater = {workspace = true}
 serde_json = {workspace = true}

@@ -10,7 +10,7 @@ use intercode_cms::api::partial_objects::ConventionCmsFields;
 use intercode_entities::cms_parent::CmsParent;
 use intercode_graphql_core::ModelBackedType;
 
-use crate::api::{merged_objects::RootSiteType, objects::ConventionType};
+use crate::api::merged_objects::{ConventionType, RootSiteType};
 
 /// A CMS parent is a web site managed by Intercode. It acts as a container for CMS content, such
 /// as pages, partials, files, layouts, variables, content groups, and user-defined GraphQL queries.

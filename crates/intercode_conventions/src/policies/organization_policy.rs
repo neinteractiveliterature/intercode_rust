@@ -1,12 +1,7 @@
-use axum::async_trait;
+use async_graphql::async_trait::async_trait;
 use intercode_entities::organizations;
+use intercode_policies::{AuthorizationInfo, Policy, ReadManageAction, SimpleGuardablePolicy};
 use sea_orm::DbErr;
-
-use crate::{
-  authorization_info::AuthorizationInfo,
-  policy::{Policy, ReadManageAction},
-  SimpleGuardablePolicy,
-};
 
 async fn can_manage_any_organizations(principal: &AuthorizationInfo) -> Result<bool, DbErr> {
   Ok(

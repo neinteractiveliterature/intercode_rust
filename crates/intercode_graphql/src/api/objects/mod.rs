@@ -1,21 +1,13 @@
 mod ability_type;
 mod cms_content_group_type;
-mod convention_type;
-mod department_type;
 mod email_route_type;
 mod maximum_event_provided_tickets_override_type;
 mod notification_destination_type;
-mod organization_role_type;
-mod organization_type;
 mod search_result_type;
-mod user_activity_alert_type;
 
 pub use ability_type::AbilityType;
 pub use cms_content_group_type::CmsContentGroupType;
-pub use convention_type::ConventionType;
-pub use department_type::DepartmentType;
 pub use email_route_type::EmailRouteType;
 pub use maximum_event_provided_tickets_override_type::MaximumEventProvidedTicketsOverrideType;
-pub use organization_role_type::OrganizationRoleType;
-pub use organization_type::OrganizationType;
+pub use notification_destination_type::*;
 pub use search_result_type::SearchResultType;

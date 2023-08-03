@@ -1,6 +1,6 @@
 use async_graphql::Union;
 
-use crate::api::{merged_objects::StaffPositionType, objects::OrganizationRoleType};
+use crate::api::merged_objects::{OrganizationRoleType, StaffPositionType};
 
 #[derive(Union)]
 #[graphql(name = "PermissionedRole")]

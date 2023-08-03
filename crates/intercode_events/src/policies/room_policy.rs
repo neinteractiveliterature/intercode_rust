@@ -1,12 +1,9 @@
-use axum::async_trait;
+use async_graphql::async_trait::async_trait;
 use intercode_entities::rooms;
-use sea_orm::{sea_query::Expr, DbErr, EntityTrait, QueryFilter};
-
-use crate::{
-  authorization_info::AuthorizationInfo,
-  policy::{EntityPolicy, Policy, ReadManageAction},
-  SimpleGuardablePolicy,
+use intercode_policies::{
+  AuthorizationInfo, EntityPolicy, Policy, ReadManageAction, SimpleGuardablePolicy,
 };
+use sea_orm::{sea_query::Expr, DbErr, EntityTrait, QueryFilter};
 
 pub struct RoomPolicy;
 
@@ -67,7 +64,7 @@ mod tests {
   use sea_orm::{ActiveModelTrait, ActiveValue};
 
   use super::*;
-  use crate::test_helpers::with_test_db;
+  use intercode_policies::test_helpers::*;
 
   fn mock_room() -> rooms::Model {
     rooms::Model {

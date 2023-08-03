@@ -1,11 +1,11 @@
 use async_graphql::*;
 use intercode_entities::tickets;
 use intercode_graphql_core::{model_backed_type, ModelBackedType};
-use intercode_policies::{
+use intercode_policies::ModelBackedTypeGuardablePolicy;
+use intercode_store::{
+  partial_objects::TicketStoreFields,
   policies::{TicketAction, TicketPolicy},
-  ModelBackedTypeGuardablePolicy,
 };
-use intercode_store::partial_objects::TicketStoreFields;
 
 use crate::merged_model_backed_type;
 

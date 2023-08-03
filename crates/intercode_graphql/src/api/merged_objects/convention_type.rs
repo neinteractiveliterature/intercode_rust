@@ -1,17 +1,18 @@
-use std::sync::Arc;
-
 use crate::{
-  api::merged_objects::{
-    EventCategoryType, EventProposalType, EventType, FormType, MailingListsType, OrderType,
-    SignupRequestType, SignupType, StaffPositionType, UserConProfileType,
+  api::{
+    merged_objects::{
+      DepartmentType, EventCategoryType, EventProposalType, EventType, FormType, MailingListsType,
+      OrderType, SignupRequestType, SignupType, StaffPositionType, UserConProfileType,
+    },
+    objects::CmsContentGroupType,
   },
   merged_model_backed_type,
 };
 
-use super::{user_activity_alert_type::UserActivityAlertType, CmsContentGroupType, DepartmentType};
+use super::user_activity_alert_type::UserActivityAlertType;
 use async_graphql::*;
-use chrono::{DateTime, Utc};
 use intercode_cms::api::partial_objects::ConventionCmsFields;
+use intercode_conventions::partial_objects::ConventionConventionsFields;
 use intercode_entities::conventions;
 use intercode_events::{
   partial_objects::ConventionEventsFields,
@@ -19,14 +20,10 @@ use intercode_events::{
 };
 use intercode_forms::partial_objects::ConventionFormsFields;
 use intercode_graphql_core::{
-  enums::{SiteMode, TicketMode, TimezoneMode},
-  load_one_by_model_id, loader_result_to_many, model_backed_type,
-  objects::ActiveStorageAttachmentType,
-  scalars::DateScalar,
-  ModelBackedType, ModelPaginator,
+  model_backed_type, scalars::DateScalar, ModelBackedType, ModelPaginator,
 };
-use intercode_graphql_loaders::LoaderManager;
 use intercode_query_builders::sort_input::SortInput;
+use intercode_reporting::partial_objects::ConventionReportingFields;
 use intercode_signups::{
   partial_objects::ConventionSignupsFields, query_builders::SignupRequestFiltersInput,
 };
@@ -101,6 +98,13 @@ impl ConventionGlueFields {
       .coupons_paginated(ctx, page, per_page, filters, sort)
       .await
       .map(ModelPaginator::into_type)
+  }
+
+  async fn departments(&self, ctx: &Context<'_>) -> Result<Vec<DepartmentType>> {
+    ConventionConventionsFields::from_type(self.clone())
+      .departments(ctx)
+      .await
+      .map(|res| res.into_iter().map(DepartmentType::from_type).collect())
   }
 
   /// Finds an active event by ID in this convention. If there is no event with that ID in this
@@ -202,6 +206,15 @@ impl ConventionGlueFields {
       .map(|items| items.into_iter().map(FormType::from_type).collect())
   }
 
+  #[graphql(name = "mailing_lists")]
+  async fn mailing_lists(&self) -> MailingListsType {
+    MailingListsType::from_type(
+      ConventionReportingFields::from_type(self.clone())
+        .mailing_lists()
+        .await,
+    )
+  }
+
   #[graphql(name = "my_profile")]
   pub async fn my_profile(&self, ctx: &Context<'_>) -> Result<Option<UserConProfileType>, Error> {
     ConventionUsersFields::from_type(self.clone())
@@ -274,158 +287,18 @@ impl ConventionGlueFields {
       .await
       .map(FormType::from_type)
   }
-}
-
-model_backed_type!(ConventionApiFields, conventions::Model);
-
-#[Object]
-impl ConventionApiFields {
-  async fn name(&self) -> &Option<String> {
-    &self.model.name
-  }
-
-  async fn canceled(&self) -> bool {
-    self.model.canceled
-  }
-
-  #[graphql(name = "clickwrap_agreement")]
-  async fn clickwrap_agreement(&self) -> Option<&str> {
-    self.model.clickwrap_agreement.as_deref()
-  }
-
-  async fn departments(&self, ctx: &Context<'_>) -> Result<Vec<DepartmentType>> {
-    let loader_result = load_one_by_model_id!(convention_departments, ctx, self)?;
-    Ok(loader_result_to_many!(loader_result, DepartmentType))
-  }
-
-  async fn domain(&self) -> &str {
-    self.model.domain.as_str()
-  }
-
-  #[graphql(name = "email_from")]
-  async fn email_from(&self) -> &str {
-    self.model.email_from.as_str()
-  }
-
-  #[graphql(name = "email_mode")]
-  async fn email_mode(&self) -> &str {
-    self.model.email_mode.as_str()
-  }
-
-  #[graphql(name = "ends_at")]
-  async fn ends_at(&self) -> Option<DateTime<Utc>> {
-    self
-      .model
-      .ends_at
-      .map(|t| DateTime::<Utc>::from_utc(t, Utc))
-  }
-
-  #[graphql(name = "event_mailing_list_domain")]
-  async fn event_mailing_list_domain(&self) -> Option<&str> {
-    self.model.event_mailing_list_domain.as_deref()
-  }
-
-  async fn favicon(&self, ctx: &Context<'_>) -> Result<Option<ActiveStorageAttachmentType>> {
-    Ok(
-      ctx
-        .data::<Arc<LoaderManager>>()?
-        .convention_favicon
-        .load_one(self.model.id)
-        .await?
-        .and_then(|models| models.get(0).cloned())
-        .map(ActiveStorageAttachmentType::new),
-    )
-  }
-
-  async fn hidden(&self) -> bool {
-    self.model.hidden
-  }
-
-  async fn language(&self) -> &str {
-    self.model.language.as_str()
-  }
-
-  async fn location(&self) -> Option<&serde_json::Value> {
-    self.model.location.as_ref()
-  }
-
-  #[graphql(name = "mailing_lists")]
-  async fn mailing_lists(&self) -> MailingListsType {
-    MailingListsType::from_type(self.clone())
-  }
-
-  #[graphql(name = "maximum_tickets")]
-  async fn maximum_tickets(&self) -> Option<i32> {
-    self.model.maximum_tickets
-  }
-
-  #[graphql(name = "open_graph_image")]
-  async fn open_graph_image(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<Option<ActiveStorageAttachmentType>> {
-    Ok(
-      ctx
-        .data::<Arc<LoaderManager>>()?
-        .convention_open_graph_image
-        .load_one(self.model.id)
-        .await?
-        .and_then(|models| models.get(0).cloned())
-        .map(ActiveStorageAttachmentType::new),
-    )
-  }
-
-  #[graphql(name = "show_event_list")]
-  async fn show_event_list(&self) -> &str {
-    self.model.show_event_list.as_str()
-  }
-
-  #[graphql(name = "show_schedule")]
-  async fn show_schedule(&self) -> &str {
-    self.model.show_schedule.as_str()
-  }
-
-  #[graphql(name = "site_mode")]
-  async fn site_mode(&self) -> Result<SiteMode, Error> {
-    self.model.site_mode.as_str().try_into()
-  }
-
-  #[graphql(name = "starts_at")]
-  async fn starts_at(&self) -> Option<DateTime<Utc>> {
-    self
-      .model
-      .starts_at
-      .map(|t| DateTime::<Utc>::from_utc(t, Utc))
-  }
-
-  #[graphql(name = "ticket_mode")]
-  async fn ticket_mode(&self) -> Result<TicketMode, Error> {
-    self.model.ticket_mode.as_str().try_into()
-  }
-
-  #[graphql(name = "ticket_name")]
-  async fn ticket_name(&self) -> &str {
-    self.model.ticket_name.as_str()
-  }
-
-  async fn ticket_name_plural(&self) -> String {
-    intercode_inflector::inflector::Inflector::to_plural(self.model.ticket_name.as_str())
-  }
-
-  #[graphql(name = "timezone_mode")]
-  async fn timezone_mode(&self) -> Result<TimezoneMode, Error> {
-    self.model.timezone_mode.as_str().try_into()
-  }
-
-  #[graphql(name = "timezone_name")]
-  async fn timezone_name(&self) -> Option<&str> {
-    self.model.timezone_name.as_deref()
-  }
 
   #[graphql(name = "user_activity_alerts")]
   async fn user_activity_alerts(&self, ctx: &Context<'_>) -> Result<Vec<UserActivityAlertType>> {
-    let loader_result = load_one_by_model_id!(convention_user_activity_alerts, ctx, self)?;
-    Ok(loader_result_to_many!(loader_result, UserActivityAlertType))
+    ConventionConventionsFields::from_type(self.clone())
+      .user_activity_alerts(ctx)
+      .await
+      .map(|res| {
+        res
+          .into_iter()
+          .map(UserActivityAlertType::from_type)
+          .collect()
+      })
   }
 }
 
@@ -433,8 +306,8 @@ merged_model_backed_type!(
   ConventionType,
   conventions::Model,
   "Convention",
-  ConventionApiFields,
   ConventionCmsFields,
+  ConventionConventionsFields,
   ConventionGlueFields,
   ConventionStoreFields
 );

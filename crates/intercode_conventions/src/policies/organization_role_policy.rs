@@ -1,11 +1,7 @@
-use axum::async_trait;
+use async_graphql::async_trait::async_trait;
 use intercode_entities::{organization_roles, organizations};
+use intercode_policies::{AuthorizationInfo, Policy, ReadManageAction};
 use sea_orm::DbErr;
-
-use crate::{
-  authorization_info::AuthorizationInfo,
-  policy::{Policy, ReadManageAction},
-};
 
 pub struct OrganizationRolePolicy;
 

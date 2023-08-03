@@ -1,9 +1,9 @@
 use async_graphql::*;
 use intercode_entities::rooms;
 use intercode_graphql_core::{load_one_by_model_id, loader_result_to_many, model_backed_type};
-use intercode_policies::{policies::RoomPolicy, ModelBackedTypeGuardablePolicy, ReadManageAction};
+use intercode_policies::{ModelBackedTypeGuardablePolicy, ReadManageAction};
 
-use crate::partial_objects::RunEventsFields;
+use crate::{partial_objects::RunEventsFields, policies::RoomPolicy};
 
 model_backed_type!(RoomType, rooms::Model);
 

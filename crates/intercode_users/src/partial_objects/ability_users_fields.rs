@@ -1,15 +1,17 @@
 use std::sync::Arc;
 
 use async_graphql::*;
-use intercode_entities::user_con_profiles;
+use intercode_entities::{staff_positions, user_con_profiles};
 use intercode_graphql_core::{lax_id::LaxId, query_data::QueryData};
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
   model_action_permitted::model_action_permitted,
   policies::{ConventionAction, ConventionPolicy, UserConProfileAction, UserConProfilePolicy},
-  AuthorizationInfo,
+  AuthorizationInfo, Policy, ReadManageAction,
 };
 use seawater::loaders::ExpectModel;
+
+use crate::policies::StaffPositionPolicy;
 
 pub struct AbilityUsersFields {
   authorization_info: Arc<AuthorizationInfo>,
@@ -51,6 +53,23 @@ impl AbilityUsersFields {
 
 #[Object]
 impl AbilityUsersFields {
+  #[graphql(name = "can_manage_staff_positions")]
+  async fn can_manage_staff_positions(&self, ctx: &Context<'_>) -> Result<bool> {
+    let authorization_info = self.authorization_info.as_ref();
+    let convention = ctx.data::<QueryData>()?.convention();
+    Ok(
+      StaffPositionPolicy::action_permitted(
+        authorization_info,
+        &ReadManageAction::Manage,
+        &staff_positions::Model {
+          convention_id: convention.map(|c| c.id),
+          ..Default::default()
+        },
+      )
+      .await?,
+    )
+  }
+
   #[graphql(name = "can_read_user_con_profiles")]
   async fn can_read_user_con_profiles(&self, ctx: &Context<'_>) -> Result<bool, Error> {
     model_action_permitted(

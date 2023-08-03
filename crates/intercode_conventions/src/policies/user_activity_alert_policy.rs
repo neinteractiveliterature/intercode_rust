@@ -1,12 +1,9 @@
-use axum::async_trait;
+use async_graphql::async_trait::async_trait;
 use intercode_entities::user_activity_alerts;
-use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter, QuerySelect};
-
-use crate::{
-  authorization_info::AuthorizationInfo,
-  policy::{EntityPolicy, Policy, ReadManageAction},
-  SimpleGuardablePolicy,
+use intercode_policies::{
+  AuthorizationInfo, EntityPolicy, Policy, ReadManageAction, SimpleGuardablePolicy,
 };
+use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter, QuerySelect};
 
 pub struct UserActivityAlertPolicy;
 

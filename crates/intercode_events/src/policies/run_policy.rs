@@ -1,10 +1,8 @@
-use async_trait::async_trait;
+use async_graphql::async_trait::async_trait;
 use intercode_entities::{conventions, events, runs};
+use intercode_policies::policies::{EventAction, EventPolicy};
+use intercode_policies::{AuthorizationInfo, Policy, ReadManageAction};
 use sea_orm::DbErr;
-
-use crate::{AuthorizationInfo, Policy, ReadManageAction};
-
-use super::{EventAction, EventPolicy};
 
 pub enum RunAction {
   Read,

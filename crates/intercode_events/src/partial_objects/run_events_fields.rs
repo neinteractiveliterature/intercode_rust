@@ -9,13 +9,13 @@ use intercode_graphql_core::{
   ModelBackedType,
 };
 use intercode_graphql_loaders::LoaderManager;
-use intercode_policies::{
-  policies::{RunAction, RunPolicy},
-  AuthorizationInfo, Policy,
-};
+use intercode_policies::{AuthorizationInfo, Policy};
 use seawater::loaders::ExpectModel;
 
-use crate::objects::RoomType;
+use crate::{
+  objects::RoomType,
+  policies::{RunAction, RunPolicy},
+};
 
 use super::EventEventsFields;
 

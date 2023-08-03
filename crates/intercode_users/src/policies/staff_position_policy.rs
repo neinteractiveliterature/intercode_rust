@@ -1,23 +1,19 @@
-use axum::async_trait;
-use intercode_entities::forms;
-use sea_orm::{sea_query::Expr, DbErr, EntityTrait, QueryFilter};
+use async_graphql::async_trait::async_trait;
+use intercode_entities::staff_positions;
+use intercode_policies::{AuthorizationInfo, EntityPolicy, Policy, ReadManageAction};
+use sea_orm::{DbErr, EntityTrait};
 
-use crate::{
-  authorization_info::AuthorizationInfo,
-  policy::{EntityPolicy, Policy, ReadManageAction},
-};
-
-pub struct FormPolicy;
+pub struct StaffPositionPolicy;
 
 #[async_trait]
-impl Policy<AuthorizationInfo, forms::Model> for FormPolicy {
+impl Policy<AuthorizationInfo, staff_positions::Model> for StaffPositionPolicy {
   type Action = ReadManageAction;
   type Error = DbErr;
 
   async fn action_permitted(
     principal: &AuthorizationInfo,
     action: &ReadManageAction,
-    resource: &forms::Model,
+    resource: &staff_positions::Model,
   ) -> Result<bool, Self::Error> {
     match action {
       ReadManageAction::Read => Ok(true),
@@ -26,7 +22,7 @@ impl Policy<AuthorizationInfo, forms::Model> for FormPolicy {
           let convention_id = resource.convention_id;
           let has_permission = if let Some(convention_id) = convention_id {
             principal
-              .has_convention_permission("update_forms", convention_id)
+              .has_convention_permission("update_staff_positions", convention_id)
               .await?
           } else {
             false
@@ -40,20 +36,17 @@ impl Policy<AuthorizationInfo, forms::Model> for FormPolicy {
   }
 }
 
-impl EntityPolicy<AuthorizationInfo, forms::Model> for FormPolicy {
+impl EntityPolicy<AuthorizationInfo, staff_positions::Model> for StaffPositionPolicy {
   type Action = ReadManageAction;
 
-  fn id_column() -> forms::Column {
-    forms::Column::Id
+  fn id_column() -> staff_positions::Column {
+    staff_positions::Column::Id
   }
 
   fn accessible_to(
     _principal: &AuthorizationInfo,
-    action: &Self::Action,
-  ) -> sea_orm::Select<forms::Entity> {
-    match action {
-      ReadManageAction::Read => forms::Entity::find(),
-      ReadManageAction::Manage => forms::Entity::find().filter(Expr::cust("0 = 1")),
-    }
+    _action: &Self::Action,
+  ) -> sea_orm::Select<<staff_positions::Model as sea_orm::ModelTrait>::Entity> {
+    staff_positions::Entity::find()
   }
 }

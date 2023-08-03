@@ -10,11 +10,11 @@ async-graphql = {workspace = true}
 async-trait = {workspace = true}
 chrono = {workspace = true}
 futures = {workspace = true}
-intercode_entities = {path = "../intercode_entities"}
-intercode_graphql_core = {path = "../intercode_graphql_core"}
+intercode_entities = {workspace = true}
+intercode_graphql_core = {workspace = true}
 itertools = {workspace = true}
 sea-orm = {workspace = true}
-seawater = {path = "../seawater"}
+seawater = {workspace = true}
 serde = {workspace = true}
 serde_json = {workspace = true}
 tokio = {workspace = true}

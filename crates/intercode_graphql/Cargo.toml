@@ -6,27 +6,24 @@ version = "0.1.0"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-async-graphql = {workspace = true, features = ["dataloader", "tracing", "chrono"]}
+async-graphql = {workspace = true}
 async-graphql-value = {workspace = true}
-chrono = {workspace = true}
 futures = {workspace = true}
-intercode_cms = {path = "../intercode_cms"}
-intercode_entities = {path = "../intercode_entities"}
-intercode_events = {path = "../intercode_events"}
-intercode_forms = {path = "../intercode_forms"}
-intercode_graphql_core = {path = "../intercode_graphql_core"}
-intercode_graphql_loaders = {path = "../intercode_graphql_loaders"}
-intercode_inflector = {path = "../intercode_inflector"}
-intercode_liquid = {path = "../intercode_liquid"}
-intercode_policies = {path = "../intercode_policies"}
-intercode_query_builders = {path = "../intercode_query_builders"}
-intercode_reporting = {path = "../intercode_reporting"}
-intercode_signups = {path = "../intercode_signups"}
-intercode_store = {path = "../intercode_store"}
-intercode_users = {path = "../intercode_users"}
-itertools = {workspace = true}
+intercode_cms = {workspace = true}
+intercode_conventions = {workspace = true}
+intercode_entities = {workspace = true}
+intercode_events = {workspace = true}
+intercode_forms = {workspace = true}
+intercode_graphql_core = {workspace = true}
+intercode_graphql_loaders = {workspace = true}
+intercode_liquid = {workspace = true}
+intercode_policies = {workspace = true}
+intercode_query_builders = {workspace = true}
+intercode_reporting = {workspace = true}
+intercode_signups = {workspace = true}
+intercode_store = {workspace = true}
+intercode_users = {workspace = true}
 liquid = {workspace = true}
 liquid-core = {workspace = true}
 sea-orm = {workspace = true}
-seawater = {path = "../seawater"}
-serde_json = {workspace = true}
+seawater = {workspace = true}

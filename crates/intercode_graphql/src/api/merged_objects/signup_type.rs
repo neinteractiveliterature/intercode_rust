@@ -1,11 +1,11 @@
 use async_graphql::*;
 use intercode_entities::signups;
 use intercode_graphql_core::{model_backed_type, ModelBackedType};
-use intercode_policies::{
+use intercode_policies::ModelBackedTypeGuardablePolicy;
+use intercode_signups::{
+  partial_objects::SignupSignupsFields,
   policies::{SignupAction, SignupPolicy},
-  ModelBackedTypeGuardablePolicy,
 };
-use intercode_signups::partial_objects::SignupSignupsFields;
 
 use crate::{api::merged_objects::RunType, merged_model_backed_type};
 

@@ -1,8 +1,10 @@
 use async_graphql::*;
 use intercode_entities::forms;
 use intercode_graphql_core::query_data::QueryData;
-use intercode_policies::{policies::FormPolicy, AuthorizationInfo, Policy, ReadManageAction};
+use intercode_policies::{AuthorizationInfo, Policy, ReadManageAction};
 use std::sync::Arc;
+
+use crate::policies::FormPolicy;
 
 pub struct AbilityFormsFields {
   authorization_info: Arc<AuthorizationInfo>,

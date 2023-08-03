@@ -6,12 +6,9 @@ use intercode_events::{
 use intercode_graphql_core::{model_backed_type, ModelBackedType, ModelPaginator};
 use intercode_query_builders::sort_input::SortInput;
 
-use crate::{
-  api::{merged_objects::FormType, objects::DepartmentType},
-  merged_model_backed_type,
-};
+use crate::{api::merged_objects::FormType, merged_model_backed_type};
 
-use super::EventType;
+use super::{DepartmentType, EventType};
 
 model_backed_type!(EventCategoryGlueFields, event_categories::Model);
 

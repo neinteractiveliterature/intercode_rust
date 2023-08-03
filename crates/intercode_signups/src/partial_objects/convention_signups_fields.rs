@@ -9,12 +9,15 @@ use intercode_graphql_core::{
   enums::SignupMode, lax_id::LaxId, model_backed_type, objects::ScheduledStringableValueType,
   query_data::QueryData, ModelBackedType, ModelPaginator,
 };
-use intercode_policies::{policies::SignupRequestPolicy, AuthorizedFromQueryBuilder};
+use intercode_policies::AuthorizedFromQueryBuilder;
 use intercode_query_builders::sort_input::SortInput;
 use intercode_timespan::ScheduledValue;
 use sea_orm::{ColumnTrait, ModelTrait, QueryFilter};
 
-use crate::query_builders::{SignupRequestFiltersInput, SignupRequestsQueryBuilder};
+use crate::{
+  policies::SignupRequestPolicy,
+  query_builders::{SignupRequestFiltersInput, SignupRequestsQueryBuilder},
+};
 
 use super::{SignupRequestSignupsFields, SignupSignupsFields};
 

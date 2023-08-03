@@ -7,7 +7,9 @@ use intercode_graphql_loaders::LoaderManager;
 use sea_orm::DbErr;
 use seawater::loaders::ExpectModel;
 
-use crate::{AuthorizationInfo, GuardablePolicy, Policy, PolicyGuard, ReadManageAction};
+use intercode_policies::{
+  AuthorizationInfo, GuardablePolicy, Policy, PolicyGuard, ReadManageAction,
+};
 
 pub enum TicketAction {
   Read,

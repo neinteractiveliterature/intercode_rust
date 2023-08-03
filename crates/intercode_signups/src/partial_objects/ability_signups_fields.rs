@@ -5,12 +5,12 @@ use intercode_entities::{conventions, events, runs, signups};
 use intercode_graphql_core::{lax_id::LaxId, query_data::QueryData};
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
-  model_action_permitted::model_action_permitted,
-  policies::{SignupAction, SignupPolicy},
-  AuthorizationInfo, Policy,
+  model_action_permitted::model_action_permitted, AuthorizationInfo, Policy,
 };
 use sea_orm::EntityTrait;
 use seawater::loaders::ExpectModel;
+
+use crate::policies::{SignupAction, SignupPolicy};
 
 pub struct AbilitySignupsFields {
   authorization_info: Arc<AuthorizationInfo>,

@@ -1,7 +1,7 @@
 use crate::{
   api::{
     merged_objects::{FormType, TicketType},
-    objects::{ConventionType, MaximumEventProvidedTicketsOverrideType},
+    objects::MaximumEventProvidedTicketsOverrideType,
   },
   merged_model_backed_type,
 };
@@ -15,7 +15,7 @@ use intercode_policies::{
   ModelBackedTypeGuardablePolicy,
 };
 
-use super::{run_type::RunType, EventCategoryType, TeamMemberType};
+use super::{run_type::RunType, ConventionType, EventCategoryType, TeamMemberType};
 
 model_backed_type!(EventGlueFields, events::Model);
 

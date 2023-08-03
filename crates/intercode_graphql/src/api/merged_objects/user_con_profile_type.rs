@@ -1,5 +1,5 @@
 use crate::api::merged_objects::{OrderType, SignupType, TeamMemberType, TicketType};
-use crate::api::objects::{AbilityType, ConventionType};
+use crate::api::objects::AbilityType;
 use crate::merged_model_backed_type;
 use async_graphql::*;
 use intercode_entities::user_con_profiles;
@@ -10,7 +10,7 @@ use intercode_policies::ModelBackedTypeGuardablePolicy;
 use intercode_store::partial_objects::UserConProfileStoreFields;
 use intercode_users::partial_objects::UserConProfileUsersFields;
 
-use super::StaffPositionType;
+use super::{ConventionType, StaffPositionType};
 
 model_backed_type!(UserConProfileGlueFields, user_con_profiles::Model);
 

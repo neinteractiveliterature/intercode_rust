@@ -1,11 +1,10 @@
-use async_trait::async_trait;
+use async_graphql::async_trait::async_trait;
 use intercode_entities::{conventions, events, runs, signup_requests, user_con_profiles};
+use intercode_policies::{AuthorizationInfo, EntityPolicy, Policy, ReadManageAction};
 use sea_orm::{
   sea_query::{Cond, Expr},
   ColumnTrait, DbErr, EntityTrait, QueryFilter, QuerySelect, Select,
 };
-
-use crate::{AuthorizationInfo, EntityPolicy, Policy, ReadManageAction};
 
 pub enum SignupRequestAction {
   Read,

@@ -3,6 +3,9 @@ edition = "2021"
 name = "intercode_policies"
 version = "0.1.0"
 
+[features]
+test_helpers = []
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dev-dependencies]
@@ -14,13 +17,13 @@ async-trait = {workspace = true}
 axum = {workspace = true}
 cached = {workspace = true}
 futures = {workspace = true}
-intercode_entities = {path = "../intercode_entities"}
-intercode_graphql_core = {path = "../intercode_graphql_core"}
-intercode_graphql_loaders = {path = "../intercode_graphql_loaders"}
-intercode_query_builders = {path = "../intercode_query_builders"}
+intercode_entities = {workspace = true}
+intercode_graphql_core = {workspace = true}
+intercode_graphql_loaders = {workspace = true}
+intercode_query_builders = {workspace = true}
 itertools = {workspace = true}
 oxide-auth = {workspace = true}
 sea-orm = {workspace = true}
-seawater = {path = "../seawater"}
+seawater = {workspace = true}
 tokio = {workspace = true, features = ["rt-multi-thread", "macros"]}
 tuple-conv = {workspace = true}
