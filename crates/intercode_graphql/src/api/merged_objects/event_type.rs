@@ -1,8 +1,5 @@
 use crate::{
-  api::{
-    merged_objects::{FormType, TicketType},
-    objects::MaximumEventProvidedTicketsOverrideType,
-  },
+  api::merged_objects::{FormType, TicketType},
   merged_model_backed_type,
 };
 use async_graphql::*;
@@ -13,6 +10,9 @@ use intercode_graphql_core::{model_backed_type, scalars::DateScalar, ModelBacked
 use intercode_policies::{
   policies::{EventAction, EventPolicy},
   ModelBackedTypeGuardablePolicy,
+};
+use intercode_store::{
+  objects::MaximumEventProvidedTicketsOverrideType, partial_objects::EventStoreFields,
 };
 
 use super::{run_type::RunType, ConventionType, EventCategoryType, TeamMemberType};
@@ -48,7 +48,7 @@ impl EventGlueFields {
     &self,
     ctx: &Context<'_>,
   ) -> Result<Vec<MaximumEventProvidedTicketsOverrideType>> {
-    EventEventsFields::from_type(self.clone())
+    EventStoreFields::from_type(self.clone())
       .maximum_event_provided_tickets_overrides(ctx)
       .await
       .map(|res| {

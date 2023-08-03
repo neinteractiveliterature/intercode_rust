@@ -1,10 +1,8 @@
 use std::sync::Arc;
 
 use async_graphql::*;
-use futures::StreamExt;
 use intercode_entities::{
-  conventions, event_categories, events, forms, maximum_event_provided_tickets_overrides, tickets,
-  RegistrationPolicy,
+  conventions, event_categories, events, forms, tickets, RegistrationPolicy,
 };
 use intercode_graphql_core::{
   lax_id::LaxId, load_one_by_id, load_one_by_model_id, loader_result_to_many, model_backed_type,
@@ -17,10 +15,10 @@ use intercode_graphql_loaders::{
 };
 use intercode_liquid::render_markdown;
 use intercode_policies::{
-  policies::{EventAction, EventPolicy, MaximumEventProvidedTicketsOverridePolicy},
-  AuthorizationInfo, ModelBackedTypeGuardablePolicy, Policy, ReadManageAction,
+  policies::{EventAction, EventPolicy},
+  ModelBackedTypeGuardablePolicy,
 };
-use seawater::loaders::{ExpectModel, ExpectModels};
+use seawater::loaders::ExpectModel;
 
 use crate::objects::RegistrationPolicyType;
 
@@ -43,37 +41,6 @@ impl EventEventsFields {
     let event_category = self.event_category(ctx).await?;
     let loader_result = load_one_by_id!(event_category_event_form, ctx, event_category.id)?;
     Ok(loader_result.expect_one()?.clone())
-  }
-
-  pub async fn maximum_event_provided_tickets_overrides(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<Vec<maximum_event_provided_tickets_overrides::Model>> {
-    let loaders = ctx.data::<Arc<LoaderManager>>()?;
-    let authorization_info = ctx.data::<AuthorizationInfo>()?;
-    let convention_result = loaders.event_convention().load_one(self.model.id).await?;
-    let convention = convention_result.expect_one()?;
-    let meptos_result = loaders
-      .event_maximum_event_provided_tickets_overrides()
-      .load_one(self.model.id)
-      .await?;
-    let meptos = meptos_result.expect_models()?;
-
-    let meptos_stream = futures::stream::iter(meptos);
-    let readable_meptos = meptos_stream.filter(|mepto| {
-      let mepto = (*mepto).clone();
-      async {
-        MaximumEventProvidedTicketsOverridePolicy::action_permitted(
-          authorization_info,
-          &ReadManageAction::Read,
-          &(convention.clone(), self.get_model().clone(), mepto),
-        )
-        .await
-        .unwrap_or(false)
-      }
-    });
-    let meptos = readable_meptos.map(|mepto| mepto.clone()).collect().await;
-    Ok(meptos)
   }
 
   pub async fn provided_tickets(&self, ctx: &Context<'_>) -> Result<Vec<tickets::Model>> {

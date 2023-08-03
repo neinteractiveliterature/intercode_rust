@@ -1,19 +1,16 @@
 use std::sync::Arc;
 
 use async_graphql::{Context, Error};
-use axum::async_trait;
+use async_trait::async_trait;
 use intercode_entities::{conventions, events, maximum_event_provided_tickets_overrides};
 use intercode_graphql_loaders::LoaderManager;
 use sea_orm::DbErr;
 use seawater::loaders::ExpectModel;
 
-use crate::{
-  authorization_info::AuthorizationInfo,
-  policy::{Policy, ReadManageAction},
-  GuardablePolicy, PolicyGuard,
+use intercode_policies::{
+  policies::{EventAction, EventPolicy},
+  AuthorizationInfo, GuardablePolicy, Policy, PolicyGuard, ReadManageAction,
 };
-
-use super::{EventAction, EventPolicy};
 
 pub struct MaximumEventProvidedTicketsOverridePolicy;
 
