@@ -74,8 +74,8 @@ macro_rules! merged_model_backed_type {
         self.0.get_model()
       }
 
-      fn clone_model_arc(&self) -> ::std::sync::Arc<Self::Model> {
-        self.0.clone_model_arc()
+      fn take_arc(self) -> ::std::sync::Arc<Self::Model> {
+        self.0.take_arc()
       }
     }
   };

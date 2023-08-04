@@ -9,7 +9,7 @@ use sea_orm::{
 };
 use seawater::ConnectionWrapper;
 
-use crate::ModelBackedType;
+use crate::{ModelBackedType, ModelBackedTypeConvertible};
 
 pub const DEFAULT_PER_PAGE: u64 = 10;
 pub const MAX_PAGE_SIZE: u64 = 100;

@@ -2,26 +2,38 @@ use std::sync::Arc;
 
 use sea_orm::ModelTrait;
 
+pub trait ModelBackedTypeConvertible {
+  type Model: ModelTrait;
+
+  fn into_type<Other: ModelBackedType<Model = Self::Model>>(self) -> Other
+  where
+    Self: Sized;
+}
+
 pub trait ModelBackedType {
   type Model: ModelTrait;
 
   fn new(model: Self::Model) -> Self;
   fn get_model(&self) -> &Self::Model;
   fn from_arc(arc: Arc<Self::Model>) -> Self;
-  fn clone_model_arc(&self) -> Arc<Self::Model>;
-
-  fn into_type<Other: ModelBackedType<Model = Self::Model>>(self) -> Other
-  where
-    Self: Sized,
-  {
-    Other::from_arc(self.clone_model_arc())
-  }
+  fn take_arc(self) -> Arc<Self::Model>;
 
   fn from_type<Other: ModelBackedType<Model = Self::Model>>(other: Other) -> Self
   where
     Self: Sized,
   {
     other.into_type()
+  }
+}
+
+impl<Model: ModelTrait, T: ModelBackedType<Model = Model>> ModelBackedTypeConvertible for T {
+  type Model = Model;
+
+  fn into_type<Other: ModelBackedType<Model = Self::Model>>(self) -> Other
+  where
+    Self: Sized,
+  {
+    Other::from_arc(self.take_arc())
   }
 }
 
@@ -50,8 +62,8 @@ macro_rules! model_backed_type {
         self.model.as_ref()
       }
 
-      fn clone_model_arc(&self) -> ::std::sync::Arc<$model_type> {
-        self.model.clone()
+      fn take_arc(self) -> ::std::sync::Arc<$model_type> {
+        self.model
       }
     }
   };
