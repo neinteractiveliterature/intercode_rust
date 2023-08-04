@@ -20,9 +20,11 @@ lto = "thin"
 members = [
   "./crates/intercode_cms",
   "./crates/intercode_conventions",
+  "./crates/intercode_email",
   "./crates/intercode_entities",
   "./crates/intercode_events",
   "./crates/intercode_forms",
+  "./crates/intercode_full_text_search",
   "./crates/intercode_graphql",
   "./crates/intercode_graphql_core",
   "./crates/intercode_graphql_loaders",
@@ -61,9 +63,11 @@ i18n-embed-fl = "0.6"
 id-arena = "2.2.1"
 intercode_cms = {path = "./crates/intercode_cms"}
 intercode_conventions = {path = "./crates/intercode_conventions"}
+intercode_email = {path = "./crates/intercode_email"}
 intercode_entities = {path = "./crates/intercode_entities"}
 intercode_events = {path = "./crates/intercode_events"}
 intercode_forms = {path = "./crates/intercode_forms"}
+intercode_full_text_search = {path = "./crates/intercode_full_text_search"}
 intercode_graphql = {path = "./crates/intercode_graphql"}
 intercode_graphql_core = {path = "./crates/intercode_graphql_core"}
 intercode_graphql_loaders = {path = "./crates/intercode_graphql_loaders"}

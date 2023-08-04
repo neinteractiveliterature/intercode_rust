@@ -11,9 +11,11 @@ async-graphql-value = {workspace = true}
 futures = {workspace = true}
 intercode_cms = {workspace = true}
 intercode_conventions = {workspace = true}
+intercode_email = {workspace = true}
 intercode_entities = {workspace = true}
 intercode_events = {workspace = true}
 intercode_forms = {workspace = true}
+intercode_full_text_search = {workspace = true}
 intercode_graphql_core = {workspace = true}
 intercode_graphql_loaders = {workspace = true}
 intercode_liquid = {workspace = true}
@@ -25,5 +27,4 @@ intercode_store = {workspace = true}
 intercode_users = {workspace = true}
 liquid = {workspace = true}
 liquid-core = {workspace = true}
-sea-orm = {workspace = true}
 seawater = {workspace = true}

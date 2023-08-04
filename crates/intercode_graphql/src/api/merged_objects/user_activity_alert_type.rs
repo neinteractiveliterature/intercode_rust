@@ -7,7 +7,7 @@ use intercode_graphql_core::{model_backed_type, ModelBackedType};
 use intercode_policies::{ModelBackedTypeGuardablePolicy, ReadManageAction};
 
 use crate::{
-  api::{merged_objects::UserType, objects::NotificationDestinationType},
+  api::merged_objects::{NotificationDestinationType, UserType},
   merged_model_backed_type,
 };
 

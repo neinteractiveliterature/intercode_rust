@@ -1,15 +1,12 @@
 use crate::{
-  api::{
-    merged_objects::{
-      DepartmentType, EventCategoryType, EventProposalType, EventType, FormType, MailingListsType,
-      OrderType, SignupRequestType, SignupType, StaffPositionType, UserConProfileType,
-    },
-    objects::CmsContentGroupType,
+  api::merged_objects::{
+    DepartmentType, EventCategoryType, EventProposalType, EventType, FormType, MailingListsType,
+    OrderType, SignupRequestType, SignupType, StaffPositionType, UserConProfileType,
   },
   merged_model_backed_type,
 };
 
-use super::user_activity_alert_type::UserActivityAlertType;
+use super::{user_activity_alert_type::UserActivityAlertType, CmsContentGroupType};
 use async_graphql::*;
 use intercode_cms::api::partial_objects::ConventionCmsFields;
 use intercode_conventions::partial_objects::ConventionConventionsFields;

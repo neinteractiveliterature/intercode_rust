@@ -53,6 +53,12 @@ impl AbilityUsersFields {
 
 #[Object]
 impl AbilityUsersFields {
+  #[graphql(name = "can_manage_oauth_applications")]
+  async fn can_manage_oauth_applications(&self) -> bool {
+    // TODO
+    false
+  }
+
   #[graphql(name = "can_manage_staff_positions")]
   async fn can_manage_staff_positions(&self, ctx: &Context<'_>) -> Result<bool> {
     let authorization_info = self.authorization_info.as_ref();

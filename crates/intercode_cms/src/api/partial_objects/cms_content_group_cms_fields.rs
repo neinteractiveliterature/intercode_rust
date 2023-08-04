@@ -5,14 +5,22 @@ use crate::api::{
 use std::sync::Arc;
 
 use async_graphql::*;
-use intercode_entities::cms_content_groups;
-use intercode_graphql_core::{model_backed_type, ModelBackedType};
+use intercode_entities::{cms_content_groups, permissions};
+use intercode_graphql_core::{load_one_by_model_id, model_backed_type, ModelBackedType};
 use intercode_graphql_loaders::{
   cms_content_group_contents_loader::CmsContentGroupItem, LoaderManager,
 };
 use intercode_policies::{AuthorizationInfo, Policy, ReadManageAction};
+use seawater::loaders::ExpectModels;
 
 model_backed_type!(CmsContentGroupCmsFields, cms_content_groups::Model);
+
+impl CmsContentGroupCmsFields {
+  pub async fn permissions(&self, ctx: &Context<'_>) -> Result<Vec<permissions::Model>> {
+    let loader_result = load_one_by_model_id!(cms_content_group_permissions, ctx, self)?;
+    loader_result.expect_models().cloned()
+  }
+}
 
 #[Object]
 impl CmsContentGroupCmsFields {

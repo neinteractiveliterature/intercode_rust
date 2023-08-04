@@ -1,9 +1,8 @@
+use crate::policies::EmailRoutePolicy;
 use async_graphql::*;
 use intercode_entities::email_routes;
 use intercode_graphql_core::model_backed_type;
-use intercode_policies::{
-  policies::EmailRoutePolicy, ModelBackedTypeGuardablePolicy, ReadManageAction,
-};
+use intercode_policies::{ModelBackedTypeGuardablePolicy, ReadManageAction};
 
 model_backed_type!(EmailRouteType, email_routes::Model);
 

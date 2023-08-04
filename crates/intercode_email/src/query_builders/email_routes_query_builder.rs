@@ -1,14 +1,11 @@
 use async_graphql::InputObject;
 use intercode_entities::email_routes;
 use intercode_graphql_core::filter_utils::string_search;
+use intercode_query_builders::{sort_input::SortInput, QueryBuilder};
 use sea_orm::{
   sea_query::{Expr, Func, IntoColumnRef, SimpleExpr},
   IntoIdentity, QueryFilter, QueryOrder, Select,
 };
-
-use crate::sort_input::SortInput;
-
-use super::QueryBuilder;
 
 fn forward_addresses_as_string() -> SimpleExpr {
   SimpleExpr::FunctionCall(Func::lower(

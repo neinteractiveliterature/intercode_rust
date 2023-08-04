@@ -1,11 +1,9 @@
-use axum::async_trait;
+use async_graphql::async_trait::async_trait;
 use intercode_entities::email_routes;
 use sea_orm::{sea_query::Expr, DbErr, EntityTrait, QueryFilter};
 
-use crate::{
-  authorization_info::AuthorizationInfo,
-  policy::{Policy, ReadManageAction},
-  EntityPolicy, SimpleGuardablePolicy,
+use intercode_policies::{
+  AuthorizationInfo, EntityPolicy, Policy, ReadManageAction, SimpleGuardablePolicy,
 };
 
 pub struct EmailRoutePolicy;
