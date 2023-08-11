@@ -15,7 +15,7 @@ pub struct Model {
   pub updated_by_id: Option<i64>,
   pub created_at: Option<DateTime>,
   pub updated_at: Option<DateTime>,
-  #[sea_orm(column_type = "custom(\"tsrange\")")]
+  #[sea_orm(column_type = "custom(\"tsrange\")", select_as = "text")]
   pub timespan_tsrange: String,
 }
 

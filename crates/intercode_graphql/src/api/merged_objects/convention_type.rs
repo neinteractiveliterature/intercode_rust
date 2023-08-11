@@ -305,6 +305,8 @@ merged_model_backed_type!(
   "Convention",
   ConventionCmsFields,
   ConventionConventionsFields,
+  ConventionEventsFields,
   ConventionGlueFields,
+  ConventionSignupsFields,
   ConventionStoreFields
 );

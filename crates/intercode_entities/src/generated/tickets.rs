@@ -13,19 +13,19 @@ pub struct Model {
   pub updated_at: DateTime,
   pub provided_by_event_id: Option<i64>,
   pub order_entry_id: Option<i64>,
-  pub event_id: Option<i64>,
+  pub run_id: Option<i64>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
   #[sea_orm(
-    belongs_to = "super::events::Entity",
-    from = "Column::EventId",
-    to = "super::events::Column::Id",
+    belongs_to = "super::runs::Entity",
+    from = "Column::RunId",
+    to = "super::runs::Column::Id",
     on_update = "NoAction",
     on_delete = "NoAction"
   )]
-  Events2,
+  Runs,
   #[sea_orm(
     belongs_to = "super::ticket_types::Entity",
     from = "Column::TicketTypeId",

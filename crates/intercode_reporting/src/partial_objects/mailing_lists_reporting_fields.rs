@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, fmt};
 
 use async_graphql::*;
 use intercode_entities::{
@@ -21,6 +21,7 @@ use intercode_policies::{
 };
 use itertools::Itertools;
 use sea_orm::{
+  prelude::SeaRc,
   sea_query::{self, Cond, Expr, Func, SimpleExpr},
   ColumnTrait, EntityTrait, Iden, ModelTrait, Order, QueryFilter, QueryOrder, QuerySelect,
 };
@@ -28,9 +29,13 @@ use seawater::loaders::ExpectModel;
 
 use crate::objects::{ContactEmail, ContactEmailType};
 
-#[derive(Iden)]
-#[iden = "TRIM"]
 struct TrimFunction;
+
+impl Iden for TrimFunction {
+  fn unquoted(&self, s: &mut dyn fmt::Write) {
+    s.write_str("TRIM").unwrap();
+  }
+}
 
 pub struct MailingListsWaitlistsResult {
   pub emails: Vec<ContactEmailType>,
@@ -357,8 +362,8 @@ impl MailingListsReportingFields {
         SimpleExpr::Value(start.0.naive_utc().into()),
         SimpleExpr::Value(finish.0.naive_utc().into()),
         SimpleExpr::Column(sea_query::ColumnRef::TableColumn(
-          Arc::new(runs::Entity),
-          Arc::new(runs::Column::TimespanTsrange),
+          SeaRc::new(runs::Entity),
+          SeaRc::new(runs::Column::TimespanTsrange),
         )),
       ]
       .into_iter(),

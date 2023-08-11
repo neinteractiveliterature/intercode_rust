@@ -50,30 +50,27 @@ impl OutputType for CmsParentInterface {
   fn create_type_info(registry: &mut Registry) -> String {
     registry.create_output_type::<Self, _>(MetaTypeId::Interface, |registry| {
       let mut fields: IndexMap<String, MetaField> = Default::default();
-      let mut cache_control = ::std::default::Default::default();
 
       if let MetaType::Object {
-        fields: obj_fields,
-        cache_control: obj_cache_control,
-        ..
+        fields: obj_fields, ..
       } = registry.create_fake_output_type::<ConventionCmsFields>()
       {
         fields = obj_fields;
-        cache_control = obj_cache_control;
       }
 
-      MetaType::Object {
+      MetaType::Interface {
         name: Self::type_name().into_owned(),
         description: None,
         fields,
-        cache_control,
+        possible_types: vec!["RootSite", "Convention"]
+          .into_iter()
+          .map(String::from)
+          .collect(),
         extends: false,
-        shareable: true,
         inaccessible: false,
         tags: vec![],
         keys: None,
         visible: None,
-        is_subscription: false,
         rust_typename: Some(std::any::type_name::<Self>()),
       }
     })

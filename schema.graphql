@@ -1,4 +1,10 @@
 type Ability {
+	can_manage_conventions: Boolean!
+	can_update_convention: Boolean!
+	can_update_departments: Boolean!
+	can_read_organizations: Boolean!
+	can_read_user_activity_alerts: Boolean!
+	can_manage_email_routes: Boolean!
 	can_read_schedule: Boolean!
 	can_read_schedule_with_counts: Boolean!
 	can_list_events: Boolean!
@@ -34,26 +40,20 @@ type Ability {
 	can_manage_forms: Boolean!
 	can_read_any_mailing_list: Boolean!
 	can_read_reports: Boolean!
-	can_manage_conventions: Boolean!
+	can_read_signups: Boolean!
+	can_manage_signups: Boolean!
+	can_force_confirm_signup(signupId: ID!): Boolean!
+	can_update_bucket_signup(signupId: ID!): Boolean!
+	can_update_counted_signup(signupId: ID!): Boolean!
+	can_manage_oauth_applications: Boolean!
+	can_manage_staff_positions: Boolean!
 	can_read_user_con_profiles: Boolean!
 	can_create_user_con_profiles: Boolean!
 	can_become_user_con_profile(userConProfileId: ID!): Boolean!
 	can_delete_user_con_profile(userConProfileId: ID!): Boolean!
 	can_update_user_con_profile(userConProfileId: ID!): Boolean!
-	can_withdraw_all_user_con_profile_signups(userConProfileId: ID!): Boolean!
-	can_update_convention: Boolean!
-	can_update_departments: Boolean!
-	can_manage_email_routes: Boolean!
-	can_manage_oauth_applications: Boolean!
-	can_manage_signups: Boolean!
-	can_manage_staff_positions: Boolean!
-	can_read_user_activity_alerts: Boolean!
-	can_read_organizations: Boolean!
-	can_read_signups: Boolean!
 	can_read_users: Boolean!
-	can_force_confirm_signup(signupId: ID!): Boolean!
-	can_update_bucket_signup(signupId: ID!): Boolean!
-	can_update_counted_signup(signupId: ID!): Boolean!
+	can_withdraw_all_user_con_profile_signups(userConProfileId: ID!): Boolean!
 }
 
 """
@@ -122,7 +122,7 @@ type CmsNavigationItem {
 	title: String
 }
 
-type CmsParent {
+interface CmsParent {
 	id: ID!
 	cmsFiles: [CmsFile!]!
 	cmsFile(id: ID!): CmsFile!
@@ -173,48 +173,6 @@ type ContactEmail {
 }
 
 type Convention {
-	name: String
-	accepting_proposals: Boolean!
-	bio_eligible_user_con_profiles: [UserConProfile!]!
-	canceled: Boolean!
-	catch_all_staff_position: StaffPosition
-	clickwrap_agreement: String
-	departments: [Department!]!
-	domain: String!
-	email_from: String!
-	email_mode: String!
-	ends_at: DateTime
-	event_mailing_list_domain: String
-	favicon: ActiveStorageAttachment
-	form(id: ID!): Form!
-	forms: [Form!]!
-	hidden: Boolean!
-	language: String!
-	location: JSON
-	mailing_lists: MailingLists!
-	maximum_event_signups: ScheduledValue
-	maximum_tickets: Int
-	my_profile: UserConProfile
-	open_graph_image: ActiveStorageAttachment
-	signup(id: ID!): Signup!
-	signup_mode: SignupMode!
-	signup_requests_open: Boolean!
-	show_event_list: String!
-	show_schedule: String!
-	signup_requests_paginated(page: Int, per_page: Int, filters: SignupRequestFiltersInput, sort: [SortInput!]): SignupRequestsPagination!
-	site_mode: SiteMode!
-	staff_position(id: ID!): StaffPosition!
-	staff_positions: [StaffPosition!]!
-	starts_at: DateTime
-	ticket_mode: TicketMode!
-	ticket_name: String!
-	ticketNamePlural: String!
-	timezone_mode: TimezoneMode!
-	timezone_name: String
-	user_activity_alerts: [UserActivityAlert!]!
-	user_con_profile(id: ID!): UserConProfile!
-	user_con_profile_form: Form!
-	user_con_profiles_paginated(page: Int, per_page: Int, filters: UserConProfileFiltersInput, sort: [SortInput!]): UserConProfilesPagination!
 	id: ID!
 	cmsFiles: [CmsFile!]!
 	cmsFile(id: ID!): CmsFile!
@@ -238,16 +196,44 @@ type Convention {
 	current domain's CMS context as if it were the content for that notification type.
 	"""
 	preview_notifier_liquid(eventKey: String!, content: String!): String!
-	cmsContentGroups: [CmsContentGroup!]!
-	cmsContentGroup(id: ID!): CmsContentGroup!
+	name: String
+	canceled: Boolean!
+	clickwrap_agreement: String
+	domain: String!
+	email_from: String!
+	email_mode: String!
+	ends_at: DateTime
+	event_mailing_list_domain: String
+	favicon: ActiveStorageAttachment
+	hidden: Boolean!
+	language: String!
+	location: JSON
+	maximum_tickets: Int
+	open_graph_image: ActiveStorageAttachment
+	show_event_list: String!
+	show_schedule: String!
+	site_mode: SiteMode!
+	starts_at: DateTime
+	ticket_mode: TicketMode!
+	ticket_name: String!
+	ticketNamePlural: String!
+	timezone_mode: TimezoneMode!
+	timezone_name: String
+	accepting_proposals: Boolean!
+	rooms: [Room!]!
+	bio_eligible_user_con_profiles: [UserConProfile!]!
+	catch_all_staff_position: StaffPosition
+	cms_content_groups: [CmsContentGroup!]!
+	cms_content_group(id: ID!): CmsContentGroup!
 	coupons_paginated: [Product!]!
+	departments: [Department!]!
 	"""
 	Finds an active event by ID in this convention. If there is no event with that ID in this
 	convention, or the event is no longer active, errors out.
 	"""
 	event(id: ID!): Event!
 	events(start: Date, finish: Date, includeDropped: Boolean, filters: EventFiltersInput): [Event!]!
-	events_paginated(page: Int, perPage: Int, filters: EventFiltersInput, sort: [SortInput!]): EventsPagination!
+	events_paginated(page: Int, per_page: Int, filters: EventFiltersInput, sort: [SortInput!]): EventsPagination!
 	event_categories(current_ability_can_read_event_proposals: Boolean): [EventCategory!]!
 	"""
 	Finds an event proposal by ID in this convention. If there is no event proposal with that ID
@@ -255,7 +241,20 @@ type Convention {
 	"""
 	event_proposal(id: ID!): EventProposal!
 	event_proposals_paginated(page: Int, per_page: Int, filters: EventProposalFiltersInput, sort: [SortInput!]): EventProposalsPagination!
-	ordersPaginated(page: Int, perPage: Int, filters: OrderFiltersInput, sort: [SortInput!]): OrdersPagination!
+	form(id: ID!): Form!
+	forms: [Form!]!
+	mailing_lists: MailingLists!
+	my_profile: UserConProfile
+	orders_paginated(page: Int, per_page: Int, filters: OrderFiltersInput, sort: [SortInput!]): OrdersPagination!
+	signup(id: ID!): Signup!
+	signup_requests_paginated(page: Int, per_page: Int, filters: SignupRequestFiltersInput, sort: [SortInput!]): SignupRequestsPagination!
+	staff_position(id: ID!): StaffPosition!
+	staff_positions: [StaffPosition!]!
+	user_con_profile_form: Form!
+	user_activity_alerts: [UserActivityAlert!]!
+	maximum_event_signups: ScheduledValue
+	signup_mode: SignupMode!
+	signup_requests_open: Boolean!
 	stripe_account: StripeAccount
 	stripe_account_id: String
 	stripe_account_ready_to_charge: Boolean!
@@ -291,9 +290,9 @@ scalar DateTime
 
 type Department {
 	id: ID!
-	event_categories: [EventCategory!]!
 	name: String
 	proposal_description: String
+	event_categories: [EventCategory!]!
 }
 
 input EmailRouteFiltersInput {
@@ -593,9 +592,9 @@ type OrdersPagination {
 
 type Organization {
 	id: ID!
-	conventions: [Convention!]!
 	current_ability_can_manage_access: Boolean!
 	name: String
+	conventions: [Convention!]!
 	organization_roles: [OrganizationRole!]!
 }
 
@@ -650,8 +649,8 @@ type PayWhatYouWantValue {
 
 type Permission {
 	id: ID!
-	model: PermissionedModel!
 	permission: String!
+	model: PermissionedModel!
 	role: PermissionedRole!
 }
 
@@ -713,12 +712,12 @@ type Query {
 	conventionByRequestHostIfPresent: Convention
 	currentAbility: Ability!
 	currentUser: User
-	email_routes_paginated(page: Int, per_page: Int, filters: EmailRouteFiltersInput, sort: [SortInput!]): EmailRoutesPagination!
 	events(after: String, before: String, first: Int, last: Int): EventConnection!
-	hasOauthApplications: Boolean!
 	organizations: [Organization!]!
-	previewLiquid(content: String!): String!
 	rootSite: RootSite!
+	previewLiquid(content: String!): String!
+	email_routes_paginated(page: Int, per_page: Int, filters: EmailRouteFiltersInput, sort: [SortInput!]): EmailRoutesPagination!
+	hasOauthApplications: Boolean!
 }
 
 type RegistrationPolicy {
@@ -822,10 +821,10 @@ type Signup {
 	bucket_key: String
 	counted: Boolean!
 	requested_bucket_key: String
-	run: Run!
 	state: SignupState!
-	user_con_profile: UserConProfile!
 	waitlist_position: Int
+	run: Run!
+	user_con_profile: UserConProfile!
 }
 
 input SignupFiltersInput {
@@ -850,10 +849,10 @@ enum SignupMode {
 type SignupRequest {
 	id: ID!
 	created_at: Date!
-	replace_signup: Signup
-	result_signup: Signup
 	requested_bucket_key: String
 	state: String!
+	replace_signup: Signup
+	result_signup: Signup
 	target_run: Run!
 	user_con_profile: UserConProfile!
 }
@@ -934,9 +933,9 @@ type StaffPosition {
 	email: String
 	email_aliases: [String!]!
 	name: String
+	visible: Boolean!
 	permissions: [Permission!]!
 	user_con_profiles: [UserConProfile!]!
-	visible: Boolean!
 }
 
 
@@ -1028,24 +1027,28 @@ type User {
 type UserActivityAlert {
 	id: ID!
 	email: String
-	notification_destinations: [NotificationDestination!]!
 	partial_name: String
 	trigger_on_ticket_create: Boolean!
 	trigger_on_user_con_profile_create: Boolean!
+	notification_destinations: [NotificationDestination!]!
 	user: User
 }
 
 type UserConProfile {
-	id: ID!
 	ability: Ability!
+	convention: Convention!
+	current_pending_order: Order
+	signups: [Signup!]!
+	staff_positions: [StaffPosition!]!
+	team_members: [TeamMember!]!
+	ticket: Ticket
+	id: ID!
 	accepted_clickwrap_agreement: Boolean!
 	address: String
 	bio_html: String
 	bio_name: String!
 	birth_date: Date
 	city: String
-	convention: Convention!
-	current_pending_order: Order
 	country: String
 	email: String!
 	first_name: String!
@@ -1058,12 +1061,8 @@ type UserConProfile {
 	name_inverted: String!
 	name_without_nickname: String!
 	nickname: String
-	signups: [Signup!]!
 	site_admin: Boolean!
-	staff_positions: [StaffPosition!]!
 	state: String
-	team_members: [TeamMember!]!
-	ticket: Ticket
 	user_id: ID!
 	zipcode: String
 	current_user_form_item_viewer_role: FormItemRole!
@@ -1071,29 +1070,6 @@ type UserConProfile {
 	form_response_attrs_json(itemIdentifiers: [String!]): Json!
 	form_response_attrs_json_with_rendered_markdown(itemIdentifiers: [String!]): Json!
 	order_summary: String!
-}
-
-input UserConProfileFiltersInput {
-	id: ID
-	attending: Boolean
-	email: String
-	first_name: String
-	is_team_member: Boolean
-	last_name: String
-	payment_amount: Float
-	privileges: String
-	name: String
-	event_title: [ID!]
-	ticket_type: [ID!]
-	userId: ID
-}
-
-type UserConProfilesPagination {
-	current_page: Int!
-	entries: [UserConProfile!]!
-	per_page: Int!
-	total_entries: Int!
-	total_pages: Int!
 }
 
 schema {
