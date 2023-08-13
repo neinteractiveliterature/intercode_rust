@@ -14,6 +14,7 @@ use intercode_graphql_core::{
   schema_data::SchemaData,
   EmbeddedGraphQLExecutorBuilder, RequestDataInjector,
 };
+use intercode_graphql_loaders::LoaderManager;
 use intercode_liquid::cms_parent_partial_source::PreloadPartialsStrategy;
 use intercode_policies::AuthorizationInfo;
 use itertools::Itertools;
@@ -121,12 +122,14 @@ struct CheckLiquidRequestDataInjector;
 
 impl RequestDataInjector for CheckLiquidRequestDataInjector {
   fn inject_data(&self, request: Request, query_data: &QueryData) -> Request {
-    request.data(AuthorizationInfo::new(
-      query_data.db().clone(),
-      query_data.current_user().cloned(),
-      None,
-      None,
-    ))
+    request
+      .data(AuthorizationInfo::new(
+        query_data.db().clone(),
+        query_data.current_user().cloned(),
+        None,
+        None,
+      ))
+      .data(Arc::new(LoaderManager::new(query_data.db().clone())))
   }
 }
 
