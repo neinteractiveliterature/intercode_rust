@@ -4,15 +4,20 @@ use std::{
 };
 
 use askama::Template;
-use axum::response::{Html, IntoResponse};
+use axum::{
+  debug_handler,
+  extract::Path,
+  response::{Html, IntoResponse},
+};
 use http::StatusCode;
 use intercode_entities::{
   event_categories, events, runs, signups, team_members, user_con_profiles,
 };
-use intercode_graphql_core::{query_data::QueryData, rendering_utils::url_with_possible_host};
+use intercode_graphql_core::rendering_utils::url_with_possible_host;
 use intercode_graphql_loaders::signup_count_presenter::{
   load_signup_count_data_for_run_ids, RunSignupCounts,
 };
+use intercode_server::QueryDataFromRequest;
 use itertools::Itertools;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use tracing::log::error;
@@ -58,9 +63,10 @@ impl SingleUserPrintableTemplate {
   }
 }
 
+#[debug_handler]
 pub async fn single_user_printable(
-  query_data: QueryData,
-  user_con_profile_id: i64,
+  QueryDataFromRequest(query_data): QueryDataFromRequest,
+  Path(user_con_profile_id): Path<i64>,
 ) -> Result<impl IntoResponse, StatusCode> {
   // TODO authorization
 

@@ -10,6 +10,7 @@ async-graphql = {workspace = true}
 async-trait = {workspace = true}
 chrono = {workspace = true}
 chrono-tz = {workspace = true}
+dyn-clone = {workspace = true}
 http = {workspace = true}
 i18n-embed = {workspace = true}
 intercode_entities = {workspace = true}

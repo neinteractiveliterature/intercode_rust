@@ -7,12 +7,21 @@ version = "0.1.0"
 
 [dependencies]
 async-graphql = {workspace = true}
+axum = {workspace = true}
+axum-sessions = {workspace = true}
+bcrypt = {workspace = true}
+hex = {workspace = true}
+http = {workspace = true}
 intercode_entities = {workspace = true}
 intercode_graphql_core = {workspace = true}
 intercode_graphql_loaders = {workspace = true}
 intercode_policies = {workspace = true}
 intercode_query_builders = {workspace = true}
+intercode_server = {workspace = true}
 md5 = {workspace = true}
 pulldown-cmark = {workspace = true}
 sea-orm = {workspace = true}
 seawater = {workspace = true}
+serde = {workspace = true}
+serde_json = {workspace = true}
+sha1 = {workspace = true}

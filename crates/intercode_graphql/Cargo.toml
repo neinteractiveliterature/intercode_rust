@@ -7,7 +7,9 @@ version = "0.1.0"
 
 [dependencies]
 async-graphql = {workspace = true}
+async-graphql-axum = {workspace = true}
 async-graphql-value = {workspace = true}
+axum = {workspace = true}
 futures = {workspace = true}
 intercode_cms = {workspace = true}
 intercode_conventions = {workspace = true}
@@ -18,13 +20,10 @@ intercode_forms = {workspace = true}
 intercode_full_text_search = {workspace = true}
 intercode_graphql_core = {workspace = true}
 intercode_graphql_loaders = {workspace = true}
-intercode_liquid = {workspace = true}
 intercode_policies = {workspace = true}
 intercode_query_builders = {workspace = true}
 intercode_reporting = {workspace = true}
+intercode_server = {workspace = true}
 intercode_signups = {workspace = true}
 intercode_store = {workspace = true}
 intercode_users = {workspace = true}
-liquid = {workspace = true}
-liquid-core = {workspace = true}
-seawater = {workspace = true}

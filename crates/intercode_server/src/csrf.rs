@@ -1,7 +1,7 @@
 // This is a frankenstein monster combining the csrf and axum_csrf crates.  axum_csrf doesn't play nice with axum-sessions
 // so I'm trying to create something that will let them work in tandem
 
-use crate::async_trait::async_trait;
+use async_trait::async_trait;
 use axum::{
   extract::FromRequestParts,
   http::{self, StatusCode},
@@ -13,7 +13,7 @@ use axum_extra::extract::{
   CookieJar,
 };
 use base64::Engine;
-use csrf::{CsrfCookie, CsrfProtection, CsrfToken};
+use csrf::{ChaCha20Poly1305CsrfProtection, CsrfCookie, CsrfProtection, CsrfToken};
 use http::{request::Parts, Request};
 use std::{
   borrow::Cow,
@@ -83,6 +83,25 @@ impl Debug for CsrfConfig {
       .field("cookie_same_site", &self.cookie_same_site)
       .field("cookie_secure", &self.cookie_secure)
       .finish_non_exhaustive()
+  }
+}
+
+impl CsrfConfig {
+  pub fn new(secret: &[u8; 64]) -> Self {
+    let mut csrf_secret: [u8; 32] = Default::default();
+    csrf_secret.clone_from_slice(&secret[0..32]);
+    let protect = ChaCha20Poly1305CsrfProtection::from_key(csrf_secret);
+    CsrfConfig {
+      cookie_domain: None,
+      cookie_http_only: true,
+      cookie_len: 2048,
+      cookie_name: "csrf-token".to_string(),
+      cookie_path: Cow::from("/".to_string()),
+      cookie_same_site: SameSite::Lax,
+      cookie_secure: true,
+      lifespan: Duration::from_secs(300),
+      protect: Arc::new(protect),
+    }
   }
 }
 

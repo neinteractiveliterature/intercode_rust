@@ -7,14 +7,13 @@ use http::{header::CONTENT_TYPE, StatusCode};
 use ics::{properties, ICalendar};
 use intercode_entities::{events, runs, signups, user_con_profiles};
 use intercode_graphql_loaders::LoaderManager;
+use intercode_server::QueryDataFromRequest;
 use itertools::Itertools;
 use once_cell::sync::Lazy;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
 use seawater::loaders::{ExpectModel, ExpectModels};
 use tracing::log::error;
 use uuid::Uuid;
-
-use crate::middleware::QueryDataFromRequest;
 
 static ICAL_DATE_FORMAT: Lazy<Vec<chrono::format::Item<'static>>> =
   Lazy::new(|| StrftimeItems::new("%Y%m%dT%H%M%SZ").collect());

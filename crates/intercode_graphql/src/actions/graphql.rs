@@ -1,43 +1,33 @@
 use std::sync::Arc;
 
+use crate::api;
 use async_graphql::{
   http::{playground_source, GraphQLPlaygroundConfig},
   EmptySubscription, Schema,
 };
 use async_graphql_axum::{GraphQLBatchRequest, GraphQLResponse};
 use axum::{
-  debug_handler,
   extract::State,
   response::{self, IntoResponse},
 };
-use intercode_graphql::api;
-use intercode_graphql_core::{liquid_renderer::LiquidRenderer, schema_data::SchemaData};
+use intercode_graphql_core::liquid_renderer::{LiquidRenderer, LiquidRendererFromRequest};
 use intercode_graphql_loaders::LoaderManager;
-
-use crate::{
-  liquid_renderer::IntercodeLiquidRenderer, middleware::AuthorizationInfoAndQueryDataFromRequest,
-};
-
-#[allow(unused_imports)]
-use crate::server::AppState;
+use intercode_server::AuthorizationInfoAndQueryDataFromRequest;
 
 pub type IntercodeSchema = Schema<api::QueryRoot, api::MutationRoot, EmptySubscription>;
 
-#[debug_handler(state = AppState)]
 pub async fn graphql_handler(
   State(schema): State<IntercodeSchema>,
-  State(schema_data): State<SchemaData>,
   AuthorizationInfoAndQueryDataFromRequest(authorization_info, query_data): AuthorizationInfoAndQueryDataFromRequest,
+  LiquidRendererFromRequest(liquid_renderer): LiquidRendererFromRequest,
   req: GraphQLBatchRequest,
 ) -> GraphQLResponse {
-  let liquid_renderer =
-    IntercodeLiquidRenderer::new(&query_data, &schema_data, authorization_info.clone());
   let loader_manager = Arc::new(LoaderManager::new(query_data.db().clone()));
   let req = req
     .into_inner()
     .data(query_data)
     .data(loader_manager)
-    .data::<Arc<dyn LiquidRenderer>>(Arc::new(liquid_renderer))
+    .data::<Arc<dyn LiquidRenderer>>(liquid_renderer)
     .data(authorization_info);
 
   let req = intercode_store::inject_request_data(req);

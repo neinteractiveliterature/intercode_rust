@@ -602,7 +602,7 @@ dependencies = [
  "rustls 0.21.1",
  "rustls-pemfile",
  "tokio",
- "tokio-rustls 0.24.0",
+ "tokio-rustls 0.24.1",
  "tower-service",
 ]
 
@@ -2449,7 +2449,9 @@ name = "intercode_graphql"
 version = "0.1.0"
 dependencies = [
  "async-graphql",
+ "async-graphql-axum",
  "async-graphql-value",
+ "axum",
  "futures",
  "intercode_cms",
  "intercode_conventions",
@@ -2460,16 +2462,13 @@ dependencies = [
  "intercode_full_text_search",
  "intercode_graphql_core",
  "intercode_graphql_loaders",
- "intercode_liquid",
  "intercode_policies",
  "intercode_query_builders",
  "intercode_reporting",
+ "intercode_server",
  "intercode_signups",
  "intercode_store",
  "intercode_users",
- "liquid",
- "liquid-core",
- "seawater",
 ]
 
 [[package]]
@@ -2480,6 +2479,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "chrono-tz",
+ "dyn-clone",
  "http",
  "i18n-embed",
  "intercode_entities",
@@ -2555,6 +2555,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "intercode_liquid_drops"
+version = "0.1.0"
+dependencies = [
+ "async-graphql",
+ "bumpalo-herd",
+ "chrono",
+ "chrono-tz",
+ "futures",
+ "i18n-embed",
+ "i18n-embed-fl",
+ "indicatif",
+ "intercode_cms",
+ "intercode_entities",
+ "intercode_graphql_core",
+ "intercode_graphql_loaders",
+ "intercode_inflector",
+ "intercode_liquid",
+ "intercode_policies",
+ "intercode_server",
+ "intercode_timespan",
+ "itertools",
+ "liquid",
+ "liquid-core",
+ "once_cell",
+ "regex",
+ "sea-orm",
+ "seawater",
+ "serde",
+ "serde_json",
+ "time 0.3.21",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "intercode_policies"
 version = "0.1.0"
 dependencies = [
@@ -2600,6 +2635,7 @@ dependencies = [
  "intercode_graphql_loaders",
  "intercode_inflector",
  "intercode_policies",
+ "intercode_server",
  "itertools",
  "mailparse",
  "sea-orm",
@@ -2613,65 +2649,82 @@ name = "intercode_rust"
 version = "0.1.0"
 dependencies = [
  "async-graphql",
- "async-graphql-axum",
  "axum",
- "axum-extra",
- "axum-server",
- "axum-sessions",
- "base64 0.21.2",
- "bcrypt",
- "bumpalo-herd",
  "chrono",
  "chrono-tz",
  "clap",
  "console-subscriber",
- "csrf",
  "dhat",
  "dotenv",
  "futures",
- "hex",
  "http",
- "hyper",
- "i18n-embed",
- "ics",
  "indicatif",
  "intercode_cms",
  "intercode_entities",
  "intercode_graphql",
  "intercode_graphql_core",
  "intercode_graphql_loaders",
- "intercode_inflector",
  "intercode_liquid",
+ "intercode_liquid_drops",
  "intercode_policies",
  "intercode_reporting",
- "intercode_store",
- "intercode_timespan",
+ "intercode_server",
+ "intercode_signups",
+ "intercode_users",
  "itertools",
  "liquid",
- "liquid-core",
- "md5",
  "once_cell",
  "opentelemetry",
  "opentelemetry-otlp",
  "oxide-auth",
  "oxide-auth-axum",
  "regex",
- "rust-embed",
  "sea-orm",
  "seawater",
- "serde",
- "serde_json",
- "sha1",
  "time 0.3.21",
  "tokio",
  "tonic 0.8.3",
- "tower",
- "tower-http",
  "tracing",
  "tracing-flame",
  "tracing-opentelemetry",
  "tracing-subscriber",
- "uuid",
+]
+
+[[package]]
+name = "intercode_server"
+version = "0.1.0"
+dependencies = [
+ "async-graphql",
+ "async-trait",
+ "axum",
+ "axum-extra",
+ "axum-server",
+ "axum-sessions",
+ "base64 0.21.2",
+ "chrono",
+ "chrono-tz",
+ "csrf",
+ "futures",
+ "hex",
+ "http",
+ "hyper",
+ "i18n-embed",
+ "i18n-embed-fl",
+ "intercode_entities",
+ "intercode_graphql_core",
+ "intercode_policies",
+ "once_cell",
+ "opentelemetry",
+ "regex",
+ "rust-embed",
+ "sea-orm",
+ "seawater",
+ "serde_json",
+ "time 0.3.21",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tracing",
 ]
 
 [[package]]
@@ -2679,16 +2732,25 @@ name = "intercode_signups"
 version = "0.1.0"
 dependencies = [
  "async-graphql",
+ "axum",
  "chrono",
+ "chrono-tz",
+ "http",
+ "ics",
  "intercode_entities",
  "intercode_graphql_core",
  "intercode_graphql_loaders",
  "intercode_policies",
  "intercode_query_builders",
+ "intercode_server",
  "intercode_timespan",
+ "itertools",
+ "once_cell",
  "sea-orm",
  "seawater",
  "serde_json",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]
@@ -2730,15 +2792,24 @@ name = "intercode_users"
 version = "0.1.0"
 dependencies = [
  "async-graphql",
+ "axum",
+ "axum-sessions",
+ "bcrypt",
+ "hex",
+ "http",
  "intercode_entities",
  "intercode_graphql_core",
  "intercode_graphql_loaders",
  "intercode_policies",
  "intercode_query_builders",
+ "intercode_server",
  "md5",
  "pulldown-cmark",
  "sea-orm",
  "seawater",
+ "serde",
+ "serde_json",
+ "sha1",
 ]
 
 [[package]]
@@ -5028,9 +5099,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-rustls"
-version = "0.24.0"
+version = "0.24.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e0d409377ff5b1e3ca6437aa86c1eb7d40c134bfec254e44c830defa92669db5"
+checksum = "c28327cf380ac148141087fbfb9de9d7bd4e84ab5d2c28fbc911d753de8a7081"
 dependencies = [
  "rustls 0.21.1",
  "tokio",

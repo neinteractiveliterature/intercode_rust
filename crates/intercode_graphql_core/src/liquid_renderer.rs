@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use intercode_liquid::cms_parent_partial_source::PreloadPartialsStrategy;
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::Arc};
 
 #[async_trait]
 pub trait LiquidRenderer: Send + Sync + Debug {
@@ -15,3 +15,5 @@ pub trait LiquidRenderer: Send + Sync + Debug {
     &self,
   ) -> Result<Box<dyn liquid::ObjectView + Send>, async_graphql::Error>;
 }
+
+pub struct LiquidRendererFromRequest(pub Arc<dyn LiquidRenderer>);

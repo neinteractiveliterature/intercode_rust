@@ -5,15 +5,16 @@ use axum::{
 };
 use intercode_cms::CmsRenderingContext;
 use intercode_entities::{cms_parent::CmsParentTrait, events};
-use intercode_graphql_core::schema_data::SchemaData;
+use intercode_graphql::build_intercode_graphql_schema;
+use intercode_graphql_core::{schema_data::SchemaData, EmbeddedGraphQLExecutorBuilder};
+use intercode_liquid_drops::IntercodeLiquidRenderer;
+use intercode_server::AuthorizationInfoAndQueryDataFromRequest;
 use liquid::object;
 use once_cell::sync::Lazy;
 use regex::Regex;
 use sea_orm::{ColumnTrait, ModelTrait, QueryFilter};
 
-use crate::{
-  liquid_renderer::IntercodeLiquidRenderer, middleware::AuthorizationInfoAndQueryDataFromRequest,
-};
+use crate::liquid_renderer::LiquidRendererRequestDataInjector;
 
 static EVENT_PATH_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new("^/events/(\\d+)").unwrap());
 
@@ -62,9 +63,19 @@ pub async fn single_page_app_entry(
     None
   };
 
-  let liquid_renderer = IntercodeLiquidRenderer::new(&query_data, &schema_data, authorization_info);
+  let liquid_renderer = IntercodeLiquidRenderer::new(
+    &query_data,
+    &schema_data,
+    EmbeddedGraphQLExecutorBuilder::new(
+      build_intercode_graphql_schema(schema_data.clone()),
+      query_data.clone_ref(),
+      schema_data.clone(),
+      Box::new(LiquidRendererRequestDataInjector::new(authorization_info)),
+    ),
+  );
 
   let cms_rendering_context = CmsRenderingContext::new(object!({}), &query_data, &liquid_renderer);
+  // TODO
   let page_title = "TODO";
 
   Ok(response::Html(

@@ -31,7 +31,7 @@ fn graphql_const_to_liquid_value(
   serde_json::from_value::<liquid_core::Value>(serde_json::to_value(value)?)
 }
 
-pub trait GraphQLExecutorBuilder: Send + Sync + Debug + DynClone {
+pub trait GraphQLExecutorBuilder: Send + Sync + DynClone {
   fn build_executor(&self) -> Box<dyn GraphQLExecutor>;
 }
 
@@ -41,11 +41,23 @@ impl Clone for Box<dyn GraphQLExecutorBuilder> {
   }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct AssignGraphQLResultTag {
   cms_parent_graphql_queries_scope: Select<cms_graphql_queries::Entity>,
   db: ConnectionWrapper,
   graphql_executor_builder: Box<dyn GraphQLExecutorBuilder>,
+}
+
+impl Debug for AssignGraphQLResultTag {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("AssignGraphQLResultTag")
+      .field(
+        "cms_parent_graphql_queries_scope",
+        &self.cms_parent_graphql_queries_scope,
+      )
+      .field("db", &self.db)
+      .finish_non_exhaustive()
+  }
 }
 
 impl AssignGraphQLResultTag {
@@ -140,7 +152,6 @@ impl ParseTag for AssignGraphQLResultTag {
   }
 }
 
-#[derive(Debug)]
 struct AssignGraphQLResult {
   cms_parent_graphql_queries_scope: Select<cms_graphql_queries::Entity>,
   db: ConnectionWrapper,
@@ -148,6 +159,21 @@ struct AssignGraphQLResult {
   arg_mapping: HashMap<String, Expression>,
   destination: String,
   query_name: String,
+}
+
+impl Debug for AssignGraphQLResult {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("AssignGraphQLResult")
+      .field(
+        "cms_parent_graphql_queries_scope",
+        &self.cms_parent_graphql_queries_scope,
+      )
+      .field("db", &self.db)
+      .field("arg_mapping", &self.arg_mapping)
+      .field("destination", &self.destination)
+      .field("query_name", &self.query_name)
+      .finish_non_exhaustive()
+  }
 }
 
 impl AssignGraphQLResult {

@@ -1,7 +1,7 @@
 use axum::response::{self, IntoResponse};
 use std::collections::HashMap;
 
-use crate::csrf::CsrfData;
+use crate::CsrfData;
 
 pub async fn authenticity_tokens(token: CsrfData) -> impl IntoResponse {
   let value = token.authenticity_token();
