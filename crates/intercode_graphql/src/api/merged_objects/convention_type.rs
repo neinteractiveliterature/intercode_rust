@@ -19,6 +19,7 @@ use intercode_forms::partial_objects::ConventionFormsFields;
 use intercode_graphql_core::{
   model_backed_type, scalars::DateScalar, ModelBackedType, ModelPaginator,
 };
+use intercode_notifiers::partial_objects::ConventionNotifiersFields;
 use intercode_query_builders::sort_input::SortInput;
 use intercode_reporting::partial_objects::ConventionReportingFields;
 use intercode_signups::{
@@ -306,6 +307,7 @@ merged_model_backed_type!(
   ConventionCmsFields,
   ConventionConventionsFields,
   ConventionEventsFields,
+  ConventionNotifiersFields,
   ConventionGlueFields,
   ConventionSignupsFields,
   ConventionStoreFields

@@ -31,6 +31,7 @@ members = [
   "./crates/intercode_inflector",
   "./crates/intercode_liquid",
   "./crates/intercode_liquid_drops",
+  "./crates/intercode_notifiers",
   "./crates/intercode_policies",
   "./crates/intercode_query_builders",
   "./crates/intercode_reporting",
@@ -87,6 +88,7 @@ intercode_graphql_loaders = {path = "./crates/intercode_graphql_loaders"}
 intercode_inflector = {path = "./crates/intercode_inflector"}
 intercode_liquid = {path = "./crates/intercode_liquid"}
 intercode_liquid_drops = {path = "./crates/intercode_liquid_drops"}
+intercode_notifiers = {path = "./crates/intercode_notifiers"}
 intercode_policies = {path = "./crates/intercode_policies"}
 intercode_query_builders = {path = "./crates/intercode_query_builders"}
 intercode_reporting = {path = "./crates/intercode_reporting"}
@@ -121,6 +123,7 @@ tower = {version = "0.4.13", features = ["limit", "make"]}
 tower-http = {version = "0.4.0", features = ["catch-panic", "compression-br", "compression-deflate", "compression-gzip", "trace"]}
 tracing = "0.1.37"
 tuple-conv = "~1.0.1"
+twilio = "1.0.3"
 url = "*"
 uuid = {version = "1.3.3", features = ["v4"]}
 

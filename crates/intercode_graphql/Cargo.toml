@@ -20,6 +20,7 @@ intercode_forms = {workspace = true}
 intercode_full_text_search = {workspace = true}
 intercode_graphql_core = {workspace = true}
 intercode_graphql_loaders = {workspace = true}
+intercode_notifiers = {workspace = true}
 intercode_policies = {workspace = true}
 intercode_query_builders = {workspace = true}
 intercode_reporting = {workspace = true}

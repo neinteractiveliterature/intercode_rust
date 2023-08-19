@@ -1,0 +1,21 @@
+[package]
+edition = "2021"
+name = "intercode_notifiers"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-graphql = {workspace = true}
+intercode_entities = {workspace = true}
+intercode_graphql_core = {workspace = true}
+intercode_liquid_drops = {workspace = true}
+intercode_policies = {workspace = true}
+liquid = {workspace = true}
+once_cell = {workspace = true}
+sea-orm = {workspace = true}
+seawater = {workspace = true}
+serde = {workspace = true}
+serde_json = {workspace = true}
+tracing = {workspace = true}
+twilio = {workspace = true}

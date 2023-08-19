@@ -31,6 +31,7 @@ pub async fn graphql_handler(
     .data(authorization_info);
 
   let req = intercode_store::inject_request_data(req);
+  let req = intercode_notifiers::inject_request_data(req);
 
   schema.execute_batch(req).await.into()
 }

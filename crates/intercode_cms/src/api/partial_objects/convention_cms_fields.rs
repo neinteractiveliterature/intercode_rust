@@ -6,8 +6,6 @@ use intercode_graphql_core::{
   liquid_renderer::LiquidRenderer, model_backed_type, query_data::QueryData,
 };
 use intercode_graphql_core::{load_one_by_model_id, loader_result_to_many};
-use intercode_policies::policies::{ConventionAction, ConventionPolicy};
-use intercode_policies::ModelBackedTypeGuardablePolicy;
 use liquid::object;
 use sea_orm::{ColumnTrait, QueryFilter};
 
@@ -172,27 +170,6 @@ impl ConventionCmsFields {
     } else {
       Ok(None)
     }
-  }
-
-  /// Given a Liquid text string and a notification event, renders the Liquid to HTML using the
-  /// current domain's CMS context as if it were the content for that notification type.
-  #[graphql(
-    name = "preview_notifier_liquid",
-    guard = "ConventionPolicy::model_guard(ConventionAction::ViewReports, self)"
-  )]
-  async fn preview_notifier_liquid(
-    &self,
-    ctx: &Context<'_>,
-    #[graphql(desc = "The key of the notification event to use for generating the preview.")]
-    event_key: String,
-    content: String,
-  ) -> Result<String, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
-    let cms_rendering_context =
-      CmsRenderingContext::new(liquid::object!({}), query_data, liquid_renderer.as_ref());
-
-    cms_rendering_context.render_liquid(&content, None).await
   }
 }
 
