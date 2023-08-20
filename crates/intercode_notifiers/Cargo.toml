@@ -7,12 +7,17 @@ version = "0.1.0"
 
 [dependencies]
 async-graphql = {workspace = true}
+aws-sdk-sesv2 = {workspace = true}
+chrono = {workspace = true}
+intercode_email = {workspace = true}
 intercode_entities = {workspace = true}
 intercode_graphql_core = {workspace = true}
 intercode_liquid_drops = {workspace = true}
 intercode_policies = {workspace = true}
 liquid = {workspace = true}
+mailparse = {workspace = true}
 once_cell = {workspace = true}
+phonenumber = {workspace = true}
 sea-orm = {workspace = true}
 seawater = {workspace = true}
 serde = {workspace = true}

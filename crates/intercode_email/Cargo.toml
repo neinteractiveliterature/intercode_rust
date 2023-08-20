@@ -7,6 +7,10 @@ version = "0.1.0"
 
 [dependencies]
 async-graphql = {workspace = true}
+aws-config = {workspace = true}
+aws-sdk-sesv2 = {workspace = true}
+aws-smithy-http = {workspace = true}
+http = {workspace = true}
 intercode_entities = {workspace = true}
 intercode_graphql_core = {workspace = true}
 intercode_graphql_loaders = {workspace = true}
@@ -14,3 +18,4 @@ intercode_policies = {workspace = true}
 intercode_query_builders = {workspace = true}
 sea-orm = {workspace = true}
 seawater = {workspace = true}
+tokio = {workspace = true}
