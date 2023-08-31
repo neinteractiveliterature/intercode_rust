@@ -13,7 +13,7 @@ indexmap = "2.0.0"
 intercode_timespan = {workspace = true}
 itertools = {workspace = true}
 once_cell = {workspace = true}
-paste = "1.0.12"
+paste = "1.0.14"
 regex = {workspace = true}
 rusty-money = {workspace = true}
 sea-orm = {workspace = true, features = ["macros", "postgres-array"]}
