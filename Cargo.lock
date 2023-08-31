@@ -2823,7 +2823,7 @@ dependencies = [
  "chrono",
  "indexmap 2.0.0",
  "intercode_timespan",
- "itertools",
+ "itertools 0.11.0",
  "once_cell",
  "paste",
  "regex",
@@ -2940,7 +2940,7 @@ dependencies = [
  "futures",
  "intercode_entities",
  "intercode_graphql_core",
- "itertools",
+ "itertools 0.11.0",
  "sea-orm",
  "seawater",
  "serde",
@@ -3010,7 +3010,7 @@ dependencies = [
  "intercode_policies",
  "intercode_server",
  "intercode_timespan",
- "itertools",
+ "itertools 0.11.0",
  "liquid",
  "liquid-core",
  "once_cell",
@@ -3061,7 +3061,7 @@ dependencies = [
  "intercode_graphql_core",
  "intercode_graphql_loaders",
  "intercode_query_builders",
- "itertools",
+ "itertools 0.11.0",
  "oxide-auth",
  "sea-orm",
  "seawater",
@@ -3095,7 +3095,7 @@ dependencies = [
  "intercode_inflector",
  "intercode_policies",
  "intercode_server",
- "itertools",
+ "itertools 0.11.0",
  "mailparse",
  "sea-orm",
  "seawater",
@@ -3130,7 +3130,7 @@ dependencies = [
  "intercode_server",
  "intercode_signups",
  "intercode_users",
- "itertools",
+ "itertools 0.11.0",
  "liquid",
  "once_cell",
  "opentelemetry",
@@ -3203,7 +3203,7 @@ dependencies = [
  "intercode_query_builders",
  "intercode_server",
  "intercode_timespan",
- "itertools",
+ "itertools 0.11.0",
  "once_cell",
  "sea-orm",
  "seawater",
@@ -3311,6 +3311,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "itertools"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
+dependencies = [
+ "either",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3406,7 +3415,7 @@ version = "0.26.0"
 source = "git+https://github.com/nbudin/liquid-rust.git?branch=lax-nulls#36e750f1fa35527d99d11f0ce856b914dfa15465"
 dependencies = [
  "anymap2",
- "itertools",
+ "itertools 0.10.5",
  "kstring",
  "liquid-derive",
  "num-traits",
@@ -3432,7 +3441,7 @@ name = "liquid-lib"
 version = "0.26.0"
 source = "git+https://github.com/nbudin/liquid-rust.git?branch=lax-nulls#36e750f1fa35527d99d11f0ce856b914dfa15465"
 dependencies = [
- "itertools",
+ "itertools 0.10.5",
  "lazy_static",
  "liquid-core",
  "once_cell",
@@ -4082,7 +4091,7 @@ dependencies = [
  "bincode",
  "either",
  "fnv",
- "itertools",
+ "itertools 0.10.5",
  "lazy_static",
  "nom",
  "quick-xml",
@@ -4286,7 +4295,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e5d2d8d10f3c6ded6da8b05b5fb3b8a5082514344d56c9f871412d29b4e075b4"
 dependencies = [
  "anyhow",
- "itertools",
+ "itertools 0.10.5",
  "proc-macro2",
  "quote",
  "syn 1.0.109",
@@ -5213,7 +5222,7 @@ version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c12bc9199d1db8234678b7051747c07f517cdcf019262d1847b94ec8b1aee3e"
 dependencies = [
- "itertools",
+ "itertools 0.10.5",
  "nom",
  "unicode_categories",
 ]
