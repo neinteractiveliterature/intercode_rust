@@ -2829,7 +2829,7 @@ dependencies = [
  "async-graphql",
  "async-trait",
  "chrono",
- "indexmap 1.9.3",
+ "indexmap 2.0.0",
  "intercode_timespan",
  "itertools",
  "once_cell",
