@@ -6,31 +6,26 @@ extern crate dotenv;
 extern crate tracing;
 
 mod actions;
-mod check_liquid;
-mod csrf;
-mod db_sessions;
-mod drops;
-mod form_or_multipart;
-mod legacy_passwords;
+mod database;
 mod liquid_renderer;
-mod middleware;
-mod request_bound_transaction;
 mod server;
 
 use async_graphql::*;
-use check_liquid::check_liquid;
 use clap::{command, FromArgMatches, Parser, Subcommand};
+use database::connect_database;
 use dotenv::dotenv;
-use intercode_graphql::api;
+use indicatif::ProgressBar;
+use intercode_graphql::{api, build_intercode_graphql_schema};
+use intercode_graphql_core::schema_data::SchemaData;
+use intercode_liquid_drops::check_liquid::LiquidChecker;
+use intercode_server::i18n::build_language_loader;
+use intercode_server::serve;
 use opentelemetry::sdk::trace::{config, Tracer};
 use opentelemetry::sdk::Resource;
 use opentelemetry::KeyValue;
 use opentelemetry_otlp::WithExportConfig;
-use rust_embed::RustEmbed;
-use sea_orm::{ConnectOptions, Database, DatabaseConnection, DbErr};
-use server::serve;
 use std::env;
-use std::time::Duration;
+use std::sync::Arc;
 use tokio::runtime::Runtime;
 use tonic::metadata::{AsciiMetadataValue, MetadataMap};
 use tonic::transport::ClientTlsConfig;
@@ -40,6 +35,8 @@ use tracing_subscriber::layer::Filter;
 use tracing_subscriber::prelude::__tracing_subscriber_SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 use tracing_subscriber::{EnvFilter, Layer};
+
+use crate::server::bootstrap_app;
 
 // #[cfg(not(target_env = "msvc"))]
 // use tikv_jemallocator::Jemalloc;
@@ -51,35 +48,6 @@ use tracing_subscriber::{EnvFilter, Layer};
 #[cfg(feature = "dhat-heap")]
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;
-
-#[derive(RustEmbed)]
-#[folder = "i18n"] // path to the compiled localization resources
-pub struct Localizations;
-
-async fn connect_database() -> Result<DatabaseConnection, DbErr> {
-  dotenv().ok();
-  let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-
-  let mut connect_options = ConnectOptions::new(database_url);
-  if let Ok(max_connections) = env::var("DB_MAX_CONNECTIONS") {
-    connect_options.max_connections(
-      max_connections
-        .parse()
-        .expect("DB_MAX_CONNECTIONS must be a number if set"),
-    );
-  }
-  if let Ok(idle_timeout) = env::var("DB_IDLE_TIMEOUT") {
-    connect_options.idle_timeout(Duration::new(
-      idle_timeout
-        .parse()
-        .expect("DB_IDLE_TIMEOUT must be a number if set"),
-      0,
-    ));
-  }
-  info!("Connecting: {:#?}", connect_options);
-
-  Database::connect(connect_options).await
-}
 
 #[cfg(feature = "flamegraph")]
 fn setup_flamegraph_subscriber<
@@ -161,9 +129,8 @@ async fn run() -> Result<()> {
   let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
   info!("Connecting: {}", database_url);
 
-  let db = connect_database().await?;
-
-  serve(db).await
+  let app = bootstrap_app().await?;
+  serve(app).await
 }
 
 fn setup_tracing(env_filter: EnvFilter) {
@@ -225,7 +192,8 @@ fn main() -> Result<()> {
     Subcommands::ExportSchema => {
       // just build the schema without any data or extras
       let schema =
-        async_graphql::Schema::build(api::QueryRoot, EmptyMutation, EmptySubscription).finish();
+        async_graphql::Schema::build(api::QueryRoot::default(), EmptyMutation, EmptySubscription)
+          .finish();
 
       println!("{}", schema.sdl());
     }
@@ -233,7 +201,24 @@ fn main() -> Result<()> {
       build_runtime().block_on(run())?;
     }
     Subcommands::CheckLiquid => {
-      build_runtime().block_on(check_liquid())?;
+      build_runtime().block_on(async {
+        setup_tracing(EnvFilter::new("error"));
+
+        let startup_bar = ProgressBar::new_spinner();
+
+        startup_bar.set_message("Connecting to database...");
+        let db = connect_database().await?;
+
+        let schema_data = SchemaData {
+          language_loader: Arc::new(build_language_loader()?),
+        };
+        let checker = LiquidChecker::new(
+          build_intercode_graphql_schema(schema_data.clone()),
+          Arc::new(db),
+          schema_data,
+        );
+        checker.check_liquid(startup_bar).await
+      })?;
     }
   }
 

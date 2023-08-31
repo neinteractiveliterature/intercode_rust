@@ -230,6 +230,8 @@ trait AssociationMacro {
   }
 
   fn drops_to_value<'a>(&'a self) -> Box<dyn ToTokens + 'a> {
+    let name = self.get_name();
+    let name_str = LitStr::new(&name.to_string(), name.span());
     let to_drop = self.get_to();
 
     match self.get_target_type() {
@@ -249,7 +251,8 @@ trait AssociationMacro {
           Ok(drops[0].clone().into())
         } else {
           Err(::seawater::DropError::ExpectedEntityNotFound(format!(
-            "Expected one {}, but there are {}",
+            "Association '{}' expected one {}, but there are {}",
+            #name_str,
             ::seawater::pretty_type_name::<#to_drop>(),
             drops.len()
           )))

@@ -1,82 +1,17 @@
-use std::sync::Arc;
+use std::borrow::Cow;
 
 use async_graphql::{
-  async_trait::async_trait,
-  futures_util::{try_join, TryFutureExt},
-  Context, Error, Interface, ID,
+  parser::types::Field,
+  registry::{MetaField, MetaType, MetaTypeId, Registry},
+  ContainerType, Context, ContextSelectionSet, InterfaceType, OutputType, Positioned,
 };
-use intercode_entities::{
-  cms_content_groups, cms_files, cms_graphql_queries, cms_layouts, cms_parent::CmsParentTrait,
-  pages,
-};
-use intercode_liquid::render_markdown;
-use sea_orm::{ColumnTrait, QueryFilter};
+use async_graphql_value::indexmap::IndexMap;
+use intercode_cms::api::partial_objects::ConventionCmsFields;
+use intercode_entities::cms_parent::CmsParent;
+use intercode_graphql_core::ModelBackedType;
 
-use crate::{
-  api::objects::{
-    CmsContentGroupType, CmsContentType, CmsFileType, CmsGraphqlQueryType, CmsLayoutType,
-    CmsNavigationItemType, CmsPartialType, CmsVariableType, ConventionType, LiquidAssignType,
-    ModelBackedType, PageType, RootSiteType, SearchResultType,
-  },
-  cms_rendering_context::CmsRenderingContext,
-  LiquidRenderer, QueryData,
-};
+use crate::api::merged_objects::{ConventionType, RootSiteType};
 
-#[derive(Interface)]
-#[graphql(
-  name = "CmsParent",
-  field(name = "id", type = "ID"),
-  field(name = "cms_content_groups", type = "Vec<CmsContentGroupType>"),
-  field(
-    name = "cms_content_group",
-    type = "CmsContentGroupType",
-    arg(name = "id", type = "ID")
-  ),
-  field(name = "cms_files", type = "Vec<CmsFileType>"),
-  field(name = "cms_graphql_queries", type = "Vec<CmsGraphqlQueryType>"),
-  field(name = "cms_layouts", type = "Vec<CmsLayoutType>"),
-  field(name = "cms_navigation_items", type = "Vec<CmsNavigationItemType>"),
-  field(name = "cms_pages", type = "Vec<PageType>"),
-  field(
-    name = "cms_page",
-    type = "PageType",
-    arg(name = "id", type = "Option<ID>"),
-    arg(name = "slug", type = "Option<String>"),
-    arg(name = "root_page", type = "Option<bool>")
-  ),
-  field(name = "cms_partials", type = "Vec<CmsPartialType>"),
-  field(name = "cms_variables", type = "Vec<CmsVariableType>"),
-  field(name = "default_layout", type = "CmsLayoutType"),
-  field(
-    name = "effective_cms_layout",
-    type = "CmsLayoutType",
-    arg(name = "path", type = "String")
-  ),
-  field(
-    name = "full_text_search",
-    type = "SearchResultType",
-    arg(name = "query", type = "String")
-  ),
-  field(name = "liquid_assigns", type = "Vec<LiquidAssignType>"),
-  field(
-    name = "preview_markdown",
-    type = "String",
-    arg(name = "markdown", type = "String"),
-    arg(name = "event_id", type = "Option<ID>"),
-    arg(name = "event_proposal_id", type = "Option<ID>")
-  ),
-  field(
-    name = "preview_liquid",
-    type = "String",
-    arg(name = "content", type = "String"),
-  ),
-  field(name = "root_page", type = "PageType"),
-  field(
-    name = "typeahead_search_cms_content",
-    type = "Vec<CmsContentType>",
-    arg(name = "name", type = "Option<String>")
-  )
-)]
 /// A CMS parent is a web site managed by Intercode. It acts as a container for CMS content, such
 /// as pages, partials, files, layouts, variables, content groups, and user-defined GraphQL queries.
 ///
@@ -86,237 +21,122 @@ use crate::{
 /// object for more details about this.)
 pub enum CmsParentInterface {
   RootSite(RootSiteType),
-  Convention(Box<ConventionType>),
+  Convention(ConventionType),
 }
 
-macro_rules! assoc_getter {
-  ($name: ident, $ty: ident) => {
-    fn $name<'life0, 'async_trait>(
-      &'life0 self,
-      ctx: &'async_trait Context<'_>,
-    ) -> std::pin::Pin<
-      Box<dyn std::future::Future<Output = Result<Vec<$ty>, Error>> + Send + 'async_trait>,
-    >
-    where
-      'life0: 'async_trait,
-      Self: Sync + 'async_trait,
-    {
-      Box::pin(async move {
-        let query_data = ctx.data::<QueryData>()?;
-        Ok(
-          self
-            .get_model()
-            .$name()
-            .all(query_data.db())
-            .await?
-            .iter()
-            .map(|item| $ty::new(item.to_owned()))
-            .collect(),
-        )
-      })
+impl From<CmsParent> for CmsParentInterface {
+  fn from(value: CmsParent) -> Self {
+    match value {
+      CmsParent::Convention(convention) => {
+        CmsParentInterface::Convention(ConventionType::new(*convention.to_owned()))
+      }
+      CmsParent::RootSite(root_site) => {
+        CmsParentInterface::RootSite(RootSiteType::new(*root_site.to_owned()))
+      }
     }
-  };
+  }
 }
 
-macro_rules! id_getter {
-  ($name: ident, $model_name: ident, $ty: ident) => {
-    fn $name<'life0, 'async_trait>(
-      &'life0 self,
-      ctx: &'async_trait Context<'_>,
-      id: ID,
-    ) -> std::pin::Pin<
-      Box<dyn std::future::Future<Output = Result<$ty, Error>> + Send + 'async_trait>,
-    >
-    where
-      'life0: 'async_trait,
-      Self: Sync + 'async_trait,
-    {
-      Box::pin(async move {
-        let query_data = ctx.data::<QueryData>()?;
-        let id = id.parse::<i64>()?;
-        Ok($ty::new(
-          self
-            .get_model()
-            .$model_name()
-            .filter($model_name::Column::Id.eq(id))
-            .one(query_data.db())
-            .await?
-            .ok_or_else(|| Error::new(format!("{} {} not found", stringify!($name), id)))?,
-        ))
-      })
+// Hacks: Interface doesn't support MergedObject, so instead we're going to declare ConventionCmsFields as the canonical
+// implementation of this interface, and assume that RootSiteType implements everything ConventionCmsFields does.
+// This loses some type safety but it does let us maintain compatibility with the Ruby version of the schema.
+impl OutputType for CmsParentInterface {
+  #[doc = " Type the name."]
+  fn type_name() -> Cow<'static, str> {
+    Cow::Borrowed("CmsParent")
+  }
+
+  #[doc = " Create type information in the registry and return qualified typename."]
+  fn create_type_info(registry: &mut Registry) -> String {
+    registry.create_output_type::<Self, _>(MetaTypeId::Interface, |registry| {
+      let mut fields: IndexMap<String, MetaField> = Default::default();
+
+      if let MetaType::Object {
+        fields: obj_fields, ..
+      } = registry.create_fake_output_type::<ConventionCmsFields>()
+      {
+        fields = obj_fields;
+      }
+
+      MetaType::Interface {
+        name: Self::type_name().into_owned(),
+        description: None,
+        fields,
+        possible_types: vec!["RootSite", "Convention"]
+          .into_iter()
+          .map(String::from)
+          .collect(),
+        extends: false,
+        inaccessible: false,
+        tags: vec![],
+        keys: None,
+        visible: None,
+        rust_typename: Some(std::any::type_name::<Self>()),
+      }
+    })
+  }
+
+  #[doc = " Resolve an output value to `async_graphql::Value`."]
+  #[must_use]
+  #[allow(clippy::type_complexity, clippy::type_repetition_in_bounds)]
+  fn resolve<'life0, 'life1, 'life2, 'life3, 'async_trait>(
+    &'life0 self,
+    ctx: &'life1 ContextSelectionSet<'life2>,
+    field: &'life3 Positioned<Field>,
+  ) -> std::pin::Pin<
+    std::boxed::Box<
+      (dyn futures::Future<
+        Output = std::result::Result<async_graphql::Value, async_graphql::ServerError>,
+      > + std::marker::Send
+         + 'async_trait),
+    >,
+  >
+  where
+    'life0: 'async_trait,
+    'life1: 'async_trait,
+    'life2: 'async_trait,
+    'life3: 'async_trait,
+    Self: 'async_trait,
+  {
+    match self {
+      CmsParentInterface::RootSite(root_site) => root_site.resolve(ctx, field),
+      CmsParentInterface::Convention(convention) => convention.resolve(ctx, field),
     }
-  };
-}
-
-#[async_trait]
-pub trait CmsParentImplementation<M>
-where
-  Self: ModelBackedType<Model = M>,
-  M: CmsParentTrait + sea_orm::ModelTrait + Sync,
-{
-  assoc_getter!(cms_content_groups, CmsContentGroupType);
-  id_getter!(cms_content_group, cms_content_groups, CmsContentGroupType);
-
-  assoc_getter!(cms_files, CmsFileType);
-  id_getter!(cms_file, cms_files, CmsFileType);
-
-  assoc_getter!(cms_graphql_queries, CmsGraphqlQueryType);
-  id_getter!(cms_graphql_query, cms_graphql_queries, CmsGraphqlQueryType);
-
-  assoc_getter!(cms_layouts, CmsLayoutType);
-  id_getter!(cms_layout, cms_layouts, CmsLayoutType);
-
-  assoc_getter!(cms_navigation_items, CmsNavigationItemType);
-
-  assoc_getter!(cms_partials, CmsPartialType);
-
-  async fn cms_pages(&self, ctx: &Context<'_>) -> Result<Vec<PageType>, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-    Ok(
-      self
-        .get_model()
-        .pages()
-        .all(query_data.db())
-        .await?
-        .iter()
-        .map(|item| PageType::new(item.to_owned()))
-        .collect(),
-    )
-  }
-
-  async fn cms_page(
-    &self,
-    ctx: &Context<'_>,
-    id: Option<ID>,
-    slug: Option<String>,
-    root_page: Option<bool>,
-  ) -> Result<PageType, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-    let pages = if let Some(id) = id {
-      self
-        .get_model()
-        .pages()
-        .filter(pages::Column::Id.eq(id.parse::<i64>()?))
-    } else if let Some(slug) = slug {
-      self
-        .get_model()
-        .pages()
-        .filter(pages::Column::Slug.eq(slug))
-    } else if Some(true) == root_page {
-      self.get_model().root_page()
-    } else {
-      return Err(Error::new(
-        "cmsPage requires either an id, slug, or root_page parameter",
-      ));
-    };
-
-    pages
-      .one(query_data.db())
-      .await?
-      .ok_or_else(|| Error::new("Page not found"))
-      .map(PageType::new)
-  }
-
-  assoc_getter!(cms_variables, CmsVariableType);
-
-  async fn default_layout(&self, ctx: &Context<'_>) -> Result<CmsLayoutType, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-
-    self
-      .get_model()
-      .default_layout()
-      .one(query_data.db())
-      .await?
-      .ok_or_else(|| Error::new("Default layout not found for root site"))
-      .map(CmsLayoutType::new)
-  }
-
-  async fn effective_cms_layout(
-    &self,
-    ctx: &Context<'_>,
-    path: String,
-  ) -> Result<CmsLayoutType, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-    self
-      .get_model()
-      .effective_cms_layout(path.as_str(), query_data.db())
-      .await
-      .map(CmsLayoutType::new)
-      .map_err(|db_err| Error::new(db_err.to_string()))
-  }
-
-  async fn full_text_search(
-    &self,
-    _ctx: &Context<'_>,
-    _query: String,
-  ) -> Result<SearchResultType, Error> {
-    // TODO
-    Ok(SearchResultType)
-  }
-
-  async fn liquid_assigns(&self, ctx: &Context<'_>) -> Result<Vec<LiquidAssignType>, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
-    let cms_rendering_context =
-      CmsRenderingContext::new(liquid::object!({}), query_data, liquid_renderer.as_ref());
-
-    let (builtins, cms_variables) = try_join!(
-      liquid_renderer.builtin_globals(),
-      cms_rendering_context
-        .cms_variables()
-        .map_err(|err| Error::new(err.to_string()))
-    )?;
-
-    Ok(
-      builtins
-        .iter()
-        .map(|(key, value)| LiquidAssignType::from_value_view(key.to_string(), value))
-        .chain(
-          cms_variables
-            .iter()
-            .map(LiquidAssignType::from_cms_variable),
-        )
-        .collect(),
-    )
-  }
-
-  async fn preview_liquid(&self, ctx: &Context<'_>, content: String) -> Result<String, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
-    let cms_rendering_context =
-      CmsRenderingContext::new(liquid::object!({}), query_data, liquid_renderer.as_ref());
-
-    cms_rendering_context.render_liquid(&content, None).await
-  }
-
-  async fn preview_markdown(
-    &self,
-    _ctx: &Context<'_>,
-    markdown: String,
-    _event_id: Option<ID>,
-    _event_proposal_id: Option<ID>,
-  ) -> Result<String, Error> {
-    // TODO find images for event or event proposal
-    Ok(render_markdown(&markdown, &Default::default()))
-  }
-
-  async fn root_page(&self, ctx: &Context<'_>) -> Result<PageType, Error> {
-    let query_data = ctx.data::<QueryData>()?;
-    self
-      .get_model()
-      .root_page()
-      .one(query_data.db())
-      .await?
-      .ok_or_else(|| Error::new("root page not found"))
-      .map(PageType::new)
-  }
-
-  async fn typeahead_search_cms_content(
-    &self,
-    _ctx: &Context<'_>,
-    _name: Option<String>,
-  ) -> Result<Vec<CmsContentType>, Error> {
-    // TODO
-    Ok(vec![])
   }
 }
+
+impl ContainerType for CmsParentInterface {
+  #[doc = " Resolves a field value and outputs it as a json value"]
+  #[doc = " `async_graphql::Value`."]
+  #[doc = ""]
+  #[doc = " If the field was not found returns None."]
+  #[must_use]
+  #[allow(clippy::type_complexity, clippy::type_repetition_in_bounds)]
+  fn resolve_field<'life0, 'life1, 'life2, 'async_trait>(
+    &'life0 self,
+    ctx: &'life1 Context<'life2>,
+  ) -> std::pin::Pin<
+    std::boxed::Box<
+      (dyn futures::Future<
+        Output = std::result::Result<
+          std::option::Option<async_graphql::Value>,
+          async_graphql::ServerError,
+        >,
+      > + std::marker::Send
+         + 'async_trait),
+    >,
+  >
+  where
+    'life0: 'async_trait,
+    'life1: 'async_trait,
+    'life2: 'async_trait,
+    Self: 'async_trait,
+  {
+    match self {
+      CmsParentInterface::RootSite(root_site) => root_site.resolve_field(ctx),
+      CmsParentInterface::Convention(convention) => convention.resolve_field(ctx),
+    }
+  }
+}
+
+impl InterfaceType for CmsParentInterface {}

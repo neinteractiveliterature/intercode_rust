@@ -1,9 +1,10 @@
 use cached::{async_sync::Mutex, CachedAsync, UnboundCache};
 use intercode_entities::{
-  cms_content_groups, conventions, event_categories, events, signups, user_con_profiles, users,
+  cms_content_groups, conventions, event_categories, events,
+  model_ext::user_con_profiles::BioEligibility, signups, user_con_profiles, users,
 };
 use oxide_auth::endpoint::Scope;
-use sea_orm::{ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, Select};
+use sea_orm::{ColumnTrait, DbErr, EntityTrait, PaginatorTrait, QueryFilter, QuerySelect, Select};
 use seawater::ConnectionWrapper;
 use std::{
   collections::{HashMap, HashSet},
@@ -31,8 +32,10 @@ pub struct AuthorizationInfo {
   pub assumed_identity_from_profile: Option<user_con_profiles::Model>,
   active_signups_by_convention_and_event: Mutex<UnboundCache<i64, SignupsByEventId>>,
   all_model_permissions_by_convention: Mutex<UnboundCache<i64, UserPermissionsMap>>,
+  bio_eligible_user_con_profile_ids_by_convention_id: Mutex<UnboundCache<i64, HashSet<i64>>>,
   organization_permissions_by_organization_id: OnceCell<HashMap<i64, HashSet<String>>>,
   user_con_profile_ids: OnceCell<HashSet<i64>>,
+  user_con_profile_ids_in_signed_up_runs: OnceCell<HashSet<i64>>,
   team_member_event_ids_by_convention_id: Mutex<UnboundCache<i64, HashSet<i64>>>,
 }
 
@@ -45,8 +48,10 @@ impl Clone for AuthorizationInfo {
       assumed_identity_from_profile: self.assumed_identity_from_profile.clone(),
       active_signups_by_convention_and_event: Mutex::new(UnboundCache::new()),
       all_model_permissions_by_convention: Mutex::new(UnboundCache::new()),
+      bio_eligible_user_con_profile_ids_by_convention_id: Mutex::new(UnboundCache::new()),
       organization_permissions_by_organization_id: OnceCell::new(),
       user_con_profile_ids: OnceCell::new(),
+      user_con_profile_ids_in_signed_up_runs: OnceCell::new(),
       team_member_event_ids_by_convention_id: Mutex::new(UnboundCache::new()),
     }
   }
@@ -98,8 +103,10 @@ impl AuthorizationInfo {
       assumed_identity_from_profile,
       active_signups_by_convention_and_event: Mutex::new(UnboundCache::new()),
       all_model_permissions_by_convention: Mutex::new(UnboundCache::new()),
+      bio_eligible_user_con_profile_ids_by_convention_id: Mutex::new(UnboundCache::new()),
       organization_permissions_by_organization_id: OnceCell::new(),
       user_con_profile_ids: OnceCell::new(),
+      user_con_profile_ids_in_signed_up_runs: OnceCell::new(),
       team_member_event_ids_by_convention_id: Mutex::new(UnboundCache::new()),
     }
   }
@@ -138,6 +145,36 @@ impl AuthorizationInfo {
       .await?;
 
     Ok(permissions_map.clone())
+  }
+
+  pub async fn is_user_con_profile_bio_eligible(
+    &self,
+    user_con_profile_id: i64,
+    convention_id: i64,
+  ) -> Result<bool, DbErr> {
+    let mut lock = self
+      .bio_eligible_user_con_profile_ids_by_convention_id
+      .lock()
+      .await;
+
+    let bio_eligible_user_con_profile_ids = lock
+      .try_get_or_set_with(convention_id, || async {
+        Ok::<_, DbErr>(
+          user_con_profiles::Entity::find()
+            .filter(user_con_profiles::Column::ConventionId.eq(convention_id))
+            .bio_eligible()
+            .select_only()
+            .column(user_con_profiles::Column::Id)
+            .into_tuple()
+            .all(&self.db)
+            .await?
+            .into_iter()
+            .collect::<HashSet<i64>>(),
+        )
+      })
+      .await?;
+
+    Ok(bio_eligible_user_con_profile_ids.contains(&user_con_profile_id))
   }
 
   pub async fn organization_permissions_by_organization_id(
@@ -377,6 +414,45 @@ impl AuthorizationInfo {
     self.site_admin() && self.has_scope("manage_conventions")
   }
 
+  pub async fn user_con_profile_ids_in_signed_up_runs(&self) -> Result<&HashSet<i64>, DbErr> {
+    self
+      .user_con_profile_ids_in_signed_up_runs
+      .get_or_try_init(|| async {
+        match &self.user {
+          Some(user) => signups::Entity::find()
+            .filter(
+              signups::Column::RunId.in_subquery(
+                QuerySelect::query(
+                  &mut signups::Entity::find()
+                    .filter(
+                      signups::Column::UserConProfileId.in_subquery(
+                        QuerySelect::query(
+                          &mut user_con_profiles::Entity::find()
+                            .filter(user_con_profiles::Column::UserId.eq(user.id))
+                            .select_only()
+                            .column(user_con_profiles::Column::Id),
+                        )
+                        .take(),
+                      ),
+                    )
+                    .select_only()
+                    .column(signups::Column::RunId),
+                )
+                .take(),
+              ),
+            )
+            .select_only()
+            .column(signups::Column::UserConProfileId)
+            .into_tuple()
+            .all(&self.db)
+            .await
+            .map(|ids| ids.into_iter().collect()),
+          None => Ok(HashSet::new()),
+        }
+      })
+      .await
+  }
+
   pub async fn team_member_in_convention(&self, convention_id: i64) -> Result<bool, DbErr> {
     Ok(
       !self
@@ -384,17 +460,5 @@ impl AuthorizationInfo {
         .await?
         .is_empty(),
     )
-  }
-}
-
-#[cfg(test)]
-impl AuthorizationInfo {
-  pub async fn for_test(
-    db: ConnectionWrapper,
-    user: Option<users::Model>,
-    oauth_scope: Option<Scope>,
-    assumed_identity_from_profile: Option<user_con_profiles::Model>,
-  ) -> Self {
-    Self::new(db, user, oauth_scope, assumed_identity_from_profile)
   }
 }

@@ -1,13 +1,11 @@
 use async_trait::async_trait;
-use intercode_entities::{
-  conventions, model_ext::form_item_permissions::FormItemRole, team_members, user_con_profiles,
-};
+use intercode_entities::{conventions, team_members, user_con_profiles};
 use sea_orm::{
   sea_query::{Cond, Expr},
   ColumnTrait, DbErr, EntityTrait, QueryFilter, QuerySelect,
 };
 
-use crate::{AuthorizationInfo, EntityPolicy, FormResponsePolicy, Policy, ReadManageAction};
+use crate::{AuthorizationInfo, EntityPolicy, Policy, ReadManageAction, SimpleGuardablePolicy};
 
 use super::TeamMemberPolicy;
 
@@ -69,9 +67,55 @@ impl Policy<AuthorizationInfo, user_con_profiles::Model> for UserConProfilePolic
     }
 
     match action {
-      UserConProfileAction::Read => todo!(),
-      UserConProfileAction::ReadEmail => todo!(),
-      UserConProfileAction::ReadBirthDate => todo!(),
+      UserConProfileAction::Read => Ok(
+        UserConProfilePolicy::action_permitted(
+          principal,
+          &UserConProfileAction::ReadEmail,
+          user_con_profile,
+        )
+        .await?
+          || principal
+            .is_user_con_profile_bio_eligible(user_con_profile.id, user_con_profile.convention_id)
+            .await?
+          || (principal.has_scope("read_events")
+            && principal
+              .user_con_profile_ids_in_signed_up_runs()
+              .await?
+              .contains(&user_con_profile.id))
+          || principal
+            .has_scope_and_convention_permission(
+              "read_conventions",
+              "read_user_con_profiles",
+              user_con_profile.convention_id,
+            )
+            .await?,
+      ),
+      UserConProfileAction::ReadEmail => Ok(
+        UserConProfilePolicy::action_permitted(
+          principal,
+          &UserConProfileAction::ReadPersonalInfo,
+          user_con_profile,
+        )
+        .await?
+          || principal
+            .has_scope_and_convention_permission(
+              "read_conventions",
+              "read_user_con_profile_email",
+              user_con_profile.convention_id,
+            )
+            .await?,
+      ),
+      UserConProfileAction::ReadBirthDate => Ok(
+        (principal.has_scope("read_profile")
+          && profile_is_user_or_identity_assumer(principal, user_con_profile))
+          || (principal.has_scope("read_conventions")
+            && (principal.has_convention_permission(
+              "read_user_con_profile_birth_date",
+              user_con_profile.convention_id,
+            ))
+            .await?)
+          || principal.site_admin_read(),
+      ),
       UserConProfileAction::ReadPersonalInfo => Ok(
         (principal.has_scope("read_profile")
           && profile_is_user_or_identity_assumer(principal, user_con_profile))
@@ -132,89 +176,6 @@ impl Policy<AuthorizationInfo, user_con_profiles::Model> for UserConProfilePolic
         Ok(principal.site_admin_manage())
       }
     }
-  }
-}
-
-#[async_trait]
-impl FormResponsePolicy<AuthorizationInfo, user_con_profiles::Model> for UserConProfilePolicy {
-  async fn form_item_viewer_role(
-    principal: &AuthorizationInfo,
-    user_con_profile: &user_con_profiles::Model,
-  ) -> FormItemRole {
-    if principal
-      .has_convention_permission("read_user_con_profiles", user_con_profile.convention_id)
-      .await
-      .unwrap_or(false)
-    {
-      if principal
-        .has_convention_permission(
-          "read_user_con_profile_birth_date",
-          user_con_profile.convention_id,
-        )
-        .await
-        .unwrap_or(false)
-        && principal
-          .has_convention_permission(
-            "read_user_con_profile_email",
-            user_con_profile.convention_id,
-          )
-          .await
-          .unwrap_or(false)
-        && principal
-          .has_convention_permission(
-            "read_user_con_profile_personal_info",
-            user_con_profile.convention_id,
-          )
-          .await
-          .unwrap_or(false)
-      {
-        return FormItemRole::Admin;
-      } else {
-        return FormItemRole::AllProfilesBasicAccess;
-      }
-    }
-
-    return FormItemRole::Normal;
-  }
-
-  async fn form_item_writer_role(
-    principal: &AuthorizationInfo,
-    user_con_profile: &user_con_profiles::Model,
-  ) -> FormItemRole {
-    if principal
-      .has_convention_permission("update_user_con_profiles", user_con_profile.convention_id)
-      .await
-      .unwrap_or(false)
-    {
-      if principal
-        .has_convention_permission(
-          "read_user_con_profile_birth_date",
-          user_con_profile.convention_id,
-        )
-        .await
-        .unwrap_or(false)
-        && principal
-          .has_convention_permission(
-            "read_user_con_profile_email",
-            user_con_profile.convention_id,
-          )
-          .await
-          .unwrap_or(false)
-        && principal
-          .has_convention_permission(
-            "read_user_con_profile_personal_info",
-            user_con_profile.convention_id,
-          )
-          .await
-          .unwrap_or(false)
-      {
-        return FormItemRole::Admin;
-      } else {
-        return FormItemRole::AllProfilesBasicAccess;
-      }
-    }
-
-    return FormItemRole::Normal;
   }
 }
 
@@ -297,3 +258,5 @@ impl EntityPolicy<AuthorizationInfo, user_con_profiles::Model> for UserConProfil
     user_con_profiles::Column::Id
   }
 }
+
+impl SimpleGuardablePolicy<'_, user_con_profiles::Model> for UserConProfilePolicy {}

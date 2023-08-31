@@ -149,10 +149,7 @@ impl LiquidDropImpl {
       cache_struct_ident,
       constructors,
       methods: getter_methods,
-      other_items: other_items
-        .into_iter()
-        .chain(ignored_methods.into_iter())
-        .collect(),
+      other_items: other_items.into_iter().chain(ignored_methods).collect(),
     }
   }
 }

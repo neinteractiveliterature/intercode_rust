@@ -1,0 +1,37 @@
+[package]
+edition = "2021"
+name = "intercode_liquid_drops"
+version = "0.1.0"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-graphql = {workspace = true}
+bumpalo-herd = {workspace = true}
+chrono = {workspace = true}
+chrono-tz = {workspace = true}
+futures = {workspace = true}
+i18n-embed = {workspace = true}
+i18n-embed-fl = {workspace = true}
+indicatif = {workspace = true}
+intercode_cms = {workspace = true}
+intercode_entities = {workspace = true}
+intercode_graphql_core = {workspace = true}
+intercode_graphql_loaders = {workspace = true}
+intercode_inflector = {workspace = true}
+intercode_liquid = {workspace = true}
+intercode_policies = {workspace = true}
+intercode_server = {workspace = true}
+intercode_timespan = {workspace = true}
+itertools = {workspace = true}
+liquid = {workspace = true}
+liquid-core = {workspace = true}
+once_cell = {workspace = true}
+regex = {workspace = true}
+sea-orm = {workspace = true}
+seawater = {workspace = true}
+serde = {workspace = true}
+serde_json = {workspace = true}
+time = {workspace = true}
+tokio = {workspace = true}
+tracing = {workspace = true}

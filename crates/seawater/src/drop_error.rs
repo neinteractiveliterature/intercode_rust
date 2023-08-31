@@ -13,6 +13,18 @@ pub enum DropError {
   PoisonError(String),
 }
 
+impl DropError {
+  pub fn message(&self) -> String {
+    match self {
+      DropError::GraphQLError(err) => err.message.clone(),
+      DropError::LiquidError(err) => err.to_string(),
+      DropError::DbErr(err) => err.to_string(),
+      DropError::ExpectedEntityNotFound(err) => err.to_string(),
+      DropError::PoisonError(err) => err.to_string(),
+    }
+  }
+}
+
 impl Display for DropError {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     match self {

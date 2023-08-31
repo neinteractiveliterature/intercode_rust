@@ -1,13 +1,18 @@
+use std::sync::Arc;
+
+use async_graphql::{Context, Error};
 use async_trait::async_trait;
-use intercode_entities::{
-  conventions, event_categories, events, model_ext::form_item_permissions::FormItemRole,
-};
+use intercode_entities::{conventions, event_categories, events};
+use intercode_graphql_loaders::LoaderManager;
 use sea_orm::{
   sea_query::{Cond, Expr},
   ColumnTrait, DbErr, EntityTrait, QueryFilter, QuerySelect,
 };
+use seawater::loaders::ExpectModel;
 
-use crate::{AuthorizationInfo, EntityPolicy, FormResponsePolicy, Policy, ReadManageAction};
+use crate::{
+  AuthorizationInfo, EntityPolicy, GuardablePolicy, Policy, PolicyGuard, ReadManageAction,
+};
 
 use super::has_schedule_release_permissions;
 
@@ -160,52 +165,6 @@ impl Policy<AuthorizationInfo, (conventions::Model, events::Model)> for EventPol
   }
 }
 
-#[async_trait]
-impl FormResponsePolicy<AuthorizationInfo, (conventions::Model, events::Model)> for EventPolicy {
-  async fn form_item_viewer_role(
-    principal: &AuthorizationInfo,
-    (_convention, form_response): &(conventions::Model, events::Model),
-  ) -> FormItemRole {
-    if principal
-      .has_convention_permission("update_events", form_response.convention_id)
-      .await
-      .unwrap_or(false)
-      || principal.site_admin_manage()
-    {
-      return FormItemRole::Admin;
-    }
-
-    if principal
-      .team_member_event_ids_in_convention(form_response.convention_id)
-      .await
-      .unwrap_or_default()
-      .contains(&form_response.id)
-    {
-      return FormItemRole::TeamMember;
-    }
-
-    if principal
-      .active_signups_in_convention_by_event_id(form_response.convention_id)
-      .await
-      .unwrap_or_default()
-      .get(&form_response.id)
-      .map(|signups| signups.iter().any(|signup| signup.state == "confirmed"))
-      .unwrap_or(false)
-    {
-      return FormItemRole::ConfirmedAttendee;
-    }
-
-    FormItemRole::Normal
-  }
-
-  async fn form_item_writer_role(
-    principal: &AuthorizationInfo,
-    resource: &(conventions::Model, events::Model),
-  ) -> FormItemRole {
-    Self::form_item_viewer_role(principal, resource).await
-  }
-}
-
 impl EntityPolicy<AuthorizationInfo, events::Model> for EventPolicy {
   type Action = EventAction;
 
@@ -283,4 +242,49 @@ impl EntityPolicy<AuthorizationInfo, events::Model> for EventPolicy {
   fn id_column() -> events::Column {
     events::Column::Id
   }
+}
+
+pub struct EventPolicyGuard {
+  action: EventAction,
+  event: events::Model,
+}
+
+#[async_trait]
+impl<'a> PolicyGuard<'a, EventPolicy, (conventions::Model, events::Model), events::Model>
+  for EventPolicyGuard
+{
+  fn new(action: EventAction, model: &events::Model) -> Self
+  where
+    Self: Sized,
+  {
+    EventPolicyGuard {
+      action,
+      event: model.clone(),
+    }
+  }
+
+  fn get_action(&self) -> &EventAction {
+    &self.action
+  }
+
+  fn get_model(&self) -> &events::Model {
+    &self.event
+  }
+
+  async fn get_resource(
+    &self,
+    model: &events::Model,
+    ctx: &Context<'_>,
+  ) -> Result<(conventions::Model, events::Model), Error> {
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
+    let convention_loader = loaders.event_convention();
+    let convention_result = convention_loader.load_one(model.id).await?;
+    let convention = convention_result.expect_one()?;
+
+    Ok((convention.clone(), model.clone()))
+  }
+}
+
+impl GuardablePolicy<'_, (conventions::Model, events::Model), events::Model> for EventPolicy {
+  type Guard = EventPolicyGuard;
 }

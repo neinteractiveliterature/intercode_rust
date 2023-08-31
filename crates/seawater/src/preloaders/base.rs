@@ -4,7 +4,7 @@ use std::{
   fmt::{Debug, Display},
 };
 
-use crate::{DropResult, DropResultTrait, DropStoreID, LiquidDrop};
+use crate::{pretty_type_name, DropResult, DropResultTrait, DropStoreID, LiquidDrop};
 use async_trait::async_trait;
 use liquid::ValueView;
 use once_cell::race::OnceBox;
@@ -239,7 +239,15 @@ pub trait Preloader<
       newly_loaded_drop_lists
         .into_iter()
         .try_for_each(|(id, drop_list)| {
-          let value = (self.drops_to_value(store, drop_list) as Result<DropResult<V>, DropError>)?;
+          let value = (self.drops_to_value(store, drop_list) as Result<DropResult<V>, DropError>)
+            .map_err(|err| {
+            DropError::ExpectedEntityNotFound(format!(
+              "Resolving association for {} {}:\n{}",
+              pretty_type_name::<FromDrop>(),
+              id,
+              err.message()
+            ))
+          })?;
 
           values_by_id.insert(id, value.clone());
 

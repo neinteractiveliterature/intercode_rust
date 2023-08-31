@@ -1,79 +1,60 @@
-use crate::drops::{DropContext, IntercodeGlobals};
-use async_graphql::async_trait::async_trait;
-use intercode_graphql::{
-  build_partial_compiler, EmbeddedGraphQLExecutorBuilder, LiquidRenderer, QueryData, SchemaData,
+use crate::server::AppState;
+use async_graphql::{async_trait::async_trait, Request};
+use axum::extract::{FromRequestParts, State};
+use http::request::Parts;
+use intercode_graphql::build_intercode_graphql_schema;
+use intercode_graphql_core::{
+  liquid_renderer::LiquidRendererFromRequest, query_data::QueryData, schema_data::SchemaData,
+  EmbeddedGraphQLExecutorBuilder, RequestDataInjector,
 };
-use intercode_liquid::{build_liquid_parser, cms_parent_partial_source::PreloadPartialsStrategy};
+use intercode_graphql_loaders::LoaderManager;
+use intercode_liquid_drops::IntercodeLiquidRenderer;
 use intercode_policies::AuthorizationInfo;
-use std::{fmt::Debug, sync::Arc};
+use intercode_server::AuthorizationInfoAndQueryDataFromRequest;
+use std::sync::Arc;
 
-#[derive(Debug, Clone)]
-pub struct IntercodeLiquidRenderer {
-  query_data: QueryData,
-  schema_data: SchemaData,
+#[derive(Clone)]
+pub struct LiquidRendererRequestDataInjector {
   authorization_info: AuthorizationInfo,
 }
 
-impl IntercodeLiquidRenderer {
-  pub fn new(
-    query_data: &QueryData,
-    schema_data: &SchemaData,
-    authorization_info: AuthorizationInfo,
-  ) -> Self {
-    IntercodeLiquidRenderer {
-      query_data: query_data.clone(),
-      schema_data: schema_data.clone(),
-      authorization_info,
-    }
+impl LiquidRendererRequestDataInjector {
+  pub fn new(authorization_info: AuthorizationInfo) -> Self {
+    Self { authorization_info }
+  }
+}
+
+impl RequestDataInjector for LiquidRendererRequestDataInjector {
+  fn inject_data(&self, request: Request, query_data: &QueryData) -> Request {
+    let loader_manager = Arc::new(LoaderManager::new(query_data.db().clone()));
+
+    request
+      .data(loader_manager)
+      .data(self.authorization_info.clone())
   }
 }
 
 #[async_trait]
-impl LiquidRenderer for IntercodeLiquidRenderer {
-  async fn builtin_globals(
-    &self,
-  ) -> Result<Box<dyn liquid::ObjectView + Send>, async_graphql::Error> {
-    todo!()
-  }
+impl FromRequestParts<AppState> for LiquidRendererFromRequest {
+  type Rejection = http::StatusCode;
 
-  async fn render_liquid(
-    &self,
-    content: &str,
-    globals: liquid::Object,
-    preload_partials_strategy: Option<PreloadPartialsStrategy<'_>>,
-  ) -> Result<String, async_graphql::Error> {
-    let schema_data: SchemaData = self.schema_data.clone();
-    let query_data: QueryData = self.query_data.clone();
-    let cms_parent = query_data.cms_parent().clone();
+  async fn from_request_parts(
+    parts: &mut Parts,
+    state: &AppState,
+  ) -> Result<Self, Self::Rejection> {
+    let State::<SchemaData>(schema_data) = State::from_request_parts(parts, state).await.unwrap();
+    let AuthorizationInfoAndQueryDataFromRequest(authorization_info, query_data) =
+      AuthorizationInfoAndQueryDataFromRequest::from_request_parts(parts, state).await?;
 
-    let partial_compiler = build_partial_compiler(
-      cms_parent,
-      query_data.db().clone(),
-      preload_partials_strategy,
-    )
-    .await?;
-    let user_signed_in = query_data.current_user().is_some();
-    let executor_builder = EmbeddedGraphQLExecutorBuilder::new(
-      query_data.clone(),
+    let graphql_executor_builder = EmbeddedGraphQLExecutorBuilder::new(
+      build_intercode_graphql_schema(schema_data.clone()),
+      query_data.clone_ref(),
       schema_data.clone(),
-      self.authorization_info.clone(),
+      Box::new(LiquidRendererRequestDataInjector { authorization_info }),
     );
 
-    let parser = build_liquid_parser(
-      query_data.convention(),
-      Arc::downgrade(&schema_data.language_loader),
-      query_data.cms_parent(),
-      query_data.db().clone(),
-      user_signed_in,
-      Box::new(executor_builder),
-      partial_compiler,
-    )?;
-
-    let renderer = seawater::Renderer::new(
-      parser,
-      move |store| DropContext::new(schema_data.clone(), query_data.clone(), store),
-      IntercodeGlobals::new,
-    );
-    renderer.render_liquid(content, globals).await
+    let liquid_renderer =
+      IntercodeLiquidRenderer::new(&query_data, &schema_data, graphql_executor_builder);
+    Ok(Self(Arc::new(liquid_renderer)))
   }
 }

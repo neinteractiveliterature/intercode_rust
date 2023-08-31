@@ -11,42 +11,95 @@ split-debuginfo = "unpacked"
 
 [profile.release]
 debug = 1
-# lto = true
+lto = "thin"
 
 # [target.'cfg(not(target_env = "msvc"))'.dependencies]
 # tikv-jemallocator = {version = "0.5", features = ["profiling"]}
 
 [workspace]
 members = [
+  "./crates/intercode_cms",
+  "./crates/intercode_conventions",
+  "./crates/intercode_email",
   "./crates/intercode_entities",
+  "./crates/intercode_events",
+  "./crates/intercode_forms",
+  "./crates/intercode_full_text_search",
   "./crates/intercode_graphql",
+  "./crates/intercode_graphql_core",
+  "./crates/intercode_graphql_loaders",
   "./crates/intercode_inflector",
   "./crates/intercode_liquid",
+  "./crates/intercode_liquid_drops",
+  "./crates/intercode_notifiers",
   "./crates/intercode_policies",
+  "./crates/intercode_query_builders",
+  "./crates/intercode_reporting",
+  "./crates/intercode_server",
+  "./crates/intercode_signups",
+  "./crates/intercode_store",
   "./crates/intercode_timespan",
+  "./crates/intercode_users",
   "./crates/seawater",
   "./crates/seawater_derive",
 ]
 
 [workspace.dependencies]
 Inflector = "*"
+askama = {version = "0.12.0", features = ["with-axum"]}
+askama_axum = "0.3.0"
 async-graphql = {version = "~5.0.10", features = ["tracing", "dataloader", "chrono"]}
+async-graphql-axum = "~5.0.10"
 async-graphql-value = {version = "~5.0.10"}
-async-stripe = {version = "0.21.0", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
 async-trait = "*"
+aws-config = "0.56.0"
+aws-sdk-sesv2 = "0.29.0"
+aws-smithy-http = "*"
 axum = {version = "~0.6.18", features = ["multipart", "macros", "headers"]}
+axum-extra = {version = "~0.7.4", features = ["cookie"]}
+axum-server = {version = "0.5.1", features = ["tls-rustls"]}
+axum-sessions = "~0.5"
+base64 = "0.21.1"
+bcrypt = "0.14.0"
 bumpalo = "3.13.0"
 bumpalo-herd = "0.1.2"
 cached = "~0.43.0"
 chrono = "0.4"
 chrono-tz = "0.8"
+csrf = "0.4.1"
 dyn-clone = "1.0.11"
 futures = "0.3.28"
+hex = "0.4.3"
 html-escape = "0.2.13"
 http = "0.2.9"
+hyper = "0.14.26"
 i18n-embed = {version = "0.13", features = ["fluent-system"]}
 i18n-embed-fl = "0.6"
+ics = "0.5.8"
 id-arena = "2.2.1"
+indicatif = {version = "0.17.3", features = ["improved_unicode"]}
+intercode_cms = {path = "./crates/intercode_cms"}
+intercode_conventions = {path = "./crates/intercode_conventions"}
+intercode_email = {path = "./crates/intercode_email"}
+intercode_entities = {path = "./crates/intercode_entities"}
+intercode_events = {path = "./crates/intercode_events"}
+intercode_forms = {path = "./crates/intercode_forms"}
+intercode_full_text_search = {path = "./crates/intercode_full_text_search"}
+intercode_graphql = {path = "./crates/intercode_graphql"}
+intercode_graphql_core = {path = "./crates/intercode_graphql_core"}
+intercode_graphql_loaders = {path = "./crates/intercode_graphql_loaders"}
+intercode_inflector = {path = "./crates/intercode_inflector"}
+intercode_liquid = {path = "./crates/intercode_liquid"}
+intercode_liquid_drops = {path = "./crates/intercode_liquid_drops"}
+intercode_notifiers = {path = "./crates/intercode_notifiers"}
+intercode_policies = {path = "./crates/intercode_policies"}
+intercode_query_builders = {path = "./crates/intercode_query_builders"}
+intercode_reporting = {path = "./crates/intercode_reporting"}
+intercode_server = {path = "./crates/intercode_server"}
+intercode_signups = {path = "./crates/intercode_signups"}
+intercode_store = {path = "./crates/intercode_store"}
+intercode_timespan = {path = "./crates/intercode_timespan"}
+intercode_users = {path = "./crates/intercode_users"}
 itertools = "0.10.5"
 linkify = "~0.9"
 liquid = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
@@ -54,18 +107,29 @@ liquid-core = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-
 mailparse = "0.14.0"
 md5 = "*"
 once_cell = "1.18.0"
+opentelemetry = {version = "0.19.0", features = ["rt-tokio"]}
 oxide-auth = "0.5.3"
 parking_lot = "0.12.1"
+phonenumber = "0.3"
 pulldown-cmark = "0.9.3"
 regex = "*"
+rust-embed = "6"
 rusty-money = "0.4.1"
-sea-orm = {version = "^0.11.3", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"]}
+sea-orm = {version = "^0.12.2", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"]}
+seawater = {path = "./crates/seawater"}
 serde = "1.0"
 serde_json = "1.0"
-tokio = {version = "~1.28.2", features = ["rt-multi-thread", "macros", "signal", "tracing"]}
+sha1 = "0.10.5"
+stripe = {package = "async-stripe", version = "0.21.0", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
+time = "0.3.21"
+tokio = {version = "~1.32.0", features = ["rt-multi-thread", "macros", "signal", "tracing"]}
+tower = {version = "0.4.13", features = ["limit", "make"]}
+tower-http = {version = "0.4.0", features = ["catch-panic", "compression-br", "compression-deflate", "compression-gzip", "trace"]}
 tracing = "0.1.37"
 tuple-conv = "~1.0.1"
+twilio = "1.0.3"
 url = "*"
+uuid = {version = "1.3.3", features = ["v4"]}
 
 [features]
 dhat-heap = ["dep:dhat"] # if you are doing heap profiling
@@ -73,72 +137,43 @@ flamegraph = ["dep:tracing-flame"]
 tokio-console = ["dep:console-subscriber", "tokio/full", "tokio/tracing"]
 
 [dependencies]
-Inflector = {workspace = true}
-anyhow = "1.0.71"
-askama = {version = "0.12.0", features = ["with-axum"]}
-askama_axum = "0.3.0"
 async-graphql = {workspace = true}
-async-graphql-axum = "~5.0.10"
-async-stripe = {workspace = true}
 axum = {workspace = true}
-axum-extra = {version = "~0.7.4", features = ["cookie"]}
-axum-server = {version = "0.5.1", features = ["tls-rustls"]}
-axum-sessions = "~0.5"
-base64 = "0.21.1"
-bcrypt = "0.14.0"
-bumpalo-herd = {workspace = true}
 chrono = {workspace = true}
 chrono-tz = {workspace = true}
 clap = {version = "4.3.8", features = ["derive", "cargo"]}
 console-subscriber = {version = "0.1.9", optional = true}
-csrf = "0.4.1"
 dhat = {version = "0.3.2", optional = true}
 dotenv = "0.15.0"
 futures = {workspace = true}
-hex = "0.4.3"
-html-escape = {workspace = true}
 http = {workspace = true}
-hyper = "0.14.26"
-i18n-embed = {workspace = true}
-i18n-embed-fl = {workspace = true}
-ics = "0.5.8"
-indicatif = {version = "0.17.3", features = ["improved_unicode"]}
-intercode_entities = {path = "./crates/intercode_entities"}
-intercode_graphql = {path = "./crates/intercode_graphql"}
-intercode_inflector = {path = "./crates/intercode_inflector"}
-intercode_liquid = {path = "./crates/intercode_liquid"}
-intercode_policies = {path = "./crates/intercode_policies"}
-intercode_timespan = {path = "./crates/intercode_timespan"}
+indicatif = {workspace = true}
+intercode_cms = {workspace = true}
+intercode_entities = {workspace = true}
+intercode_graphql = {workspace = true}
+intercode_graphql_core = {workspace = true}
+intercode_graphql_loaders = {workspace = true}
+intercode_liquid = {workspace = true}
+intercode_liquid_drops = {workspace = true}
+intercode_policies = {workspace = true}
+intercode_reporting = {workspace = true}
+intercode_server = {workspace = true}
+intercode_signups = {workspace = true}
+intercode_users = {workspace = true}
 itertools = {workspace = true}
 liquid = {workspace = true}
-liquid-core = {workspace = true}
-md5 = {workspace = true}
 once_cell = {workspace = true}
-opentelemetry = {version = "0.19.0", features = ["rt-tokio"]}
+opentelemetry = {workspace = true}
 opentelemetry-otlp = {version = "0.12.0", features = ["tls-roots"]}
 oxide-auth = {workspace = true}
 oxide-auth-axum = "~0.3.0"
-parking_lot = {workspace = true}
-pulldown-cmark = {workspace = true}
 regex = {workspace = true}
-rust-embed = "6"
-rustls-pemfile = "1.0.2"
 sea-orm = {workspace = true}
-seawater = {path = "./crates/seawater"}
-serde = {workspace = true}
-serde_json = {workspace = true}
-sha1 = "0.10.5"
-time = "0.3.21"
+seawater = {workspace = true}
+time = {workspace = true}
 tokio = {workspace = true}
-tokio-stream = {version = "0.1.14", features = ["net"]}
 tonic = "~0.8.3"
-tower = {version = "0.4.13", features = ["limit", "make"]}
-tower-http = {version = "0.4.0", features = ["catch-panic", "compression-br", "compression-deflate", "compression-gzip", "trace"]}
-tower-layer = "0.3.2"
 tracing = {workspace = true}
 tracing-flame = {version = "0.2.0", optional = true}
 tracing-opentelemetry = "0.19.0"
 tracing-subscriber = {version = "0.3", features = ["env-filter"]}
-unic-langid = "0.9"
-url = {workspace = true}
-uuid = {version = "1.3.4", features = ["v4"]}

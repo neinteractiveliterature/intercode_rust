@@ -14,7 +14,7 @@ pub struct NewEventProposalButtonTag;
 
 impl NewEventProposalButtonTag {
   pub fn new() -> Self {
-    Self::default()
+    Self
   }
 }
 

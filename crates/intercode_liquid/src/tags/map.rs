@@ -17,7 +17,7 @@ pub struct MapTag;
 
 impl MapTag {
   pub fn new() -> Self {
-    Self::default()
+    Self
   }
 }
 

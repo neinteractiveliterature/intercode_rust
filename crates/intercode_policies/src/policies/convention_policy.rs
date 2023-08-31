@@ -4,7 +4,7 @@ use intercode_entities::conventions;
 use sea_orm::{sea_query::Cond, ColumnTrait, DbErr, EntityTrait, QueryFilter, QuerySelect, Select};
 use tuple_conv::RepeatedTuple;
 
-use crate::{AuthorizationInfo, Policy, ReadManageAction};
+use crate::{AuthorizationInfo, Policy, ReadManageAction, SimpleGuardablePolicy};
 
 pub enum ConventionAction {
   Read,
@@ -225,3 +225,5 @@ impl Policy<AuthorizationInfo, conventions::Model> for ConventionPolicy {
     }
   }
 }
+
+impl SimpleGuardablePolicy<'_, conventions::Model> for ConventionPolicy {}

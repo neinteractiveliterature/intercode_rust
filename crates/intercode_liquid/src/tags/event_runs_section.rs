@@ -14,7 +14,7 @@ pub struct EventRunsSectionTag;
 
 impl EventRunsSectionTag {
   pub fn new() -> Self {
-    Self::default()
+    Self
   }
 }
 

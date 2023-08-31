@@ -14,7 +14,7 @@ pub struct ShortFormEventDetailsTag;
 
 impl ShortFormEventDetailsTag {
   pub fn new() -> Self {
-    Self::default()
+    Self
   }
 }
 

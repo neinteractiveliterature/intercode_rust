@@ -1,18 +1,21 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::Arc};
 
+use async_graphql::{Context, Error};
 use async_trait::async_trait;
 use cached::once_cell::sync::Lazy;
 use intercode_entities::{
-  conventions, event_proposals,
-  model_ext::{event_proposals::EventProposalStatus, form_item_permissions::FormItemRole},
+  conventions, event_proposals, model_ext::event_proposals::EventProposalStatus,
 };
+use intercode_graphql_loaders::LoaderManager;
 use sea_orm::{
   sea_query::{Cond, Expr},
   ColumnTrait, DbErr, EntityTrait, Iterable, QueryFilter, Select,
 };
+use seawater::loaders::ExpectModel;
 
 use crate::{
-  AuthorizationInfo, CRUDAction, EntityPolicy, FormResponsePolicy, Policy, ReadManageAction,
+  AuthorizationInfo, CRUDAction, EntityPolicy, GuardablePolicy, Policy, PolicyGuard,
+  ReadManageAction,
 };
 
 pub enum EventProposalAction {
@@ -69,7 +72,7 @@ static NON_FINAL_STATUSES: Lazy<HashSet<EventProposalStatus>> = Lazy::new(|| {
     .collect()
 });
 
-fn is_non_draft_event_proposal(event_proposal: &event_proposals::Model) -> bool {
+pub fn is_non_draft_event_proposal(event_proposal: &event_proposals::Model) -> bool {
   event_proposal
     .status
     .as_ref()
@@ -77,7 +80,7 @@ fn is_non_draft_event_proposal(event_proposal: &event_proposals::Model) -> bool 
     .unwrap_or(false)
 }
 
-fn is_non_pending_event_proposal(event_proposal: &event_proposals::Model) -> bool {
+pub fn is_non_pending_event_proposal(event_proposal: &event_proposals::Model) -> bool {
   event_proposal
     .status
     .as_ref()
@@ -85,7 +88,7 @@ fn is_non_pending_event_proposal(event_proposal: &event_proposals::Model) -> boo
     .unwrap_or(false)
 }
 
-fn is_non_final_event_proposal(event_proposal: &event_proposals::Model) -> bool {
+pub fn is_non_final_event_proposal(event_proposal: &event_proposals::Model) -> bool {
   event_proposal
     .status
     .as_ref()
@@ -210,47 +213,6 @@ impl Policy<AuthorizationInfo, (conventions::Model, event_proposals::Model)>
   }
 }
 
-#[async_trait]
-impl FormResponsePolicy<AuthorizationInfo, (conventions::Model, event_proposals::Model)>
-  for EventProposalPolicy
-{
-  async fn form_item_viewer_role(
-    principal: &AuthorizationInfo,
-    (convention, form_response): &(conventions::Model, event_proposals::Model),
-  ) -> FormItemRole {
-    if is_non_draft_event_proposal(form_response)
-      && principal
-        .has_convention_permission("update_event_proposals", convention.id)
-        .await
-        .unwrap_or(false)
-      || principal.site_admin_manage()
-    {
-      return FormItemRole::Admin;
-    }
-
-    if let Some(owner_id) = form_response.owner_id {
-      if principal
-        .user_con_profile_ids()
-        .await
-        .cloned()
-        .unwrap_or_default()
-        .contains(&owner_id)
-      {
-        return FormItemRole::TeamMember;
-      }
-    }
-
-    FormItemRole::Normal
-  }
-
-  async fn form_item_writer_role(
-    principal: &AuthorizationInfo,
-    resource: &(conventions::Model, event_proposals::Model),
-  ) -> FormItemRole {
-    EventProposalPolicy::form_item_viewer_role(principal, resource).await
-  }
-}
-
 impl EntityPolicy<AuthorizationInfo, event_proposals::Model> for EventProposalPolicy {
   type Action = EventProposalAction;
 
@@ -326,4 +288,53 @@ impl EntityPolicy<AuthorizationInfo, event_proposals::Model> for EventProposalPo
       _ => event_proposals::Entity::find().filter(Expr::cust("1 = 0")),
     }
   }
+}
+
+pub struct EventProposalGuard {
+  action: EventProposalAction,
+  model: event_proposals::Model,
+}
+
+#[async_trait]
+impl
+  PolicyGuard<
+    '_,
+    EventProposalPolicy,
+    (conventions::Model, event_proposals::Model),
+    event_proposals::Model,
+  > for EventProposalGuard
+{
+  fn new(action: EventProposalAction, model: &event_proposals::Model) -> Self {
+    Self {
+      action,
+      model: model.clone(),
+    }
+  }
+
+  fn get_action(&self) -> &EventProposalAction {
+    &self.action
+  }
+
+  fn get_model(&self) -> &event_proposals::Model {
+    &self.model
+  }
+
+  async fn get_resource(
+    &self,
+    model: &event_proposals::Model,
+    ctx: &Context<'_>,
+  ) -> Result<(conventions::Model, event_proposals::Model), Error> {
+    let loaders = ctx.data::<Arc<LoaderManager>>()?;
+    let convention_loader = loaders.event_proposal_convention();
+    let convention_result = convention_loader.load_one(model.id).await?;
+    let convention = convention_result.expect_one()?;
+
+    Ok((convention.clone(), model.clone()))
+  }
+}
+
+impl GuardablePolicy<'_, (conventions::Model, event_proposals::Model), event_proposals::Model>
+  for EventProposalPolicy
+{
+  type Guard = EventProposalGuard;
 }

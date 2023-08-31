@@ -14,7 +14,7 @@ pub struct EventAdminMenuTag;
 
 impl EventAdminMenuTag {
   pub fn new() -> Self {
-    Self::default()
+    Self
   }
 }
 
