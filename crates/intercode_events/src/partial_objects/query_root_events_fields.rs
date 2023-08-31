@@ -24,7 +24,7 @@ impl QueryRootEventsFields {
 
     Ok(events::Entity::find().relay_connection(
       db,
-      Box::new(|m: events::Model| EventEventsFields::new(m)),
+      Box::new(EventEventsFields::new),
       after,
       before,
       first,

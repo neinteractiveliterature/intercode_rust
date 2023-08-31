@@ -3,7 +3,7 @@ use std::fmt::Display;
 use async_graphql::Error;
 use intercode_entities::{conventions, events, runs, signup_requests, user_con_profiles, users};
 use intercode_liquid_drops::drops::{
-  ConventionDrop, DropContext, EventDrop, RunDrop, SignupRequestDrop, UserConProfileDrop, UserDrop,
+  DropContext, EventDrop, RunDrop, SignupRequestDrop, UserConProfileDrop, UserDrop,
 };
 use liquid::object;
 use seawater::{Context, DropResult, LiquidDrop, ModelBackedDrop};
@@ -54,12 +54,12 @@ fn mock_user_con_profile_drop(ctx: DropContext) -> DropResult<UserConProfileDrop
   })
 }
 
-fn mock_convention_drop(ctx: DropContext) -> DropResult<ConventionDrop> {
-  ctx.with_drop_store(|store| {
-    let convention = ctx.query_data().convention().cloned().unwrap_or_default();
-    DropResult::from(store.store(ConventionDrop::new(convention, ctx.clone())))
-  })
-}
+// fn mock_convention_drop(ctx: DropContext) -> DropResult<ConventionDrop> {
+//   ctx.with_drop_store(|store| {
+//     let convention = ctx.query_data().convention().cloned().unwrap_or_default();
+//     DropResult::from(store.store(ConventionDrop::new(convention, ctx.clone())))
+//   })
+// }
 
 fn mock_event_drop(ctx: DropContext) -> DropResult<EventDrop> {
   ctx.with_drop_store(|store| {

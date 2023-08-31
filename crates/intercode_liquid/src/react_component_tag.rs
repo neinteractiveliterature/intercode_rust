@@ -17,7 +17,7 @@ pub fn react_component_tag(component_name: &str, props: Value) -> String {
   );
 
   if let Value::Object(props) = props {
-    component_props.extend(props.into_iter());
+    component_props.extend(props);
   }
 
   format!(

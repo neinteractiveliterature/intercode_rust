@@ -57,7 +57,7 @@ pub fn merge_hash_maps<K: Eq + Hash, V>(hash_maps: Vec<HashMap<K, V>>) -> HashMa
   hash_maps.into_iter().fold(
     HashMap::with_capacity(total_capacity),
     |mut acc, hash_map| {
-      acc.extend(hash_map.into_iter());
+      acc.extend(hash_map);
       acc
     },
   )

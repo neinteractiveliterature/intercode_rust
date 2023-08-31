@@ -23,7 +23,7 @@ pub trait EventRunHelpers {
       })
       .unwrap_or_default();
 
-    let mut names = Vec::from_iter(names.into_iter());
+    let mut names = Vec::from_iter(names);
     names.sort();
     names.join(", ")
   }

@@ -12,7 +12,7 @@ static AWS_CONFIG: OnceCell<SdkConfig> = OnceCell::const_new();
 static SES_CLIENT: OnceCell<aws_sdk_sesv2::Client> = OnceCell::const_new();
 
 async fn get_aws_config() -> &'static SdkConfig {
-  AWS_CONFIG.get_or_init(|| aws_config::load_from_env()).await
+  AWS_CONFIG.get_or_init(aws_config::load_from_env).await
 }
 
 async fn get_ses_client() -> &'static aws_sdk_sesv2::Client {
