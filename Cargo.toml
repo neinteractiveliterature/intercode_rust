@@ -141,7 +141,7 @@ async-graphql = {workspace = true}
 axum = {workspace = true}
 chrono = {workspace = true}
 chrono-tz = {workspace = true}
-clap = {version = "4.3.3", features = ["derive", "cargo"]}
+clap = {version = "4.3.8", features = ["derive", "cargo"]}
 console-subscriber = {version = "0.1.9", optional = true}
 dhat = {version = "0.3.2", optional = true}
 dotenv = "0.15.0"
