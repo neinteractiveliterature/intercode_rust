@@ -59,7 +59,7 @@ axum = {version = "~0.6.18", features = ["multipart", "macros", "headers"]}
 axum-extra = {version = "~0.7.4", features = ["cookie"]}
 axum-server = {version = "0.5.1", features = ["tls-rustls"]}
 axum-sessions = "~0.5"
-base64 = "0.21.1"
+base64 = "0.21.3"
 bcrypt = "0.14.0"
 bumpalo = "3.13.0"
 bumpalo-herd = "0.1.2"
