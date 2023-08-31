@@ -29,7 +29,9 @@ pub trait EventRunHelpers {
   }
 
   fn title_for_run(&self, run_id: &i64) -> String {
-    let Some(run) = self.get_run_by_id(run_id) else { return "".to_string() };
+    let Some(run) = self.get_run_by_id(run_id) else {
+      return "".to_string();
+    };
 
     let event_title = self
       .get_event_by_id(&run.event_id)

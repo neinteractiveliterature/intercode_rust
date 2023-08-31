@@ -96,7 +96,9 @@ async fn can_manage_cms_content_via_group<M: CmsContentAuthorizable>(
     return Ok(false);
   }
 
-  let Some(scope) = resource.cms_content_groups_scope() else { return Ok(false);};
+  let Some(scope) = resource.cms_content_groups_scope() else {
+    return Ok(false);
+  };
 
   Ok(
     principal.has_scope("manage_conventions")

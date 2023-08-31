@@ -85,7 +85,7 @@ impl AbilityConventionsFields {
   async fn can_read_user_activity_alerts(&self, ctx: &Context<'_>) -> Result<bool> {
     let authorization_info = self.authorization_info.as_ref();
     let convention = ctx.data::<QueryData>()?.convention();
-    let Some(convention)= convention else {
+    let Some(convention) = convention else {
       return Ok(false);
     };
 

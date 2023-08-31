@@ -75,7 +75,7 @@ pub async fn single_user_printable(
     .await
     .map_err(|_err| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-  let Some(subject_profile)= subject_profile else {
+  let Some(subject_profile) = subject_profile else {
     return Err(StatusCode::NOT_FOUND);
   };
 

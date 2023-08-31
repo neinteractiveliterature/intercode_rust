@@ -56,7 +56,7 @@ impl AbilityStoreFields {
   async fn can_read_orders(&self, ctx: &Context<'_>) -> Result<bool> {
     let authorization_info = self.authorization_info.as_ref();
     let convention = ctx.data::<QueryData>()?.convention();
-    let Some(convention)= convention else {
+    let Some(convention) = convention else {
       return Ok(false);
     };
 
@@ -84,7 +84,7 @@ impl AbilityStoreFields {
   async fn can_create_orders(&self, ctx: &Context<'_>) -> Result<bool> {
     let authorization_info = self.authorization_info.as_ref();
     let convention = ctx.data::<QueryData>()?.convention();
-    let Some(convention)= convention else {
+    let Some(convention) = convention else {
       return Ok(false);
     };
 
@@ -112,7 +112,7 @@ impl AbilityStoreFields {
   async fn can_update_orders(&self, ctx: &Context<'_>) -> Result<bool> {
     let authorization_info = self.authorization_info.as_ref();
     let convention = ctx.data::<QueryData>()?.convention();
-    let Some(convention)= convention else {
+    let Some(convention) = convention else {
       return Ok(false);
     };
 
@@ -157,7 +157,7 @@ impl AbilityStoreFields {
   async fn can_manage_ticket_types(&self, ctx: &Context<'_>) -> Result<bool> {
     let authorization_info = self.authorization_info.as_ref();
     let convention = ctx.data::<QueryData>()?.convention();
-    let Some(convention)= convention else {
+    let Some(convention) = convention else {
       return Ok(false);
     };
     let single_event_loader_result = load_one_by_id!(convention_single_event, ctx, convention.id)?;

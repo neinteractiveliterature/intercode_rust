@@ -73,7 +73,9 @@ impl RunSignupCounts {
     bucket_key: &str,
     counted: SignupCountDataCountedStatus,
   ) -> i64 {
-    let Some(count_by_bucket_key_and_counted) = self.count_by_state_and_bucket_key_and_counted.get(state) else {
+    let Some(count_by_bucket_key_and_counted) =
+      self.count_by_state_and_bucket_key_and_counted.get(state)
+    else {
       return 0;
     };
 

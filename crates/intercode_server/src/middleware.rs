@@ -82,7 +82,10 @@ impl<S: Sync> FromRequestParts<S> for QueryDataFromRequest {
     let session = session_handle.read().await;
 
     let Some(cms_parent) = cms_parent else {
-      return Err((StatusCode::INTERNAL_SERVER_ERROR, "No root_site present in database".to_string()));
+      return Err((
+        StatusCode::INTERNAL_SERVER_ERROR,
+        "No root_site present in database".to_string(),
+      ));
     };
 
     let user_timezone = parts

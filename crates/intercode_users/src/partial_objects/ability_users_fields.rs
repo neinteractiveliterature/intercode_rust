@@ -92,7 +92,9 @@ impl AbilityUsersFields {
   async fn can_create_user_con_profiles(&self, ctx: &Context<'_>) -> Result<bool, Error> {
     let convention = ctx.data::<QueryData>()?.convention();
 
-    let Some(convention) = convention else { return Ok(false); };
+    let Some(convention) = convention else {
+      return Ok(false);
+    };
 
     let user_con_profile = user_con_profiles::Model {
       convention_id: convention.id,
