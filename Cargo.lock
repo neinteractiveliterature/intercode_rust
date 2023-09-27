@@ -447,9 +447,9 @@ dependencies = [
 
 [[package]]
 name = "async-stripe"
-version = "0.21.0"
+version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65bb25e3145c6216eafb3eca6f8cd6e016f43c9d4416d0af7984de46acf4f288"
+checksum = "87dd8d77f5bfefa28601194c7233e7c3dc6a9833dae6c990804a2d90a95d6354"
 dependencies = [
  "chrono",
  "futures-util",
@@ -457,7 +457,7 @@ dependencies = [
  "hmac 0.12.1",
  "http-types",
  "hyper",
- "hyper-rustls 0.23.2",
+ "hyper-rustls",
  "serde",
  "serde_json",
  "serde_path_to_error",
@@ -697,7 +697,7 @@ dependencies = [
  "http",
  "http-body",
  "hyper",
- "hyper-rustls 0.24.1",
+ "hyper-rustls",
  "lazy_static",
  "pin-project-lite",
  "rustls 0.21.6",
@@ -2513,21 +2513,6 @@ dependencies = [
  "tower-service",
  "tracing",
  "want",
-]
-
-[[package]]
-name = "hyper-rustls"
-version = "0.23.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1788965e61b367cd03a62950836d5cd41560c3577d90e40e0819373194d1661c"
-dependencies = [
- "http",
- "hyper",
- "log",
- "rustls 0.20.8",
- "rustls-native-certs",
- "tokio",
- "tokio-rustls 0.23.4",
 ]
 
 [[package]]
