@@ -10,6 +10,7 @@ use intercode_graphql_core::{
   ModelBackedType,
 };
 use intercode_graphql_loaders::LoaderManager;
+use sea_orm::prelude::DateTimeUtc;
 
 use super::{
   user_activity_alert_conventions_fields::UserActivityAlertConventionsFields,
@@ -73,7 +74,7 @@ impl ConventionConventionsFields {
     self
       .model
       .ends_at
-      .map(|t| DateTime::<Utc>::from_utc(t, Utc))
+      .map(|t| DateTimeUtc::from_naive_utc_and_offset(t, Utc))
   }
 
   #[graphql(name = "event_mailing_list_domain")]
@@ -146,7 +147,7 @@ impl ConventionConventionsFields {
     self
       .model
       .starts_at
-      .map(|t| DateTime::<Utc>::from_utc(t, Utc))
+      .map(|t| DateTimeUtc::from_naive_utc_and_offset(t, Utc))
   }
 
   #[graphql(name = "ticket_mode")]
