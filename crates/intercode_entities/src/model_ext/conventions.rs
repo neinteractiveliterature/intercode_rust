@@ -37,7 +37,7 @@ impl conventions::Model {
 
   pub fn ended(&self) -> bool {
     if let Some(ends_at) = self.ends_at {
-      DateTimeUtc::from_utc(ends_at, Utc) <= Utc::now()
+      DateTimeUtc::from_naive_utc_and_offset(ends_at, Utc) <= Utc::now()
     } else {
       false
     }
