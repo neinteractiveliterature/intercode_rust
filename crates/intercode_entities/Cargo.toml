@@ -9,7 +9,7 @@ version = "0.1.0"
 async-graphql = {workspace = true}
 async-trait = {workspace = true}
 chrono = {workspace = true}
-indexmap = "2.0.0"
+indexmap = "2.0.2"
 intercode_timespan = {workspace = true}
 itertools = {workspace = true}
 once_cell = {workspace = true}
