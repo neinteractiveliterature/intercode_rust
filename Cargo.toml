@@ -74,7 +74,7 @@ html-escape = "0.2.13"
 http = "0.2.9"
 hyper = "0.14.27"
 i18n-embed = {version = "0.13", features = ["fluent-system"]}
-i18n-embed-fl = "0.6"
+i18n-embed-fl = "0.7"
 ics = "0.5.8"
 id-arena = "2.2.1"
 indicatif = {version = "0.17.7", features = ["improved_unicode"]}

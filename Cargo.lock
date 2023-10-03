@@ -2617,15 +2617,15 @@ dependencies = [
 
 [[package]]
 name = "i18n-config"
-version = "0.4.4"
+version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b987084cadad6e2f2b1e6ea62c44123591a3c044793a1beabf71a8356ea768d5"
+checksum = "0c9ce3c48cbc21fd5b22b9331f32b5b51f6ad85d969b99e793427332e76e7640"
 dependencies = [
  "log",
  "serde",
  "serde_derive",
  "thiserror",
- "toml 0.7.6",
+ "toml 0.8.2",
  "unic-langid",
 ]
 
@@ -2644,7 +2644,27 @@ dependencies = [
  "lazy_static",
  "log",
  "parking_lot",
- "rust-embed",
+ "rust-embed 6.8.1",
+ "thiserror",
+ "unic-langid",
+]
+
+[[package]]
+name = "i18n-embed"
+version = "0.14.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94205d95764f5bb9db9ea98fa77f89653365ca748e27161f5bbea2ffd50e459c"
+dependencies = [
+ "arc-swap",
+ "fluent",
+ "fluent-langneg",
+ "fluent-syntax",
+ "i18n-embed-impl",
+ "intl-memoizer",
+ "lazy_static",
+ "log",
+ "parking_lot",
+ "rust-embed 8.0.0",
  "thiserror",
  "unic-langid",
  "walkdir",
@@ -2652,16 +2672,16 @@ dependencies = [
 
 [[package]]
 name = "i18n-embed-fl"
-version = "0.6.7"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d26a3d3569737dfaac7fc1c4078e6af07471c3060b8e570bcd83cdd5f4685395"
+checksum = "9fc1f8715195dffc4caddcf1cf3128da15fe5d8a137606ea8856c9300047d5a2"
 dependencies = [
  "dashmap",
  "find-crate",
  "fluent",
  "fluent-syntax",
  "i18n-config",
- "i18n-embed",
+ "i18n-embed 0.14.1",
  "lazy_static",
  "proc-macro-error",
  "proc-macro2",
@@ -2899,7 +2919,7 @@ version = "0.1.0"
 dependencies = [
  "async-graphql",
  "async-trait",
- "i18n-embed",
+ "i18n-embed 0.13.9",
  "i18n-embed-fl",
  "intercode_entities",
  "intercode_graphql_core",
@@ -2957,7 +2977,7 @@ dependencies = [
  "chrono-tz",
  "dyn-clone",
  "http",
- "i18n-embed",
+ "i18n-embed 0.13.9",
  "intercode_entities",
  "intercode_inflector",
  "intercode_liquid",
@@ -3010,7 +3030,7 @@ dependencies = [
  "chrono-tz",
  "dyn-clone",
  "html-escape",
- "i18n-embed",
+ "i18n-embed 0.13.9",
  "i18n-embed-fl",
  "intercode_entities",
  "intercode_inflector",
@@ -3039,7 +3059,7 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "futures",
- "i18n-embed",
+ "i18n-embed 0.13.9",
  "i18n-embed-fl",
  "indicatif",
  "intercode_cms",
@@ -3208,7 +3228,7 @@ dependencies = [
  "hex",
  "http",
  "hyper",
- "i18n-embed",
+ "i18n-embed 0.13.9",
  "i18n-embed-fl",
  "intercode_entities",
  "intercode_graphql_core",
@@ -3216,7 +3236,7 @@ dependencies = [
  "once_cell",
  "opentelemetry",
  "regex",
- "rust-embed",
+ "rust-embed 6.8.1",
  "sea-orm",
  "seawater",
  "serde_json",
@@ -3282,7 +3302,7 @@ name = "intercode_timespan"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "i18n-embed",
+ "i18n-embed 0.13.9",
  "i18n-embed-fl",
  "serde",
 ]
@@ -4252,7 +4272,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f4c021e1093a56626774e81216a4ce732a735e5bad4868a03f3ed65ca0c3919"
 dependencies = [
  "once_cell",
- "toml_edit",
+ "toml_edit 0.19.14",
 ]
 
 [[package]]
@@ -4685,8 +4705,19 @@ version = "6.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a36224c3276f8c4ebc8c20f158eca7ca4359c8db89991c4925132aaaf6702661"
 dependencies = [
- "rust-embed-impl",
- "rust-embed-utils",
+ "rust-embed-impl 6.8.1",
+ "rust-embed-utils 7.8.1",
+ "walkdir",
+]
+
+[[package]]
+name = "rust-embed"
+version = "8.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1e7d90385b59f0a6bf3d3b757f3ca4ece2048265d70db20a2016043d4509a40"
+dependencies = [
+ "rust-embed-impl 8.0.0",
+ "rust-embed-utils 8.0.0",
  "walkdir",
 ]
 
@@ -4698,7 +4729,20 @@ checksum = "49b94b81e5b2c284684141a2fb9e2a31be90638caf040bf9afbc5a0416afe1ac"
 dependencies = [
  "proc-macro2",
  "quote",
- "rust-embed-utils",
+ "rust-embed-utils 7.8.1",
+ "syn 2.0.37",
+ "walkdir",
+]
+
+[[package]]
+name = "rust-embed-impl"
+version = "8.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c3d8c6fd84090ae348e63a84336b112b5c3918b3bf0493a581f7bd8ee623c29"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "rust-embed-utils 8.0.0",
  "syn 2.0.37",
  "walkdir",
 ]
@@ -4708,6 +4752,16 @@ name = "rust-embed-utils"
 version = "7.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d38ff6bf570dc3bb7100fce9f7b60c33fa71d80e88da3f2580df4ff2bdded74"
+dependencies = [
+ "sha2 0.10.7",
+ "walkdir",
+]
+
+[[package]]
+name = "rust-embed-utils"
+version = "8.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "873feff8cb7bf86fdf0a71bb21c95159f4e4a37dd7a4bd1855a940909b583ada"
 dependencies = [
  "sha2 0.10.7",
  "walkdir",
@@ -5800,14 +5854,14 @@ dependencies = [
 
 [[package]]
 name = "toml"
-version = "0.7.6"
+version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c17e963a819c331dcacd7ab957d80bc2b9a9c1e71c804826d2f283dd65306542"
+checksum = "185d8ab0dfbb35cf1399a6344d8484209c088f75f8f68230da55d48d95d43e3d"
 dependencies = [
  "serde",
  "serde_spanned",
  "toml_datetime",
- "toml_edit",
+ "toml_edit 0.20.2",
 ]
 
 [[package]]
@@ -5824,6 +5878,17 @@ name = "toml_edit"
 version = "0.19.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8123f27e969974a3dfba720fdb560be359f57b44302d280ba72e76a74480e8a"
+dependencies = [
+ "indexmap 2.0.2",
+ "toml_datetime",
+ "winnow",
+]
+
+[[package]]
+name = "toml_edit"
+version = "0.20.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "396e4d48bbb2b7554c944bde63101b5ae446cff6ec4a24227428f15eb72ef338"
 dependencies = [
  "indexmap 2.0.2",
  "serde",
@@ -6277,9 +6342,9 @@ checksum = "9d5b2c62b4012a3e1eca5a7e077d13b3bf498c4073e33ccd58626607748ceeca"
 
 [[package]]
 name = "walkdir"
-version = "2.3.3"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36df944cda56c7d8d8b7496af378e6b16de9284591917d307c9b4d313c44e698"
+checksum = "d71d857dc86794ca4c280d616f7da00d2dbfd8cd788846559a6813e6aa4b54ee"
 dependencies = [
  "same-file",
  "winapi-util",
