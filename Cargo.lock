@@ -3894,9 +3894,9 @@ checksum = "b15813163c1d831bf4a13c3610c05c0d03b39feb07f7e09fa234dac9b15aaf39"
 
 [[package]]
 name = "oxide-auth"
-version = "0.5.3"
+version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e580c9b15905cc585d44bc6010113a3225c4b664d40d0a175d5a0a4022235d89"
+checksum = "06729d9f5ee0fcade59be20aef48231be773808ea3d2eda2fcac394f678cfd95"
 dependencies = [
  "base64 0.13.1",
  "chrono",
