@@ -48,9 +48,9 @@ members = [
 Inflector = "*"
 askama = {version = "0.12.1", features = ["with-axum"]}
 askama_axum = "0.3.0"
-async-graphql = {version = "~5.0.10", features = ["tracing", "dataloader", "chrono"]}
-async-graphql-axum = "~5.0.10"
-async-graphql-value = {version = "~5.0.10"}
+async-graphql = {version = "~6.0.7", features = ["tracing", "dataloader", "chrono"]}
+async-graphql-axum = "~6.0.7"
+async-graphql-value = {version = "~6.0.7"}
 async-trait = "*"
 aws-config = "0.56.1"
 aws-sdk-sesv2 = "0.31.1"

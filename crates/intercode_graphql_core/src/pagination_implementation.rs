@@ -109,6 +109,7 @@ where
           tags: vec![],
           override_from: None,
           compute_complexity: None,
+          directive_invocations: vec![],
         },
       );
 
@@ -130,6 +131,7 @@ where
           tags: vec![],
           override_from: None,
           compute_complexity: None,
+          directive_invocations: vec![],
         },
       );
 
@@ -151,6 +153,7 @@ where
           tags: vec![],
           override_from: None,
           compute_complexity: None,
+          directive_invocations: vec![],
         },
       );
 
@@ -172,6 +175,7 @@ where
           tags: vec![],
           override_from: None,
           compute_complexity: None,
+          directive_invocations: vec![],
         },
       );
 
@@ -193,6 +197,7 @@ where
           tags: vec![],
           override_from: None,
           compute_complexity: None,
+          directive_invocations: vec![],
         },
       );
 
@@ -204,11 +209,14 @@ where
         extends: false,
         shareable: true,
         inaccessible: false,
+        resolvable: true,
         tags: vec![],
         keys: None,
         visible: None,
         is_subscription: false,
         rust_typename: Some(std::any::type_name::<Self>()),
+        directive_invocations: vec![],
+        interface_object: false,
       }
     })
   }

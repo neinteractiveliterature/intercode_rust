@@ -141,11 +141,6 @@ interface CmsParent {
 	rootPage: Page!
 	typeaheadSearchCmsContent(name: String): [CmsContent!]!
 	pre_schedule_content_html: String
-	"""
-	Given a Liquid text string and a notification event, renders the Liquid to HTML using the
-	current domain's CMS context as if it were the content for that notification type.
-	"""
-	preview_notifier_liquid(eventKey: String!, content: String!): String!
 }
 
 type CmsPartial {
@@ -191,11 +186,6 @@ type Convention {
 	rootPage: Page!
 	typeaheadSearchCmsContent(name: String): [CmsContent!]!
 	pre_schedule_content_html: String
-	"""
-	Given a Liquid text string and a notification event, renders the Liquid to HTML using the
-	current domain's CMS context as if it were the content for that notification type.
-	"""
-	preview_notifier_liquid(eventKey: String!, content: String!): String!
 	name: String
 	canceled: Boolean!
 	clickwrap_agreement: String
@@ -221,6 +211,16 @@ type Convention {
 	timezone_name: String
 	accepting_proposals: Boolean!
 	rooms: [Room!]!
+	"""
+	Given a Liquid text string and a notification event, renders the Liquid to HTML using the
+	current domain's CMS context as if it were the content for that notification type.
+	"""
+	preview_notifier_liquid(
+		"""
+		The key of the notification event to use for generating the preview.
+		"""
+		eventKey: String!,		content: String!
+	): String!
 	bio_eligible_user_con_profiles: [UserConProfile!]!
 	catch_all_staff_position: StaffPosition
 	cms_content_groups: [CmsContentGroup!]!
@@ -239,7 +239,12 @@ type Convention {
 	Finds an event proposal by ID in this convention. If there is no event proposal with that ID
 	in this convention, errors out.
 	"""
-	event_proposal(id: ID!): EventProposal!
+	event_proposal(
+		"""
+		The ID of the event proposal to find.
+		"""
+		id: ID!
+	): EventProposal!
 	event_proposals_paginated(page: Int, per_page: Int, filters: EventProposalFiltersInput, sort: [SortInput!]): EventProposalsPagination!
 	form(id: ID!): Form!
 	forms: [Form!]!
