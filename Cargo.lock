@@ -3236,7 +3236,7 @@ dependencies = [
  "once_cell",
  "opentelemetry",
  "regex",
- "rust-embed 6.8.1",
+ "rust-embed 8.0.0",
  "sea-orm",
  "seawater",
  "serde_json",

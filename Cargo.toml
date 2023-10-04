@@ -113,7 +113,7 @@ parking_lot = "0.12.1"
 phonenumber = "0.3"
 pulldown-cmark = "0.9.3"
 regex = "*"
-rust-embed = "6"
+rust-embed = "8"
 rusty-money = "0.4.1"
 sea-orm = {version = "^0.12.3", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"]}
 seawater = {path = "./crates/seawater"}
