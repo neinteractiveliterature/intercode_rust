@@ -2631,26 +2631,6 @@ dependencies = [
 
 [[package]]
 name = "i18n-embed"
-version = "0.13.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92a86226a7a16632de6723449ee5fe70bac5af718bc642ee9ca2f0f6e14fa1fa"
-dependencies = [
- "arc-swap",
- "fluent",
- "fluent-langneg",
- "fluent-syntax",
- "i18n-embed-impl",
- "intl-memoizer",
- "lazy_static",
- "log",
- "parking_lot",
- "rust-embed 6.8.1",
- "thiserror",
- "unic-langid",
-]
-
-[[package]]
-name = "i18n-embed"
 version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94205d95764f5bb9db9ea98fa77f89653365ca748e27161f5bbea2ffd50e459c"
@@ -2681,7 +2661,7 @@ dependencies = [
  "fluent",
  "fluent-syntax",
  "i18n-config",
- "i18n-embed 0.14.1",
+ "i18n-embed",
  "lazy_static",
  "proc-macro-error",
  "proc-macro2",
@@ -2919,7 +2899,7 @@ version = "0.1.0"
 dependencies = [
  "async-graphql",
  "async-trait",
- "i18n-embed 0.13.9",
+ "i18n-embed",
  "i18n-embed-fl",
  "intercode_entities",
  "intercode_graphql_core",
@@ -2977,7 +2957,7 @@ dependencies = [
  "chrono-tz",
  "dyn-clone",
  "http",
- "i18n-embed 0.13.9",
+ "i18n-embed",
  "intercode_entities",
  "intercode_inflector",
  "intercode_liquid",
@@ -3030,7 +3010,7 @@ dependencies = [
  "chrono-tz",
  "dyn-clone",
  "html-escape",
- "i18n-embed 0.13.9",
+ "i18n-embed",
  "i18n-embed-fl",
  "intercode_entities",
  "intercode_inflector",
@@ -3059,7 +3039,7 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "futures",
- "i18n-embed 0.13.9",
+ "i18n-embed",
  "i18n-embed-fl",
  "indicatif",
  "intercode_cms",
@@ -3228,7 +3208,7 @@ dependencies = [
  "hex",
  "http",
  "hyper",
- "i18n-embed 0.13.9",
+ "i18n-embed",
  "i18n-embed-fl",
  "intercode_entities",
  "intercode_graphql_core",
@@ -3302,7 +3282,7 @@ name = "intercode_timespan"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "i18n-embed 0.13.9",
+ "i18n-embed",
  "i18n-embed-fl",
  "serde",
 ]
