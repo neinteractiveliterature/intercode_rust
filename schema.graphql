@@ -300,6 +300,12 @@ type Department {
 	event_categories: [EventCategory!]!
 }
 
+type EmailRoute {
+	id: ID!
+	forward_addresses: [String!]!
+	receiver_address: String!
+}
+
 input EmailRouteFiltersInput {
 	receiver_address: String
 	forward_addresses: String

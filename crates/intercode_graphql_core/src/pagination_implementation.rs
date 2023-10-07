@@ -87,6 +87,11 @@ where
 
   #[doc = " Create type information in the registry and return qualified typename."]
   fn create_type_info(registry: &mut Registry) -> String {
+    let existing_type = registry.types.get(Item::type_name().as_ref());
+    if existing_type.is_none() {
+      Item::create_type_info(registry);
+    }
+
     registry.create_output_type::<Self, _>(MetaTypeId::Object, |_registry| {
       let mut fields: IndexMap<String, MetaField> = Default::default();
       let cache_control = ::std::default::Default::default();
