@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-name = "seawater_derive"
+name = "intercode_graphql_presend_macros"
 version = "0.1.0"
 
 [lib]
@@ -9,5 +9,9 @@ proc-macro = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+proc-macro2 = {workspace = true}
 quote = {workspace = true}
+serde = {workspace = true}
+serde_json = {workspace = true}
+serde_path_to_error = {workspace = true}
 syn = {workspace = true}

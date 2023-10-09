@@ -3010,6 +3010,40 @@ dependencies = [
 ]
 
 [[package]]
+name = "intercode_graphql_presend"
+version = "0.1.0"
+dependencies = [
+ "async-graphql",
+ "async-graphql-value",
+ "intercode_cms",
+ "intercode_entities",
+ "intercode_graphql",
+ "intercode_graphql_core",
+ "intercode_graphql_loaders",
+ "intercode_graphql_presend_macros",
+ "intercode_policies",
+ "once_cell",
+ "regex",
+ "sea-orm",
+ "serde",
+ "serde_json",
+ "serde_path_to_error",
+ "tracing",
+]
+
+[[package]]
+name = "intercode_graphql_presend_macros"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_json",
+ "serde_path_to_error",
+ "syn 2.0.37",
+]
+
+[[package]]
 name = "intercode_inflector"
 version = "0.1.0"
 dependencies = [
@@ -3169,6 +3203,7 @@ name = "intercode_rust"
 version = "0.1.0"
 dependencies = [
  "async-graphql",
+ "async-graphql-value",
  "axum",
  "chrono",
  "chrono-tz",
@@ -3184,6 +3219,7 @@ dependencies = [
  "intercode_graphql",
  "intercode_graphql_core",
  "intercode_graphql_loaders",
+ "intercode_graphql_presend",
  "intercode_liquid",
  "intercode_liquid_drops",
  "intercode_policies",
@@ -3201,6 +3237,9 @@ dependencies = [
  "regex",
  "sea-orm",
  "seawater",
+ "serde",
+ "serde_json",
+ "serde_path_to_error",
  "time",
  "tokio",
  "tonic 0.9.2",
@@ -4307,9 +4346,9 @@ checksum = "dc375e1527247fe1a97d8b7156678dfe7c1af2fc075c9a4db3690ecd2a148068"
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.67"
+version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d433d9f1a3e8c1263d9456598b16fec66f4acc9a74dacffd35c7bb09b3a1328"
+checksum = "134c189feb4956b20f6f547d2cf727d4c0fe06722b20a0eec87ed445a97f92da"
 dependencies = [
  "unicode-ident",
 ]
