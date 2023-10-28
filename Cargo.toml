@@ -75,7 +75,7 @@ hex = "0.4.3"
 html-escape = "0.2.13"
 http = "0.2.9"
 hyper = "0.14.27"
-i18n-embed = {version = "0.13", features = ["fluent-system"]}
+i18n-embed = {version = "0.14.1", features = ["fluent-system"]}
 i18n-embed-fl = "0.7"
 ics = "0.5.8"
 id-arena = "2.2.1"
@@ -119,7 +119,7 @@ proc-macro2 = "1.0.69"
 pulldown-cmark = "0.9.3"
 quote = "1.0.33"
 regex = "*"
-rust-embed = "6"
+rust-embed = "8"
 rusty-money = "0.4.1"
 sea-orm = {version = "^0.12.3", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"]}
 seawater = {path = "./crates/seawater"}

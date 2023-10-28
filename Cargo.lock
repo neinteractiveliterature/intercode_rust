@@ -2631,26 +2631,6 @@ dependencies = [
 
 [[package]]
 name = "i18n-embed"
-version = "0.13.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92a86226a7a16632de6723449ee5fe70bac5af718bc642ee9ca2f0f6e14fa1fa"
-dependencies = [
- "arc-swap",
- "fluent",
- "fluent-langneg",
- "fluent-syntax",
- "i18n-embed-impl",
- "intl-memoizer",
- "lazy_static",
- "log",
- "parking_lot",
- "rust-embed 6.8.1",
- "thiserror",
- "unic-langid",
-]
-
-[[package]]
-name = "i18n-embed"
 version = "0.14.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94205d95764f5bb9db9ea98fa77f89653365ca748e27161f5bbea2ffd50e459c"
@@ -2664,7 +2644,7 @@ dependencies = [
  "lazy_static",
  "log",
  "parking_lot",
- "rust-embed 8.0.0",
+ "rust-embed",
  "thiserror",
  "unic-langid",
  "walkdir",
@@ -2681,7 +2661,7 @@ dependencies = [
  "fluent",
  "fluent-syntax",
  "i18n-config",
- "i18n-embed 0.14.1",
+ "i18n-embed",
  "lazy_static",
  "proc-macro-error",
  "proc-macro2",
@@ -2919,7 +2899,7 @@ version = "0.1.0"
 dependencies = [
  "async-graphql",
  "async-trait",
- "i18n-embed 0.13.9",
+ "i18n-embed",
  "i18n-embed-fl",
  "intercode_entities",
  "intercode_graphql_core",
@@ -2977,7 +2957,7 @@ dependencies = [
  "chrono-tz",
  "dyn-clone",
  "http",
- "i18n-embed 0.13.9",
+ "i18n-embed",
  "intercode_entities",
  "intercode_inflector",
  "intercode_liquid",
@@ -3064,7 +3044,7 @@ dependencies = [
  "chrono-tz",
  "dyn-clone",
  "html-escape",
- "i18n-embed 0.13.9",
+ "i18n-embed",
  "i18n-embed-fl",
  "intercode_entities",
  "intercode_inflector",
@@ -3093,7 +3073,7 @@ dependencies = [
  "chrono",
  "chrono-tz",
  "futures",
- "i18n-embed 0.13.9",
+ "i18n-embed",
  "i18n-embed-fl",
  "indicatif",
  "intercode_cms",
@@ -3267,7 +3247,7 @@ dependencies = [
  "hex",
  "http",
  "hyper",
- "i18n-embed 0.13.9",
+ "i18n-embed",
  "i18n-embed-fl",
  "intercode_entities",
  "intercode_graphql_core",
@@ -3275,7 +3255,7 @@ dependencies = [
  "once_cell",
  "opentelemetry",
  "regex",
- "rust-embed 6.8.1",
+ "rust-embed",
  "sea-orm",
  "seawater",
  "serde_json",
@@ -3341,7 +3321,7 @@ name = "intercode_timespan"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "i18n-embed 0.13.9",
+ "i18n-embed",
  "i18n-embed-fl",
  "serde",
 ]
@@ -4740,36 +4720,12 @@ dependencies = [
 
 [[package]]
 name = "rust-embed"
-version = "6.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a36224c3276f8c4ebc8c20f158eca7ca4359c8db89991c4925132aaaf6702661"
-dependencies = [
- "rust-embed-impl 6.8.1",
- "rust-embed-utils 7.8.1",
- "walkdir",
-]
-
-[[package]]
-name = "rust-embed"
 version = "8.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1e7d90385b59f0a6bf3d3b757f3ca4ece2048265d70db20a2016043d4509a40"
 dependencies = [
- "rust-embed-impl 8.0.0",
- "rust-embed-utils 8.0.0",
- "walkdir",
-]
-
-[[package]]
-name = "rust-embed-impl"
-version = "6.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49b94b81e5b2c284684141a2fb9e2a31be90638caf040bf9afbc5a0416afe1ac"
-dependencies = [
- "proc-macro2",
- "quote",
- "rust-embed-utils 7.8.1",
- "syn 2.0.37",
+ "rust-embed-impl",
+ "rust-embed-utils",
  "walkdir",
 ]
 
@@ -4781,18 +4737,8 @@ checksum = "3c3d8c6fd84090ae348e63a84336b112b5c3918b3bf0493a581f7bd8ee623c29"
 dependencies = [
  "proc-macro2",
  "quote",
- "rust-embed-utils 8.0.0",
+ "rust-embed-utils",
  "syn 2.0.37",
- "walkdir",
-]
-
-[[package]]
-name = "rust-embed-utils"
-version = "7.8.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d38ff6bf570dc3bb7100fce9f7b60c33fa71d80e88da3f2580df4ff2bdded74"
-dependencies = [
- "sha2 0.10.7",
  "walkdir",
 ]
 
