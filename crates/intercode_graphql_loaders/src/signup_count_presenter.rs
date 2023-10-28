@@ -57,10 +57,10 @@ impl RunSignupCounts {
     let state_entry = self
       .count_by_state_and_bucket_key_and_counted
       .entry(state.to_string());
-    let count_by_bucket_key = state_entry.or_insert_with(Default::default);
+    let count_by_bucket_key = state_entry.or_default();
     let count_by_counted = count_by_bucket_key
       .entry(bucket_key.map(|key| key.to_string()).unwrap_or_default())
-      .or_insert_with(Default::default);
+      .or_default();
     let current_count_entry = count_by_counted.entry(counted.into());
     current_count_entry
       .and_modify(|current_count| *current_count += count)

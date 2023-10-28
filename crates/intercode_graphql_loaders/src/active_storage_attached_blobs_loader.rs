@@ -36,9 +36,7 @@ impl Loader<i64> for ActiveStorageAttachedBlobsLoader {
         .fold(
           HashMap::<i64, Self::Value>::with_capacity(keys.len()),
           |mut acc, (attachment, blob)| {
-            let attachments = acc
-              .entry(attachment.record_id)
-              .or_insert_with(Default::default);
+            let attachments = acc.entry(attachment.record_id).or_default();
             if let Some(blob) = blob {
               attachments.push(blob);
             }
