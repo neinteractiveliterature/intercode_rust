@@ -50,7 +50,7 @@ members = [
 Inflector = "*"
 askama = {version = "0.12.1", features = ["with-axum"]}
 askama_axum = "0.3.0"
-async-graphql = {version = "~6.0.7", features = ["tracing", "dataloader", "chrono"]}
+async-graphql = {version = "~6.0.9", features = ["tracing", "dataloader", "chrono"]}
 async-graphql-axum = "~6.0.7"
 async-graphql-value = {version = "~6.0.7"}
 async-trait = "*"
