@@ -130,7 +130,7 @@ sha1 = "0.10.6"
 stripe = {package = "async-stripe", version = "0.25.1", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
 syn = "2.0.37"
 time = "0.3.29"
-tokio = {version = "~1.32.0", features = ["rt-multi-thread", "macros", "signal", "tracing"]}
+tokio = {version = "~1.33.0", features = ["rt-multi-thread", "macros", "signal", "tracing"]}
 tower = {version = "0.4.13", features = ["limit", "make"]}
 tower-http = {version = "0.4.4", features = ["catch-panic", "compression-br", "compression-deflate", "compression-gzip", "trace"]}
 tracing = "0.1.37"
