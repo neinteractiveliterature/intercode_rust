@@ -28,6 +28,8 @@ members = [
   "./crates/intercode_graphql",
   "./crates/intercode_graphql_core",
   "./crates/intercode_graphql_loaders",
+  "./crates/intercode_graphql_presend",
+  "./crates/intercode_graphql_presend_macros",
   "./crates/intercode_inflector",
   "./crates/intercode_liquid",
   "./crates/intercode_liquid_drops",
@@ -88,6 +90,8 @@ intercode_full_text_search = {path = "./crates/intercode_full_text_search"}
 intercode_graphql = {path = "./crates/intercode_graphql"}
 intercode_graphql_core = {path = "./crates/intercode_graphql_core"}
 intercode_graphql_loaders = {path = "./crates/intercode_graphql_loaders"}
+intercode_graphql_presend = {path = "./crates/intercode_graphql_presend"}
+intercode_graphql_presend_macros = {path = "./crates/intercode_graphql_presend_macros"}
 intercode_inflector = {path = "./crates/intercode_inflector"}
 intercode_liquid = {path = "./crates/intercode_liquid"}
 intercode_liquid_drops = {path = "./crates/intercode_liquid_drops"}
@@ -111,7 +115,9 @@ opentelemetry = {version = "0.20.0", features = ["rt-tokio"]}
 oxide-auth = "0.5.4"
 parking_lot = "0.12.1"
 phonenumber = "0.3"
+proc-macro2 = "1.0.69"
 pulldown-cmark = "0.9.3"
+quote = "1.0.33"
 regex = "*"
 rust-embed = "6"
 rusty-money = "0.4.1"
@@ -119,8 +125,10 @@ sea-orm = {version = "^0.12.3", features = ["sqlx-postgres", "runtime-tokio-rust
 seawater = {path = "./crates/seawater"}
 serde = "1.0"
 serde_json = "1.0"
+serde_path_to_error = "*"
 sha1 = "0.10.6"
 stripe = {package = "async-stripe", version = "0.25.1", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
+syn = "2.0.37"
 time = "0.3.29"
 tokio = {version = "~1.32.0", features = ["rt-multi-thread", "macros", "signal", "tracing"]}
 tower = {version = "0.4.13", features = ["limit", "make"]}
@@ -138,6 +146,7 @@ tokio-console = ["dep:console-subscriber", "tokio/full", "tokio/tracing"]
 
 [dependencies]
 async-graphql = {workspace = true}
+async-graphql-value = {workspace = true}
 axum = {workspace = true}
 chrono = {workspace = true}
 chrono-tz = {workspace = true}
@@ -153,6 +162,7 @@ intercode_entities = {workspace = true}
 intercode_graphql = {workspace = true}
 intercode_graphql_core = {workspace = true}
 intercode_graphql_loaders = {workspace = true}
+intercode_graphql_presend = {workspace = true}
 intercode_liquid = {workspace = true}
 intercode_liquid_drops = {workspace = true}
 intercode_policies = {workspace = true}
@@ -170,6 +180,9 @@ oxide-auth-axum = "~0.3.0"
 regex = {workspace = true}
 sea-orm = {workspace = true}
 seawater = {workspace = true}
+serde = {workspace = true}
+serde_json = {workspace = true}
+serde_path_to_error = {workspace = true}
 time = {workspace = true}
 tokio = {workspace = true}
 tonic = "~0.9.0"

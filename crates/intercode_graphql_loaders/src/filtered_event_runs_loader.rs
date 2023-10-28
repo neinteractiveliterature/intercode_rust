@@ -42,7 +42,7 @@ impl Loader<i64> for FilteredEventRunsLoader {
         .fold(
           HashMap::<i64, Self::Value>::with_capacity(keys.len()),
           |mut acc, run| {
-            let runs = acc.entry(run.event_id).or_insert_with(Default::default);
+            let runs = acc.entry(run.event_id).or_default();
             runs.push(run);
             acc
           },

@@ -107,7 +107,7 @@ impl PerUserSingleTemplate {
             .await?
             .into_iter()
             .fold(HashMap::new(), |mut acc, (room_run, room)| {
-              let rooms = acc.entry(room_run.run_id).or_insert(vec![]);
+              let rooms: &mut Vec<rooms::Model> = acc.entry(room_run.run_id).or_default();
               if let Some(room) = room {
                 rooms.push(room);
               }

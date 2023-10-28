@@ -7,9 +7,10 @@ use intercode_entities::links::{
   CmsNavigationItemToCmsNavigationSection, ConventionToCatchAllStaffPosition, ConventionToSignups,
   ConventionToSingleEvent, ConventionToStaffPositions, EventCategoryToEventForm,
   EventCategoryToEventProposalForm, EventToProvidedTickets, FormToEventCategories, FormToFormItems,
-  FormToProposalEventCategories, FormToUserConProfileConventions, SignupRequestToReplaceSignup,
-  SignupRequestToResultSignup, StaffPositionToUserConProfiles, TicketToProvidedByEvent,
-  UserActivityAlertToNotificationDestinations, UserConProfileToStaffPositions,
+  FormToProposalEventCategories, FormToUserConProfileConventions, PageToCmsPartials,
+  SignupRequestToReplaceSignup, SignupRequestToResultSignup, StaffPositionToUserConProfiles,
+  TicketToProvidedByEvent, UserActivityAlertToNotificationDestinations,
+  UserConProfileToStaffPositions,
 };
 use intercode_entities::model_ext::FormResponse;
 use intercode_entities::*;
@@ -339,6 +340,7 @@ loader_manager!(
   entity_relation(organization_role_permissions, organization_roles, permissions);
   entity_relation(organization_role_users, organization_roles, users);
   entity_relation(pages_cms_layouts, pages, cms_layouts);
+  entity_link(pages_referenced_partials, PageToCmsPartials);
   entity_relation(product_product_variants, products, product_variants);
   entity_relation(product_provides_ticket_type, products, ticket_types);
   entity_relation(room_runs, rooms, runs);

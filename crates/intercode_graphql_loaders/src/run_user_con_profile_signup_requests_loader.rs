@@ -38,9 +38,7 @@ impl Loader<i64> for RunUserConProfileSignupRequestsLoader {
         .fold(
           HashMap::<i64, Self::Value>::with_capacity(keys.len()),
           |mut acc, signup_request| {
-            let signup_requests = acc
-              .entry(signup_request.target_run_id)
-              .or_insert_with(Default::default);
+            let signup_requests = acc.entry(signup_request.target_run_id).or_default();
             signup_requests.push(signup_request);
             acc
           },

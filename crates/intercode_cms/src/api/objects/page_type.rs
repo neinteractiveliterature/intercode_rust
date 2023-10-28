@@ -3,8 +3,8 @@ use std::sync::Arc;
 use async_graphql::*;
 use intercode_entities::pages;
 use intercode_graphql_core::{
-  liquid_renderer::LiquidRenderer, load_one_by_model_id, model_backed_type, query_data::QueryData,
-  ModelBackedType,
+  liquid_renderer::LiquidRenderer, load_one_by_model_id, loader_result_to_many, model_backed_type,
+  query_data::QueryData, ModelBackedType,
 };
 use intercode_liquid::cms_parent_partial_source::PreloadPartialsStrategy;
 use intercode_policies::{
@@ -15,7 +15,7 @@ use seawater::loaders::ExpectModel;
 
 use crate::{api::policies::PagePolicy, CmsRenderingContext};
 
-use super::CmsLayoutType;
+use super::{CmsLayoutType, CmsPartialType};
 model_backed_type!(PageType, pages::Model);
 
 #[Object(name = "Page")]
@@ -88,6 +88,12 @@ impl PageType {
 
   async fn name(&self) -> &Option<String> {
     &self.model.name
+  }
+
+  #[graphql(name = "referenced_partials")]
+  async fn referenced_partials(&self, ctx: &Context<'_>) -> Result<Vec<CmsPartialType>> {
+    let loader_result = load_one_by_model_id!(pages_referenced_partials, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, CmsPartialType))
   }
 
   #[graphql(name = "skip_clickwrap_agreement")]

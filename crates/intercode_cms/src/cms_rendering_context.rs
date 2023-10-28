@@ -312,6 +312,7 @@ impl<'a> CmsRenderingContext<'a> {
     page_title: &str,
     page: Option<&pages::Model>,
     event: Option<&events::Model>,
+    app_component_props: serde_json::Value,
   ) -> String {
     let content_for_head = content_for_head(
       request_url,
@@ -335,8 +336,8 @@ impl<'a> CmsRenderingContext<'a> {
       NOSCRIPT_WARNING,
       browser_warning
         .map(|value| value.to_kstr().to_string())
-        .unwrap_or_else(|| "".to_string()),
-      react_component_tag("AppRoot", json!({}))
+        .unwrap_or_default(),
+      react_component_tag("AppRoot", app_component_props)
     )
   }
 }
