@@ -37,13 +37,11 @@ where
         .map(|mime_type| std::str::from_utf8(mime_type.as_bytes()));
 
       match mime_type {
-        Some(Ok(v)) if v == "application/x-www-form-urlencoded" => {
-          Form::<T>::from_request(req, state)
-            .await
-            .map(Self::Form)
-            .map_err(|_err| StatusCode::INTERNAL_SERVER_ERROR)
-        }
-        Some(Ok(v)) if v == "multipart/form-data" => Multipart::from_request(req, state)
+        Some(Ok("application/x-www-form-urlencoded")) => Form::<T>::from_request(req, state)
+          .await
+          .map(Self::Form)
+          .map_err(|_err| StatusCode::INTERNAL_SERVER_ERROR),
+        Some(Ok("multipart/form-data")) => Multipart::from_request(req, state)
           .await
           .map(Self::Multipart)
           .map_err(|_err| StatusCode::INTERNAL_SERVER_ERROR),

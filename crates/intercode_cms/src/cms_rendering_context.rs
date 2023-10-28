@@ -336,7 +336,7 @@ impl<'a> CmsRenderingContext<'a> {
       NOSCRIPT_WARNING,
       browser_warning
         .map(|value| value.to_kstr().to_string())
-        .unwrap_or_else(|| "".to_string()),
+        .unwrap_or_default(),
       react_component_tag("AppRoot", app_component_props)
     )
   }

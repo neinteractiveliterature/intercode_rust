@@ -80,14 +80,21 @@ pub async fn get_presend_data(
   path: &str,
 ) -> Result<serde_json::Value, async_graphql::Error> {
   let operations = if path == "/" {
-    cms_page_queries(path, &authorization_info, cms_parent, &query_data, None).await?
+    cms_page_queries(
+      path,
+      &authorization_info,
+      cms_parent,
+      query_data.as_ref(),
+      None,
+    )
+    .await?
   } else if let Some(captures) = PAGE_PATH_REGEX.captures(path) {
     let slug = captures.get(1).map_or("", |m| m.as_str());
     cms_page_queries(
       path,
       &authorization_info,
       cms_parent,
-      &query_data,
+      query_data.as_ref(),
       Some(slug),
     )
     .await?
@@ -150,7 +157,7 @@ async fn cms_page_queries(
   path: &str,
   authorization_info: &AuthorizationInfo,
   cms_parent: &CmsParent,
-  query_data: &Box<dyn QueryDataContainer>,
+  query_data: &dyn QueryDataContainer,
   slug: Option<&str>,
 ) -> Result<Vec<PresendableOperation>, async_graphql::Error> {
   let cms_admin = PagePolicy::accessible_to(authorization_info, &ReadManageAction::Manage)
