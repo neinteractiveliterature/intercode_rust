@@ -56,25 +56,25 @@ impl Add for SlotCount {
 
 impl PartialOrd for SlotCount {
   fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-    match self {
-      SlotCount::Unlimited => {
-        if other.is_unlimited() {
-          Some(std::cmp::Ordering::Equal)
-        } else {
-          Some(std::cmp::Ordering::Greater)
-        }
-      }
-      SlotCount::Limited(count) => match other {
-        SlotCount::Unlimited => Some(std::cmp::Ordering::Less),
-        SlotCount::Limited(other_count) => count.partial_cmp(other_count),
-      },
-    }
+    Some(self.cmp(other))
   }
 }
 
 impl Ord for SlotCount {
   fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-    self.partial_cmp(other).unwrap()
+    match self {
+      SlotCount::Unlimited => {
+        if other.is_unlimited() {
+          std::cmp::Ordering::Equal
+        } else {
+          std::cmp::Ordering::Greater
+        }
+      }
+      SlotCount::Limited(count) => match other {
+        SlotCount::Unlimited => std::cmp::Ordering::Less,
+        SlotCount::Limited(other_count) => count.cmp(other_count),
+      },
+    }
   }
 }
 
