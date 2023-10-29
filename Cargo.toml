@@ -127,7 +127,7 @@ serde = "1.0"
 serde_json = "1.0"
 serde_path_to_error = "*"
 sha1 = "0.10.6"
-stripe = {package = "async-stripe", version = "0.25.1", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
+stripe = {package = "async-stripe", version = "0.25.2", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
 syn = "2.0.38"
 time = "0.3.29"
 tokio = {version = "~1.33.0", features = ["rt-multi-thread", "macros", "signal", "tracing"]}
