@@ -11,7 +11,6 @@ async-trait = {workspace = true}
 axum = {workspace = true}
 axum-extra = {workspace = true}
 axum-server = {workspace = true}
-axum-sessions = {workspace = true}
 base64 = {workspace = true}
 chrono = {workspace = true}
 chrono-tz = {workspace = true}
@@ -36,4 +35,5 @@ time = {workspace = true}
 tokio = {workspace = true}
 tower = {workspace = true}
 tower-http = {workspace = true}
+tower-sessions = {workspace = true}
 tracing = {workspace = true}
