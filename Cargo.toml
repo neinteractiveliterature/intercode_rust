@@ -55,7 +55,7 @@ async-graphql-axum = "~6.0.9"
 async-graphql-value = {version = "~6.0.9"}
 async-trait = "*"
 aws-config = "0.56.1"
-aws-sdk-sesv2 = "0.31.1"
+aws-sdk-sesv2 = "0.35.0"
 aws-smithy-http = "*"
 axum = {version = "~0.6.20", features = ["multipart", "macros", "headers"]}
 axum-extra = {version = "~0.8.0", features = ["cookie"]}
