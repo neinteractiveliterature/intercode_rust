@@ -183,10 +183,15 @@ impl Policy<AuthorizationInfo, (conventions::Model, event_proposals::Model)>
               .await?
                 || principal.site_admin_read()))),
       ),
-      EventProposalAction::ReadAdminNotes => Ok(
+      EventProposalAction::ReadAdminNotes | EventProposalAction::UpdateAdminNotes => Ok(
         (principal.has_scope("read_events")
-          && has_applicable_permission("read_admin_notes", principal, convention, event_proposal)
-            .await?)
+          && has_applicable_permission(
+            "access_admin_notes",
+            principal,
+            convention,
+            event_proposal,
+          )
+          .await?)
           || principal.site_admin_read(),
       ),
       EventProposalAction::Update => Ok(
