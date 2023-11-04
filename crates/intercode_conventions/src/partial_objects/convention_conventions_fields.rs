@@ -67,7 +67,7 @@ impl ConventionConventionsFields {
 
   #[graphql(name = "email_mode")]
   async fn email_mode(&self) -> Result<EmailMode> {
-    Ok(self.model.email_mode.as_str().try_into()?)
+    self.model.email_mode.as_str().try_into()
   }
 
   #[graphql(name = "ends_at")]
