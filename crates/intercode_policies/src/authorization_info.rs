@@ -1,4 +1,4 @@
-use cached::{async_sync::Mutex, CachedAsync, UnboundCache};
+use cached::{CachedAsync, UnboundCache};
 use intercode_entities::{
   cms_content_groups, conventions, event_categories, events,
   model_ext::user_con_profiles::BioEligibility, signups, user_con_profiles, users,
@@ -11,7 +11,7 @@ use std::{
   fmt::Debug,
   hash::Hash,
 };
-use tokio::sync::OnceCell;
+use tokio::sync::{Mutex, OnceCell};
 
 use crate::{
   conventions_where_team_member, conventions_with_organization_permission,
