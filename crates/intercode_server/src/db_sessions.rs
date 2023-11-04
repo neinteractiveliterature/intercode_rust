@@ -99,10 +99,8 @@ impl SessionStore for DbSessionStore {
       .map(|find_result| {
         find_result
           .and_then(|record| record.data)
-          // .and_then(|encoded| engine.decode(encoded).ok())
-          // .and_then(|bytes| String::from_utf8(bytes).ok())
           .and_then(|data| serde_json::from_str::<SessionRecord>(&data).ok())
-          .and_then(|rec| Some(Session::from(rec)))
+          .map(Session::from)
       })
       .map_err(DbSessionError::from)
   }
