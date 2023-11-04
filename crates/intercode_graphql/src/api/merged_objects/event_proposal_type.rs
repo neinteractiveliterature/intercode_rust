@@ -43,5 +43,6 @@ merged_model_backed_type!(
   event_proposals::Model,
   "EventProposal",
   EventProposalGlueFields,
+  EventProposalEventsFields,
   EventProposalFormsFields
 );

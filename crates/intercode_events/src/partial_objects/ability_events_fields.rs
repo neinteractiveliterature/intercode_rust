@@ -181,6 +181,21 @@ impl AbilityEventsFields {
       .await
   }
 
+  #[graphql(name = "can_update_admin_notes_on_event_proposal")]
+  async fn can_update_admin_notes_on_event_proposal(
+    &self,
+    ctx: &Context<'_>,
+    event_proposal_id: ID,
+  ) -> Result<bool, Error> {
+    self
+      .can_perform_event_proposal_action(
+        ctx,
+        event_proposal_id,
+        &EventProposalAction::UpdateAdminNotes,
+      )
+      .await
+  }
+
   #[graphql(name = "can_update_event_proposal")]
   async fn can_update_event_proposal(
     &self,
