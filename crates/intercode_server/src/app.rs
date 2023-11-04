@@ -2,11 +2,15 @@ use std::env;
 use std::sync::Arc;
 
 use async_graphql::Result;
+use axum::error_handling::HandleErrorLayer;
 use axum::extract::FromRef;
+use axum::BoxError;
 use axum::{middleware::from_fn_with_state, routing::IntoMakeService, Extension, Router};
+use http::StatusCode;
 use hyper::body::HttpBody;
 use sea_orm::DatabaseConnection;
 use tower::limit::ConcurrencyLimitLayer;
+use tower::ServiceBuilder;
 use tower_http::catch_panic::CatchPanicLayer;
 use tower_http::compression::CompressionLayer;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
@@ -33,15 +37,21 @@ where
   });
 
   let csrf_config = CsrfConfig::new(&secret);
-  let session_layer = SessionWithDbStoreFromTxLayer::new(secret);
+  let session_layer = SessionWithDbStoreFromTxLayer::new();
 
   let app: Router<S, B> = Router::new();
   let app = build_routes(app);
 
+  let session_service = ServiceBuilder::new()
+    .layer(HandleErrorLayer::new(|err: BoxError| async move {
+      (StatusCode::BAD_REQUEST, err.to_string())
+    }))
+    .layer(session_layer);
+
   let app = app
     .layer(axum::middleware::from_fn(csrf_middleware))
     .layer(Extension(csrf_config))
-    .layer(session_layer)
+    .layer(session_service)
     .layer(from_fn_with_state(state.clone(), request_bound_transaction))
     .layer(ConcurrencyLimitLayer::new(
       env::var("MAX_CONCURRENCY")

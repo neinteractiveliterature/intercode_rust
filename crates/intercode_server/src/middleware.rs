@@ -2,7 +2,6 @@ use axum::{
   async_trait,
   extract::{FromRequestParts, Host},
 };
-use axum_sessions::SessionHandle;
 use http::{request::Parts, StatusCode};
 use intercode_entities::{
   cms_parent::CmsParent, conventions, root_sites, user_con_profiles, users,
@@ -13,6 +12,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter};
 use seawater::ConnectionWrapper;
+use tower_sessions::Session;
 use tracing::{error, warn};
 
 static PORT_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(":\\d+$").unwrap());
@@ -78,8 +78,7 @@ impl<S: Sync> FromRequestParts<S> for QueryDataFromRequest {
     let (cms_parent, convention) = cms_parent_from_request_parts(parts, &db)
       .await
       .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
-    let session_handle = parts.extensions.get::<SessionHandle>().unwrap();
-    let session = session_handle.read().await;
+    let session = parts.extensions.get::<Session>().unwrap();
 
     let Some(cms_parent) = cms_parent else {
       return Err((
@@ -93,7 +92,9 @@ impl<S: Sync> FromRequestParts<S> for QueryDataFromRequest {
       .get("X-Intercode-User-Timezone")
       .and_then(|header| header.to_str().ok());
 
-    let current_user_id: Option<i64> = session.get("current_user_id");
+    let current_user_id: Option<i64> = session
+      .get("current_user_id")
+      .map_err(|err| (StatusCode::INTERNAL_SERVER_ERROR, err.to_string()))?;
     let current_user = if let Some(current_user_id) = current_user_id {
       users::Entity::find_by_id(current_user_id)
         .one(db.as_ref())

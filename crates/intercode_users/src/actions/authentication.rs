@@ -3,15 +3,15 @@ use std::collections::HashMap;
 use axum::{
   debug_handler,
   response::{self, IntoResponse},
-  Extension, Form,
+  Form,
 };
-use axum_sessions::SessionHandle;
 use http::StatusCode;
 use intercode_entities::users;
 use intercode_server::{enforce_csrf, CsrfData, FormOrMultipart, QueryDataFromRequest};
 use sea_orm::{ActiveValue, ColumnTrait, EntityTrait, QueryFilter};
 use serde::Deserialize;
 use serde_json::json;
+use tower_sessions::Session;
 
 use crate::legacy_passwords::{verify_legacy_md5_password, verify_legacy_sha1_password};
 
@@ -29,7 +29,7 @@ pub struct SignInParams {
 pub async fn sign_in(
   token: CsrfData,
   QueryDataFromRequest(query_data): QueryDataFromRequest,
-  session: Extension<SessionHandle>,
+  session: Session,
   form_or_multipart: FormOrMultipart<SignInParams>,
 ) -> Result<impl IntoResponse, StatusCode> {
   enforce_csrf(token)?;
@@ -94,8 +94,7 @@ pub async fn sign_in(
       .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
   }
 
-  let mut write_guard = session.write().await;
-  write_guard
+  session
     .insert("current_user_id", user.id)
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 

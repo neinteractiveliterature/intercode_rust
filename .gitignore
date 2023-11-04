@@ -6,3 +6,4 @@
 /dev_ca.*
 /dev_certificate.*
 /dhat-heap.json
+/sweep.timestamp
