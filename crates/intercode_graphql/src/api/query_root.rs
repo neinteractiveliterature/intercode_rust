@@ -10,8 +10,10 @@ use intercode_conventions::partial_objects::QueryRootConventionsFields;
 use intercode_email::partial_objects::QueryRootEmailFields;
 use intercode_events::partial_objects::QueryRootEventsFields;
 use intercode_graphql_core::entity_relay_connection::type_converting_query;
-use intercode_graphql_core::ModelBackedType;
+use intercode_graphql_core::{ModelBackedType, ModelPaginator};
+use intercode_query_builders::sort_input::SortInput;
 use intercode_users::partial_objects::QueryRootUsersFields;
+use intercode_users::query_builders::UserFiltersInput;
 
 #[derive(Default)]
 pub struct QueryRootGlueFields;
@@ -87,6 +89,30 @@ impl QueryRootGlueFields {
     QueryRootCmsFields::root_site(ctx)
       .await
       .map(RootSiteType::from_type)
+  }
+
+  pub async fn user(&self, ctx: &Context<'_>, id: ID) -> Result<UserType, Error> {
+    UserType::from_future_result(QueryRootUsersFields::user(ctx, id)).await
+  }
+
+  pub async fn users(&self, ctx: &Context<'_>, ids: Vec<ID>) -> Result<Vec<UserType>, Error> {
+    UserType::from_many_future_result(QueryRootUsersFields::users(ctx, ids)).await
+  }
+
+  #[graphql(name = "users_paginated")]
+  pub async fn users_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
+    filters: Option<UserFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<ModelPaginator<UserType>, Error> {
+    Ok(
+      QueryRootUsersFields::users_paginated(ctx, page, per_page, filters, sort)
+        .await?
+        .into_type(),
+    )
   }
 }
 

@@ -360,6 +360,46 @@ pub fn conventions_with_permission(
   conventions_with_permissions(&[permission], user_id)
 }
 
+pub fn conventions_with_organization_permissions(
+  permissions: &[&str],
+  user_id: Option<i64>,
+) -> Select<conventions::Entity> {
+  conventions::Entity::find().filter(
+    conventions::Column::OrganizationId.in_subquery(
+      sea_orm::QuerySelect::query(
+        &mut organization_roles_with_permissions(permissions, user_id)
+          .select_only()
+          .column(organization_roles::Column::Id),
+      )
+      .take(),
+    ),
+  )
+}
+
+pub fn conventions_with_organization_permission(
+  permission: &str,
+  user_id: Option<i64>,
+) -> Select<conventions::Entity> {
+  conventions_with_organization_permissions(&[permission], user_id)
+}
+
+pub fn organization_roles_with_permissions(
+  permissions: &[&str],
+  user_id: Option<i64>,
+) -> Select<organization_roles::Entity> {
+  organization_roles::Entity::find().filter(
+    organization_roles::Column::Id.in_subquery(
+      sea_orm::QuerySelect::query(
+        &mut user_permission_scope(user_id)
+          .filter(permissions::Column::Permission.is_in(permissions.iter().cloned()))
+          .select_only()
+          .column(permissions::Column::OrganizationRoleId),
+      )
+      .take(),
+    ),
+  )
+}
+
 pub fn event_categories_with_permission(
   permission: &str,
   user_id: Option<i64>,

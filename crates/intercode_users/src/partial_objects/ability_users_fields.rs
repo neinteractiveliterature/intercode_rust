@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_graphql::*;
-use intercode_entities::{staff_positions, user_con_profiles};
+use intercode_entities::{staff_positions, user_con_profiles, users};
 use intercode_graphql_core::{lax_id::LaxId, query_data::QueryData};
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
@@ -11,7 +11,7 @@ use intercode_policies::{
 };
 use seawater::loaders::ExpectModel;
 
-use crate::policies::StaffPositionPolicy;
+use crate::policies::{StaffPositionPolicy, UserAction, UserPolicy};
 
 pub struct AbilityUsersFields {
   authorization_info: Arc<AuthorizationInfo>,
@@ -145,9 +145,15 @@ impl AbilityUsersFields {
   }
 
   #[graphql(name = "can_read_users")]
-  async fn can_read_users(&self) -> bool {
-    // TODO
-    false
+  async fn can_read_users(&self) -> Result<bool, Error> {
+    Ok(
+      UserPolicy::action_permitted(
+        &self.authorization_info,
+        &UserAction::Read,
+        &users::Model::default(),
+      )
+      .await?,
+    )
   }
 
   #[graphql(name = "can_withdraw_all_user_con_profile_signups")]
