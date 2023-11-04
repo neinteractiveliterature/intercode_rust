@@ -17,6 +17,23 @@ use super::CmsContentGroupCmsFields;
 
 model_backed_type!(RootSiteCmsFields, root_sites::Model);
 
+impl RootSiteCmsFields {
+  pub async fn cms_content_groups(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<CmsContentGroupCmsFields>, Error> {
+    <Self as CmsParentImplementation<root_sites::Model>>::cms_content_groups(self, ctx).await
+  }
+
+  pub async fn cms_content_group(
+    &self,
+    ctx: &Context<'_>,
+    id: ID,
+  ) -> Result<CmsContentGroupCmsFields, Error> {
+    <Self as CmsParentImplementation<root_sites::Model>>::cms_content_group(self, ctx, id).await
+  }
+}
+
 #[Object]
 impl RootSiteCmsFields {
   pub async fn id(&self) -> ID {
@@ -26,21 +43,6 @@ impl RootSiteCmsFields {
   #[graphql(name = "site_name")]
   async fn site_name(&self) -> Option<&str> {
     self.model.site_name.as_deref()
-  }
-
-  async fn cms_content_groups(
-    &self,
-    ctx: &Context<'_>,
-  ) -> Result<Vec<CmsContentGroupCmsFields>, Error> {
-    <Self as CmsParentImplementation<root_sites::Model>>::cms_content_groups(self, ctx).await
-  }
-
-  async fn cms_content_group(
-    &self,
-    ctx: &Context<'_>,
-    id: ID,
-  ) -> Result<CmsContentGroupCmsFields, Error> {
-    <Self as CmsParentImplementation<root_sites::Model>>::cms_content_group(self, ctx, id).await
   }
 
   async fn cms_files(&self, ctx: &Context<'_>) -> Result<Vec<CmsFileType>, Error> {

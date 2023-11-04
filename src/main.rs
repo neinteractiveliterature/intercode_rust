@@ -15,7 +15,7 @@ use clap::{command, FromArgMatches, Parser, Subcommand};
 use database::connect_database;
 use dotenv::dotenv;
 use indicatif::ProgressBar;
-use intercode_graphql::{api, build_intercode_graphql_schema};
+use intercode_graphql::{build_intercode_graphql_schema, build_intercode_graphql_schema_minimal};
 use intercode_graphql_core::schema_data::SchemaData;
 use intercode_liquid_drops::check_liquid::LiquidChecker;
 use intercode_server::i18n::build_language_loader;
@@ -191,9 +191,7 @@ fn main() -> Result<()> {
   match derived_subcommands {
     Subcommands::ExportSchema => {
       // just build the schema without any data or extras
-      let schema =
-        async_graphql::Schema::build(api::QueryRoot::default(), EmptyMutation, EmptySubscription)
-          .finish();
+      let schema = build_intercode_graphql_schema_minimal().finish();
 
       println!("{}", schema.sdl());
     }
