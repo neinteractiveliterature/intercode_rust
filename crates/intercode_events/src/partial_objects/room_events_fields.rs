@@ -14,10 +14,7 @@ impl RoomEventsFields {
   }
 }
 
-#[Object(
-  name = "Room",
-  guard = "RoomPolicy::model_guard(ReadManageAction::Read, self)"
-)]
+#[Object(guard = "RoomPolicy::model_guard(ReadManageAction::Read, self)")]
 impl RoomEventsFields {
   async fn id(&self) -> ID {
     self.model.id.into()
