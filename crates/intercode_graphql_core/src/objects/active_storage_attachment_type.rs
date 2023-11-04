@@ -17,8 +17,8 @@ impl ActiveStorageAttachmentType {
   }
 
   #[graphql(name = "content_type")]
-  async fn content_type(&self) -> Option<&str> {
-    self.model.content_type.as_deref()
+  async fn content_type(&self) -> &str {
+    self.model.content_type.as_deref().unwrap_or_default()
   }
 
   async fn filename(&self) -> &str {

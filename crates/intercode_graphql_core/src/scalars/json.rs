@@ -1,5 +1,6 @@
 use async_graphql::{Scalar, ScalarType};
 
+#[derive(Default)]
 pub struct JsonScalar(pub serde_json::Value);
 
 #[Scalar(name = "Json")]

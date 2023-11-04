@@ -122,8 +122,12 @@ impl AbilityUsersFields {
   async fn can_become_user_con_profile(
     &self,
     ctx: &Context<'_>,
-    user_con_profile_id: ID,
+    user_con_profile_id: Option<ID>,
   ) -> Result<bool, Error> {
+    let Some(user_con_profile_id) = user_con_profile_id else {
+      return Ok(false);
+    };
+
     self
       .can_perform_user_con_profile_action(ctx, user_con_profile_id, &UserConProfileAction::Become)
       .await
@@ -133,8 +137,12 @@ impl AbilityUsersFields {
   async fn can_delete_user_con_profile(
     &self,
     ctx: &Context<'_>,
-    user_con_profile_id: ID,
+    user_con_profile_id: Option<ID>,
   ) -> Result<bool, Error> {
+    let Some(user_con_profile_id) = user_con_profile_id else {
+      return Ok(false);
+    };
+
     self
       .can_perform_user_con_profile_action(ctx, user_con_profile_id, &UserConProfileAction::Delete)
       .await
@@ -144,8 +152,12 @@ impl AbilityUsersFields {
   async fn can_update_user_con_profile(
     &self,
     ctx: &Context<'_>,
-    user_con_profile_id: ID,
+    user_con_profile_id: Option<ID>,
   ) -> Result<bool, Error> {
+    let Some(user_con_profile_id) = user_con_profile_id else {
+      return Ok(false);
+    };
+
     self
       .can_perform_user_con_profile_action(ctx, user_con_profile_id, &UserConProfileAction::Update)
       .await
@@ -167,8 +179,12 @@ impl AbilityUsersFields {
   async fn can_withdraw_all_user_con_profile_signups(
     &self,
     ctx: &Context<'_>,
-    user_con_profile_id: ID,
+    user_con_profile_id: Option<ID>,
   ) -> Result<bool, Error> {
+    let Some(user_con_profile_id) = user_con_profile_id else {
+      return Ok(false);
+    };
+
     self
       .can_perform_user_con_profile_action(
         ctx,

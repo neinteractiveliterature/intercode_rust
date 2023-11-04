@@ -24,14 +24,18 @@ use super::{SignupRequestSignupsFields, SignupSignupsFields};
 model_backed_type!(ConventionSignupsFields, conventions::Model);
 
 impl ConventionSignupsFields {
-  pub async fn signup(&self, ctx: &Context<'_>, id: ID) -> Result<SignupSignupsFields, Error> {
+  pub async fn signup(
+    &self,
+    ctx: &Context<'_>,
+    id: Option<ID>,
+  ) -> Result<SignupSignupsFields, Error> {
     let query_data = ctx.data::<QueryData>()?;
 
     Ok(SignupSignupsFields::new(
       self
         .model
         .find_linked(ConventionToSignups)
-        .filter(signups::Column::Id.eq(LaxId::parse(id)?))
+        .filter(signups::Column::Id.eq(LaxId::parse(id.unwrap_or_default())?))
         .one(query_data.db())
         .await?
         .ok_or_else(|| Error::new("Signup not found"))?,

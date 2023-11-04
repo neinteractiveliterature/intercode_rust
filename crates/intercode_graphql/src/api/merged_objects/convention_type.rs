@@ -109,7 +109,7 @@ impl ConventionGlueFields {
 
   /// Finds an active event by ID in this convention. If there is no event with that ID in this
   /// convention, or the event is no longer active, errors out.
-  pub async fn event(&self, ctx: &Context<'_>, id: ID) -> Result<EventType, Error> {
+  pub async fn event(&self, ctx: &Context<'_>, id: Option<ID>) -> Result<EventType, Error> {
     ConventionEventsFields::from_type(self.clone())
       .event(ctx, id)
       .await
@@ -169,7 +169,7 @@ impl ConventionGlueFields {
   async fn event_proposal(
     &self,
     ctx: &Context<'_>,
-    #[graphql(desc = "The ID of the event proposal to find.")] id: ID,
+    #[graphql(desc = "The ID of the event proposal to find.")] id: Option<ID>,
   ) -> Result<EventProposalType> {
     ConventionEventsFields::from_type(self.clone())
       .event_proposal(ctx, id)
@@ -192,7 +192,7 @@ impl ConventionGlueFields {
       .map(ModelPaginator::into_type)
   }
 
-  pub async fn form(&self, ctx: &Context<'_>, id: ID) -> Result<FormType> {
+  pub async fn form(&self, ctx: &Context<'_>, id: Option<ID>) -> Result<FormType> {
     ConventionFormsFields::from_type(self.clone())
       .form(ctx, id)
       .await
@@ -245,7 +245,7 @@ impl ConventionGlueFields {
       .map(|rooms| rooms.into_iter().map(RoomType::from_type).collect())
   }
 
-  async fn signup(&self, ctx: &Context<'_>, id: ID) -> Result<SignupType, Error> {
+  async fn signup(&self, ctx: &Context<'_>, id: Option<ID>) -> Result<SignupType, Error> {
     ConventionSignupsFields::from_type(self.clone())
       .signup(ctx, id)
       .await
@@ -271,7 +271,7 @@ impl ConventionGlueFields {
   pub async fn staff_position(
     &self,
     ctx: &Context<'_>,
-    id: ID,
+    id: Option<ID>,
   ) -> Result<StaffPositionType, Error> {
     ConventionUsersFields::from_type(self.clone())
       .staff_position(ctx, id)

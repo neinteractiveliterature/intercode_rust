@@ -61,8 +61,6 @@ impl ConventionStoreFields {
 
 #[Object]
 impl ConventionStoreFields {
-  #[graphql(name = "coupons_paginated")]
-
   async fn products(&self, ctx: &Context<'_>) -> Result<Vec<ProductType>> {
     let loader_result = load_one_by_model_id!(convention_products, ctx, self)?;
     Ok(loader_result_to_many!(loader_result, ProductType))

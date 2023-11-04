@@ -46,7 +46,14 @@ impl CmsVariableType {
   }
 
   #[graphql(name = "value_json")]
-  async fn value_json(&self) -> Option<JsonScalar> {
-    self.model.value.clone().map(JsonScalar)
+  async fn value_json(&self) -> String {
+    self
+      .model
+      .value
+      .clone()
+      .map(JsonScalar)
+      .unwrap_or_default()
+      .0
+      .to_string()
   }
 }

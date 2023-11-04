@@ -111,8 +111,12 @@ impl AbilitySignupsFields {
   async fn can_force_confirm_signup(
     &self,
     ctx: &Context<'_>,
-    signup_id: ID,
+    signup_id: Option<ID>,
   ) -> Result<bool, Error> {
+    let Some(signup_id) = signup_id else {
+      return Ok(false);
+    };
+
     let policy_model = self.get_signup_policy_model(ctx, signup_id).await?;
 
     model_action_permitted(
@@ -129,8 +133,12 @@ impl AbilitySignupsFields {
   async fn can_update_bucket_signup(
     &self,
     ctx: &Context<'_>,
-    signup_id: ID,
+    signup_id: Option<ID>,
   ) -> Result<bool, Error> {
+    let Some(signup_id) = signup_id else {
+      return Ok(false);
+    };
+
     let policy_model = self.get_signup_policy_model(ctx, signup_id).await?;
 
     model_action_permitted(
@@ -147,8 +155,12 @@ impl AbilitySignupsFields {
   async fn can_update_counted_signup(
     &self,
     ctx: &Context<'_>,
-    signup_id: ID,
+    signup_id: Option<ID>,
   ) -> Result<bool, Error> {
+    let Some(signup_id) = signup_id else {
+      return Ok(false);
+    };
+
     let policy_model = self.get_signup_policy_model(ctx, signup_id).await?;
 
     model_action_permitted(
@@ -162,7 +174,15 @@ impl AbilitySignupsFields {
   }
 
   #[graphql(name = "can_update_signup")]
-  async fn can_update_signup(&self, ctx: &Context<'_>, signup_id: ID) -> Result<bool, Error> {
+  async fn can_update_signup(
+    &self,
+    ctx: &Context<'_>,
+    signup_id: Option<ID>,
+  ) -> Result<bool, Error> {
+    let Some(signup_id) = signup_id else {
+      return Ok(false);
+    };
+
     let policy_model = self.get_signup_policy_model(ctx, signup_id).await?;
 
     model_action_permitted(
