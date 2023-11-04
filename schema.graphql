@@ -277,7 +277,7 @@ type Coupon {
 type CouponApplication {
 	id: ID!
 	coupon: Coupon!
-	discount: Money
+	discount: Money!
 }
 
 input CouponFiltersInput {
@@ -303,7 +303,7 @@ scalar DateTime
 
 type Department {
 	id: ID!
-	name: String
+	name: String!
 	proposal_description: String
 	event_categories: [EventCategory!]!
 }
@@ -344,7 +344,7 @@ type Event {
 	event_category: EventCategory!
 	maximum_event_provided_tickets_overrides: [MaximumEventProvidedTicketsOverride!]!
 	provided_tickets: [Ticket!]!
-	run(id: ID!): Run!
+	run(id: ID): Run!
 	runs(start: Date, finish: Date, exclude_conflicts: Date): [Run!]!
 	team_members: [TeamMember!]!
 	id: ID!
@@ -386,7 +386,7 @@ type EventCategory {
 	full_color: String!
 	name: String!
 	proposal_description: String
-	scheduling_ui: String!
+	scheduling_ui: SchedulingUI!
 	signed_up_color: String!
 	team_member_name: String!
 	teamMemberNamePlural: String!
@@ -426,7 +426,7 @@ input EventFiltersInput {
 	title: String
 	title_prefix: String
 	my_rating: [Int!]
-	form_items: Json
+	form_items: JSON
 }
 
 type EventProposal {
@@ -514,6 +514,11 @@ type FormSection {
 }
 
 
+
+"""
+A scalar that can represent any JSON value.
+"""
+scalar JSON
 
 scalar Json
 
@@ -841,6 +846,12 @@ type ScheduledMoneyValue {
 
 type ScheduledValue {
 	timespans: [TimespanWithValue!]!
+}
+
+enum SchedulingUI {
+	regular
+	recurring
+	single_run
 }
 
 enum ShowSchedule {

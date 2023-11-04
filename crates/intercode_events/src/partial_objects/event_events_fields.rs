@@ -48,9 +48,12 @@ impl EventEventsFields {
     Ok(loader_result.expect_one().into_iter().cloned().collect())
   }
 
-  pub async fn run(&self, ctx: &Context<'_>, id: ID) -> Result<RunEventsFields, Error> {
+  pub async fn run(&self, ctx: &Context<'_>, id: Option<ID>) -> Result<RunEventsFields, Error> {
     let loaders = ctx.data::<Arc<LoaderManager>>()?;
-    let loader_result = loaders.runs_by_id().load_one(LaxId::parse(id)?).await?;
+    let loader_result = loaders
+      .runs_by_id()
+      .load_one(LaxId::parse(id.unwrap_or_default())?)
+      .await?;
 
     Ok(RunEventsFields::new(loader_result.expect_one()?.clone()))
   }

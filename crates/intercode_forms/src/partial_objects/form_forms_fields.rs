@@ -51,7 +51,7 @@ impl FormFormsFields {
     &self.model.form_type
   }
 
-  async fn title(&self) -> Option<&str> {
-    self.model.title.as_deref()
+  async fn title(&self) -> &str {
+    self.model.title.as_deref().unwrap_or_default()
   }
 }
