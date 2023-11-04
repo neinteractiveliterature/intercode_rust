@@ -133,7 +133,7 @@ tokio = {version = "~1.33.0", features = ["rt-multi-thread", "macros", "signal",
 tower = {version = "0.4.13", features = ["limit", "make"]}
 tower-http = {version = "0.4.4", features = ["catch-panic", "compression-br", "compression-deflate", "compression-gzip", "trace"]}
 tower-sessions = "~0.3.3"
-tracing = "0.1.37"
+tracing = "0.1.40"
 tuple-conv = "~1.0.1"
 twilio = "1.0.3"
 url = "*"
