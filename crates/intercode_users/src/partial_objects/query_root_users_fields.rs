@@ -44,17 +44,22 @@ impl QueryRootUsersFields {
     Ok(query_data.current_user().cloned().map(UserUsersFields::new))
   }
 
-  pub async fn user(ctx: &Context<'_>, id: ID) -> Result<UserUsersFields, Error> {
+  pub async fn user(ctx: &Context<'_>, id: Option<ID>) -> Result<UserUsersFields, Error> {
     let query_data = ctx.data::<QueryData>()?;
-    let user = users::Entity::find_by_id(LaxId::parse(id.clone())?)
+    let user = users::Entity::find_by_id(LaxId::parse(id.clone().unwrap_or_default())?)
       .one(query_data.db())
       .await?
-      .ok_or_else(|| Error::new(format!("User {} not found", id.0)))?;
+      .ok_or_else(|| Error::new(format!("User {} not found", id.unwrap_or_default().0)))?;
 
     Ok(UserUsersFields::new(user))
   }
 
-  pub async fn users(ctx: &Context<'_>, ids: Vec<ID>) -> Result<Vec<UserUsersFields>, Error> {
+  pub async fn users(
+    ctx: &Context<'_>,
+    ids: Option<Vec<ID>>,
+  ) -> Result<Vec<UserUsersFields>, Error> {
+    let ids = ids.unwrap_or_default();
+
     if ids.len() > 25 {
       return Err(Error::new(
         "Can't retrieve more than 25 users in a single query",

@@ -91,11 +91,15 @@ impl QueryRootGlueFields {
       .map(RootSiteType::from_type)
   }
 
-  pub async fn user(&self, ctx: &Context<'_>, id: ID) -> Result<UserType, Error> {
+  pub async fn user(&self, ctx: &Context<'_>, id: Option<ID>) -> Result<UserType, Error> {
     UserType::from_future_result(QueryRootUsersFields::user(ctx, id)).await
   }
 
-  pub async fn users(&self, ctx: &Context<'_>, ids: Vec<ID>) -> Result<Vec<UserType>, Error> {
+  pub async fn users(
+    &self,
+    ctx: &Context<'_>,
+    ids: Option<Vec<ID>>,
+  ) -> Result<Vec<UserType>, Error> {
     UserType::from_many_future_result(QueryRootUsersFields::users(ctx, ids)).await
   }
 

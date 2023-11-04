@@ -480,7 +480,7 @@ type Form {
 	export_json: Json!
 	form_sections: [FormSection!]!
 	form_type: String!
-	title: String
+	title: String!
 }
 
 type FormItem {
@@ -759,8 +759,8 @@ type Query {
 	events(after: String, before: String, first: Int, last: Int): EventConnection!
 	organizations: [Organization!]!
 	rootSite: RootSite!
-	user(id: ID!): User!
-	users(ids: [ID!]!): [User!]!
+	user(id: ID): User!
+	users(ids: [ID!]): [User!]!
 	users_paginated(page: Int, per_page: Int, filters: UserFiltersInput, sort: [SortInput!]): UsersPagination!
 	previewLiquid(content: String!): String!
 	email_routes_paginated(page: Int, per_page: Int, filters: EmailRouteFiltersInput, sort: [SortInput!]): EmailRoutesPagination!
