@@ -9,8 +9,7 @@ use sea_orm::{sea_query::OnConflict, ColumnTrait, DbErr, EntityTrait, QueryFilte
 use seawater::ConnectionWrapper;
 use tower::{Layer, Service};
 use tower_sessions::{
-  session::SessionId, MemoryStore, Session, SessionManager, SessionManagerLayer, SessionRecord,
-  SessionStore,
+  session::Id, MemoryStore, Session, SessionManager, SessionManagerLayer, SessionStore,
 };
 use tracing::log::error;
 
@@ -70,9 +69,9 @@ impl From<serde_json::Error> for DbSessionError {
 impl SessionStore for DbSessionStore {
   type Error = DbSessionError;
 
-  async fn save(&self, session_record: &SessionRecord) -> Result<(), Self::Error> {
-    let session_id = session_record.id().to_string();
-    let encoded_data = serde_json::to_string(&session_record)?;
+  async fn save(&self, session: &Session) -> Result<(), Self::Error> {
+    let session_id = session.id().to_string();
+    let encoded_data = serde_json::to_string(&session)?;
     let model = sessions::ActiveModel {
       id: sea_orm::ActiveValue::NotSet,
       created_at: sea_orm::ActiveValue::Set(Some(Utc::now().naive_utc())),
@@ -91,23 +90,22 @@ impl SessionStore for DbSessionStore {
     Ok(())
   }
 
-  async fn load(&self, session_id: &SessionId) -> Result<Option<Session>, Self::Error> {
+  async fn load(&self, session_id: &Id) -> Result<Option<Session>, Self::Error> {
     sessions::Entity::find()
-      .filter(sessions::Column::SessionId.eq(session_id.0.to_string()))
+      .filter(sessions::Column::SessionId.eq(session_id.to_string()))
       .one(self.db.as_ref())
       .await
       .map(|find_result| {
         find_result
           .and_then(|record| record.data)
-          .and_then(|data| serde_json::from_str::<SessionRecord>(&data).ok())
-          .map(Session::from)
+          .and_then(|data| serde_json::from_str::<Session>(&data).ok())
       })
       .map_err(DbSessionError::from)
   }
 
-  async fn delete(&self, session_id: &SessionId) -> Result<(), Self::Error> {
+  async fn delete(&self, session_id: &Id) -> Result<(), Self::Error> {
     sessions::Entity::delete_many()
-      .filter(sessions::Column::SessionId.eq(session_id.0.to_string()))
+      .filter(sessions::Column::SessionId.eq(session_id.to_string()))
       .exec(self.db.as_ref())
       .await?;
 

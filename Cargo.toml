@@ -54,9 +54,9 @@ async-graphql = {version = "~6.0.10", features = ["tracing", "dataloader", "chro
 async-graphql-axum = "~6.0.10"
 async-graphql-value = {version = "~6.0.10"}
 async-trait = "*"
-aws-config = "0.56.1"
-aws-sdk-sesv2 = "0.31.1"
-aws-smithy-http = "*"
+aws-config = "0.57.1"
+aws-sdk-sesv2 = "0.35.0"
+aws-smithy-types = "*"
 axum = {version = "~0.6.20", features = ["multipart", "macros", "headers"]}
 axum-extra = {version = "~0.8.0", features = ["cookie"]}
 axum-server = {version = "0.5.1", features = ["tls-rustls"]}
@@ -132,7 +132,7 @@ time = "0.3.30"
 tokio = {version = "~1.33.0", features = ["rt-multi-thread", "macros", "signal", "tracing"]}
 tower = {version = "0.4.13", features = ["limit", "make"]}
 tower-http = {version = "0.4.4", features = ["catch-panic", "compression-br", "compression-deflate", "compression-gzip", "trace"]}
-tower-sessions = "~0.3.3"
+tower-sessions = "~0.4.1"
 tracing = "0.1.40"
 tuple-conv = "~1.0.1"
 twilio = "1.0.3"

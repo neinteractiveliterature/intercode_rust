@@ -4,7 +4,7 @@ use aws_sdk_sesv2::{
   operation::send_email::{SendEmailError, SendEmailOutput},
   types::{Body, Content, Destination, EmailContent, Message},
 };
-use aws_smithy_http::body::SdkBody;
+use aws_smithy_types::body::SdkBody;
 use http::Response;
 use tokio::sync::OnceCell;
 
@@ -34,15 +34,15 @@ pub async fn send_email(
   let client = get_ses_client().await;
   let mut body = Body::builder();
   if let Some(body_html) = body_html {
-    body = body.html(Content::builder().data(body_html).build());
+    body = body.html(Content::builder().data(body_html).build().unwrap());
   }
   if let Some(body_text) = body_text {
-    body = body.text(Content::builder().data(body_text).build());
+    body = body.text(Content::builder().data(body_text).build().unwrap());
   }
 
   let content = EmailContent::builder().simple(
     Message::builder()
-      .subject(Content::builder().data(subject).build())
+      .subject(Content::builder().data(subject).build().unwrap())
       .body(body.build())
       .build(),
   );
