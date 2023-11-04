@@ -160,4 +160,49 @@ impl AbilitySignupsFields {
     )
     .await
   }
+
+  #[graphql(name = "can_update_signup")]
+  async fn can_update_signup(&self, ctx: &Context<'_>, signup_id: ID) -> Result<bool, Error> {
+    let policy_model = self.get_signup_policy_model(ctx, signup_id).await?;
+
+    model_action_permitted(
+      self.authorization_info.as_ref(),
+      SignupPolicy,
+      ctx,
+      &SignupAction::Manage,
+      |_ctx| Ok(Some(&policy_model)),
+    )
+    .await
+  }
+
+  #[graphql(name = "can_update_signups")]
+  async fn can_update_signups(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+    let Some(convention) = query_data.convention() else {
+      return Ok(false);
+    };
+
+    let policy_model = (
+      convention.clone(),
+      events::Model {
+        convention_id: convention.id,
+        ..Default::default()
+      },
+      runs::Model {
+        ..Default::default()
+      },
+      signups::Model {
+        ..Default::default()
+      },
+    );
+
+    model_action_permitted(
+      self.authorization_info.as_ref(),
+      SignupPolicy,
+      ctx,
+      &SignupAction::Manage,
+      |_ctx| Ok(Some(&policy_model)),
+    )
+    .await
+  }
 }
