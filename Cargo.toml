@@ -50,9 +50,9 @@ members = [
 Inflector = "*"
 askama = {version = "0.12.1", features = ["with-axum"]}
 askama_axum = "0.3.0"
-async-graphql = {version = "~6.0.9", features = ["tracing", "dataloader", "chrono"]}
-async-graphql-axum = "~6.0.9"
-async-graphql-value = {version = "~6.0.9"}
+async-graphql = {version = "~6.0.10", features = ["tracing", "dataloader", "chrono"]}
+async-graphql-axum = "~6.0.10"
+async-graphql-value = {version = "~6.0.10"}
 async-trait = "*"
 aws-config = "0.56.1"
 aws-sdk-sesv2 = "0.31.1"
@@ -120,20 +120,20 @@ quote = "1.0.33"
 regex = "*"
 rust-embed = "8"
 rusty-money = "0.4.1"
-sea-orm = {version = "^0.12.3", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"]}
+sea-orm = {version = "^0.12.4", features = ["sqlx-postgres", "runtime-tokio-rustls", "macros"]}
 seawater = {path = "./crates/seawater"}
 serde = "1.0"
 serde_json = "1.0"
 serde_path_to_error = "*"
 sha1 = "0.10.6"
-stripe = {package = "async-stripe", version = "0.25.1", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
+stripe = {package = "async-stripe", version = "0.25.2", default-features = false, features = ["runtime-tokio-hyper-rustls", "checkout", "chrono", "connect", "webhook-events"]}
 syn = "2.0.38"
 time = "0.3.30"
 tokio = {version = "~1.33.0", features = ["rt-multi-thread", "macros", "signal", "tracing"]}
 tower = {version = "0.4.13", features = ["limit", "make"]}
 tower-http = {version = "0.4.4", features = ["catch-panic", "compression-br", "compression-deflate", "compression-gzip", "trace"]}
 tower-sessions = "~0.3.3"
-tracing = "0.1.37"
+tracing = "0.1.40"
 tuple-conv = "~1.0.1"
 twilio = "1.0.3"
 url = "*"
