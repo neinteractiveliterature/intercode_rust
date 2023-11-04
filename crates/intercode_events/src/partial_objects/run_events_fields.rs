@@ -12,12 +12,9 @@ use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{AuthorizationInfo, Policy};
 use seawater::loaders::ExpectModel;
 
-use crate::{
-  objects::RoomType,
-  policies::{RunAction, RunPolicy},
-};
+use crate::policies::{RunAction, RunPolicy};
 
-use super::EventEventsFields;
+use super::{EventEventsFields, RoomEventsFields};
 
 model_backed_type!(RunEventsFields, runs::Model);
 
@@ -28,6 +25,11 @@ impl RunEventsFields {
       loader_result,
       EventEventsFields
     ))
+  }
+
+  pub async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<RoomEventsFields>, Error> {
+    let loader_result = load_one_by_model_id!(run_rooms, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, RoomEventsFields))
   }
 }
 
@@ -123,11 +125,6 @@ impl RunEventsFields {
         .map(|room| room.get_model().name.clone())
         .collect(),
     )
-  }
-
-  async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<RoomType>, Error> {
-    let loader_result = load_one_by_model_id!(run_rooms, ctx, self)?;
-    Ok(loader_result_to_many!(loader_result, RoomType))
   }
 
   #[graphql(name = "schedule_note")]

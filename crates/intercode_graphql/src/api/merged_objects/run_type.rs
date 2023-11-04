@@ -7,7 +7,7 @@ use intercode_signups::{partial_objects::RunSignupsFields, query_builders::Signu
 
 use crate::merged_model_backed_type;
 
-use super::{EventType, SignupRequestType, SignupType};
+use super::{room_type::RoomType, EventType, SignupRequestType, SignupType};
 
 model_backed_type!(RunGlueFields, runs::Model);
 
@@ -39,6 +39,13 @@ impl RunGlueFields {
           .map(SignupRequestType::from_type)
           .collect()
       })
+  }
+
+  pub async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<RoomType>, Error> {
+    RunEventsFields::from_type(self.clone())
+      .rooms(ctx)
+      .await
+      .map(|rooms| rooms.into_iter().map(RoomType::from_type).collect())
   }
 
   #[graphql(name = "signups_paginated")]

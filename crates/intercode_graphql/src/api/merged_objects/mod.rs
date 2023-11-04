@@ -13,6 +13,7 @@ mod order_type;
 mod organization_role_type;
 mod organization_type;
 mod permission_type;
+mod room_type;
 mod root_site_type;
 mod run_type;
 mod signup_request_type;

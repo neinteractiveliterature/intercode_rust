@@ -16,14 +16,13 @@ use intercode_policies::{
 use intercode_query_builders::{sort_input::SortInput, QueryBuilder};
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, ModelTrait, QueryFilter};
 
-use crate::{
-  objects::RoomType,
-  query_builders::{
-    EventFiltersInput, EventProposalFiltersInput, EventProposalsQueryBuilder, EventsQueryBuilder,
-  },
+use crate::query_builders::{
+  EventFiltersInput, EventProposalFiltersInput, EventProposalsQueryBuilder, EventsQueryBuilder,
 };
 
-use super::{EventCategoryEventsFields, EventEventsFields, EventProposalEventsFields};
+use super::{
+  EventCategoryEventsFields, EventEventsFields, EventProposalEventsFields, RoomEventsFields,
+};
 
 model_backed_type!(ConventionEventsFields, conventions::Model);
 
@@ -205,6 +204,11 @@ impl ConventionEventsFields {
       EventProposalPolicy,
     )
   }
+
+  pub async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<RoomEventsFields>, Error> {
+    let loader_result = load_one_by_model_id!(convention_rooms, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, RoomEventsFields))
+  }
 }
 
 #[Object]
@@ -212,10 +216,5 @@ impl ConventionEventsFields {
   #[graphql(name = "accepting_proposals")]
   async fn accepting_proposals(&self) -> bool {
     self.model.accepting_proposals.unwrap_or(false)
-  }
-
-  async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<RoomType>, Error> {
-    let loader_result = load_one_by_model_id!(convention_rooms, ctx, self)?;
-    Ok(loader_result_to_many!(loader_result, RoomType))
   }
 }

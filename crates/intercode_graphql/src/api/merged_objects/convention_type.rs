@@ -6,7 +6,9 @@ use crate::{
   merged_model_backed_type,
 };
 
-use super::{user_activity_alert_type::UserActivityAlertType, CmsContentGroupType};
+use super::{
+  room_type::RoomType, user_activity_alert_type::UserActivityAlertType, CmsContentGroupType,
+};
 use async_graphql::*;
 use intercode_cms::api::partial_objects::ConventionCmsFields;
 use intercode_conventions::partial_objects::ConventionConventionsFields;
@@ -234,6 +236,13 @@ impl ConventionGlueFields {
       .orders_paginated(ctx, page, per_page, filters, sort)
       .await
       .map(ModelPaginator::into_type)
+  }
+
+  pub async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<RoomType>, Error> {
+    ConventionEventsFields::from_type(self.clone())
+      .rooms(ctx)
+      .await
+      .map(|rooms| rooms.into_iter().map(RoomType::from_type).collect())
   }
 
   async fn signup(&self, ctx: &Context<'_>, id: ID) -> Result<SignupType, Error> {

@@ -5,6 +5,7 @@ mod event_events_fields;
 mod event_proposal_events_fields;
 mod form_events_fields;
 mod query_root_events_fields;
+mod room_events_fields;
 mod run_events_fields;
 mod team_member_events_fields;
 
@@ -15,5 +16,6 @@ pub use event_events_fields::*;
 pub use event_proposal_events_fields::*;
 pub use form_events_fields::*;
 pub use query_root_events_fields::*;
+pub use room_events_fields::*;
 pub use run_events_fields::*;
 pub use team_member_events_fields::*;
