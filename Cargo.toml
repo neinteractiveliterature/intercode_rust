@@ -64,7 +64,7 @@ base64 = "0.21.5"
 bcrypt = "0.15.0"
 bumpalo = "3.14.0"
 bumpalo-herd = "0.1.2"
-cached = "~0.44.0"
+cached = {version = "~0.46.0", features = ["async", "async_tokio_rt_multi_thread"]}
 chrono = "0.4"
 chrono-tz = "0.8"
 csrf = "0.4.1"
