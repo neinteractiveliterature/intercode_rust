@@ -1,5 +1,6 @@
-use std::sync::Arc;
+use std::{future::Future, sync::Arc};
 
+use async_trait::async_trait;
 use sea_orm::ModelTrait;
 
 pub trait ModelBackedTypeConvertible {
@@ -10,6 +11,7 @@ pub trait ModelBackedTypeConvertible {
     Self: Sized;
 }
 
+#[async_trait]
 pub trait ModelBackedType {
   type Model: ModelTrait;
 
@@ -23,6 +25,59 @@ pub trait ModelBackedType {
     Self: Sized,
   {
     other.into_type()
+  }
+
+  fn from_many<Other: ModelBackedType<Model = Self::Model>, I: IntoIterator<Item = Other>>(
+    others: I,
+  ) -> Vec<Self>
+  where
+    Self: Sized,
+  {
+    others.into_iter().map(Self::from_type).collect()
+  }
+
+  fn from_result<Other: ModelBackedType<Model = Self::Model>, E>(
+    result: Result<Other, E>,
+  ) -> Result<Self, E>
+  where
+    Self: Sized,
+  {
+    result.map(Self::from_type)
+  }
+
+  fn from_many_result<
+    Other: ModelBackedType<Model = Self::Model>,
+    I: IntoIterator<Item = Other>,
+    E,
+  >(
+    result: Result<I, E>,
+  ) -> Result<Vec<Self>, E>
+  where
+    Self: Sized,
+  {
+    result.map(Self::from_many)
+  }
+
+  async fn from_future_result<Other: ModelBackedType<Model = Self::Model>, E>(
+    fut: impl Future<Output = Result<Other, E>> + Send,
+  ) -> Result<Self, E>
+  where
+    Self: Sized,
+  {
+    Self::from_result(fut.await)
+  }
+
+  async fn from_many_future_result<
+    Other: ModelBackedType<Model = Self::Model>,
+    I: IntoIterator<Item = Other>,
+    E,
+  >(
+    fut: impl Future<Output = Result<I, E>> + Send,
+  ) -> Result<Vec<Self>, E>
+  where
+    Self: Sized,
+  {
+    Self::from_many_result(fut.await)
   }
 }
 

@@ -14,8 +14,9 @@ use std::{
 use tokio::sync::OnceCell;
 
 use crate::{
-  conventions_where_team_member, conventions_with_permission, conventions_with_permissions,
-  event_categories_with_permission, events_where_team_member,
+  conventions_where_team_member, conventions_with_organization_permission,
+  conventions_with_organization_permissions, conventions_with_permission,
+  conventions_with_permissions, event_categories_with_permission, events_where_team_member,
   load_all_active_signups_in_convention_by_event_id, load_all_team_member_event_ids_in_convention,
   permissions_loading::{
     load_all_permissions_in_convention_with_model_type_and_id, UserPermissionsMap,
@@ -309,6 +310,20 @@ impl AuthorizationInfo {
 
   pub fn conventions_with_permission(&self, permission: &str) -> Select<conventions::Entity> {
     conventions_with_permission(permission, self.user.as_ref().map(|u| u.id))
+  }
+
+  pub fn conventions_with_organization_permissions(
+    &self,
+    permissions: &[&str],
+  ) -> Select<conventions::Entity> {
+    conventions_with_organization_permissions(permissions, self.user.as_ref().map(|u| u.id))
+  }
+
+  pub fn conventions_with_organization_permission(
+    &self,
+    permission: &str,
+  ) -> Select<conventions::Entity> {
+    conventions_with_organization_permission(permission, self.user.as_ref().map(|u| u.id))
   }
 
   pub async fn has_convention_permission(

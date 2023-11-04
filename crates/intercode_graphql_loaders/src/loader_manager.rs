@@ -387,6 +387,7 @@ loader_manager!(
   entity_relation(user_con_profile_ticket, user_con_profiles, tickets);
   entity_relation(user_con_profile_user, user_con_profiles, users);
   entity_id(users_by_id, users);
+  entity_relation(user_user_con_profiles, users, user_con_profiles);
 );
 
 impl std::fmt::Debug for LoaderManager {
