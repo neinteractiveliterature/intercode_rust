@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_graphql::*;
-use intercode_entities::{staff_positions, user_con_profiles, users};
+use intercode_entities::{oauth_applications, staff_positions, user_con_profiles, users};
 use intercode_graphql_core::{lax_id::LaxId, query_data::QueryData};
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
@@ -11,7 +11,7 @@ use intercode_policies::{
 };
 use seawater::loaders::ExpectModel;
 
-use crate::policies::{StaffPositionPolicy, UserAction, UserPolicy};
+use crate::policies::{OAuthApplicationPolicy, StaffPositionPolicy, UserAction, UserPolicy};
 
 pub struct AbilityUsersFields {
   authorization_info: Arc<AuthorizationInfo>,
@@ -54,9 +54,16 @@ impl AbilityUsersFields {
 #[Object]
 impl AbilityUsersFields {
   #[graphql(name = "can_manage_oauth_applications")]
-  async fn can_manage_oauth_applications(&self) -> bool {
-    // TODO
-    false
+  async fn can_manage_oauth_applications(&self) -> Result<bool> {
+    let authorization_info = self.authorization_info.as_ref();
+    Ok(
+      OAuthApplicationPolicy::action_permitted(
+        authorization_info,
+        &ReadManageAction::Manage,
+        &oauth_applications::Model::default(),
+      )
+      .await?,
+    )
   }
 
   #[graphql(name = "can_manage_staff_positions")]
