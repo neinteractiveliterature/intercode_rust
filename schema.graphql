@@ -187,7 +187,7 @@ type Convention {
 	domain: String!
 	email_from: String!
 	email_mode: EmailMode!
-	ends_at: DateTime
+	ends_at: Date
 	event_mailing_list_domain: String
 	favicon: ActiveStorageAttachment
 	hidden: Boolean!
@@ -198,7 +198,7 @@ type Convention {
 	show_event_list: ShowSchedule!
 	show_schedule: ShowSchedule!
 	site_mode: SiteMode!
-	starts_at: DateTime
+	starts_at: Date
 	ticket_mode: TicketMode!
 	ticket_name: String!
 	ticketNamePlural: String!
@@ -294,13 +294,6 @@ type CouponsPagination {
 
 scalar Date
 
-"""
-Implement the DateTime<Utc> scalar
-
-The input/output is a string in RFC3339 format.
-"""
-scalar DateTime
-
 type Department {
 	id: ID!
 	name: String!
@@ -386,7 +379,7 @@ type EventCategory {
 	full_color: String!
 	name: String!
 	proposal_description: String
-	scheduling_ui: SchedulingUI!
+	scheduling_ui: SchedulingUi!
 	signed_up_color: String!
 	team_member_name: String!
 	teamMemberNamePlural: String!
@@ -438,7 +431,7 @@ type EventProposal {
 	images: [ActiveStorageAttachment!]!
 	length_seconds: Int
 	registration_policy: RegistrationPolicy!
-	status: String
+	status: String!
 	submitted_at: Date
 	title: String
 	updated_at: Date!
@@ -718,7 +711,7 @@ enum PricingStrategy {
 }
 
 type PricingStructure {
-	price(time: DateTime): Money
+	price(time: Date): Money
 	pricing_strategy: PricingStrategy!
 	value: PricingStructureValue!
 }
@@ -831,12 +824,12 @@ type Run {
 	id: ID!
 	confirmed_signup_count: Int!
 	current_ability_can_signup_summary_run: Boolean!
-	ends_at: Date
+	ends_at: Date!
 	not_counted_signup_count: Int!
 	room_names: [String]!
 	schedule_note: String
 	signup_count_by_state_and_bucket_key_and_counted: Json!
-	starts_at: Date
+	starts_at: Date!
 	title_suffix: String
 }
 
@@ -848,7 +841,7 @@ type ScheduledValue {
 	timespans: [TimespanWithValue!]!
 }
 
-enum SchedulingUI {
+enum SchedulingUi {
 	regular
 	recurring
 	single_run
@@ -1039,14 +1032,14 @@ type TicketType {
 }
 
 type TimespanWithMoneyValue {
-	finish: DateTime
-	start: DateTime
+	finish: Date
+	start: Date
 	value: Money
 }
 
 type TimespanWithValue {
-	finish: DateTime
-	start: DateTime
+	finish: Date
+	start: Date
 	value: String
 }
 

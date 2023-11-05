@@ -26,10 +26,7 @@ impl RunDrop {
   }
 
   pub fn starts_at(&self) -> Option<DateTime> {
-    self
-      .model
-      .starts_at
-      .and_then(naive_date_time_to_liquid_date_time)
+    naive_date_time_to_liquid_date_time(self.model.starts_at)
   }
 
   pub async fn ends_at(&self) -> Option<DateTime> {

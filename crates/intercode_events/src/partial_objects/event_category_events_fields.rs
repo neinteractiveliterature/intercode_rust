@@ -1,7 +1,7 @@
 use async_graphql::{Context, Error, Object, Result, ID};
 use intercode_entities::{departments, event_categories, events, forms};
 use intercode_graphql_core::{
-  enums::SchedulingUI, load_one_by_model_id, model_backed_type, query_data::QueryData,
+  enums::SchedulingUi, load_one_by_model_id, model_backed_type, query_data::QueryData,
   ModelPaginator,
 };
 use intercode_inflector::inflector::string::pluralize;
@@ -98,7 +98,7 @@ impl EventCategoryEventsFields {
   }
 
   #[graphql(name = "scheduling_ui")]
-  async fn scheduling_ui(&self) -> Result<SchedulingUI> {
+  async fn scheduling_ui(&self) -> Result<SchedulingUi> {
     self.model.scheduling_ui.as_str().try_into()
   }
 

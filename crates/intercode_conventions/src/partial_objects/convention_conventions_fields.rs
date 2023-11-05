@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use async_graphql::*;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use intercode_entities::conventions;
 use intercode_graphql_core::{
   enums::{EmailMode, ShowSchedule, SiteMode, TicketMode, TimezoneMode},
   load_one_by_model_id, loader_result_to_many, model_backed_type,
   objects::ActiveStorageAttachmentType,
-  scalars::JsonScalar,
+  scalars::{DateScalar, JsonScalar},
   ModelBackedType,
 };
 use intercode_graphql_loaders::LoaderManager;
@@ -71,11 +71,11 @@ impl ConventionConventionsFields {
   }
 
   #[graphql(name = "ends_at")]
-  async fn ends_at(&self) -> Option<DateTime<Utc>> {
+  async fn ends_at(&self) -> Option<DateScalar> {
     self
       .model
       .ends_at
-      .map(|t| DateTimeUtc::from_naive_utc_and_offset(t, Utc))
+      .map(|t| DateScalar(DateTimeUtc::from_naive_utc_and_offset(t, Utc)))
   }
 
   #[graphql(name = "event_mailing_list_domain")]
@@ -144,11 +144,11 @@ impl ConventionConventionsFields {
   }
 
   #[graphql(name = "starts_at")]
-  async fn starts_at(&self) -> Option<DateTime<Utc>> {
+  async fn starts_at(&self) -> Option<DateScalar> {
     self
       .model
       .starts_at
-      .map(|t| DateTimeUtc::from_naive_utc_and_offset(t, Utc))
+      .map(|t| DateScalar(DateTimeUtc::from_naive_utc_and_offset(t, Utc)))
   }
 
   #[graphql(name = "ticket_mode")]

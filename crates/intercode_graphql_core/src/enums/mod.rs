@@ -12,7 +12,7 @@ mod timezone_mode;
 pub use email_mode::EmailMode;
 pub use order_status::OrderStatus;
 pub use pricing_strategy::PricingStrategy;
-pub use scheduling_ui::SchedulingUI;
+pub use scheduling_ui::SchedulingUi;
 pub use show_schedule::ShowSchedule;
 pub use signup_mode::SignupMode;
 pub use signup_state::SignupState;

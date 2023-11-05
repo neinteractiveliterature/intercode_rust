@@ -79,24 +79,18 @@ impl RunEventsFields {
   }
 
   #[graphql(name = "ends_at")]
-  async fn ends_at(&self, ctx: &Context<'_>) -> Result<Option<DateScalar>, Error> {
+  async fn ends_at(&self, ctx: &Context<'_>) -> Result<DateScalar, Error> {
     let starts_at = self.model.starts_at;
 
-    if let Some(starts_at) = starts_at {
-      let length_seconds = ctx
-        .data::<Arc<LoaderManager>>()?
-        .run_event()
-        .load_one(self.model.id)
-        .await?
-        .expect_one()?
-        .length_seconds;
+    let length_seconds = ctx
+      .data::<Arc<LoaderManager>>()?
+      .run_event()
+      .load_one(self.model.id)
+      .await?
+      .expect_one()?
+      .length_seconds;
 
-      (starts_at + Duration::seconds(length_seconds.into()))
-        .try_into()
-        .map(Some)
-    } else {
-      Ok(None)
-    }
+    (starts_at + Duration::seconds(length_seconds.into())).try_into()
   }
 
   #[graphql(name = "not_counted_signup_count")]
@@ -151,8 +145,8 @@ impl RunEventsFields {
   }
 
   #[graphql(name = "starts_at")]
-  async fn starts_at(&self) -> Result<Option<DateScalar>> {
-    self.model.starts_at.map(DateScalar::try_from).transpose()
+  async fn starts_at(&self) -> Result<DateScalar> {
+    DateScalar::try_from(self.model.starts_at)
   }
 
   #[graphql(name = "title_suffix")]

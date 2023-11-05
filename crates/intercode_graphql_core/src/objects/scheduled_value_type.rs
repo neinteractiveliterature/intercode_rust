@@ -1,9 +1,11 @@
 use std::fmt::Debug;
 
 use async_graphql::{Object, OutputType};
-use chrono::{DateTime, TimeZone};
+use chrono::TimeZone;
 use intercode_timespan::{ScheduledValue, TimespanWithValue};
 use rusty_money::{iso::Currency, Money};
+
+use crate::scalars::DateScalar;
 
 use super::timespan_with_value_type::{
   TimespanWithMoneyValueType, TimespanWithStringableValueType,
@@ -29,7 +31,7 @@ impl<Tz: TimeZone + Debug + Send + Sync, V: Clone + Default + Debug + Send + Syn
   ScheduledStringableValueType<Tz, V>
 where
   Tz::Offset: Send + Sync,
-  DateTime<Tz>: OutputType,
+  DateScalar<Tz>: OutputType,
 {
   async fn timespans(&self) -> Vec<TimespanWithStringableValueType<Tz, Tz, V>> {
     self
@@ -55,7 +57,7 @@ impl<Tz: TimeZone + Debug> ScheduledMoneyValueType<Tz> {
 impl<Tz: TimeZone + Debug + Send + Sync> ScheduledMoneyValueType<Tz>
 where
   Tz::Offset: Send + Sync,
-  DateTime<Tz>: OutputType,
+  DateScalar<Tz>: OutputType,
 {
   async fn timespans(&self) -> Vec<TimespanWithMoneyValueType<Tz, Tz>> {
     self

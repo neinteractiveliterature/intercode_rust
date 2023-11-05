@@ -8,7 +8,7 @@ pub struct Model {
   #[sea_orm(primary_key)]
   pub id: i64,
   pub event_id: i64,
-  pub starts_at: Option<DateTime>,
+  pub starts_at: DateTime,
   pub title_suffix: Option<String>,
   #[sea_orm(column_type = "Text", nullable)]
   pub schedule_note: Option<String>,

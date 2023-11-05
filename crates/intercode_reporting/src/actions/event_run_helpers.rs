@@ -9,7 +9,7 @@ pub trait EventRunHelpers {
   fn get_rooms_for_run_id(&self, run_id: &i64) -> Option<&Vec<rooms::Model>>;
 
   fn run_starts_at(&self, run_id: &i64) -> Option<NaiveDateTime> {
-    self.get_run_by_id(run_id).and_then(|run| run.starts_at)
+    self.get_run_by_id(run_id).map(|run| run.starts_at)
   }
 
   fn room_names_for_run(&self, run_id: &i64) -> String {
