@@ -3,11 +3,11 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::time::Duration;
 
 use async_graphql::Result;
-use axum_server::service::MakeServiceRef;
+use axum_server::service::MakeService;
 use axum_server::tls_rustls::{RustlsAcceptor, RustlsConfig};
 use axum_server::{Handle, Server};
 use http::Request;
-use hyper::server::conn::AddrStream;
+use hyper::body::Incoming;
 use opentelemetry::global::shutdown_tracer_provider;
 use tokio::time::sleep;
 use tracing::log::*;
@@ -70,7 +70,7 @@ async fn graceful_shutdown(handle: Handle) {
   }
 }
 
-pub async fn serve<M: MakeServiceRef<AddrStream, Request<hyper::Body>>>(app: M) -> Result<()> {
+pub async fn serve<M: MakeService<SocketAddr, Request<Incoming>>>(app: M) -> Result<()> {
   let addr = SocketAddr::new(
     IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
     env::var("PORT")
