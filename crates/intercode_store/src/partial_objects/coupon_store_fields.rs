@@ -1,16 +1,26 @@
 use async_graphql::*;
-use intercode_entities::coupons;
+use intercode_entities::{conventions, coupons};
 use intercode_graphql_core::{
-  load_one_by_model_id, model_backed_type, objects::MoneyType, scalars::DateScalar, ModelBackedType,
+  load_one_by_model_id, model_backed_type,
+  objects::MoneyType,
+  scalars::{BigDecimalScalar, DateScalar},
+  ModelBackedType,
 };
 use seawater::loaders::ExpectModel;
 
-use super::ProductType;
+use crate::objects::ProductType;
 
-model_backed_type!(CouponType, coupons::Model);
+model_backed_type!(CouponStoreFields, coupons::Model);
 
-#[Object(name = "Coupon")]
-impl CouponType {
+impl CouponStoreFields {
+  pub async fn convention(&self, ctx: &Context<'_>) -> Result<conventions::Model> {
+    let result = load_one_by_model_id!(coupon_convention, ctx, self)?;
+    result.expect_one().cloned()
+  }
+}
+
+#[Object]
+impl CouponStoreFields {
   async fn id(&self) -> ID {
     self.model.id.into()
   }
@@ -33,13 +43,14 @@ impl CouponType {
   }
 
   #[graphql(name = "percent_discount")]
-  async fn percent_discount(&self) -> Result<Option<f64>> {
+  async fn percent_discount(&self) -> Result<Option<BigDecimalScalar>> {
     Ok(
       self
         .model
         .percent_discount
-        .map(|decimal| decimal.try_into())
-        .transpose()?,
+        .map(BigDecimalScalar::try_from)
+        .transpose()
+        .map_err(|err| err.into_server_error(Pos::default()))?,
     )
   }
 

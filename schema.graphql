@@ -71,6 +71,8 @@ type ActiveStorageAttachment {
 	url: String!
 }
 
+scalar BigDecimal
+
 
 union CmsContent = Page | CmsPartial | CmsLayout
 
@@ -269,15 +271,10 @@ type Coupon {
 	code: String!
 	expires_at: Date
 	fixed_amount: Money
-	percent_discount: Float
+	percent_discount: BigDecimal
 	provides_product: Product
 	usage_limit: Int
-}
-
-type CouponApplication {
-	id: ID!
-	coupon: Coupon!
-	discount: Money!
+	convention: Convention!
 }
 
 input CouponFiltersInput {
@@ -570,7 +567,6 @@ type Order {
 	user_con_profile: UserConProfile!
 	id: ID!
 	charge_id: String
-	coupon_applications: [CouponApplication!]!
 	payment_amount: Money
 	payment_note: String
 	status: String!
@@ -582,10 +578,10 @@ type OrderEntry {
 	order: Order!
 	id: ID!
 	describe_products: String!
-	price_per_item: Money
+	price_per_item: Money!
 	product: Product!
 	product_variant: ProductVariant
-	quantity: Int
+	quantity: Int!
 }
 
 input OrderFiltersInput {

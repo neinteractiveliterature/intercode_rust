@@ -1,11 +1,22 @@
 use async_graphql::{Object, Result};
 use intercode_entities::model_ext::orders::money_from_cents_and_currency;
-use rusty_money::{iso::Currency, FormattableCurrency, Money};
+use rusty_money::{
+  iso::{Currency, USD},
+  FormattableCurrency, Money,
+};
 use sea_orm::prelude::Decimal;
 
 #[derive(Clone, Debug)]
 pub struct MoneyType<'currency> {
   money: Money<'currency, Currency>,
+}
+
+impl<'currency> Default for MoneyType<'currency> {
+  fn default() -> Self {
+    Self {
+      money: Money::from_minor(0, &USD),
+    }
+  }
 }
 
 impl<'currency> MoneyType<'currency> {

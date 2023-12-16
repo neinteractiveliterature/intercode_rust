@@ -9,18 +9,21 @@ use rusty_money::{
 };
 use seawater::loaders::{ExpectModel, ExpectModels};
 
-use super::CouponType;
-model_backed_type!(CouponApplicationType, coupon_applications::Model);
+use super::CouponStoreFields;
 
-#[Object(name = "CouponApplication")]
-impl CouponApplicationType {
+model_backed_type!(CouponApplicationStoreFields, coupon_applications::Model);
+
+impl CouponApplicationStoreFields {
+  pub async fn coupon(&self, ctx: &Context<'_>) -> Result<CouponStoreFields> {
+    let loader_result = load_one_by_model_id!(coupon_application_coupon, ctx, self)?;
+    Ok(CouponStoreFields::new(loader_result.expect_one()?.clone()))
+  }
+}
+
+#[Object]
+impl CouponApplicationStoreFields {
   async fn id(&self) -> ID {
     self.model.id.into()
-  }
-
-  async fn coupon(&self, ctx: &Context<'_>) -> Result<CouponType> {
-    let loader_result = load_one_by_model_id!(coupon_application_coupon, ctx, self)?;
-    Ok(CouponType::new(loader_result.expect_one()?.clone()))
   }
 
   async fn discount(&self, ctx: &Context<'_>) -> Result<MoneyType> {

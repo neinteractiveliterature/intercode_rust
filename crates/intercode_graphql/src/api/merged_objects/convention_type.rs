@@ -7,7 +7,8 @@ use crate::{
 };
 
 use super::{
-  room_type::RoomType, user_activity_alert_type::UserActivityAlertType, CmsContentGroupType,
+  coupon_type::CouponType, room_type::RoomType, user_activity_alert_type::UserActivityAlertType,
+  CmsContentGroupType,
 };
 use async_graphql::*;
 use intercode_cms::api::partial_objects::ConventionCmsFields;
@@ -28,7 +29,6 @@ use intercode_signups::{
   partial_objects::ConventionSignupsFields, query_builders::SignupRequestFiltersInput,
 };
 use intercode_store::{
-  objects::CouponType,
   partial_objects::ConventionStoreFields,
   query_builders::{CouponFiltersInput, OrderFiltersInput},
 };
