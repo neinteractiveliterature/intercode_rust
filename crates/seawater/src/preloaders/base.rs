@@ -147,7 +147,9 @@ pub trait Preloader<
           .collect();
 
         let unloaded_drops = drops
-          .iter().filter(|&drop| !loaded_values_by_drop_id.contains_key(&drop.id())).cloned();
+          .iter()
+          .filter(|&drop| !loaded_values_by_drop_id.contains_key(&drop.id()))
+          .cloned();
 
         let unloaded_drops_by_id = unloaded_drops
           .map(|drop| (drop.id(), drop))

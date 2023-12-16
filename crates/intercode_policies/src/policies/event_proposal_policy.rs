@@ -56,7 +56,9 @@ static NON_DRAFT_STATUSES: Lazy<HashSet<EventProposalStatus>> = Lazy::new(|| {
 
 static NON_PENDING_STATUSES: Lazy<HashSet<EventProposalStatus>> = Lazy::new(|| {
   NON_DRAFT_STATUSES
-    .iter().filter(|&status| *status != EventProposalStatus::Proposed).cloned()
+    .iter()
+    .filter(|&status| *status != EventProposalStatus::Proposed)
+    .cloned()
     .collect()
 });
 
