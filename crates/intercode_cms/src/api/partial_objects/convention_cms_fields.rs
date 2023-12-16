@@ -171,6 +171,27 @@ impl ConventionCmsFields {
       Ok(None)
     }
   }
+
+  async fn preview_liquid(&self, ctx: &Context<'_>, content: String) -> Result<String, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::preview_liquid(self, ctx, content).await
+  }
+
+  async fn preview_markdown(
+    &self,
+    ctx: &Context<'_>,
+    markdown: String,
+    event_id: Option<ID>,
+    event_proposal_id: Option<ID>,
+  ) -> Result<String, Error> {
+    <Self as CmsParentImplementation<conventions::Model>>::preview_markdown(
+      self,
+      ctx,
+      markdown,
+      event_id,
+      event_proposal_id,
+    )
+    .await
+  }
 }
 
 impl CmsParentImplementation<conventions::Model> for ConventionCmsFields {}

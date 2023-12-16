@@ -41,8 +41,8 @@ impl RootSiteCmsFields {
   }
 
   #[graphql(name = "site_name")]
-  async fn site_name(&self) -> Option<&str> {
-    self.model.site_name.as_deref()
+  async fn site_name(&self) -> &str {
+    self.model.site_name.as_deref().unwrap_or_default()
   }
 
   async fn cms_files(&self, ctx: &Context<'_>) -> Result<Vec<CmsFileType>, Error> {
@@ -117,6 +117,27 @@ impl RootSiteCmsFields {
   ) -> Result<CmsLayoutType, Error> {
     <Self as CmsParentImplementation<root_sites::Model>>::effective_cms_layout(self, ctx, path)
       .await
+  }
+
+  async fn preview_liquid(&self, ctx: &Context<'_>, content: String) -> Result<String, Error> {
+    <Self as CmsParentImplementation<root_sites::Model>>::preview_liquid(self, ctx, content).await
+  }
+
+  async fn preview_markdown(
+    &self,
+    ctx: &Context<'_>,
+    markdown: String,
+    event_id: Option<ID>,
+    event_proposal_id: Option<ID>,
+  ) -> Result<String, Error> {
+    <Self as CmsParentImplementation<root_sites::Model>>::preview_markdown(
+      self,
+      ctx,
+      markdown,
+      event_id,
+      event_proposal_id,
+    )
+    .await
   }
 
   async fn root_page(&self, ctx: &Context<'_>) -> Result<PageType, Error> {

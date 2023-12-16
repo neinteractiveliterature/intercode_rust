@@ -1,7 +1,8 @@
 use async_graphql::*;
 use intercode_entities::{runs, signup_requests, user_con_profiles};
 use intercode_graphql_core::{
-  load_one_by_model_id, loader_result_to_optional_single, model_backed_type, scalars::DateScalar,
+  enums::SignupRequestState, load_one_by_model_id, loader_result_to_optional_single,
+  model_backed_type, scalars::DateScalar,
 };
 use seawater::loaders::ExpectModel;
 
@@ -59,7 +60,7 @@ impl SignupRequestSignupsFields {
     self.model.requested_bucket_key.as_deref()
   }
 
-  async fn state(&self) -> &str {
-    &self.model.state
+  async fn state(&self) -> Result<SignupRequestState> {
+    SignupRequestState::try_from(self.model.state.as_str()).map_err(Error::from)
   }
 }

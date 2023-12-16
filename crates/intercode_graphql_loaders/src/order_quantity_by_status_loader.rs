@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use async_graphql::{dataloader::Loader, resolver_utils::parse_enum, EnumType, Object};
+use async_graphql::{dataloader::Loader, EnumType, Object};
 use async_trait::async_trait;
 use intercode_entities::{order_entries, orders};
 use intercode_graphql_core::enums::OrderStatus;
@@ -10,20 +10,20 @@ use seawater::ConnectionWrapper;
 
 #[derive(Debug, Clone)]
 pub struct OrderQuantityByStatusType {
-  status: OrderStatus,
+  status: String,
   quantity: i64,
 }
 
 impl OrderQuantityByStatusType {
-  pub fn new(status: OrderStatus, quantity: i64) -> Self {
+  pub fn new(status: String, quantity: i64) -> Self {
     Self { status, quantity }
   }
 }
 
 #[Object(name = "OrderQuantityByStatus")]
 impl OrderQuantityByStatusType {
-  pub async fn status(&self) -> OrderStatus {
-    self.status
+  pub async fn status(&self) -> &str {
+    &self.status
   }
 
   pub async fn quantity(&self) -> i64 {
@@ -81,10 +81,8 @@ impl Loader<i64> for OrderQuantityByStatusLoader {
       .all(&self.db)
       .await?
       .into_iter()
-      .filter_map(|(key, status, quantity): (i64, String, i64)| {
-        parse_enum(status.into())
-          .map(|status| (key, OrderQuantityByStatusType::new(status, quantity)))
-          .ok()
+      .map(|(key, status, quantity): (i64, String, i64)| {
+        (key, OrderQuantityByStatusType::new(status, quantity))
       })
       .into_group_map();
 
@@ -97,7 +95,7 @@ impl Loader<i64> for OrderQuantityByStatusLoader {
             if status.value == OrderStatus::Pending {
               None
             } else {
-              Some(OrderQuantityByStatusType::new(status.value, 0))
+              Some(OrderQuantityByStatusType::new(status.name.to_string(), 0))
             }
           })
           .collect()

@@ -6,7 +6,6 @@ use async_graphql::{
   ContainerType, Context, ContextSelectionSet, InterfaceType, OutputType, Positioned,
 };
 use async_graphql_value::indexmap::IndexMap;
-use intercode_cms::api::partial_objects::ConventionCmsFields;
 use intercode_entities::cms_parent::CmsParent;
 use intercode_graphql_core::ModelBackedType;
 
@@ -37,8 +36,8 @@ impl From<CmsParent> for CmsParentInterface {
   }
 }
 
-// Hacks: Interface doesn't support MergedObject, so instead we're going to declare ConventionCmsFields as the canonical
-// implementation of this interface, and assume that RootSiteType implements everything ConventionCmsFields does.
+// Hacks: Interface doesn't support MergedObject, so instead we're going to declare RootSite as the canonical
+// implementation of this interface, and assume that ConventionType implements everything RootSite does.
 // This loses some type safety but it does let us maintain compatibility with the Ruby version of the schema.
 impl OutputType for CmsParentInterface {
   #[doc = " Type the name."]
@@ -58,7 +57,7 @@ impl OutputType for CmsParentInterface {
 
       if let MetaType::Object {
         fields: obj_fields, ..
-      } = registry.create_fake_output_type::<ConventionCmsFields>()
+      } = registry.create_fake_output_type::<RootSiteType>()
       {
         fields = obj_fields;
       }

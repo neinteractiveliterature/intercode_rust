@@ -3,8 +3,8 @@ use std::sync::Arc;
 use async_graphql::*;
 use intercode_entities::orders;
 use intercode_graphql_core::{
-  load_one_by_model_id, loader_result_to_many, model_backed_type, objects::MoneyType,
-  scalars::DateScalar, ModelBackedType,
+  enums::OrderStatus, load_one_by_model_id, loader_result_to_many, model_backed_type,
+  objects::MoneyType, scalars::DateScalar, ModelBackedType,
 };
 use intercode_graphql_loaders::LoaderManager;
 use rusty_money::{iso, Money};
@@ -73,8 +73,8 @@ impl OrderStoreFields {
     self.model.payment_note.as_deref()
   }
 
-  async fn status(&self) -> &str {
-    &self.model.status
+  async fn status(&self) -> Result<OrderStatus> {
+    OrderStatus::try_from(self.model.status.as_str()).map_err(Error::from)
   }
 
   #[graphql(name = "submitted_at")]

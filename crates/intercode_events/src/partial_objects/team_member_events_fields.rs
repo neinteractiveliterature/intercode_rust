@@ -3,7 +3,8 @@ use std::sync::Arc;
 use async_graphql::*;
 use intercode_entities::{team_members, user_con_profiles};
 use intercode_graphql_core::{
-  load_one_by_model_id, loader_result_to_required_single, model_backed_type, query_data::QueryData,
+  enums::ReceiveSignupEmail, load_one_by_model_id, loader_result_to_required_single,
+  model_backed_type, query_data::QueryData,
 };
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
@@ -73,8 +74,8 @@ impl TeamMemberEventsFields {
   }
 
   #[graphql(name = "receive_signup_email")]
-  async fn receive_signup_email(&self) -> &str {
-    &self.model.receive_signup_email
+  async fn receive_signup_email(&self) -> Result<ReceiveSignupEmail> {
+    ReceiveSignupEmail::try_from(self.model.receive_signup_email.as_str()).map_err(Error::from)
   }
 
   #[graphql(name = "show_email")]

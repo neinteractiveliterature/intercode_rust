@@ -121,6 +121,7 @@ type CmsNavigationItem {
 
 interface CmsParent {
 	id: ID!
+	site_name: String!
 	cmsFiles: [CmsFile!]!
 	cmsFile(id: ID!): CmsFile!
 	cmsGraphqlQueries: [CmsGraphqlQuery!]!
@@ -134,10 +135,13 @@ interface CmsParent {
 	cmsVariables: [CmsVariable!]!
 	defaultLayout: CmsLayout!
 	effectiveCmsLayout(path: String!): CmsLayout!
-	notification_templates: [NotificationTemplate!]!
+	previewLiquid(content: String!): String!
+	previewMarkdown(markdown: String!, eventId: ID, eventProposalId: ID): String!
 	rootPage: Page!
 	typeaheadSearchCmsContent(name: String): [CmsContent!]!
-	pre_schedule_content_html: String
+	url: String!
+	cmsContentGroups: [CmsContentGroup!]!
+	cmsContentGroup(id: ID!): CmsContentGroup!
 }
 
 type CmsPartial {
@@ -183,6 +187,8 @@ type Convention implements CmsParent {
 	rootPage: Page!
 	typeaheadSearchCmsContent(name: String): [CmsContent!]!
 	pre_schedule_content_html: String
+	previewLiquid(content: String!): String!
+	previewMarkdown(markdown: String!, eventId: ID, eventProposalId: ID): String!
 	name: String!
 	canceled: Boolean!
 	clickwrap_agreement: String
@@ -525,7 +531,7 @@ type FormItem {
 	id: ID!
 	admin_description: String
 	default_value: Json
-	expose_in: [String!]
+	expose_in: [FormItemExposeIn!]
 	identifier: String
 	item_type: String!
 	properties: Json!
@@ -534,6 +540,11 @@ type FormItem {
 	rendered_properties: Json!
 	visibility: FormItemRole!
 	writeability: FormItemRole!
+}
+
+enum FormItemExposeIn {
+	event_catalog
+	schedule_popup
 }
 
 enum FormItemRole {
@@ -623,7 +634,7 @@ type Order {
 	charge_id: String
 	payment_amount: Money
 	payment_note: String
-	status: String!
+	status: OrderStatus!
 	submitted_at: Date
 	total_price: Money!
 }
@@ -645,7 +656,7 @@ input OrderFiltersInput {
 }
 
 type OrderQuantityByStatus {
-	status: OrderStatus!
+	status: String!
 	quantity: Int!
 }
 
@@ -857,6 +868,21 @@ type Query {
 	hasOauthApplications: Boolean!
 }
 
+enum ReceiveSignupEmail {
+	"""
+	Receive email for all signup activity
+	"""
+	ALL_SIGNUPS
+	"""
+	Receive email for signup activity affecting confirmed signups
+	"""
+	NON_WAITLIST_SIGNUPS
+	"""
+	Do not receive signup email
+	"""
+	NO
+}
+
 type RegistrationPolicy {
 	buckets: [RegistrationPolicyBucket!]!
 	minimum_slots: Int
@@ -891,7 +917,7 @@ type Room {
 
 type RootSite implements CmsParent {
 	id: ID!
-	site_name: String
+	site_name: String!
 	cmsFiles: [CmsFile!]!
 	cmsFile(id: ID!): CmsFile!
 	cmsGraphqlQueries: [CmsGraphqlQuery!]!
@@ -905,6 +931,8 @@ type RootSite implements CmsParent {
 	cmsVariables: [CmsVariable!]!
 	defaultLayout: CmsLayout!
 	effectiveCmsLayout(path: String!): CmsLayout!
+	previewLiquid(content: String!): String!
+	previewMarkdown(markdown: String!, eventId: ID, eventProposalId: ID): String!
 	rootPage: Page!
 	typeaheadSearchCmsContent(name: String): [CmsContent!]!
 	url: String!
@@ -986,7 +1014,7 @@ type SignupRequest {
 	id: ID!
 	created_at: Date!
 	requested_bucket_key: String
-	state: String!
+	state: SignupRequestState!
 	replace_signup: Signup
 	result_signup: Signup
 	target_run: Run!
@@ -994,7 +1022,27 @@ type SignupRequest {
 }
 
 input SignupRequestFiltersInput {
-	state: [String!]
+	state: [SignupRequestState!]
+}
+
+enum SignupRequestState {
+	"""
+	The request has not yet been reviewed by a moderator
+	"""
+	pending
+	"""
+	The request has been accepted and the requester has been signed up (see the result_signup
+	field for the actual signup)
+	"""
+	accepted
+	"""
+	The request has been rejected and the requester has not been signed up
+	"""
+	rejected
+	"""
+	The requester withdrew their request before it was accepted or rejected
+	"""
+	withdrawn
 }
 
 type SignupRequestsPagination implements PaginationInterface {
@@ -1113,7 +1161,7 @@ type TeamMember {
 	display_team_member: Boolean!
 	email: String
 	receive_con_email: Boolean!
-	receive_signup_email: String!
+	receive_signup_email: ReceiveSignupEmail!
 	show_email: Boolean!
 }
 

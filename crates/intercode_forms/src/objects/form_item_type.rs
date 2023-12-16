@@ -1,6 +1,6 @@
 use async_graphql::*;
 use intercode_entities::{form_items, model_ext::form_item_permissions::FormItemRole};
-use intercode_graphql_core::{model_backed_type, scalars::JsonScalar};
+use intercode_graphql_core::{enums::FormItemExposeIn, model_backed_type, scalars::JsonScalar};
 use intercode_liquid::render_markdown;
 use serde_json::json;
 
@@ -23,8 +23,18 @@ impl FormItemType {
   }
 
   #[graphql(name = "expose_in")]
-  async fn expose_in(&self) -> &Option<Vec<String>> {
-    &self.model.expose_in
+  async fn expose_in(&self) -> Result<Option<Vec<FormItemExposeIn>>> {
+    self
+      .model
+      .expose_in
+      .as_ref()
+      .map(|expose_in| {
+        expose_in
+          .iter()
+          .map(|v| FormItemExposeIn::try_from(v.as_str()).map_err(Error::from))
+          .collect::<Result<Vec<FormItemExposeIn>>>()
+      })
+      .transpose()
   }
 
   async fn identifier(&self) -> Option<&str> {
