@@ -3,7 +3,7 @@
 
 use async_trait::async_trait;
 use axum::{
-  extract::FromRequestParts,
+  extract::{FromRequestParts, Request},
   http::{self, StatusCode},
   middleware::Next,
   response::{IntoResponse, IntoResponseParts, Response, ResponseParts},
@@ -14,7 +14,7 @@ use axum_extra::extract::{
 };
 use base64::Engine;
 use csrf::{ChaCha20Poly1305CsrfProtection, CsrfCookie, CsrfProtection, CsrfToken};
-use http::{request::Parts, Request};
+use http::request::Parts;
 use std::{
   borrow::Cow,
   fmt::{Debug, Display},
@@ -185,7 +185,7 @@ impl CsrfData {
     let lifespan = OffsetDateTime::now_utc() + self.config.lifespan;
 
     let mut cookie_builder =
-      Cookie::build(self.config.cookie_name.clone(), self.cookie.b64_string())
+      Cookie::build((self.config.cookie_name.clone(), self.cookie.b64_string()))
         .path(self.config.cookie_path.clone())
         .secure(self.config.cookie_secure)
         .http_only(self.config.cookie_http_only)
@@ -197,15 +197,15 @@ impl CsrfData {
         .same_site(self.config.cookie_same_site);
     }
 
-    cookie_builder.finish()
+    cookie_builder.build()
   }
 }
 
-pub async fn csrf_middleware<B: Send>(
+pub async fn csrf_middleware(
   token: CsrfData,
   jar: CookieJar,
-  req: Request<B>,
-  next: Next<B>,
+  req: Request,
+  next: Next,
 ) -> Result<Response, (StatusCode, String)> {
   let future = next.run(req);
   let response = future.await;

@@ -1,17 +1,17 @@
 use std::sync::Arc;
 
 use axum::{
-  extract::State,
+  extract::{Request, State},
   middleware::Next,
   response::{IntoResponse, Response},
 };
-use http::{Request, StatusCode};
+use http::StatusCode;
 use sea_orm::{DatabaseConnection, DbErr, TransactionTrait};
 use seawater::ConnectionWrapper;
 
-async fn run_request_bound_transaction<B>(
-  mut request: Request<B>,
-  next: Next<B>,
+async fn run_request_bound_transaction(
+  mut request: Request,
+  next: Next,
   db: &DatabaseConnection,
 ) -> Result<Response, DbErr> {
   let extensions_mut = request.extensions_mut();
@@ -38,10 +38,10 @@ async fn run_request_bound_transaction<B>(
   Ok(response)
 }
 
-pub async fn request_bound_transaction<B>(
+pub async fn request_bound_transaction(
   State(db_conn): State<Arc<DatabaseConnection>>,
-  request: Request<B>,
-  next: Next<B>,
+  request: Request,
+  next: Next,
 ) -> Response {
   run_request_bound_transaction(request, next, &db_conn)
     .await

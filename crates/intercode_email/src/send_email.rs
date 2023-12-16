@@ -1,18 +1,19 @@
-use aws_config::SdkConfig;
+use aws_config::{BehaviorVersion, SdkConfig};
 use aws_sdk_sesv2::{
   error::SdkError,
   operation::send_email::{SendEmailError, SendEmailOutput},
   types::{Body, Content, Destination, EmailContent, Message},
 };
-use aws_smithy_types::body::SdkBody;
-use http::Response;
+use aws_smithy_runtime_api::client::orchestrator::HttpResponse;
 use tokio::sync::OnceCell;
 
 static AWS_CONFIG: OnceCell<SdkConfig> = OnceCell::const_new();
 static SES_CLIENT: OnceCell<aws_sdk_sesv2::Client> = OnceCell::const_new();
 
 async fn get_aws_config() -> &'static SdkConfig {
-  AWS_CONFIG.get_or_init(aws_config::load_from_env).await
+  AWS_CONFIG
+    .get_or_init(|| aws_config::load_defaults(BehaviorVersion::latest()))
+    .await
 }
 
 async fn get_ses_client() -> &'static aws_sdk_sesv2::Client {
@@ -30,7 +31,7 @@ pub async fn send_email(
   subject: &str,
   body_html: Option<&str>,
   body_text: Option<&str>,
-) -> Result<SendEmailOutput, SdkError<SendEmailError, Response<SdkBody>>> {
+) -> Result<SendEmailOutput, SdkError<SendEmailError, HttpResponse>> {
   let client = get_ses_client().await;
   let mut body = Body::builder();
   if let Some(body_html) = body_html {

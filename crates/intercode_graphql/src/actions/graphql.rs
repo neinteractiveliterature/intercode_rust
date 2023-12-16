@@ -6,18 +6,15 @@ use async_graphql::{
   EmptySubscription, Schema,
 };
 use async_graphql_axum::{GraphQLBatchRequest, GraphQLResponse};
-use axum::{
-  extract::State,
-  response::{self, IntoResponse},
-};
+use axum::response::{self, IntoResponse};
 use intercode_graphql_core::liquid_renderer::{LiquidRenderer, LiquidRendererFromRequest};
 use intercode_graphql_loaders::LoaderManager;
 use intercode_server::AuthorizationInfoAndQueryDataFromRequest;
 
 pub type IntercodeSchema = Schema<api::QueryRoot, api::MutationRoot, EmptySubscription>;
 
-pub async fn graphql_handler(
-  State(schema): State<IntercodeSchema>,
+pub async fn graphql_handler_inner(
+  schema: IntercodeSchema,
   AuthorizationInfoAndQueryDataFromRequest(authorization_info, query_data): AuthorizationInfoAndQueryDataFromRequest,
   LiquidRendererFromRequest(liquid_renderer): LiquidRendererFromRequest,
   req: GraphQLBatchRequest,

@@ -1,12 +1,9 @@
-use std::error::Error;
-
 use axum::{
   async_trait,
-  body::{Bytes, HttpBody},
   extract::{FromRequest, Multipart},
   Form,
 };
-use http::{Request, StatusCode};
+use http::StatusCode;
 use once_cell::sync::Lazy;
 use regex::bytes::Regex;
 
@@ -18,16 +15,13 @@ pub enum FormOrMultipart<T> {
 }
 
 #[async_trait]
-impl<T, S: Send + Sync, B: Send + Sync + 'static> FromRequest<S, B> for FormOrMultipart<T>
+impl<T, S: Send + Sync> FromRequest<S> for FormOrMultipart<T>
 where
-  Form<T>: FromRequest<S, B>,
-  B: HttpBody,
-  Bytes: From<<B as HttpBody>::Data>,
-  <B as HttpBody>::Error: Error + Send + Sync,
+  Form<T>: FromRequest<S>,
 {
   type Rejection = StatusCode;
 
-  async fn from_request(req: Request<B>, state: &S) -> Result<Self, Self::Rejection> {
+  async fn from_request(req: axum::extract::Request, state: &S) -> Result<Self, Self::Rejection> {
     if let Some(content_type) = req.headers().get("content-type") {
       let content_type = content_type
         .to_str()

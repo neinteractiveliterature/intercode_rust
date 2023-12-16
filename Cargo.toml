@@ -49,17 +49,18 @@ members = [
 [workspace.dependencies]
 Inflector = "*"
 askama = {version = "0.12.1", features = ["with-axum"]}
-askama_axum = "0.3.0"
-async-graphql = {version = "~6.0.10", features = ["tracing", "dataloader", "chrono"]}
-async-graphql-axum = "~6.0.10"
-async-graphql-value = {version = "~6.0.10"}
+askama_axum = "0.4.0"
+async-graphql = {git = "https://github.com/async-graphql/async-graphql.git", features = ["tracing", "dataloader", "chrono"]}
+async-graphql-axum = {git = "https://github.com/async-graphql/async-graphql.git"}
+async-graphql-value = {git = "https://github.com/async-graphql/async-graphql.git"}
 async-trait = "*"
-aws-config = "0.57.1"
-aws-sdk-sesv2 = "0.35.0"
+aws-config = "1.1.1"
+aws-sdk-sesv2 = "1.7.0"
+aws-smithy-runtime-api = "*"
 aws-smithy-types = "*"
-axum = {version = "~0.6.20", features = ["multipart", "macros", "headers"]}
-axum-extra = {version = "~0.8.0", features = ["cookie"]}
-axum-server = {version = "0.5.1", features = ["tls-rustls"]}
+axum = {version = "~0.7.2", features = ["multipart", "macros"]}
+axum-extra = {version = "~0.9.0", features = ["cookie"]}
+axum-server = {git = "https://github.com/programatik29/axum-server.git", features = ["tls-rustls"]}
 base64 = "0.21.5"
 bcrypt = "0.15.0"
 bumpalo = "3.14.0"
@@ -72,8 +73,8 @@ dyn-clone = "1.0.16"
 futures = "0.3.29"
 hex = "0.4.3"
 html-escape = "0.2.13"
-http = "0.2.9"
-hyper = "0.14.27"
+http = "1.0.0"
+hyper = "1.0.1"
 i18n-embed = {version = "0.14.1", features = ["fluent-system"]}
 i18n-embed-fl = "0.7"
 ics = "0.5.8"
@@ -131,8 +132,8 @@ syn = "2.0.39"
 time = "0.3.30"
 tokio = {version = "~1.34.0", features = ["rt-multi-thread", "macros", "signal", "tracing"]}
 tower = {version = "0.4.13", features = ["limit", "make"]}
-tower-http = {version = "0.4.4", features = ["catch-panic", "compression-br", "compression-deflate", "compression-gzip", "trace"]}
-tower-sessions = "~0.4.1"
+tower-http = {version = "0.5.0", features = ["catch-panic", "compression-br", "compression-deflate", "compression-gzip", "trace"]}
+tower-sessions = "~0.7.0"
 tracing = "0.1.40"
 tuple-conv = "~1.0.1"
 twilio = "1.0.3"
@@ -146,6 +147,7 @@ tokio-console = ["dep:console-subscriber", "tokio/full", "tokio/tracing"]
 
 [dependencies]
 async-graphql = {workspace = true}
+async-graphql-axum = {workspace = true}
 axum = {workspace = true}
 chrono = {workspace = true}
 chrono-tz = {workspace = true}

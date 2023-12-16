@@ -1,13 +1,15 @@
 use crate::actions;
 use crate::database::connect_database;
-use axum::body::HttpBody;
-use axum::extract::FromRef;
+use async_graphql_axum::{GraphQLBatchRequest, GraphQLResponse};
+use axum::extract::{FromRef, State};
 use axum::routing::{get, post, IntoMakeService};
 use axum::Router;
-use intercode_graphql::actions::IntercodeSchema;
+use intercode_graphql::actions::{graphql_handler_inner, IntercodeSchema};
 use intercode_graphql::build_intercode_graphql_schema;
+use intercode_graphql_core::liquid_renderer::LiquidRendererFromRequest;
 use intercode_graphql_core::schema_data::SchemaData;
 use intercode_server::i18n::build_language_loader;
+use intercode_server::AuthorizationInfoAndQueryDataFromRequest;
 use sea_orm::DatabaseConnection;
 use std::sync::Arc;
 
@@ -18,13 +20,23 @@ pub struct AppState {
   db_conn: Arc<DatabaseConnection>,
 }
 
-pub async fn bootstrap_app<B>() -> Result<IntoMakeService<Router<(), B>>, async_graphql::Error>
-where
-  axum::body::Bytes: From<<B as HttpBody>::Data>,
-  B: HttpBody + Send + Sync + Unpin + 'static,
-  <B as HttpBody>::Data: Send + Sync,
-  <B as HttpBody>::Error: std::error::Error + Send + Sync,
-{
+#[axum::debug_handler]
+async fn graphql_handler(
+  State(state): State<AppState>,
+  authorization_info_and_query_data_from_request: AuthorizationInfoAndQueryDataFromRequest,
+  liquid_renderer_from_request: LiquidRendererFromRequest,
+  req: GraphQLBatchRequest,
+) -> GraphQLResponse {
+  graphql_handler_inner(
+    state.schema,
+    authorization_info_and_query_data_from_request,
+    liquid_renderer_from_request,
+    req,
+  )
+  .await
+}
+
+pub async fn bootstrap_app() -> Result<IntoMakeService<Router>, async_graphql::Error> {
   let db_conn = Arc::new(connect_database().await?);
   let language_loader_arc = Arc::new(build_language_loader()?);
   let schema_data = SchemaData {
@@ -42,8 +54,7 @@ where
     router
       .route(
         "/graphql",
-        get(intercode_graphql::actions::graphql_playground)
-          .post(intercode_graphql::actions::graphql_handler),
+        get(intercode_graphql::actions::graphql_playground).post(graphql_handler),
       )
       .route(
         "/authenticity_tokens",

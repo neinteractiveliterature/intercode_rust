@@ -7,7 +7,6 @@ use axum::extract::FromRef;
 use axum::BoxError;
 use axum::{middleware::from_fn_with_state, routing::IntoMakeService, Extension, Router};
 use http::StatusCode;
-use hyper::body::HttpBody;
 use sea_orm::DatabaseConnection;
 use tower::limit::ConcurrencyLimitLayer;
 use tower::ServiceBuilder;
@@ -21,12 +20,11 @@ use crate::{
   request_bound_transaction::request_bound_transaction,
 };
 
-pub fn build_app<S, F, B>(state: S, build_routes: F) -> Result<IntoMakeService<Router<(), B>>>
+pub fn build_app<S, F>(state: S, build_routes: F) -> Result<IntoMakeService<Router>>
 where
   S: Clone + Send + Sync + 'static,
   Arc<DatabaseConnection>: FromRef<S>,
-  F: FnOnce(Router<S, B>) -> Router<S, B>,
-  B: HttpBody + Send + Sync + Unpin + 'static,
+  F: FnOnce(Router<S>) -> Router<S>,
 {
   let secret_bytes = hex::decode(env::var("SECRET_KEY_BASE")?)?;
   let secret: [u8; 64] = secret_bytes[0..64].try_into().unwrap_or_else(|_| {
@@ -39,7 +37,7 @@ where
   let csrf_config = CsrfConfig::new(&secret);
   let session_layer = SessionWithDbStoreFromTxLayer::new();
 
-  let app: Router<S, B> = Router::new();
+  let app: Router<S> = Router::new();
   let app = build_routes(app);
 
   let session_service = ServiceBuilder::new()
