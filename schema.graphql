@@ -8,12 +8,13 @@ type Ability {
 	can_read_schedule: Boolean!
 	can_read_schedule_with_counts: Boolean!
 	can_list_events: Boolean!
-	can_update_event(eventId: ID!): Boolean!
-	can_delete_event(eventId: ID!): Boolean! @deprecated(reason: "Deleting events is never allowed; this always returns false")
-	can_read_event_signups(eventId: ID!): Boolean!
-	can_read_admin_notes_on_event_proposal(eventProposalId: ID!): Boolean!
-	can_update_event_proposal(eventProposalId: ID!): Boolean!
-	can_delete_event_proposal(eventProposalId: ID!): Boolean!
+	can_update_event(eventId: ID): Boolean!
+	can_delete_event(eventId: ID): Boolean! @deprecated(reason: "Deleting events is never allowed; this always returns false")
+	can_read_event_signups(eventId: ID): Boolean!
+	can_read_admin_notes_on_event_proposal(eventProposalId: ID): Boolean!
+	can_update_admin_notes_on_event_proposal(eventProposalId: ID): Boolean!
+	can_update_event_proposal(eventProposalId: ID): Boolean!
+	can_delete_event_proposal(eventProposalId: ID): Boolean!
 	can_override_maximum_event_provided_tickets: Boolean!
 	can_update_event_categories: Boolean!
 	can_read_event_proposals: Boolean!
@@ -25,8 +26,8 @@ type Ability {
 	can_update_products: Boolean!
 	can_manage_ticket_types: Boolean!
 	can_create_tickets: Boolean!
-	can_delete_ticket(ticketId: ID!): Boolean!
-	can_update_ticket(ticketId: ID!): Boolean!
+	can_delete_ticket(ticketId: ID): Boolean!
+	can_update_ticket(ticketId: ID): Boolean!
 	can_create_cms_files: Boolean!
 	can_create_pages: Boolean!
 	can_create_cms_partials: Boolean!
@@ -42,18 +43,20 @@ type Ability {
 	can_read_reports: Boolean!
 	can_read_signups: Boolean!
 	can_manage_signups: Boolean!
-	can_force_confirm_signup(signupId: ID!): Boolean!
-	can_update_bucket_signup(signupId: ID!): Boolean!
-	can_update_counted_signup(signupId: ID!): Boolean!
+	can_force_confirm_signup(signupId: ID): Boolean!
+	can_update_bucket_signup(signupId: ID): Boolean!
+	can_update_counted_signup(signupId: ID): Boolean!
+	can_update_signup(signupId: ID): Boolean!
+	can_update_signups: Boolean!
 	can_manage_oauth_applications: Boolean!
 	can_manage_staff_positions: Boolean!
 	can_read_user_con_profiles: Boolean!
 	can_create_user_con_profiles: Boolean!
-	can_become_user_con_profile(userConProfileId: ID!): Boolean!
-	can_delete_user_con_profile(userConProfileId: ID!): Boolean!
-	can_update_user_con_profile(userConProfileId: ID!): Boolean!
+	can_become_user_con_profile(userConProfileId: ID): Boolean!
+	can_delete_user_con_profile(userConProfileId: ID): Boolean!
+	can_update_user_con_profile(userConProfileId: ID): Boolean!
 	can_read_users: Boolean!
-	can_withdraw_all_user_con_profile_signups(userConProfileId: ID!): Boolean!
+	can_withdraw_all_user_con_profile_signups(userConProfileId: ID): Boolean!
 }
 
 """
@@ -62,11 +65,13 @@ Despite the name, this actually represents an active_storage_blob model.  Whoops
 type ActiveStorageAttachment {
 	id: ID!
 	byte_size: Int!
-	content_type: String
+	content_type: String!
 	filename: String!
 	resized_url(maxWidth: Int!, maxHeight: Int!): String
 	url: String!
 }
+
+scalar BigDecimal
 
 
 union CmsContent = Page | CmsPartial | CmsLayout
@@ -80,18 +85,10 @@ type CmsContentGroup {
 	permissions: [Permission!]!
 }
 
-type CmsContentGroupCmsFields {
-	id: ID!
-	contents: [CmsContent!]!
-	current_ability_can_delete: Boolean!
-	current_ability_can_update: Boolean!
-	name: String!
-}
-
 type CmsFile {
 	id: ID!
 	current_ability_can_delete: Boolean!
-	file: ActiveStorageAttachment
+	file: ActiveStorageAttachment!
 }
 
 type CmsGraphqlQuery {
@@ -99,8 +96,8 @@ type CmsGraphqlQuery {
 	admin_notes: String
 	current_ability_can_delete: Boolean!
 	current_ability_can_update: Boolean!
-	identifier: String
-	query: String
+	identifier: String!
+	query: String!
 }
 
 type CmsLayout {
@@ -157,7 +154,7 @@ type CmsVariable {
 	current_ability_can_delete: Boolean!
 	current_ability_can_update: Boolean!
 	key: String!
-	value_json: Json
+	value_json: String!
 }
 
 type ContactEmail {
@@ -186,31 +183,30 @@ type Convention {
 	rootPage: Page!
 	typeaheadSearchCmsContent(name: String): [CmsContent!]!
 	pre_schedule_content_html: String
-	name: String
+	name: String!
 	canceled: Boolean!
 	clickwrap_agreement: String
 	domain: String!
 	email_from: String!
-	email_mode: String!
-	ends_at: DateTime
+	email_mode: EmailMode!
+	ends_at: Date
 	event_mailing_list_domain: String
 	favicon: ActiveStorageAttachment
 	hidden: Boolean!
 	language: String!
-	location: JSON
+	location: Json
 	maximum_tickets: Int
 	open_graph_image: ActiveStorageAttachment
-	show_event_list: String!
-	show_schedule: String!
+	show_event_list: ShowSchedule!
+	show_schedule: ShowSchedule!
 	site_mode: SiteMode!
-	starts_at: DateTime
+	starts_at: Date
 	ticket_mode: TicketMode!
 	ticket_name: String!
 	ticketNamePlural: String!
 	timezone_mode: TimezoneMode!
 	timezone_name: String
 	accepting_proposals: Boolean!
-	rooms: [Room!]!
 	"""
 	Given a Liquid text string and a notification event, renders the Liquid to HTML using the
 	current domain's CMS context as if it were the content for that notification type.
@@ -225,13 +221,13 @@ type Convention {
 	catch_all_staff_position: StaffPosition
 	cms_content_groups: [CmsContentGroup!]!
 	cms_content_group(id: ID!): CmsContentGroup!
-	coupons_paginated: [Product!]!
+	coupons_paginated(page: Int, per_page: Int, filters: CouponFiltersInput, sort: [SortInput!]): CouponsPagination!
 	departments: [Department!]!
 	"""
 	Finds an active event by ID in this convention. If there is no event with that ID in this
 	convention, or the event is no longer active, errors out.
 	"""
-	event(id: ID!): Event!
+	event(id: ID): Event!
 	events(start: Date, finish: Date, includeDropped: Boolean, filters: EventFiltersInput): [Event!]!
 	events_paginated(page: Int, per_page: Int, filters: EventFiltersInput, sort: [SortInput!]): EventsPagination!
 	event_categories(current_ability_can_read_event_proposals: Boolean): [EventCategory!]!
@@ -243,23 +239,25 @@ type Convention {
 		"""
 		The ID of the event proposal to find.
 		"""
-		id: ID!
+		id: ID
 	): EventProposal!
 	event_proposals_paginated(page: Int, per_page: Int, filters: EventProposalFiltersInput, sort: [SortInput!]): EventProposalsPagination!
-	form(id: ID!): Form!
+	form(id: ID): Form!
 	forms: [Form!]!
 	mailing_lists: MailingLists!
 	my_profile: UserConProfile
 	orders_paginated(page: Int, per_page: Int, filters: OrderFiltersInput, sort: [SortInput!]): OrdersPagination!
-	signup(id: ID!): Signup!
+	rooms: [Room!]!
+	signup(id: ID): Signup!
 	signup_requests_paginated(page: Int, per_page: Int, filters: SignupRequestFiltersInput, sort: [SortInput!]): SignupRequestsPagination!
-	staff_position(id: ID!): StaffPosition!
+	staff_position(id: ID): StaffPosition!
 	staff_positions: [StaffPosition!]!
 	user_con_profile_form: Form!
 	user_activity_alerts: [UserActivityAlert!]!
 	maximum_event_signups: ScheduledValue
 	signup_mode: SignupMode!
 	signup_requests_open: Boolean!
+	products: [Product!]!
 	stripe_account: StripeAccount
 	stripe_account_id: String
 	stripe_account_ready_to_charge: Boolean!
@@ -273,31 +271,42 @@ type Coupon {
 	code: String!
 	expires_at: Date
 	fixed_amount: Money
-	percent_discount: Float
+	percent_discount: BigDecimal
 	provides_product: Product
 	usage_limit: Int
+	convention: Convention!
 }
 
-type CouponApplication {
-	id: ID!
-	coupon: Coupon!
-	discount: Money
+input CouponFiltersInput {
+	code: String
+}
+
+type CouponsPagination {
+	current_page: Int!
+	entries: [Coupon!]!
+	per_page: Int!
+	total_entries: Int!
+	total_pages: Int!
 }
 
 scalar Date
 
-"""
-Implement the DateTime<Utc> scalar
-
-The input/output is a string in RFC3339 format.
-"""
-scalar DateTime
-
 type Department {
 	id: ID!
-	name: String
+	name: String!
 	proposal_description: String
 	event_categories: [EventCategory!]!
+}
+
+enum EmailMode {
+	"""
+	Forward received emails to staff positions as configured
+	"""
+	forward
+	"""
+	Forward all received staff emails to catch-all staff position
+	"""
+	staff_emails_to_catch_all
 }
 
 type EmailRoute {
@@ -325,7 +334,7 @@ type Event {
 	event_category: EventCategory!
 	maximum_event_provided_tickets_overrides: [MaximumEventProvidedTicketsOverride!]!
 	provided_tickets: [Ticket!]!
-	run(id: ID!): Run!
+	run(id: ID): Run!
 	runs(start: Date, finish: Date, exclude_conflicts: Date): [Run!]!
 	team_members: [TeamMember!]!
 	id: ID!
@@ -367,7 +376,7 @@ type EventCategory {
 	full_color: String!
 	name: String!
 	proposal_description: String
-	scheduling_ui: String!
+	scheduling_ui: SchedulingUi!
 	signed_up_color: String!
 	team_member_name: String!
 	teamMemberNamePlural: String!
@@ -407,13 +416,22 @@ input EventFiltersInput {
 	title: String
 	title_prefix: String
 	my_rating: [Int!]
-	form_items: Json
+	form_items: JSON
 }
 
 type EventProposal {
 	event: Event
 	event_category: EventCategory!
 	owner: UserConProfile!
+	id: ID!
+	admin_notes: String
+	images: [ActiveStorageAttachment!]!
+	length_seconds: Int
+	registration_policy: RegistrationPolicy!
+	status: String!
+	submitted_at: Date
+	title: String
+	updated_at: Date!
 	current_user_form_item_viewer_role: FormItemRole!
 	current_user_form_item_writer_role: FormItemRole!
 	form_response_attrs_json(itemIdentifiers: [String!]): Json!
@@ -452,20 +470,20 @@ type Form {
 	export_json: Json!
 	form_sections: [FormSection!]!
 	form_type: String!
-	title: String
+	title: String!
 }
 
 type FormItem {
 	id: ID!
 	admin_description: String
-	default_value: String
+	default_value: Json
 	expose_in: [String!]
 	identifier: String
-	item_type: String
+	item_type: String!
 	properties: Json!
 	position: Int!
 	public_description: String
-	rendered_properties: String
+	rendered_properties: Json!
 	visibility: FormItemRole!
 	writeability: FormItemRole!
 }
@@ -516,13 +534,17 @@ type MailingListsWaitlistsResult {
 
 type MaximumEventProvidedTicketsOverride {
 	id: ID!
-	override_value: Int
+	override_value: Int!
 	ticket_type: TicketType!
 }
 
 type Money {
 	currency_code: String!
 	fractional: Int!
+}
+
+type Mutation {
+	deleteMe: Boolean!
 }
 
 type NotificationDestination {
@@ -545,7 +567,6 @@ type Order {
 	user_con_profile: UserConProfile!
 	id: ID!
 	charge_id: String
-	coupon_applications: [CouponApplication!]!
 	payment_amount: Money
 	payment_note: String
 	status: String!
@@ -557,10 +578,10 @@ type OrderEntry {
 	order: Order!
 	id: ID!
 	describe_products: String!
-	price_per_item: Money
+	price_per_item: Money!
 	product: Product!
 	product_variant: ProductVariant
-	quantity: Int
+	quantity: Int!
 }
 
 input OrderFiltersInput {
@@ -604,14 +625,14 @@ type OrdersPagination {
 type Organization {
 	id: ID!
 	current_ability_can_manage_access: Boolean!
-	name: String
+	name: String!
 	conventions: [Convention!]!
 	organization_roles: [OrganizationRole!]!
 }
 
 type OrganizationRole {
 	id: ID!
-	name: String
+	name: String!
 	permissions: [Permission!]!
 	users: [User!]!
 }
@@ -626,6 +647,7 @@ type Page {
 	current_ability_can_update: Boolean!
 	hidden_from_search: Boolean!
 	name: String
+	referenced_partials: [CmsPartial!]!
 	skip_clickwrap_agreement: Boolean!
 	slug: String
 }
@@ -685,7 +707,7 @@ enum PricingStrategy {
 }
 
 type PricingStructure {
-	price(time: DateTime): Money
+	price(time: Date): Money
 	pricing_strategy: PricingStrategy!
 	value: PricingStructureValue!
 }
@@ -698,7 +720,7 @@ type Product {
 	description: String
 	description_html: String!
 	image: ActiveStorageAttachment
-	name: String
+	name: String!
 	order_quantities_by_status: [OrderQuantityByStatus!]!
 	payment_options: [String!]!
 	pricing_structure: PricingStructure!
@@ -710,7 +732,7 @@ type ProductVariant {
 	id: ID!
 	description: String
 	image: ActiveStorageAttachment
-	name: String
+	name: String!
 	order_quantities_by_status: [OrderQuantityByStatus!]!
 	override_pricing_structure: PricingStructure
 	position: Int
@@ -726,6 +748,9 @@ type Query {
 	events(after: String, before: String, first: Int, last: Int): EventConnection!
 	organizations: [Organization!]!
 	rootSite: RootSite!
+	user(id: ID): User!
+	users(ids: [ID!]): [User!]!
+	users_paginated(page: Int, per_page: Int, filters: UserFiltersInput, sort: [SortInput!]): UsersPagination!
 	previewLiquid(content: String!): String!
 	email_routes_paginated(page: Int, per_page: Int, filters: EmailRouteFiltersInput, sort: [SortInput!]): EmailRoutesPagination!
 	hasOauthApplications: Boolean!
@@ -760,14 +785,12 @@ type RegistrationPolicyBucket {
 type Room {
 	id: ID!
 	name: String
-	runs: [RunEventsFields!]!
+	runs: [Run!]!
 }
 
 type RootSite {
 	id: ID!
 	site_name: String
-	cmsContentGroups: [CmsContentGroupCmsFields!]!
-	cmsContentGroup(id: ID!): CmsContentGroupCmsFields!
 	cmsFiles: [CmsFile!]!
 	cmsFile(id: ID!): CmsFile!
 	cmsGraphqlQueries: [CmsGraphqlQuery!]!
@@ -784,37 +807,25 @@ type RootSite {
 	rootPage: Page!
 	typeaheadSearchCmsContent(name: String): [CmsContent!]!
 	url: String!
+	cmsContentGroups: [CmsContentGroup!]!
+	cmsContentGroup(id: ID!): CmsContentGroup!
 }
 
 type Run {
 	event: Event!
 	my_signups: [Signup!]!
 	my_signup_requests: [SignupRequest!]!
+	rooms: [Room!]!
 	signups_paginated(page: Int, per_page: Int, filters: SignupFiltersInput, sort: [SortInput!]): SignupsPagination!
 	id: ID!
 	confirmed_signup_count: Int!
 	current_ability_can_signup_summary_run: Boolean!
-	ends_at: Date
+	ends_at: Date!
 	not_counted_signup_count: Int!
-	room_names: [String]!
-	rooms: [Room!]!
+	room_names: [String!]!
 	schedule_note: String
 	signup_count_by_state_and_bucket_key_and_counted: Json!
-	starts_at: Date
-	title_suffix: String
-}
-
-type RunEventsFields {
-	id: ID!
-	confirmed_signup_count: Int!
-	current_ability_can_signup_summary_run: Boolean!
-	ends_at: Date
-	not_counted_signup_count: Int!
-	room_names: [String]!
-	rooms: [Room!]!
-	schedule_note: String
-	signup_count_by_state_and_bucket_key_and_counted: Json!
-	starts_at: Date
+	starts_at: Date!
 	title_suffix: String
 }
 
@@ -824,6 +835,19 @@ type ScheduledMoneyValue {
 
 type ScheduledValue {
 	timespans: [TimespanWithValue!]!
+}
+
+enum SchedulingUi {
+	regular
+	recurring
+	single_run
+}
+
+enum ShowSchedule {
+	no
+	priv
+	gms
+	yes
 }
 
 type Signup {
@@ -943,7 +967,7 @@ type StaffPosition {
 	cc_addresses: [String!]!
 	email: String
 	email_aliases: [String!]!
-	name: String
+	name: String!
 	visible: Boolean!
 	permissions: [Permission!]!
 	user_con_profiles: [UserConProfile!]!
@@ -952,7 +976,7 @@ type StaffPosition {
 
 type StripeAccount {
 	id: ID!
-	charges_enabled: Boolean
+	charges_enabled: Boolean!
 	display_name: String
 	email: String
 }
@@ -1004,15 +1028,15 @@ type TicketType {
 }
 
 type TimespanWithMoneyValue {
-	finish: DateTime
-	start: DateTime
-	value: Money
+	finish: Date
+	start: Date
+	value: Money!
 }
 
 type TimespanWithValue {
-	finish: DateTime
-	start: DateTime
-	value: String
+	finish: Date
+	start: Date
+	value: String!
 }
 
 enum TimezoneMode {
@@ -1033,6 +1057,8 @@ type User {
 	last_name: String!
 	name: String!
 	name_inverted: String!
+	privileges: [String!]!
+	user_con_profiles: [UserConProfile!]!
 }
 
 type UserActivityAlert {
@@ -1083,7 +1109,24 @@ type UserConProfile {
 	order_summary: String!
 }
 
+input UserFiltersInput {
+	email: String
+	first_name: String
+	last_name: String
+	privileges: [String!]
+	name: String
+}
+
+type UsersPagination {
+	current_page: Int!
+	entries: [User!]!
+	per_page: Int!
+	total_entries: Int!
+	total_pages: Int!
+}
+
 schema {
 	query: Query
+	mutation: Mutation
 }
 

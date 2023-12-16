@@ -67,7 +67,7 @@ impl EventGlueFields {
       .map(|res| res.into_iter().map(TicketType::new).collect())
   }
 
-  async fn run(&self, ctx: &Context<'_>, id: ID) -> Result<RunType, Error> {
+  async fn run(&self, ctx: &Context<'_>, id: Option<ID>) -> Result<RunType, Error> {
     EventEventsFields::from_type(self.clone())
       .run(ctx, id)
       .await

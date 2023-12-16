@@ -30,15 +30,15 @@ impl CmsFileType {
     )
   }
 
-  async fn file(&self, ctx: &Context<'_>) -> Result<Option<ActiveStorageAttachmentType>> {
-    Ok(
+  async fn file(&self, ctx: &Context<'_>) -> Result<ActiveStorageAttachmentType> {
+    Ok(ActiveStorageAttachmentType::new(
       ctx
         .data::<Arc<LoaderManager>>()?
         .cms_file_file
         .load_one(self.model.id)
         .await?
         .and_then(|files| files.get(0).cloned())
-        .map(ActiveStorageAttachmentType::new),
-    )
+        .ok_or_else(|| Error::new("File not found"))?,
+    ))
   }
 }

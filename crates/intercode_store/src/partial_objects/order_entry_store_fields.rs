@@ -39,11 +39,12 @@ impl OrderEntryStoreFields {
   }
 
   #[graphql(name = "price_per_item")]
-  async fn price_per_item(&self) -> Option<MoneyType<'_>> {
+  async fn price_per_item(&self) -> MoneyType<'_> {
     MoneyType::from_cents_and_currency(
       self.model.price_per_item_cents,
       self.model.price_per_item_currency.as_deref(),
     )
+    .unwrap_or_default()
   }
 
   async fn product(&self, ctx: &Context<'_>) -> Result<ProductType> {
@@ -72,7 +73,7 @@ impl OrderEntryStoreFields {
     )
   }
 
-  async fn quantity(&self) -> Option<i32> {
-    self.model.quantity
+  async fn quantity(&self) -> i32 {
+    self.model.quantity.unwrap_or_default()
   }
 }

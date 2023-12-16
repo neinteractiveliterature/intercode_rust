@@ -10,13 +10,24 @@ use intercode_graphql_loaders::LoaderManager;
 use rusty_money::{iso, Money};
 use seawater::loaders::{ExpectModel, ExpectModels};
 
-use crate::{objects::CouponApplicationType, partial_objects::UserConProfileStoreFields};
+use crate::partial_objects::UserConProfileStoreFields;
 
-use super::OrderEntryStoreFields;
+use super::{coupon_application_store_fields::CouponApplicationStoreFields, OrderEntryStoreFields};
 
 model_backed_type!(OrderStoreFields, orders::Model);
 
 impl OrderStoreFields {
+  pub async fn coupon_applications(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<CouponApplicationStoreFields>> {
+    let loader_result = load_one_by_model_id!(order_coupon_applications, ctx, self)?;
+    Ok(loader_result_to_many!(
+      loader_result,
+      CouponApplicationStoreFields
+    ))
+  }
+
   pub async fn order_entries(
     &self,
     ctx: &Context<'_>,
@@ -47,12 +58,6 @@ impl OrderStoreFields {
   #[graphql(name = "charge_id")]
   async fn charge_id(&self) -> Option<&str> {
     self.model.charge_id.as_deref()
-  }
-
-  #[graphql(name = "coupon_applications")]
-  async fn coupon_applications(&self, ctx: &Context<'_>) -> Result<Vec<CouponApplicationType>> {
-    let loader_result = load_one_by_model_id!(order_coupon_applications, ctx, self)?;
-    Ok(loader_result_to_many!(loader_result, CouponApplicationType))
   }
 
   #[graphql(name = "payment_amount")]

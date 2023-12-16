@@ -45,9 +45,7 @@ impl TicketTypeType {
         .await?;
 
       if let Some(mepto) = mepto {
-        if let Some(override_value) = mepto.override_value {
-          return Ok(override_value);
-        }
+        return Ok(mepto.override_value);
       }
     }
 

@@ -207,7 +207,11 @@ impl AbilityStoreFields {
   }
 
   #[graphql(name = "can_delete_ticket")]
-  async fn can_delete_ticket(&self, ctx: &Context<'_>, ticket_id: ID) -> Result<bool> {
+  async fn can_delete_ticket(&self, ctx: &Context<'_>, ticket_id: Option<ID>) -> Result<bool> {
+    let Some(ticket_id) = ticket_id else {
+      return Ok(false);
+    };
+
     Ok(
       TicketPolicy::action_permitted(
         &self.authorization_info,
@@ -219,7 +223,11 @@ impl AbilityStoreFields {
   }
 
   #[graphql(name = "can_update_ticket")]
-  async fn can_update_ticket(&self, ctx: &Context<'_>, ticket_id: ID) -> Result<bool> {
+  async fn can_update_ticket(&self, ctx: &Context<'_>, ticket_id: Option<ID>) -> Result<bool> {
+    let Some(ticket_id) = ticket_id else {
+      return Ok(false);
+    };
+
     Ok(
       TicketPolicy::action_permitted(
         &self.authorization_info,

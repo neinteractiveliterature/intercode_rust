@@ -1,9 +1,6 @@
 use async_graphql::InputObject;
 use intercode_entities::{event_ratings, events, runs, user_con_profiles, users};
-use intercode_graphql_core::{
-  filter_utils::{numbered_placeholders, string_search},
-  scalars::JsonScalar,
-};
+use intercode_graphql_core::filter_utils::{numbered_placeholders, string_search};
 use intercode_query_builders::{sort_input::SortInput, QueryBuilder};
 use sea_orm::{
   sea_query::Expr, ColumnTrait, JoinType, Order, QueryFilter, QueryOrder, QuerySelect,
@@ -19,7 +16,7 @@ pub struct EventFiltersInput {
   #[graphql(name = "my_rating")]
   pub my_rating: Option<Vec<i64>>,
   #[graphql(name = "form_items")]
-  pub form_items: Option<JsonScalar>,
+  pub form_items: Option<serde_json::Value>,
 }
 
 pub struct EventsQueryBuilder {
@@ -99,7 +96,7 @@ impl QueryBuilder for EventsQueryBuilder {
     }
 
     if let Some(form_items) = &filters.form_items {
-      if let Some(form_items) = form_items.0.as_object() {
+      if let Some(form_items) = form_items.as_object() {
         for (key, value) in form_items.iter() {
           if let Some(values) = value.as_array() {
             if !values.is_empty() {

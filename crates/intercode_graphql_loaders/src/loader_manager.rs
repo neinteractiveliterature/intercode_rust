@@ -279,6 +279,7 @@ loader_manager!(
     cms_navigation_item_section,
     CmsNavigationItemToCmsNavigationSection
   );
+  entity_relation(coupon_convention, coupons, conventions);
   entity_link(convention_catch_all_staff_position, ConventionToCatchAllStaffPosition);
   entity_relation(convention_departments, conventions, departments);
   entity_relation(convention_event_categories, conventions, event_categories);

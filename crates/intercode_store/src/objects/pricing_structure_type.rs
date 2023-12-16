@@ -1,9 +1,10 @@
 use async_graphql::Object;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use intercode_entities::PricingStructure;
 use intercode_graphql_core::{
   enums::PricingStrategy,
   objects::{MoneyType, ScheduledMoneyValueType},
+  scalars::DateScalar,
 };
 
 use crate::unions::PricingStructureValueType;
@@ -22,10 +23,10 @@ impl PricingStructureType {
 
 #[Object(name = "PricingStructure")]
 impl PricingStructureType {
-  pub async fn price(&self, time: Option<DateTime<Utc>>) -> Option<MoneyType<'static>> {
+  pub async fn price(&self, time: Option<DateScalar>) -> Option<MoneyType<'static>> {
     self
       .pricing_structure
-      .price(time.unwrap_or_else(Utc::now))
+      .price(time.map(|date| date.0).unwrap_or_else(Utc::now))
       .map(MoneyType::new)
   }
 

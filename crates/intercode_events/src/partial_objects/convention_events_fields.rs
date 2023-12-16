@@ -29,9 +29,9 @@ model_backed_type!(ConventionEventsFields, conventions::Model);
 impl ConventionEventsFields {
   /// Finds an active event by ID in this convention. If there is no event with that ID in this
   /// convention, or the event is no longer active, errors out.
-  pub async fn event(&self, ctx: &Context<'_>, id: ID) -> Result<EventEventsFields, Error> {
+  pub async fn event(&self, ctx: &Context<'_>, id: Option<ID>) -> Result<EventEventsFields, Error> {
     let query_data = ctx.data::<QueryData>()?;
-    let event_id: i64 = LaxId::parse(id)?;
+    let event_id: i64 = LaxId::parse(id.unwrap_or_default())?;
 
     Ok(EventEventsFields::new(
       self
@@ -174,10 +174,10 @@ impl ConventionEventsFields {
   pub async fn event_proposal(
     &self,
     ctx: &Context<'_>,
-    id: ID,
+    id: Option<ID>,
   ) -> Result<EventProposalEventsFields> {
     let db = ctx.data::<QueryData>()?.db();
-    let id = LaxId::parse(id)?;
+    let id = LaxId::parse(id.unwrap_or_default())?;
     let event_proposal = event_proposals::Entity::find()
       .filter(event_proposals::Column::ConventionId.eq(self.model.id))
       .filter(event_proposals::Column::Id.eq(id))

@@ -51,11 +51,11 @@ impl CmsGraphqlQueryType {
     )
   }
 
-  async fn identifier(&self) -> Option<&str> {
-    self.model.identifier.as_deref()
+  async fn identifier(&self) -> &str {
+    self.model.identifier.as_deref().unwrap_or_default()
   }
 
-  async fn query(&self) -> Option<&str> {
-    self.model.query.as_deref()
+  async fn query(&self) -> &str {
+    self.model.query.as_deref().unwrap_or_default()
   }
 }

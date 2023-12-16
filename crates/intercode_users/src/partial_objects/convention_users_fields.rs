@@ -4,8 +4,8 @@ use intercode_entities::{
   staff_positions, user_con_profiles,
 };
 use intercode_graphql_core::{
-  load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single, model_backed_type,
-  query_data::QueryData, ModelBackedType, ModelPaginator,
+  lax_id::LaxId, load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single,
+  model_backed_type, query_data::QueryData, ModelBackedType, ModelPaginator,
 };
 use intercode_policies::{policies::UserConProfilePolicy, AuthorizedFromQueryBuilder};
 use intercode_query_builders::sort_input::SortInput;
@@ -81,20 +81,20 @@ impl ConventionUsersFields {
   pub async fn staff_position(
     &self,
     ctx: &Context<'_>,
-    id: ID,
+    id: Option<ID>,
   ) -> Result<StaffPositionUsersFields, Error> {
     let db = ctx.data::<QueryData>()?.db();
 
     self
       .model
       .find_linked(ConventionToStaffPositions)
-      .filter(staff_positions::Column::Id.eq(id.parse::<u64>()?))
+      .filter(staff_positions::Column::Id.eq(LaxId::parse(id.clone().unwrap_or_default())?))
       .one(db.as_ref())
       .await?
       .ok_or_else(|| {
         Error::new(format!(
           "Staff position with ID {} not found in convention",
-          id.as_str()
+          id.unwrap_or_default().as_str()
         ))
       })
       .map(StaffPositionUsersFields::new)

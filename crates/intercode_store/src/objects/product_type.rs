@@ -46,8 +46,8 @@ impl ProductType {
     )
   }
 
-  async fn name(&self) -> &Option<String> {
-    &self.model.name
+  async fn name(&self) -> &str {
+    self.model.name.as_deref().unwrap_or_default()
   }
 
   #[graphql(name = "order_quantities_by_status")]

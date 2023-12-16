@@ -1,6 +1,8 @@
 mod ability_type;
 mod cms_content_group_type;
 mod convention_type;
+mod coupon_application_type;
+mod coupon_type;
 mod department_type;
 mod event_category_type;
 mod event_proposal_type;

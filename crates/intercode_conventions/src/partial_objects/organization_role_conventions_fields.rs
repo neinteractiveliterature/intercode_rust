@@ -23,7 +23,7 @@ impl OrganizationRoleConventionsFields {
     self.model.id.into()
   }
 
-  async fn name(&self) -> Option<&str> {
-    self.model.name.as_deref()
+  async fn name(&self) -> &str {
+    self.model.name.as_deref().unwrap_or_default()
   }
 }

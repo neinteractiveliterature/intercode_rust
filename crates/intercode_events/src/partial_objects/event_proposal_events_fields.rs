@@ -89,14 +89,19 @@ impl EventProposalEventsFields {
     )
   }
 
-  async fn status(&self) -> Option<String> {
-    self.model.status.as_ref().map(|status| {
-      serde_json::to_value(status)
-        .unwrap()
-        .as_str()
-        .unwrap()
-        .to_string()
-    })
+  async fn status(&self) -> String {
+    self
+      .model
+      .status
+      .as_ref()
+      .map(|status| {
+        serde_json::to_value(status)
+          .unwrap()
+          .as_str()
+          .unwrap()
+          .to_string()
+      })
+      .unwrap_or_default()
   }
 
   #[graphql(name = "submitted_at")]

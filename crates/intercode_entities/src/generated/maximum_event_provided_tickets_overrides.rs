@@ -9,7 +9,7 @@ pub struct Model {
   pub id: i64,
   pub event_id: Option<i64>,
   pub ticket_type_id: Option<i64>,
-  pub override_value: Option<i32>,
+  pub override_value: i32,
   pub created_at: DateTime,
   pub updated_at: DateTime,
 }

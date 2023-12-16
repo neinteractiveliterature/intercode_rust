@@ -3,24 +3,30 @@ use intercode_entities::coupon_applications;
 use intercode_graphql_core::{
   load_one_by_id, load_one_by_model_id, model_backed_type, objects::MoneyType, ModelBackedType,
 };
-use rusty_money::{iso, Money};
+use rusty_money::{
+  iso::{self, USD},
+  Money,
+};
 use seawater::loaders::{ExpectModel, ExpectModels};
 
-use super::CouponType;
-model_backed_type!(CouponApplicationType, coupon_applications::Model);
+use super::CouponStoreFields;
 
-#[Object(name = "CouponApplication")]
-impl CouponApplicationType {
+model_backed_type!(CouponApplicationStoreFields, coupon_applications::Model);
+
+impl CouponApplicationStoreFields {
+  pub async fn coupon(&self, ctx: &Context<'_>) -> Result<CouponStoreFields> {
+    let loader_result = load_one_by_model_id!(coupon_application_coupon, ctx, self)?;
+    Ok(CouponStoreFields::new(loader_result.expect_one()?.clone()))
+  }
+}
+
+#[Object]
+impl CouponApplicationStoreFields {
   async fn id(&self) -> ID {
     self.model.id.into()
   }
 
-  async fn coupon(&self, ctx: &Context<'_>) -> Result<CouponType> {
-    let loader_result = load_one_by_model_id!(coupon_application_coupon, ctx, self)?;
-    Ok(CouponType::new(loader_result.expect_one()?.clone()))
-  }
-
-  async fn discount(&self, ctx: &Context<'_>) -> Result<Option<MoneyType>> {
+  async fn discount(&self, ctx: &Context<'_>) -> Result<MoneyType> {
     let coupon = load_one_by_model_id!(coupon_application_coupon, ctx, self)?;
     let coupon = coupon.expect_one()?;
     let discount = coupon.discount()?;
@@ -33,6 +39,10 @@ impl CouponApplicationType {
       .fold(Money::from_minor(0, iso::USD), |acc, order_entry| {
         acc + order_entry.total_price()
       });
-    Ok(discount.discount_amount(total_price).map(MoneyType::new))
+    Ok(MoneyType::new(
+      discount
+        .discount_amount(total_price)
+        .unwrap_or_else(|| Money::from_minor(0, USD)),
+    ))
   }
 }

@@ -78,7 +78,7 @@ impl SignupSignupsFields {
 
     if let Some(minimum_age) = event.minimum_age {
       if let Some(birth_date) = user_con_profile.birth_date {
-        if age_as_of(birth_date, run.starts_at.unwrap().date()) >= minimum_age {
+        if age_as_of(birth_date, run.starts_at.date()) >= minimum_age {
           Ok("OK")
         } else {
           Ok("Too young")

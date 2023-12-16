@@ -11,11 +11,11 @@ use super::FormFormsFields;
 model_backed_type!(ConventionFormsFields, conventions::Model);
 
 impl ConventionFormsFields {
-  pub async fn form(&self, ctx: &Context<'_>, id: ID) -> Result<FormFormsFields> {
+  pub async fn form(&self, ctx: &Context<'_>, id: Option<ID>) -> Result<FormFormsFields> {
     let form = self
       .model
       .all_forms()
-      .filter(forms::Column::Id.eq(LaxId::parse(id.clone())?))
+      .filter(forms::Column::Id.eq(LaxId::parse(id.clone().unwrap_or_default())?))
       .one(ctx.data::<QueryData>()?.db())
       .await?;
     form

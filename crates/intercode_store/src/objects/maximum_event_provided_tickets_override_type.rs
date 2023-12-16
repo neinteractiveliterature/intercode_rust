@@ -23,7 +23,7 @@ impl MaximumEventProvidedTicketsOverrideType {
   }
 
   #[graphql(name = "override_value")]
-  async fn override_value(&self) -> Option<i32> {
+  async fn override_value(&self) -> i32 {
     self.model.override_value
   }
 

@@ -95,7 +95,11 @@ impl AbilityEventsFields {
   }
 
   #[graphql(name = "can_update_event")]
-  async fn can_update_event(&self, ctx: &Context<'_>, event_id: ID) -> Result<bool, Error> {
+  async fn can_update_event(&self, ctx: &Context<'_>, event_id: Option<ID>) -> Result<bool, Error> {
+    let Some(event_id) = event_id else {
+      return Ok(false);
+    };
+
     let db = ctx.data::<QueryData>()?.db();
     let event = events::Entity::find_by_id(LaxId::parse(event_id)?)
       .one(db)
@@ -130,12 +134,20 @@ impl AbilityEventsFields {
     name = "can_delete_event",
     deprecation = "Deleting events is never allowed; this always returns false"
   )]
-  async fn can_delete_event(&self, _event_id: ID) -> Result<bool, Error> {
+  async fn can_delete_event(&self, _event_id: Option<ID>) -> Result<bool, Error> {
     Ok(false)
   }
 
   #[graphql(name = "can_read_event_signups")]
-  async fn can_read_event_signups(&self, ctx: &Context<'_>, event_id: ID) -> Result<bool, Error> {
+  async fn can_read_event_signups(
+    &self,
+    ctx: &Context<'_>,
+    event_id: Option<ID>,
+  ) -> Result<bool, Error> {
+    let Some(event_id) = event_id else {
+      return Ok(false);
+    };
+
     let db = ctx.data::<QueryData>()?.db();
     let event = events::Entity::find_by_id(LaxId::parse(event_id)?)
       .one(db)
@@ -170,8 +182,12 @@ impl AbilityEventsFields {
   async fn can_read_admin_notes_on_event_proposal(
     &self,
     ctx: &Context<'_>,
-    event_proposal_id: ID,
+    event_proposal_id: Option<ID>,
   ) -> Result<bool, Error> {
+    let Some(event_proposal_id) = event_proposal_id else {
+      return Ok(false);
+    };
+
     self
       .can_perform_event_proposal_action(
         ctx,
@@ -185,8 +201,12 @@ impl AbilityEventsFields {
   async fn can_update_admin_notes_on_event_proposal(
     &self,
     ctx: &Context<'_>,
-    event_proposal_id: ID,
+    event_proposal_id: Option<ID>,
   ) -> Result<bool, Error> {
+    let Some(event_proposal_id) = event_proposal_id else {
+      return Ok(false);
+    };
+
     self
       .can_perform_event_proposal_action(
         ctx,
@@ -200,8 +220,12 @@ impl AbilityEventsFields {
   async fn can_update_event_proposal(
     &self,
     ctx: &Context<'_>,
-    event_proposal_id: ID,
+    event_proposal_id: Option<ID>,
   ) -> Result<bool, Error> {
+    let Some(event_proposal_id) = event_proposal_id else {
+      return Ok(false);
+    };
+
     self
       .can_perform_event_proposal_action(ctx, event_proposal_id, &EventProposalAction::Update)
       .await
@@ -211,8 +235,12 @@ impl AbilityEventsFields {
   async fn can_delete_event_proposal(
     &self,
     ctx: &Context<'_>,
-    event_proposal_id: ID,
+    event_proposal_id: Option<ID>,
   ) -> Result<bool, Error> {
+    let Some(event_proposal_id) = event_proposal_id else {
+      return Ok(false);
+    };
+
     self
       .can_perform_event_proposal_action(ctx, event_proposal_id, &EventProposalAction::Delete)
       .await

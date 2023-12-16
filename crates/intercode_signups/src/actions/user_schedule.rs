@@ -161,19 +161,12 @@ pub async fn user_schedule(
       Uuid::new_v4().to_string(),
       naive_date_time_to_ical_date(signup.created_at),
     );
-    ical_event.push(properties::DtStart::new(
-      run
-        .starts_at
-        .map(naive_date_time_to_ical_date)
-        .unwrap_or_default(),
-    ));
-    ical_event.push(properties::DtEnd::new(
-      run
-        .starts_at
-        .map(|starts_at| starts_at + Duration::seconds(event.length_seconds.into()))
-        .map(naive_date_time_to_ical_date)
-        .unwrap_or_default(),
-    ));
+    ical_event.push(properties::DtStart::new(naive_date_time_to_ical_date(
+      run.starts_at,
+    )));
+    ical_event.push(properties::DtEnd::new(naive_date_time_to_ical_date(
+      run.starts_at + Duration::seconds(event.length_seconds.into()),
+    )));
     ical_event.push(properties::Summary::new(event_summary(event, run, signup)));
     ical_event.push(properties::Location::new(
       rooms

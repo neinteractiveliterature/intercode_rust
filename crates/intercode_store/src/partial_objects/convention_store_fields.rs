@@ -10,14 +10,14 @@ use intercode_query_builders::sort_input::SortInput;
 use sea_orm::ModelTrait;
 
 use crate::{
-  objects::{CouponType, ProductType, StripeAccountType, TicketTypeType},
+  objects::{ProductType, StripeAccountType, TicketTypeType},
   policies::{CouponPolicy, OrderPolicy},
   query_builders::{
     CouponFiltersInput, CouponsQueryBuilder, OrderFiltersInput, OrdersQueryBuilder,
   },
 };
 
-use super::OrderStoreFields;
+use super::{CouponStoreFields, OrderStoreFields};
 
 model_backed_type!(ConventionStoreFields, conventions::Model);
 
@@ -29,7 +29,7 @@ impl ConventionStoreFields {
     per_page: Option<u64>,
     filters: Option<CouponFiltersInput>,
     sort: Option<Vec<SortInput>>,
-  ) -> Result<ModelPaginator<CouponType>, Error> {
+  ) -> Result<ModelPaginator<CouponStoreFields>, Error> {
     ModelPaginator::authorized_from_query_builder(
       &CouponsQueryBuilder::new(filters, sort),
       ctx,
@@ -61,8 +61,6 @@ impl ConventionStoreFields {
 
 #[Object]
 impl ConventionStoreFields {
-  #[graphql(name = "coupons_paginated")]
-
   async fn products(&self, ctx: &Context<'_>) -> Result<Vec<ProductType>> {
     let loader_result = load_one_by_model_id!(convention_products, ctx, self)?;
     Ok(loader_result_to_many!(loader_result, ProductType))

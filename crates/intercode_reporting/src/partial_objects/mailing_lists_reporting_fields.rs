@@ -136,7 +136,7 @@ pub async fn waitlists(
     })
     .collect::<Vec<_>>();
 
-  results.sort_by_key(|result| (result.run.starts_at.unwrap_or_default(), result.run.id));
+  results.sort_by_key(|result| (result.run.starts_at, result.run.id));
   Ok(results)
 }
 

@@ -1,7 +1,9 @@
 use async_graphql::Object;
-use chrono::{DateTime, TimeZone};
+use chrono::TimeZone;
 use intercode_timespan::TimespanWithValue;
 use rusty_money::{iso::Currency, Money};
+
+use crate::scalars::DateScalar;
 
 use super::MoneyType;
 
@@ -33,19 +35,24 @@ impl<StartTz: TimeZone, FinishTz: TimeZone, T: Clone + Into<String> + Send + Syn
 where
   StartTz::Offset: Send + Sync,
   FinishTz::Offset: Send + Sync,
-  DateTime<FinishTz>: async_graphql::OutputType,
-  DateTime<StartTz>: async_graphql::OutputType,
+  DateScalar<FinishTz>: async_graphql::OutputType,
+  DateScalar<StartTz>: async_graphql::OutputType,
 {
-  async fn finish(&self) -> Option<&DateTime<FinishTz>> {
-    self.timespan.timespan.finish.as_ref()
+  async fn finish(&self) -> Option<DateScalar<FinishTz>> {
+    self.timespan.timespan.finish.clone().map(DateScalar)
   }
 
-  async fn start(&self) -> Option<&DateTime<StartTz>> {
-    self.timespan.timespan.start.as_ref()
+  async fn start(&self) -> Option<DateScalar<StartTz>> {
+    self.timespan.timespan.start.clone().map(DateScalar)
   }
 
-  async fn value(&self) -> Option<String> {
-    self.timespan.value.clone().map(|v| v.into())
+  async fn value(&self) -> String {
+    self
+      .timespan
+      .value
+      .clone()
+      .map(|v| v.into())
+      .unwrap_or_default()
   }
 }
 
@@ -74,18 +81,23 @@ impl<StartTz: TimeZone, FinishTz: TimeZone> TimespanWithMoneyValueType<StartTz, 
 where
   StartTz::Offset: Send + Sync,
   FinishTz::Offset: Send + Sync,
-  DateTime<FinishTz>: async_graphql::OutputType,
-  DateTime<StartTz>: async_graphql::OutputType,
+  DateScalar<FinishTz>: async_graphql::OutputType,
+  DateScalar<StartTz>: async_graphql::OutputType,
 {
-  async fn finish(&self) -> Option<&DateTime<FinishTz>> {
-    self.timespan.timespan.finish.as_ref()
+  async fn finish(&self) -> Option<DateScalar<FinishTz>> {
+    self.timespan.timespan.finish.clone().map(DateScalar)
   }
 
-  async fn start(&self) -> Option<&DateTime<StartTz>> {
-    self.timespan.timespan.start.as_ref()
+  async fn start(&self) -> Option<DateScalar<StartTz>> {
+    self.timespan.timespan.start.clone().map(DateScalar)
   }
 
-  async fn value(&self) -> Option<MoneyType<'static>> {
-    self.timespan.value.clone().map(MoneyType::new)
+  async fn value(&self) -> MoneyType<'static> {
+    self
+      .timespan
+      .value
+      .clone()
+      .map(MoneyType::new)
+      .unwrap_or_default()
   }
 }
