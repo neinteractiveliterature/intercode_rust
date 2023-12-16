@@ -1,0 +1,1134 @@
+type Ability {
+	can_manage_conventions: Boolean!
+	can_update_convention: Boolean!
+	can_update_departments: Boolean!
+	can_read_organizations: Boolean!
+	can_read_user_activity_alerts: Boolean!
+	can_manage_email_routes: Boolean!
+	can_read_schedule: Boolean!
+	can_read_schedule_with_counts: Boolean!
+	can_list_events: Boolean!
+	can_update_event(eventId: ID): Boolean!
+	can_delete_event(eventId: ID): Boolean! @deprecated(reason: "Deleting events is never allowed; this always returns false")
+	can_read_event_signups(eventId: ID): Boolean!
+	can_read_admin_notes_on_event_proposal(eventProposalId: ID): Boolean!
+	can_update_admin_notes_on_event_proposal(eventProposalId: ID): Boolean!
+	can_update_event_proposal(eventProposalId: ID): Boolean!
+	can_delete_event_proposal(eventProposalId: ID): Boolean!
+	can_override_maximum_event_provided_tickets: Boolean!
+	can_update_event_categories: Boolean!
+	can_read_event_proposals: Boolean!
+	can_manage_rooms: Boolean!
+	can_manage_runs: Boolean!
+	can_read_orders: Boolean!
+	can_create_orders: Boolean!
+	can_update_orders: Boolean!
+	can_update_products: Boolean!
+	can_manage_ticket_types: Boolean!
+	can_create_tickets: Boolean!
+	can_delete_ticket(ticketId: ID): Boolean!
+	can_update_ticket(ticketId: ID): Boolean!
+	can_create_cms_files: Boolean!
+	can_create_pages: Boolean!
+	can_create_cms_partials: Boolean!
+	can_create_cms_layouts: Boolean!
+	can_create_cms_navigation_items: Boolean!
+	can_create_cms_variables: Boolean!
+	can_create_cms_graphql_queries: Boolean!
+	can_create_cms_content_groups: Boolean!
+	can_manage_any_cms_content: Boolean!
+	can_update_notification_templates: Boolean!
+	can_manage_forms: Boolean!
+	can_read_any_mailing_list: Boolean!
+	can_read_reports: Boolean!
+	can_read_signups: Boolean!
+	can_manage_signups: Boolean!
+	can_force_confirm_signup(signupId: ID): Boolean!
+	can_update_bucket_signup(signupId: ID): Boolean!
+	can_update_counted_signup(signupId: ID): Boolean!
+	can_update_signup(signupId: ID): Boolean!
+	can_update_signups: Boolean!
+	can_manage_oauth_applications: Boolean!
+	can_manage_staff_positions: Boolean!
+	can_read_user_con_profiles: Boolean!
+	can_create_user_con_profiles: Boolean!
+	can_become_user_con_profile(userConProfileId: ID): Boolean!
+	can_delete_user_con_profile(userConProfileId: ID): Boolean!
+	can_update_user_con_profile(userConProfileId: ID): Boolean!
+	can_read_users: Boolean!
+	can_withdraw_all_user_con_profile_signups(userConProfileId: ID): Boolean!
+}
+
+"""
+Despite the name, this actually represents an active_storage_blob model.  Whoops...
+"""
+type ActiveStorageAttachment {
+	id: ID!
+	byte_size: Int!
+	content_type: String!
+	filename: String!
+	resized_url(maxWidth: Int!, maxHeight: Int!): String
+	url: String!
+}
+
+scalar BigDecimal
+
+
+union CmsContent = Page | CmsPartial | CmsLayout
+
+type CmsContentGroup {
+	id: ID!
+	contents: [CmsContent!]!
+	current_ability_can_delete: Boolean!
+	current_ability_can_update: Boolean!
+	name: String!
+	permissions: [Permission!]!
+}
+
+type CmsFile {
+	id: ID!
+	current_ability_can_delete: Boolean!
+	file: ActiveStorageAttachment!
+}
+
+type CmsGraphqlQuery {
+	id: ID!
+	admin_notes: String
+	current_ability_can_delete: Boolean!
+	current_ability_can_update: Boolean!
+	identifier: String!
+	query: String!
+}
+
+type CmsLayout {
+	id: ID!
+	admin_notes: String
+	content: String
+	content_html(path: String): String
+	current_ability_can_delete: Boolean!
+	current_ability_can_update: Boolean!
+	name: String
+	navbar_classes: String
+}
+
+type CmsNavigationItem {
+	id: ID!
+	navigation_section: CmsNavigationItem
+	page: Page
+	position: Int
+	title: String
+}
+
+interface CmsParent {
+	id: ID!
+	cmsFiles: [CmsFile!]!
+	cmsFile(id: ID!): CmsFile!
+	cmsGraphqlQueries: [CmsGraphqlQuery!]!
+	cmsGraphqlQuery(id: ID!): CmsGraphqlQuery!
+	cmsLayouts: [CmsLayout!]!
+	cmsLayout(id: ID!): CmsLayout!
+	cmsNavigationItems: [CmsNavigationItem!]!
+	cmsPages: [Page!]!
+	cmsPage(id: ID, slug: String, rootPage: Boolean): Page!
+	cmsPartials: [CmsPartial!]!
+	cmsVariables: [CmsVariable!]!
+	defaultLayout: CmsLayout!
+	effectiveCmsLayout(path: String!): CmsLayout!
+	notification_templates: [NotificationTemplate!]!
+	rootPage: Page!
+	typeaheadSearchCmsContent(name: String): [CmsContent!]!
+	pre_schedule_content_html: String
+}
+
+type CmsPartial {
+	id: ID!
+	admin_notes: String
+	content: String
+	current_ability_can_delete: Boolean!
+	current_ability_can_update: Boolean!
+	name: String!
+}
+
+type CmsVariable {
+	id: ID!
+	current_ability_can_delete: Boolean!
+	current_ability_can_update: Boolean!
+	key: String!
+	value_json: String!
+}
+
+type ContactEmail {
+	email: String!
+	formatted_address: String!
+	metadata_json: Json!
+	name: String!
+}
+
+type Convention {
+	id: ID!
+	cmsFiles: [CmsFile!]!
+	cmsFile(id: ID!): CmsFile!
+	cmsGraphqlQueries: [CmsGraphqlQuery!]!
+	cmsGraphqlQuery(id: ID!): CmsGraphqlQuery!
+	cmsLayouts: [CmsLayout!]!
+	cmsLayout(id: ID!): CmsLayout!
+	cmsNavigationItems: [CmsNavigationItem!]!
+	cmsPages: [Page!]!
+	cmsPage(id: ID, slug: String, rootPage: Boolean): Page!
+	cmsPartials: [CmsPartial!]!
+	cmsVariables: [CmsVariable!]!
+	defaultLayout: CmsLayout!
+	effectiveCmsLayout(path: String!): CmsLayout!
+	notification_templates: [NotificationTemplate!]!
+	rootPage: Page!
+	typeaheadSearchCmsContent(name: String): [CmsContent!]!
+	pre_schedule_content_html: String
+	name: String!
+	canceled: Boolean!
+	clickwrap_agreement: String
+	domain: String!
+	email_from: String!
+	email_mode: EmailMode!
+	ends_at: Date
+	event_mailing_list_domain: String
+	favicon: ActiveStorageAttachment
+	hidden: Boolean!
+	language: String!
+	location: Json
+	maximum_tickets: Int
+	open_graph_image: ActiveStorageAttachment
+	show_event_list: ShowSchedule!
+	show_schedule: ShowSchedule!
+	site_mode: SiteMode!
+	starts_at: Date
+	ticket_mode: TicketMode!
+	ticket_name: String!
+	ticketNamePlural: String!
+	timezone_mode: TimezoneMode!
+	timezone_name: String
+	accepting_proposals: Boolean!
+	"""
+	Given a Liquid text string and a notification event, renders the Liquid to HTML using the
+	current domain's CMS context as if it were the content for that notification type.
+	"""
+	preview_notifier_liquid(
+		"""
+		The key of the notification event to use for generating the preview.
+		"""
+		eventKey: String!,		content: String!
+	): String!
+	bio_eligible_user_con_profiles: [UserConProfile!]!
+	catch_all_staff_position: StaffPosition
+	cms_content_groups: [CmsContentGroup!]!
+	cms_content_group(id: ID!): CmsContentGroup!
+	coupons_paginated(page: Int, per_page: Int, filters: CouponFiltersInput, sort: [SortInput!]): CouponsPagination!
+	departments: [Department!]!
+	"""
+	Finds an active event by ID in this convention. If there is no event with that ID in this
+	convention, or the event is no longer active, errors out.
+	"""
+	event(id: ID): Event!
+	events(start: Date, finish: Date, includeDropped: Boolean, filters: EventFiltersInput): [Event!]!
+	events_paginated(page: Int, per_page: Int, filters: EventFiltersInput, sort: [SortInput!]): EventsPagination!
+	event_categories(current_ability_can_read_event_proposals: Boolean): [EventCategory!]!
+	"""
+	Finds an event proposal by ID in this convention. If there is no event proposal with that ID
+	in this convention, errors out.
+	"""
+	event_proposal(
+		"""
+		The ID of the event proposal to find.
+		"""
+		id: ID
+	): EventProposal!
+	event_proposals_paginated(page: Int, per_page: Int, filters: EventProposalFiltersInput, sort: [SortInput!]): EventProposalsPagination!
+	form(id: ID): Form!
+	forms: [Form!]!
+	mailing_lists: MailingLists!
+	my_profile: UserConProfile
+	orders_paginated(page: Int, per_page: Int, filters: OrderFiltersInput, sort: [SortInput!]): OrdersPagination!
+	rooms: [Room!]!
+	signup(id: ID): Signup!
+	signup_requests_paginated(page: Int, per_page: Int, filters: SignupRequestFiltersInput, sort: [SortInput!]): SignupRequestsPagination!
+	staff_position(id: ID): StaffPosition!
+	staff_positions: [StaffPosition!]!
+	user_con_profile_form: Form!
+	user_activity_alerts: [UserActivityAlert!]!
+	maximum_event_signups: ScheduledValue
+	signup_mode: SignupMode!
+	signup_requests_open: Boolean!
+	products: [Product!]!
+	stripe_account: StripeAccount
+	stripe_account_id: String
+	stripe_account_ready_to_charge: Boolean!
+	stripe_publishable_key: String
+	ticket_types: [TicketType!]!
+	tickets_available_for_purchase: Boolean!
+}
+
+type Coupon {
+	id: ID!
+	code: String!
+	expires_at: Date
+	fixed_amount: Money
+	percent_discount: BigDecimal
+	provides_product: Product
+	usage_limit: Int
+	convention: Convention!
+}
+
+input CouponFiltersInput {
+	code: String
+}
+
+type CouponsPagination {
+	current_page: Int!
+	entries: [Coupon!]!
+	per_page: Int!
+	total_entries: Int!
+	total_pages: Int!
+}
+
+scalar Date
+
+type Department {
+	id: ID!
+	name: String!
+	proposal_description: String
+	event_categories: [EventCategory!]!
+}
+
+enum EmailMode {
+	"""
+	Forward received emails to staff positions as configured
+	"""
+	forward
+	"""
+	Forward all received staff emails to catch-all staff position
+	"""
+	staff_emails_to_catch_all
+}
+
+type EmailRoute {
+	id: ID!
+	forward_addresses: [String!]!
+	receiver_address: String!
+}
+
+input EmailRouteFiltersInput {
+	receiver_address: String
+	forward_addresses: String
+}
+
+type EmailRoutesPagination {
+	current_page: Int!
+	entries: [EmailRoute!]!
+	per_page: Int!
+	total_entries: Int!
+	total_pages: Int!
+}
+
+type Event {
+	convention: Convention!
+	form: Form!
+	event_category: EventCategory!
+	maximum_event_provided_tickets_overrides: [MaximumEventProvidedTicketsOverride!]!
+	provided_tickets: [Ticket!]!
+	run(id: ID): Run!
+	runs(start: Date, finish: Date, exclude_conflicts: Date): [Run!]!
+	team_members: [TeamMember!]!
+	id: ID!
+	admin_notes: String
+	author: String
+	can_play_concurrently: Boolean!
+	con_mail_destination: String
+	content_warnings: String
+	created_at: Date
+	description: String
+	description_html: String!
+	email: String
+	images: [ActiveStorageAttachment!]!
+	length_seconds: Int!
+	my_rating: Int
+	organization: String
+	participant_communications: String
+	private_signup_list: Boolean!
+	registration_policy: RegistrationPolicy
+	short_blurb: String
+	short_blurb_html: String!
+	status: String!
+	title: String!
+	url: String
+	current_user_form_item_viewer_role: FormItemRole!
+	current_user_form_item_writer_role: FormItemRole!
+	form_response_attrs_json(itemIdentifiers: [String!]): Json!
+	form_response_attrs_json_with_rendered_markdown(itemIdentifiers: [String!]): Json!
+}
+
+type EventCategory {
+	department: Department
+	event_form: Form!
+	event_proposal_form: Form
+	events_paginated(page: Int, per_page: Int, filters: EventFiltersInput, sort: [SortInput!]): EventsPagination!
+	id: ID!
+	can_provide_tickets: Boolean!
+	default_color: String!
+	full_color: String!
+	name: String!
+	proposal_description: String
+	scheduling_ui: SchedulingUi!
+	signed_up_color: String!
+	team_member_name: String!
+	teamMemberNamePlural: String!
+}
+
+type EventConnection {
+	"""
+	Information to aid in pagination.
+	"""
+	pageInfo: PageInfo!
+	"""
+	A list of edges.
+	"""
+	edges: [EventEdge!]!
+	"""
+	A list of nodes.
+	"""
+	nodes: [Event!]!
+}
+
+"""
+An edge in a connection.
+"""
+type EventEdge {
+	"""
+	The item at the end of the edge
+	"""
+	node: Event!
+	"""
+	A cursor for use in pagination
+	"""
+	cursor: String!
+}
+
+input EventFiltersInput {
+	category: [Int]
+	title: String
+	title_prefix: String
+	my_rating: [Int!]
+	form_items: JSON
+}
+
+type EventProposal {
+	event: Event
+	event_category: EventCategory!
+	owner: UserConProfile!
+	id: ID!
+	admin_notes: String
+	images: [ActiveStorageAttachment!]!
+	length_seconds: Int
+	registration_policy: RegistrationPolicy!
+	status: String!
+	submitted_at: Date
+	title: String
+	updated_at: Date!
+	current_user_form_item_viewer_role: FormItemRole!
+	current_user_form_item_writer_role: FormItemRole!
+	form_response_attrs_json(itemIdentifiers: [String!]): Json!
+	form_response_attrs_json_with_rendered_markdown(itemIdentifiers: [String!]): Json!
+}
+
+input EventProposalFiltersInput {
+	event_category: [Int]
+	title: String
+	owner: String
+	status: [String]
+}
+
+type EventProposalsPagination {
+	current_page: Int!
+	entries: [EventProposal!]!
+	per_page: Int!
+	total_entries: Int!
+	total_pages: Int!
+}
+
+type EventsPagination {
+	current_page: Int!
+	entries: [Event!]!
+	per_page: Int!
+	total_entries: Int!
+	total_pages: Int!
+}
+
+
+type Form {
+	event_categories: [EventCategory!]!
+	proposal_event_categories: [EventCategory!]!
+	user_con_profile_conventions: [Convention!]!
+	id: ID!
+	export_json: Json!
+	form_sections: [FormSection!]!
+	form_type: String!
+	title: String!
+}
+
+type FormItem {
+	id: ID!
+	admin_description: String
+	default_value: Json
+	expose_in: [String!]
+	identifier: String
+	item_type: String!
+	properties: Json!
+	position: Int!
+	public_description: String
+	rendered_properties: Json!
+	visibility: FormItemRole!
+	writeability: FormItemRole!
+}
+
+enum FormItemRole {
+	normal
+	confirmed_attendee
+	team_member
+	all_profiles_basic_access
+	admin
+}
+
+type FormSection {
+	id: ID!
+	form_items: [FormItem!]!
+	position: Int!
+	title: String
+}
+
+
+
+"""
+A scalar that can represent any JSON value.
+"""
+scalar JSON
+
+scalar Json
+
+type MailingLists {
+	event_proposers: MailingListsResult!
+	team_members: MailingListsResult!
+	ticketed_attendees: MailingListsResult!
+	users_with_pending_bio: MailingListsResult!
+	whos_free(start: Date!, finish: Date!): MailingListsResult!
+	waitlists: [MailingListsWaitlistsResult!]!
+}
+
+type MailingListsResult {
+	emails: [ContactEmail!]!
+	metadata_fields: [String!]!
+}
+
+type MailingListsWaitlistsResult {
+	emails: [ContactEmail!]!
+	metadata_fields: [String!]!
+	run: Run!
+}
+
+type MaximumEventProvidedTicketsOverride {
+	id: ID!
+	override_value: Int!
+	ticket_type: TicketType!
+}
+
+type Money {
+	currency_code: String!
+	fractional: Int!
+}
+
+type Mutation {
+	deleteMe: Boolean!
+}
+
+type NotificationDestination {
+	id: ID!
+	staff_position: StaffPosition
+	user_con_profile: UserConProfile
+}
+
+type NotificationTemplate {
+	id: ID!
+	body_html: String
+	body_sms: String
+	body_text: String
+	event_key: String!
+	subject: String
+}
+
+type Order {
+	order_entries: [OrderEntry!]!
+	user_con_profile: UserConProfile!
+	id: ID!
+	charge_id: String
+	payment_amount: Money
+	payment_note: String
+	status: String!
+	submitted_at: Date
+	total_price: Money!
+}
+
+type OrderEntry {
+	order: Order!
+	id: ID!
+	describe_products: String!
+	price_per_item: Money!
+	product: Product!
+	product_variant: ProductVariant
+	quantity: Int!
+}
+
+input OrderFiltersInput {
+	id: ID
+	user_name: String
+	status: [String!]
+}
+
+type OrderQuantityByStatus {
+	status: OrderStatus!
+	quantity: Int!
+}
+
+enum OrderStatus {
+	"""
+	Order has not yet been submitted
+	"""
+	pending
+	"""
+	Order is submitted but not yet paid
+	"""
+	unpaid
+	"""
+	Order has been submitted and paid
+	"""
+	paid
+	"""
+	Order has been cancelled
+	"""
+	cancelled
+}
+
+type OrdersPagination {
+	current_page: Int!
+	entries: [Order!]!
+	per_page: Int!
+	total_entries: Int!
+	total_pages: Int!
+}
+
+type Organization {
+	id: ID!
+	current_ability_can_manage_access: Boolean!
+	name: String!
+	conventions: [Convention!]!
+	organization_roles: [OrganizationRole!]!
+}
+
+type OrganizationRole {
+	id: ID!
+	name: String!
+	permissions: [Permission!]!
+	users: [User!]!
+}
+
+type Page {
+	id: ID!
+	admin_notes: String
+	cms_layout: CmsLayout
+	content: String
+	content_html: String!
+	current_ability_can_delete: Boolean!
+	current_ability_can_update: Boolean!
+	hidden_from_search: Boolean!
+	name: String
+	referenced_partials: [CmsPartial!]!
+	skip_clickwrap_agreement: Boolean!
+	slug: String
+}
+
+"""
+Information about pagination in a connection
+"""
+type PageInfo {
+	"""
+	When paginating backwards, are there more items?
+	"""
+	hasPreviousPage: Boolean!
+	"""
+	When paginating forwards, are there more items?
+	"""
+	hasNextPage: Boolean!
+	"""
+	When paginating backwards, the cursor to continue.
+	"""
+	startCursor: String
+	"""
+	When paginating forwards, the cursor to continue.
+	"""
+	endCursor: String
+}
+
+type PayWhatYouWantValue {
+	minimum_amount: Money
+	suggested_amount: Money
+	maximum_amount: Money
+}
+
+type Permission {
+	id: ID!
+	permission: String!
+	model: PermissionedModel!
+	role: PermissionedRole!
+}
+
+union PermissionedModel = CmsContentGroup | Convention | EventCategory
+
+union PermissionedRole = OrganizationRole | StaffPosition
+
+enum PricingStrategy {
+	"""
+	Fixed price
+	"""
+	fixed
+	"""
+	Price that changes over time
+	"""
+	scheduled_value
+	"""
+	Pay-what-you-want price
+	"""
+	pay_what_you_want
+}
+
+type PricingStructure {
+	price(time: Date): Money
+	pricing_strategy: PricingStrategy!
+	value: PricingStructureValue!
+}
+
+union PricingStructureValue = Money | ScheduledMoneyValue | PayWhatYouWantValue
+
+type Product {
+	id: ID!
+	available: Boolean!
+	description: String
+	description_html: String!
+	image: ActiveStorageAttachment
+	name: String!
+	order_quantities_by_status: [OrderQuantityByStatus!]!
+	payment_options: [String!]!
+	pricing_structure: PricingStructure!
+	product_variants: [ProductVariant!]!
+	provides_ticket_type: TicketType
+}
+
+type ProductVariant {
+	id: ID!
+	description: String
+	image: ActiveStorageAttachment
+	name: String!
+	order_quantities_by_status: [OrderQuantityByStatus!]!
+	override_pricing_structure: PricingStructure
+	position: Int
+}
+
+type Query {
+	assumedIdentityFromProfile: UserConProfile
+	cmsParentByRequestHost: CmsParent!
+	conventionByRequestHost: Convention!
+	conventionByRequestHostIfPresent: Convention
+	currentAbility: Ability!
+	currentUser: User
+	events(after: String, before: String, first: Int, last: Int): EventConnection!
+	organizations: [Organization!]!
+	rootSite: RootSite!
+	user(id: ID): User!
+	users(ids: [ID!]): [User!]!
+	users_paginated(page: Int, per_page: Int, filters: UserFiltersInput, sort: [SortInput!]): UsersPagination!
+	previewLiquid(content: String!): String!
+	email_routes_paginated(page: Int, per_page: Int, filters: EmailRouteFiltersInput, sort: [SortInput!]): EmailRoutesPagination!
+	hasOauthApplications: Boolean!
+}
+
+type RegistrationPolicy {
+	buckets: [RegistrationPolicyBucket!]!
+	minimum_slots: Int
+	minimum_slots_including_not_counted: Int
+	only_uncounted: Boolean!
+	preferred_slots: Int
+	preferred_slots_including_not_counted: Int
+	prevent_no_preference_signups: Boolean!
+	slots_limited: Boolean!
+	total_slots: Int
+	total_slots_including_not_counted: Int
+}
+
+type RegistrationPolicyBucket {
+	key: String!
+	anything: Boolean!
+	description: String!
+	expose_attendees: Boolean!
+	minimum_slots: Int
+	name: String!
+	not_counted: Boolean!
+	preferred_slots: Int
+	slots_limited: Boolean!
+	total_slots: Int
+}
+
+type Room {
+	id: ID!
+	name: String
+	runs: [Run!]!
+}
+
+type RootSite {
+	id: ID!
+	site_name: String
+	cmsFiles: [CmsFile!]!
+	cmsFile(id: ID!): CmsFile!
+	cmsGraphqlQueries: [CmsGraphqlQuery!]!
+	cmsGraphqlQuery(id: ID!): CmsGraphqlQuery!
+	cmsLayouts: [CmsLayout!]!
+	cmsLayout(id: ID!): CmsLayout!
+	cmsNavigationItems: [CmsNavigationItem!]!
+	cmsPages: [Page!]!
+	cmsPage(id: ID, slug: String, rootPage: Boolean): Page!
+	cmsPartials: [CmsPartial!]!
+	cmsVariables: [CmsVariable!]!
+	defaultLayout: CmsLayout!
+	effectiveCmsLayout(path: String!): CmsLayout!
+	rootPage: Page!
+	typeaheadSearchCmsContent(name: String): [CmsContent!]!
+	url: String!
+	cmsContentGroups: [CmsContentGroup!]!
+	cmsContentGroup(id: ID!): CmsContentGroup!
+}
+
+type Run {
+	event: Event!
+	my_signups: [Signup!]!
+	my_signup_requests: [SignupRequest!]!
+	rooms: [Room!]!
+	signups_paginated(page: Int, per_page: Int, filters: SignupFiltersInput, sort: [SortInput!]): SignupsPagination!
+	id: ID!
+	confirmed_signup_count: Int!
+	current_ability_can_signup_summary_run: Boolean!
+	ends_at: Date!
+	not_counted_signup_count: Int!
+	room_names: [String!]!
+	schedule_note: String
+	signup_count_by_state_and_bucket_key_and_counted: Json!
+	starts_at: Date!
+	title_suffix: String
+}
+
+type ScheduledMoneyValue {
+	timespans: [TimespanWithMoneyValue!]!
+}
+
+type ScheduledValue {
+	timespans: [TimespanWithValue!]!
+}
+
+enum SchedulingUi {
+	regular
+	recurring
+	single_run
+}
+
+enum ShowSchedule {
+	no
+	priv
+	gms
+	yes
+}
+
+type Signup {
+	id: ID!
+	age_restrictions_check: String!
+	bucket_key: String
+	counted: Boolean!
+	requested_bucket_key: String
+	state: SignupState!
+	waitlist_position: Int
+	run: Run!
+	user_con_profile: UserConProfile!
+}
+
+input SignupFiltersInput {
+	name: String
+	event_title: String
+	bucket: [String!]
+	email: String
+	state: [String!]
+}
+
+enum SignupMode {
+	"""
+	Attendees can sign themselves up for events
+	"""
+	self_service
+	"""
+	Attendees can request signups and signup changes but con staff must approve them
+	"""
+	moderated
+}
+
+type SignupRequest {
+	id: ID!
+	created_at: Date!
+	requested_bucket_key: String
+	state: String!
+	replace_signup: Signup
+	result_signup: Signup
+	target_run: Run!
+	user_con_profile: UserConProfile!
+}
+
+input SignupRequestFiltersInput {
+	state: [String!]
+}
+
+type SignupRequestsPagination {
+	current_page: Int!
+	entries: [SignupRequest!]!
+	per_page: Int!
+	total_entries: Int!
+	total_pages: Int!
+}
+
+enum SignupState {
+	"""
+	Attendee's spot is held temporarily while the attendee finishes paying for their ticket
+	"""
+	ticket_purchase_hold
+	"""
+	Attendee's spot is confirmed
+	"""
+	confirmed
+	"""
+	Attendee is on the waitlist for this event and may be pulled in automatically
+	"""
+	waitlisted
+	"""
+	Attendee has withdrawn from this event (and this signup is no longer valid)
+	"""
+	withdrawn
+}
+
+type SignupsPagination {
+	current_page: Int!
+	entries: [Signup!]!
+	per_page: Int!
+	total_entries: Int!
+	total_pages: Int!
+}
+
+enum SiteMode {
+	"""
+	Site behaves as a convention with multiple events
+	"""
+	convention
+	"""
+	Site behaves as a single standalone event
+	"""
+	single_event
+	"""
+	Site behaves as a series of standalone events
+	"""
+	event_series
+}
+
+"""
+A description of a field to sort a result set by. This is typically used in pagination
+fields to specify how the results should be ordered.
+"""
+input SortInput {
+	"""
+	The name of the field to sort by.
+	"""
+	field: String!
+	"""
+	If true, the field will be sorted in descending order. If false, it will be sorted in
+	ascending order.
+	"""
+	desc: Boolean!
+}
+
+type StaffPosition {
+	id: ID!
+	cc_addresses: [String!]!
+	email: String
+	email_aliases: [String!]!
+	name: String!
+	visible: Boolean!
+	permissions: [Permission!]!
+	user_con_profiles: [UserConProfile!]!
+}
+
+
+type StripeAccount {
+	id: ID!
+	charges_enabled: Boolean!
+	display_name: String
+	email: String
+}
+
+type TeamMember {
+	event: Event!
+	user_con_profile: UserConProfile!
+	id: ID!
+	display_team_member: Boolean!
+	email: String
+	receive_con_email: Boolean!
+	receive_signup_email: String!
+	show_email: Boolean!
+}
+
+type Ticket {
+	id: ID!
+	created_at: Date!
+	ticket_type: TicketType!
+	updated_at: Date!
+	order_entry: OrderEntry
+	provided_by_event: Event
+	user_con_profile: UserConProfile!
+}
+
+enum TicketMode {
+	"""
+	Tickets are neither sold nor required in this convention
+	"""
+	disabled
+	"""
+	A valid ticket is required to sign up for events in this convention
+	"""
+	required_for_signup
+	"""
+	Each event in this convention sells tickets separately
+	"""
+	ticket_per_event
+}
+
+type TicketType {
+	id: ID!
+	allows_event_signups: Boolean!
+	counts_towards_convention_maximum: Boolean!
+	description: String
+	maximum_event_provided_tickets(eventId: ID): Int!
+	name: String!
+	providing_products: [Product!]!
+}
+
+type TimespanWithMoneyValue {
+	finish: Date
+	start: Date
+	value: Money!
+}
+
+type TimespanWithValue {
+	finish: Date
+	start: Date
+	value: String!
+}
+
+enum TimezoneMode {
+	"""
+	Display dates and times using convention’s local time zone
+	"""
+	convention_local
+	"""
+	Display dates and times using user’s local time zone
+	"""
+	user_local
+}
+
+type User {
+	id: ID!
+	email: String!
+	first_name: String!
+	last_name: String!
+	name: String!
+	name_inverted: String!
+	privileges: [String!]!
+	user_con_profiles: [UserConProfile!]!
+}
+
+type UserActivityAlert {
+	id: ID!
+	email: String
+	partial_name: String
+	trigger_on_ticket_create: Boolean!
+	trigger_on_user_con_profile_create: Boolean!
+	notification_destinations: [NotificationDestination!]!
+	user: User
+}
+
+type UserConProfile {
+	ability: Ability!
+	convention: Convention!
+	current_pending_order: Order
+	signups: [Signup!]!
+	staff_positions: [StaffPosition!]!
+	team_members: [TeamMember!]!
+	ticket: Ticket
+	id: ID!
+	accepted_clickwrap_agreement: Boolean!
+	address: String
+	bio_html: String
+	bio_name: String!
+	birth_date: Date
+	city: String
+	country: String
+	email: String!
+	first_name: String!
+	gravatar_enabled: Boolean!
+	gravatar_url: String!
+	ical_secret: String!
+	last_name: String!
+	mobile_phone: String
+	name: String!
+	name_inverted: String!
+	name_without_nickname: String!
+	nickname: String
+	site_admin: Boolean!
+	state: String
+	user_id: ID!
+	zipcode: String
+	current_user_form_item_viewer_role: FormItemRole!
+	current_user_form_item_writer_role: FormItemRole!
+	form_response_attrs_json(itemIdentifiers: [String!]): Json!
+	form_response_attrs_json_with_rendered_markdown(itemIdentifiers: [String!]): Json!
+	order_summary: String!
+}
+
+input UserFiltersInput {
+	email: String
+	first_name: String
+	last_name: String
+	privileges: [String!]
+	name: String
+}
+
+type UsersPagination {
+	current_page: Int!
+	entries: [User!]!
+	per_page: Int!
+	total_entries: Int!
+	total_pages: Int!
+}
+
+directive @include(if: Boolean!) on FIELD | FRAGMENT_SPREAD | INLINE_FRAGMENT
+directive @skip(if: Boolean!) on FIELD | FRAGMENT_SPREAD | INLINE_FRAGMENT
+schema {
+	query: Query
+	mutation: Mutation
+}
+
