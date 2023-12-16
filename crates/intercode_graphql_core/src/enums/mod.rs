@@ -1,4 +1,6 @@
 mod email_mode;
+mod form_item_expose_in;
+mod form_type;
 mod order_status;
 mod pricing_strategy;
 mod scheduling_ui;
@@ -10,6 +12,7 @@ mod ticket_mode;
 mod timezone_mode;
 
 pub use email_mode::EmailMode;
+pub use form_type::FormType;
 pub use order_status::OrderStatus;
 pub use pricing_strategy::PricingStrategy;
 pub use scheduling_ui::SchedulingUi;

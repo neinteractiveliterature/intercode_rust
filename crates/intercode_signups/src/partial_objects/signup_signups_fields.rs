@@ -106,7 +106,7 @@ impl SignupSignupsFields {
   }
 
   async fn state(&self) -> Result<SignupState> {
-    SignupState::try_from(self.model.state.as_str())
+    SignupState::try_from(self.model.state.as_str()).map_err(Error::from)
   }
 
   #[graphql(name = "waitlist_position")]

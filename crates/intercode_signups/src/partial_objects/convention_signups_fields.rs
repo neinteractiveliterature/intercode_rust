@@ -79,7 +79,12 @@ impl ConventionSignupsFields {
 
   #[graphql(name = "signup_mode")]
   async fn signup_mode(&self) -> Result<SignupMode, Error> {
-    self.model.signup_mode.as_str().try_into()
+    self
+      .model
+      .signup_mode
+      .as_str()
+      .try_into()
+      .map_err(Error::from)
   }
 
   #[graphql(name = "signup_requests_open")]

@@ -67,7 +67,12 @@ impl ConventionConventionsFields {
 
   #[graphql(name = "email_mode")]
   async fn email_mode(&self) -> Result<EmailMode> {
-    self.model.email_mode.as_str().try_into()
+    self
+      .model
+      .email_mode
+      .as_str()
+      .try_into()
+      .map_err(Error::from)
   }
 
   #[graphql(name = "ends_at")]
@@ -130,17 +135,32 @@ impl ConventionConventionsFields {
 
   #[graphql(name = "show_event_list")]
   async fn show_event_list(&self) -> Result<ShowSchedule> {
-    self.model.show_event_list.as_str().try_into()
+    self
+      .model
+      .show_event_list
+      .as_str()
+      .try_into()
+      .map_err(Error::from)
   }
 
   #[graphql(name = "show_schedule")]
   async fn show_schedule(&self) -> Result<ShowSchedule> {
-    self.model.show_schedule.as_str().try_into()
+    self
+      .model
+      .show_schedule
+      .as_str()
+      .try_into()
+      .map_err(Error::from)
   }
 
   #[graphql(name = "site_mode")]
   async fn site_mode(&self) -> Result<SiteMode, Error> {
-    self.model.site_mode.as_str().try_into()
+    self
+      .model
+      .site_mode
+      .as_str()
+      .try_into()
+      .map_err(Error::from)
   }
 
   #[graphql(name = "starts_at")]
@@ -153,7 +173,12 @@ impl ConventionConventionsFields {
 
   #[graphql(name = "ticket_mode")]
   async fn ticket_mode(&self) -> Result<TicketMode, Error> {
-    self.model.ticket_mode.as_str().try_into()
+    self
+      .model
+      .ticket_mode
+      .as_str()
+      .try_into()
+      .map_err(Error::from)
   }
 
   #[graphql(name = "ticket_name")]
@@ -167,7 +192,12 @@ impl ConventionConventionsFields {
 
   #[graphql(name = "timezone_mode")]
   async fn timezone_mode(&self) -> Result<TimezoneMode, Error> {
-    self.model.timezone_mode.as_str().try_into()
+    self
+      .model
+      .timezone_mode
+      .as_str()
+      .try_into()
+      .map_err(Error::from)
   }
 
   #[graphql(name = "timezone_name")]

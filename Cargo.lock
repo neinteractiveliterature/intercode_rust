@@ -2982,6 +2982,7 @@ dependencies = [
  "sea-orm",
  "seawater",
  "serde_json",
+ "strum",
 ]
 
 [[package]]

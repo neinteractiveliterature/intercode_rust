@@ -1,6 +1,8 @@
-use async_graphql::{resolver_utils::parse_enum, Enum};
+use async_graphql::Enum;
+use strum::EnumString;
 
-#[derive(Enum, Copy, Clone, Eq, PartialEq)]
+#[derive(Enum, Copy, Clone, Eq, PartialEq, EnumString)]
+#[strum(serialize_all = "snake_case")]
 pub enum TicketMode {
   /// Tickets are neither sold nor required in this convention
   #[graphql(name = "disabled")]
@@ -13,13 +15,4 @@ pub enum TicketMode {
   /// Each event in this convention sells tickets separately
   #[graphql(name = "ticket_per_event")]
   TicketPerEvent,
-}
-
-impl TryFrom<&str> for TicketMode {
-  type Error = async_graphql::Error;
-
-  fn try_from(value: &str) -> Result<Self, Self::Error> {
-    parse_enum(value.into())
-      .map_err(|err| Self::Error::new(err.into_server_error(Default::default()).message))
-  }
 }

@@ -1,6 +1,8 @@
 use async_graphql::Enum;
+use strum::EnumString;
 
-#[derive(Enum, Copy, Clone, Eq, PartialEq)]
+#[derive(Enum, Copy, Clone, Eq, PartialEq, EnumString)]
+#[strum(serialize_all = "lowercase")]
 pub enum ShowSchedule {
   #[graphql(name = "no")]
   No,
@@ -10,21 +12,4 @@ pub enum ShowSchedule {
   GMs,
   #[graphql(name = "yes")]
   Yes,
-}
-
-impl TryFrom<&str> for ShowSchedule {
-  type Error = async_graphql::Error;
-
-  fn try_from(value: &str) -> Result<Self, Self::Error> {
-    match value {
-      "no" => Ok(ShowSchedule::No),
-      "priv" => Ok(ShowSchedule::Priv),
-      "gms" => Ok(ShowSchedule::GMs),
-      "yes" => Ok(ShowSchedule::Yes),
-      _ => Err(Self::Error::new(format!(
-        "Unknown show schedule value: {}",
-        value
-      ))),
-    }
-  }
 }

@@ -3,7 +3,8 @@ use std::sync::Arc;
 use async_graphql::*;
 use intercode_entities::{forms, FormExport};
 use intercode_graphql_core::{
-  load_one_by_model_id, loader_result_to_many, model_backed_type, scalars::JsonScalar,
+  enums::FormType, load_one_by_model_id, loader_result_to_many, model_backed_type,
+  scalars::JsonScalar,
 };
 use intercode_graphql_loaders::LoaderManager;
 use seawater::loaders::ExpectModels;
@@ -47,8 +48,13 @@ impl FormFormsFields {
   }
 
   #[graphql(name = "form_type")]
-  async fn form_type(&self) -> &str {
-    &self.model.form_type
+  async fn form_type(&self) -> Result<FormType, Error> {
+    self
+      .model
+      .form_type
+      .as_str()
+      .try_into()
+      .map_err(Error::from)
   }
 
   async fn title(&self) -> &str {

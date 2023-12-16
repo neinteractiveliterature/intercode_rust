@@ -99,7 +99,12 @@ impl EventCategoryEventsFields {
 
   #[graphql(name = "scheduling_ui")]
   async fn scheduling_ui(&self) -> Result<SchedulingUi> {
-    self.model.scheduling_ui.as_str().try_into()
+    self
+      .model
+      .scheduling_ui
+      .as_str()
+      .try_into()
+      .map_err(Error::from)
   }
 
   #[graphql(name = "signed_up_color")]

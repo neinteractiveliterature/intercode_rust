@@ -517,7 +517,7 @@ type Form {
 	id: ID!
 	export_json: Json!
 	form_sections: [FormSection!]!
-	form_type: String!
+	form_type: FormType!
 	title: String!
 }
 
@@ -549,6 +549,12 @@ type FormSection {
 	form_items: [FormItem!]!
 	position: Int!
 	title: String
+}
+
+enum FormType {
+	event
+	event_proposal
+	user_con_profile
 }
 
 
