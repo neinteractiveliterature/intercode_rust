@@ -48,7 +48,12 @@ impl OutputType for CmsParentInterface {
 
   #[doc = " Create type information in the registry and return qualified typename."]
   fn create_type_info(registry: &mut Registry) -> String {
-    registry.create_output_type::<Self, _>(MetaTypeId::Interface, |registry| {
+    let possible_types: Vec<String> = vec![
+      ConventionType::type_name().into_owned(),
+      RootSiteType::type_name().into_owned(),
+    ];
+
+    let output_type = registry.create_output_type::<Self, _>(MetaTypeId::Interface, |registry| {
       let mut fields: IndexMap<String, MetaField> = Default::default();
 
       if let MetaType::Object {
@@ -62,10 +67,7 @@ impl OutputType for CmsParentInterface {
         name: Self::type_name().into_owned(),
         description: None,
         fields,
-        possible_types: vec!["RootSite", "Convention"]
-          .into_iter()
-          .map(String::from)
-          .collect(),
+        possible_types: possible_types.iter().cloned().collect(),
         extends: false,
         inaccessible: false,
         tags: vec![],
@@ -73,7 +75,13 @@ impl OutputType for CmsParentInterface {
         visible: None,
         rust_typename: Some(std::any::type_name::<Self>()),
       }
-    })
+    });
+
+    for possible_type in possible_types {
+      registry.add_implements(&possible_type, Self::type_name().as_ref());
+    }
+
+    output_type
   }
 
   #[doc = " Resolve an output value to `async_graphql::Value`."]

@@ -11,6 +11,7 @@ async-graphql-axum = {workspace = true}
 async-graphql-value = {workspace = true}
 axum = {workspace = true}
 futures = {workspace = true}
+indoc = {workspace = true}
 intercode_cms = {workspace = true}
 intercode_conventions = {workspace = true}
 intercode_email = {workspace = true}

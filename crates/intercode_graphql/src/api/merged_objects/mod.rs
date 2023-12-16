@@ -30,6 +30,7 @@ mod user_type;
 pub use ability_type::*;
 pub use cms_content_group_type::*;
 pub use convention_type::*;
+pub use coupon_type::*;
 pub use department_type::*;
 pub use event_category_type::*;
 pub use event_proposal_type::*;

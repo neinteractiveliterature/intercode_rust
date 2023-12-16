@@ -79,6 +79,7 @@ i18n-embed-fl = "0.7"
 ics = "0.5.8"
 id-arena = "2.2.1"
 indicatif = {version = "0.17.7", features = ["improved_unicode"]}
+indoc = "2"
 intercode_cms = {path = "./crates/intercode_cms"}
 intercode_conventions = {path = "./crates/intercode_conventions"}
 intercode_email = {path = "./crates/intercode_email"}

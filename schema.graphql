@@ -164,7 +164,7 @@ type ContactEmail {
 	name: String!
 }
 
-type Convention {
+type Convention implements CmsParent {
 	id: ID!
 	cmsFiles: [CmsFile!]!
 	cmsFile(id: ID!): CmsFile!
@@ -281,11 +281,23 @@ input CouponFiltersInput {
 	code: String
 }
 
-type CouponsPagination {
+type CouponsPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
 	current_page: Int!
 	entries: [Coupon!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
 	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
 	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
 	total_pages: Int!
 }
 
@@ -320,11 +332,23 @@ input EmailRouteFiltersInput {
 	forward_addresses: String
 }
 
-type EmailRoutesPagination {
+type EmailRoutesPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
 	current_page: Int!
 	entries: [EmailRoute!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
 	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
 	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
 	total_pages: Int!
 }
 
@@ -445,19 +469,43 @@ input EventProposalFiltersInput {
 	status: [String]
 }
 
-type EventProposalsPagination {
+type EventProposalsPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
 	current_page: Int!
 	entries: [EventProposal!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
 	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
 	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
 	total_pages: Int!
 }
 
-type EventsPagination {
+type EventsPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
 	current_page: Int!
 	entries: [Event!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
 	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
 	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
 	total_pages: Int!
 }
 
@@ -614,11 +662,23 @@ enum OrderStatus {
 	cancelled
 }
 
-type OrdersPagination {
+type OrdersPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
 	current_page: Int!
 	entries: [Order!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
 	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
 	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
 	total_pages: Int!
 }
 
@@ -672,6 +732,41 @@ type PageInfo {
 	When paginating forwards, the cursor to continue.
 	"""
 	endCursor: String
+}
+
+"""
+PaginationInterface provides a way to use offset-based pagination on a list of objects. This
+is useful for UIs such as Intercode's table views, which provide a way to jump between numbered
+pages.
+
+Page numbers in PaginationInterface are 1-based (so, the first page is page 1, then page 2,
+etc.) The number of items per page can be controlled via the per_page argument on paginated
+fields. It defaults to 20, and can go up to 200.
+
+Offset-based pagination is different from
+[Relay's cursor-based pagination](https://relay.dev/graphql/connections.htm) that is more
+commonly used in GraphQL APIs. We chose to go with an offset-based approach due to our UI
+needs, but if a cursor-based approach is desirable in the future, we may also implement Relay
+connections alongside our existing pagination fields.
+
+"""
+interface PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
+	current_page: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
+	total_pages: Int!
+	"""
+	The number of items per page currently being returned in this query
+	"""
+	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
+	total_entries: Int!
 }
 
 type PayWhatYouWantValue {
@@ -788,7 +883,7 @@ type Room {
 	runs: [Run!]!
 }
 
-type RootSite {
+type RootSite implements CmsParent {
 	id: ID!
 	site_name: String
 	cmsFiles: [CmsFile!]!
@@ -896,11 +991,23 @@ input SignupRequestFiltersInput {
 	state: [String!]
 }
 
-type SignupRequestsPagination {
+type SignupRequestsPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
 	current_page: Int!
 	entries: [SignupRequest!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
 	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
 	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
 	total_pages: Int!
 }
 
@@ -923,11 +1030,23 @@ enum SignupState {
 	withdrawn
 }
 
-type SignupsPagination {
+type SignupsPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
 	current_page: Int!
 	entries: [Signup!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
 	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
 	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
 	total_pages: Int!
 }
 
@@ -1117,11 +1236,23 @@ input UserFiltersInput {
 	name: String
 }
 
-type UsersPagination {
+type UsersPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
 	current_page: Int!
 	entries: [User!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
 	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
 	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
 	total_pages: Int!
 }
 
