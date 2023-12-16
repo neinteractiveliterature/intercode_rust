@@ -14,7 +14,7 @@ pub struct MoneyType<'currency> {
 impl<'currency> Default for MoneyType<'currency> {
   fn default() -> Self {
     Self {
-      money: Money::from_minor(0, &USD),
+      money: Money::from_minor(0, USD),
     }
   }
 }
