@@ -110,13 +110,13 @@ impl RunEventsFields {
   }
 
   #[graphql(name = "room_names")]
-  async fn room_names(&self, ctx: &Context<'_>) -> Result<Vec<Option<String>>, Error> {
+  async fn room_names(&self, ctx: &Context<'_>) -> Result<Vec<String>, Error> {
     Ok(
       self
         .rooms(ctx)
         .await?
         .into_iter()
-        .map(|room| room.get_model().name.clone())
+        .map(|room| room.get_model().name.clone().unwrap_or_default())
         .collect(),
     )
   }

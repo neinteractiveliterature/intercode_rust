@@ -45,8 +45,8 @@ impl StaffPositionUsersFields {
     &self.model.email_aliases
   }
 
-  async fn name(&self) -> Option<&str> {
-    self.model.name.as_deref()
+  async fn name(&self) -> &str {
+    self.model.name.as_deref().unwrap_or_default()
   }
 
   async fn visible(&self) -> bool {

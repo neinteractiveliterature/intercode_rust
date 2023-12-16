@@ -32,8 +32,8 @@ impl ProductVariantType {
     )
   }
 
-  async fn name(&self) -> Option<&str> {
-    self.model.name.as_deref()
+  async fn name(&self) -> &str {
+    self.model.name.as_deref().unwrap_or_default()
   }
 
   #[graphql(name = "order_quantities_by_status")]

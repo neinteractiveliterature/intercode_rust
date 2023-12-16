@@ -46,8 +46,13 @@ where
     self.timespan.timespan.start.clone().map(DateScalar)
   }
 
-  async fn value(&self) -> Option<String> {
-    self.timespan.value.clone().map(|v| v.into())
+  async fn value(&self) -> String {
+    self
+      .timespan
+      .value
+      .clone()
+      .map(|v| v.into())
+      .unwrap_or_default()
   }
 }
 
@@ -87,7 +92,12 @@ where
     self.timespan.timespan.start.clone().map(DateScalar)
   }
 
-  async fn value(&self) -> Option<MoneyType<'static>> {
-    self.timespan.value.clone().map(MoneyType::new)
+  async fn value(&self) -> MoneyType<'static> {
+    self
+      .timespan
+      .value
+      .clone()
+      .map(MoneyType::new)
+      .unwrap_or_default()
   }
 }

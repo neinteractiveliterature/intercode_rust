@@ -17,8 +17,8 @@ impl StripeAccountType {
   }
 
   #[graphql(name = "charges_enabled")]
-  async fn charges_enabled(&self) -> Option<bool> {
-    self.stripe_account.charges_enabled
+  async fn charges_enabled(&self) -> bool {
+    self.stripe_account.charges_enabled.unwrap_or(false)
   }
 
   #[graphql(name = "display_name")]
