@@ -138,7 +138,7 @@ macro_rules! load_one_by_id {
 #[macro_export]
 macro_rules! load_one_by_model_id {
   ($loader: ident, $ctx: ident, $self: expr) => {
-    $crate::load_one_by_id!($loader, $ctx, $self.model.id)
+    $crate::load_one_by_id!($loader, $ctx, $crate::ModelBackedType::get_model($self).id)
   };
 }
 

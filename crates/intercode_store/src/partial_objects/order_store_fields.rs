@@ -1,53 +1,45 @@
-use std::sync::Arc;
-
 use async_graphql::*;
-use intercode_entities::orders;
+use async_trait::async_trait;
+use intercode_entities::{coupon_applications, order_entries, orders, user_con_profiles};
 use intercode_graphql_core::{
-  enums::OrderStatus, load_one_by_model_id, loader_result_to_many, model_backed_type,
-  objects::MoneyType, scalars::DateScalar, ModelBackedType,
+  enums::OrderStatus, load_one_by_model_id, loader_result_to_many,
+  loader_result_to_required_single, model_backed_type, objects::MoneyType, scalars::DateScalar,
+  ModelBackedType,
 };
-use intercode_graphql_loaders::LoaderManager;
 use rusty_money::{iso, Money};
-use seawater::loaders::{ExpectModel, ExpectModels};
+use seawater::loaders::ExpectModels;
 
-use crate::partial_objects::UserConProfileStoreFields;
-
-use super::{coupon_application_store_fields::CouponApplicationStoreFields, OrderEntryStoreFields};
-
-model_backed_type!(OrderStoreFields, orders::Model);
-
-impl OrderStoreFields {
-  pub async fn coupon_applications(
+#[async_trait]
+pub trait OrderStoreExtensions
+where
+  Self: ModelBackedType<Model = orders::Model>,
+{
+  async fn coupon_applications<T: ModelBackedType<Model = coupon_applications::Model>>(
     &self,
     ctx: &Context<'_>,
-  ) -> Result<Vec<CouponApplicationStoreFields>> {
+  ) -> Result<Vec<T>> {
     let loader_result = load_one_by_model_id!(order_coupon_applications, ctx, self)?;
-    Ok(loader_result_to_many!(
-      loader_result,
-      CouponApplicationStoreFields
-    ))
+    Ok(loader_result_to_many!(loader_result, T))
   }
 
-  pub async fn order_entries(
+  async fn order_entries<T: ModelBackedType<Model = order_entries::Model>>(
     &self,
     ctx: &Context<'_>,
-  ) -> Result<Vec<OrderEntryStoreFields>, Error> {
+  ) -> Result<Vec<T>, Error> {
     let loader_result = load_one_by_model_id!(order_order_entries, ctx, self)?;
-    Ok(loader_result_to_many!(loader_result, OrderEntryStoreFields))
+    Ok(loader_result_to_many!(loader_result, T))
   }
 
-  pub async fn user_con_profile(&self, ctx: &Context<'_>) -> Result<UserConProfileStoreFields> {
-    let loader_result = ctx
-      .data::<Arc<LoaderManager>>()?
-      .order_user_con_profile()
-      .load_one(self.model.id)
-      .await?;
-
-    Ok(UserConProfileStoreFields::new(
-      loader_result.expect_one()?.clone(),
-    ))
+  async fn user_con_profile<T: ModelBackedType<Model = user_con_profiles::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<T> {
+    let loader_result = load_one_by_model_id!(order_user_con_profile, ctx, self)?;
+    Ok(loader_result_to_required_single!(loader_result, T))
   }
 }
+
+model_backed_type!(OrderStoreFields, orders::Model);
 
 #[Object]
 impl OrderStoreFields {
@@ -58,6 +50,11 @@ impl OrderStoreFields {
   #[graphql(name = "charge_id")]
   async fn charge_id(&self) -> Option<&str> {
     self.model.charge_id.as_deref()
+  }
+
+  #[graphql(name = "paid_at")]
+  async fn paid_at(&self) -> Result<Option<DateScalar>> {
+    self.model.paid_at.map(DateScalar::try_from).transpose()
   }
 
   #[graphql(name = "payment_amount")]

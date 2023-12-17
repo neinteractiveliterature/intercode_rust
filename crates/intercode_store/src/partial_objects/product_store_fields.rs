@@ -11,11 +11,40 @@ use intercode_graphql_loaders::{
 };
 use intercode_liquid::render_markdown;
 
-use super::{pricing_structure_type::PricingStructureType, ProductVariantType, TicketTypeType};
-model_backed_type!(ProductType, products::Model);
+use crate::objects::PricingStructureType;
 
-#[Object(name = "Product")]
-impl ProductType {
+use super::{ProductVariantStoreFields, TicketTypeStoreFields};
+
+model_backed_type!(ProductStoreFields, products::Model);
+
+impl ProductStoreFields {
+  pub async fn product_variants(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<ProductVariantStoreFields>> {
+    let loader_result = load_one_by_model_id!(product_product_variants, ctx, self)?;
+
+    Ok(loader_result_to_many!(
+      loader_result,
+      ProductVariantStoreFields
+    ))
+  }
+
+  pub async fn provides_ticket_type(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Option<TicketTypeStoreFields>> {
+    let loader_result = load_one_by_model_id!(product_provides_ticket_type, ctx, self)?;
+
+    Ok(loader_result_to_optional_single!(
+      loader_result,
+      TicketTypeStoreFields
+    ))
+  }
+}
+
+#[Object]
+impl ProductStoreFields {
   async fn id(&self) -> ID {
     self.model.id.into()
   }
@@ -84,22 +113,5 @@ impl ProductType {
     Ok(PricingStructureType::new(serde_json::from_value(
       self.model.pricing_structure.clone(),
     )?))
-  }
-
-  #[graphql(name = "product_variants")]
-  async fn product_variants(&self, ctx: &Context<'_>) -> Result<Vec<ProductVariantType>> {
-    let loader_result = load_one_by_model_id!(product_product_variants, ctx, self)?;
-
-    Ok(loader_result_to_many!(loader_result, ProductVariantType))
-  }
-
-  #[graphql(name = "provides_ticket_type")]
-  async fn provides_ticket_type(&self, ctx: &Context<'_>) -> Result<Option<TicketTypeType>> {
-    let loader_result = load_one_by_model_id!(product_provides_ticket_type, ctx, self)?;
-
-    Ok(loader_result_to_optional_single!(
-      loader_result,
-      TicketTypeType
-    ))
   }
 }

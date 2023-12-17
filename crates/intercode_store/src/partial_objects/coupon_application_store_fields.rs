@@ -1,7 +1,9 @@
 use async_graphql::*;
-use intercode_entities::coupon_applications;
+use async_trait::async_trait;
+use intercode_entities::{coupon_applications, coupons, orders};
 use intercode_graphql_core::{
-  load_one_by_id, load_one_by_model_id, model_backed_type, objects::MoneyType, ModelBackedType,
+  load_one_by_id, load_one_by_model_id, loader_result_to_required_single, model_backed_type,
+  objects::MoneyType, ModelBackedType,
 };
 use rusty_money::{
   iso::{self, USD},
@@ -9,16 +11,26 @@ use rusty_money::{
 };
 use seawater::loaders::{ExpectModel, ExpectModels};
 
-use super::CouponStoreFields;
-
-model_backed_type!(CouponApplicationStoreFields, coupon_applications::Model);
-
-impl CouponApplicationStoreFields {
-  pub async fn coupon(&self, ctx: &Context<'_>) -> Result<CouponStoreFields> {
+#[async_trait]
+pub trait CouponApplicationStoreExtensions
+where
+  Self: ModelBackedType<Model = coupon_applications::Model>,
+{
+  async fn coupon<T: ModelBackedType<Model = coupons::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<T> {
     let loader_result = load_one_by_model_id!(coupon_application_coupon, ctx, self)?;
-    Ok(CouponStoreFields::new(loader_result.expect_one()?.clone()))
+    Ok(loader_result_to_required_single!(loader_result, T))
+  }
+
+  async fn order<T: ModelBackedType<Model = orders::Model>>(&self, ctx: &Context<'_>) -> Result<T> {
+    let loader_result = load_one_by_model_id!(coupon_application_order, ctx, self)?;
+    Ok(loader_result_to_required_single!(loader_result, T))
   }
 }
+
+model_backed_type!(CouponApplicationStoreFields, coupon_applications::Model);
 
 #[Object]
 impl CouponApplicationStoreFields {

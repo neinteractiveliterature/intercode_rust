@@ -304,22 +304,10 @@ type Convention implements CmsParent {
 	maximum_event_signups: ScheduledValue
 	signup_mode: SignupMode!
 	signup_requests_open: Boolean!
-	"""
-	Finds a product by ID in this convention. If there is no product with that ID in this
-	convention, errors out.
-	"""
-	product(
-		"""
-		The ID of the product to find.
-		"""
-		id: ID!
-	): Product!
-	products(only_available: Boolean, only_ticket_providing: Boolean): [Product!]!
 	stripe_account: StripeAccount
 	stripe_account_id: String
 	stripe_account_ready_to_charge: Boolean!
 	stripe_publishable_key: String
-	ticket_types: [TicketType!]!
 	tickets_available_for_purchase: Boolean!
 }
 
@@ -329,9 +317,16 @@ type Coupon {
 	expires_at: Date
 	fixed_amount: Money
 	percent_discount: BigDecimal
-	provides_product: Product
 	usage_limit: Int
 	convention: Convention!
+	provides_product: Product
+}
+
+type CouponApplication {
+	id: ID!
+	discount: Money!
+	coupon: Coupon!
+	order: Order!
 }
 
 input CouponFiltersInput {
@@ -661,7 +656,6 @@ type MaximumEventProvidedTicketsOverride {
 	event: Event!
 	id: ID!
 	override_value: Int!
-	ticket_type: TicketType!
 }
 
 type Money {
@@ -689,10 +683,12 @@ type NotificationTemplate {
 }
 
 type Order {
+	coupon_applications: [CouponApplication!]!
 	order_entries: [OrderEntry!]!
 	user_con_profile: UserConProfile!
 	id: ID!
 	charge_id: String
+	paid_at: Date
 	payment_amount: Money
 	payment_note: String
 	status: OrderStatus!
@@ -702,11 +698,11 @@ type Order {
 
 type OrderEntry {
 	order: Order!
+	product: Product!
+	productVariant: ProductVariant
 	id: ID!
 	describe_products: String!
 	price_per_item: Money!
-	product: Product!
-	product_variant: ProductVariant
 	quantity: Int!
 }
 
@@ -771,6 +767,7 @@ type Organization {
 type OrganizationRole {
 	id: ID!
 	name: String!
+	organization: Organization!
 	permissions: [Permission!]!
 	users: [User!]!
 }
@@ -888,6 +885,8 @@ type PricingStructure {
 union PricingStructureValue = Money | ScheduledMoneyValue | PayWhatYouWantValue
 
 type Product {
+	product_variants: [ProductVariant!]!
+	provides_ticket_type: TicketType
 	id: ID!
 	available: Boolean!
 	description: String
@@ -897,11 +896,10 @@ type Product {
 	order_quantities_by_status: [OrderQuantityByStatus!]!
 	payment_options: [String!]!
 	pricing_structure: PricingStructure!
-	product_variants: [ProductVariant!]!
-	provides_ticket_type: TicketType
 }
 
 type ProductVariant {
+	product: Product!
 	id: ID!
 	description: String
 	image: ActiveStorageAttachment
@@ -1045,8 +1043,11 @@ type Signup {
 	age_restrictions_check: String!
 	bucket_key: String
 	counted: Boolean!
+	created_at: Date!
+	expires_at: Date
 	requested_bucket_key: String
 	state: SignupState!
+	updated_at: Date!
 	waitlist_position: Int
 	run: Run!
 	user_con_profile: UserConProfile!
@@ -1076,9 +1077,11 @@ type SignupRequest {
 	created_at: Date!
 	requested_bucket_key: String
 	state: SignupRequestState!
+	updated_at: Date!
 	replace_signup: Signup
 	result_signup: Signup
 	target_run: Run!
+	updated_by: User!
 	user_con_profile: UserConProfile!
 }
 
@@ -1229,10 +1232,12 @@ type TeamMember {
 type Ticket {
 	id: ID!
 	created_at: Date!
-	ticket_type: TicketType!
 	updated_at: Date!
+	convention: Convention!
+	run: Run
 	order_entry: OrderEntry
 	provided_by_event: Event
+	ticket_type: TicketType!
 	user_con_profile: UserConProfile!
 }
 
@@ -1252,13 +1257,15 @@ enum TicketMode {
 }
 
 type TicketType {
+	convention: Convention
+	event: Event
+	providing_products: [Product!]!
 	id: ID!
 	allows_event_signups: Boolean!
 	counts_towards_convention_maximum: Boolean!
 	description: String
 	maximum_event_provided_tickets(eventId: ID): Int!
 	name: String!
-	providing_products: [Product!]!
 }
 
 type TimespanWithMoneyValue {

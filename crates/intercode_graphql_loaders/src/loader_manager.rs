@@ -3,15 +3,7 @@ use std::time::Duration;
 
 use async_graphql::dataloader::DataLoader;
 
-use intercode_entities::links::{
-  CmsNavigationItemToCmsNavigationSection, ConventionToCatchAllStaffPosition, ConventionToSignups,
-  ConventionToSingleEvent, ConventionToStaffPositions, EventCategoryToEventForm,
-  EventCategoryToEventProposalForm, EventToProvidedTickets, FormToEventCategories, FormToFormItems,
-  FormToProposalEventCategories, FormToUserConProfileConventions, PageToCmsPartials,
-  SignupRequestToReplaceSignup, SignupRequestToResultSignup, StaffPositionToUserConProfiles,
-  TicketToProvidedByEvent, UserActivityAlertToNotificationDestinations,
-  UserConProfileToStaffPositions,
-};
+use intercode_entities::links::*;
 use intercode_entities::model_ext::FormResponse;
 use intercode_entities::*;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
@@ -341,12 +333,14 @@ loader_manager!(
   entity_relation(order_entry_product_variant, order_entries, product_variants);
   entity_relation(organization_conventions, organizations, conventions);
   entity_relation(organization_organization_roles, organizations, organization_roles);
+  entity_relation(organization_role_organization, organization_roles, organizations);
   entity_relation(organization_role_permissions, organization_roles, permissions);
   entity_relation(organization_role_users, organization_roles, users);
   entity_relation(pages_cms_layouts, pages, cms_layouts);
   entity_link(pages_referenced_partials, PageToCmsPartials);
   entity_relation(product_product_variants, products, product_variants);
   entity_relation(product_provides_ticket_type, products, ticket_types);
+  entity_relation(product_variant_product, product_variants, products);
   entity_relation(room_runs, rooms, runs);
   entity_relation(run_event, runs, events);
   entity_relation(run_rooms, runs, rooms);
@@ -357,6 +351,7 @@ loader_manager!(
   entity_link(signup_request_replace_signup, SignupRequestToReplaceSignup);
   entity_link(signup_request_result_signup, SignupRequestToResultSignup);
   entity_relation(signup_request_target_run, signup_requests, runs);
+  entity_relation(signup_request_updated_by, signup_requests, users);
   entity_relation(signup_request_user_con_profile, signup_requests, user_con_profiles);
   entity_id(staff_positions_by_id, staff_positions);
   entity_relation(staff_position_permissions, staff_positions, permissions);
@@ -369,9 +364,13 @@ loader_manager!(
   );
   entity_id(team_members_by_id, team_members);
   entity_relation(ticket_order_entry, tickets, order_entries);
+  entity_link(ticket_convention, TicketToConvention);
   entity_link(ticket_provided_by_event, TicketToProvidedByEvent);
+  entity_link(ticket_run, TicketToRun);
   entity_relation(ticket_ticket_type, tickets, ticket_types);
   entity_relation(ticket_user_con_profile, tickets, user_con_profiles);
+  entity_relation(ticket_type_convention, ticket_types, conventions);
+  entity_relation(ticket_type_event, ticket_types, events);
   entity_relation(ticket_type_providing_products, ticket_types, products);
   entity_link(user_activity_alert_notification_destinations, UserActivityAlertToNotificationDestinations);
   entity_relation(user_activity_alert_user, user_activity_alerts, users);

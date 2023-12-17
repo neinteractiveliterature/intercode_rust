@@ -13,14 +13,14 @@ use intercode_query_builders::sort_input::SortInput;
 use sea_orm::{ColumnTrait, ModelTrait, QueryFilter};
 
 use crate::{
-  objects::{ProductType, StripeAccountType, TicketTypeType},
+  objects::StripeAccountType,
   policies::{CouponPolicy, OrderPolicy, ProductPolicy},
   query_builders::{
     CouponFiltersInput, CouponsQueryBuilder, OrderFiltersInput, OrdersQueryBuilder,
   },
 };
 
-use super::{CouponStoreFields, OrderStoreFields};
+use super::{CouponStoreFields, OrderStoreFields, ProductStoreFields, TicketTypeStoreFields};
 
 model_backed_type!(ConventionStoreFields, conventions::Model);
 
@@ -60,20 +60,13 @@ impl ConventionStoreFields {
       OrderPolicy,
     )
   }
-}
 
-#[Object]
-impl ConventionStoreFields {
   /// Finds a product by ID in this convention. If there is no product with that ID in this
   /// convention, errors out.
-  async fn product(
-    &self,
-    ctx: &Context<'_>,
-    #[graphql(desc = "The ID of the product to find.")] id: ID,
-  ) -> Result<ProductType> {
+  pub async fn product(&self, ctx: &Context<'_>, id: ID) -> Result<ProductStoreFields> {
     let authorization_info = ctx.data::<AuthorizationInfo>()?;
     let query_data = ctx.data::<QueryData>()?;
-    Ok(ProductType::new(
+    Ok(ProductStoreFields::new(
       ProductPolicy::accessible_to(authorization_info, &ReadManageAction::Read)
         .filter(products::Column::Id.eq(LaxId::parse(id)?))
         .one(query_data.db())
@@ -82,15 +75,16 @@ impl ConventionStoreFields {
     ))
   }
 
-  async fn products(
+  pub async fn products(
     &self,
     ctx: &Context<'_>,
-    #[graphql(name = "only_available")] only_available: Option<bool>,
-    #[graphql(name = "only_ticket_providing")] only_ticket_providing: Option<bool>,
-  ) -> Result<Vec<ProductType>> {
+    only_available: Option<bool>,
+    only_ticket_providing: Option<bool>,
+  ) -> Result<Vec<ProductStoreFields>> {
     let loader_result = load_one_by_model_id!(convention_products, ctx, self)?;
-    let all_products: Vec<ProductType> = loader_result_to_many!(loader_result, ProductType);
-    let mut products_iter: Box<dyn Iterator<Item = ProductType>> =
+    let all_products: Vec<ProductStoreFields> =
+      loader_result_to_many!(loader_result, ProductStoreFields);
+    let mut products_iter: Box<dyn Iterator<Item = ProductStoreFields>> =
       Box::new(all_products.into_iter());
 
     if only_available.unwrap_or(false) {
@@ -107,6 +101,14 @@ impl ConventionStoreFields {
     Ok(products_iter.collect())
   }
 
+  pub async fn ticket_types(&self, ctx: &Context<'_>) -> Result<Vec<TicketTypeStoreFields>, Error> {
+    let loader_result = load_one_by_model_id!(convention_ticket_types, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, TicketTypeStoreFields))
+  }
+}
+
+#[Object]
+impl ConventionStoreFields {
   #[graphql(name = "stripe_account")]
   async fn stripe_account(&self, ctx: &Context<'_>) -> Result<Option<StripeAccountType>> {
     if let Some(id) = &self.model.stripe_account_id {
@@ -131,12 +133,6 @@ impl ConventionStoreFields {
   #[graphql(name = "stripe_publishable_key")]
   async fn stripe_publishable_key(&self) -> Option<String> {
     std::env::var("STRIPE_PUBLISHABLE_KEY").ok()
-  }
-
-  #[graphql(name = "ticket_types")]
-  async fn ticket_types(&self, ctx: &Context<'_>) -> Result<Vec<TicketTypeType>, Error> {
-    let loader_result = load_one_by_model_id!(convention_ticket_types, ctx, self)?;
-    Ok(loader_result_to_many!(loader_result, TicketTypeType))
   }
 
   #[graphql(name = "tickets_available_for_purchase")]
