@@ -8,7 +8,7 @@ use crate::{
 
 use super::{
   coupon_type::CouponType, room_type::RoomType, user_activity_alert_type::UserActivityAlertType,
-  CmsContentGroupType,
+  CmsContentGroupType, OrganizationType, RunType,
 };
 use async_graphql::*;
 use intercode_cms::api::partial_objects::ConventionCmsFields;
@@ -60,7 +60,6 @@ impl ConventionGlueFields {
       .map(|res| res.map(StaffPositionType::from_type))
   }
 
-  #[graphql(name = "cms_content_groups")]
   async fn cms_content_groups(&self, ctx: &Context<'_>) -> Result<Vec<CmsContentGroupType>, Error> {
     ConventionCmsFields::from_type(self.clone())
       .cms_content_groups(ctx)
@@ -73,7 +72,6 @@ impl ConventionGlueFields {
       })
   }
 
-  #[graphql(name = "cms_content_group")]
   async fn cms_content_group(
     &self,
     ctx: &Context<'_>,
@@ -238,11 +236,31 @@ impl ConventionGlueFields {
       .map(ModelPaginator::into_type)
   }
 
+  pub async fn organization(&self, ctx: &Context<'_>) -> Result<Option<OrganizationType>> {
+    ConventionConventionsFields::from_type(self.clone())
+      .organization(ctx)
+      .await
+      .map(|opt| opt.map(OrganizationType::from_type))
+  }
+
   pub async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<RoomType>, Error> {
     ConventionEventsFields::from_type(self.clone())
       .rooms(ctx)
       .await
       .map(|rooms| rooms.into_iter().map(RoomType::from_type).collect())
+  }
+
+  /// Finds an active run by ID in this convention. If there is no run with that ID in this
+  /// convention, or the run's event is no longer active, errors out.
+  async fn run(
+    &self,
+    ctx: &Context<'_>,
+    #[graphql(desc = "The ID of the run to find")] id: ID,
+  ) -> Result<RunType> {
+    ConventionEventsFields::from_type(self.clone())
+      .run(ctx, id)
+      .await
+      .map(RunType::from_type)
   }
 
   async fn signup(&self, ctx: &Context<'_>, id: Option<ID>) -> Result<SignupType, Error> {

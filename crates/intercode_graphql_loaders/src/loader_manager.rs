@@ -284,6 +284,7 @@ loader_manager!(
   entity_relation(convention_departments, conventions, departments);
   entity_relation(convention_event_categories, conventions, event_categories);
   entity_relation(convention_notification_templates, conventions, notification_templates);
+  entity_relation(convention_organization, conventions, organizations);
   entity_relation(convention_products, conventions, products);
   entity_relation(convention_rooms, conventions, rooms);
   entity_link(convention_signups, ConventionToSignups);

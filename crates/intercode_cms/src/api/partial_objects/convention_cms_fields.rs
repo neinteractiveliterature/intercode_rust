@@ -46,6 +46,23 @@ impl ConventionCmsFields {
     ID(self.model.id.to_string())
   }
 
+  #[graphql(name = "clickwrap_agreement_html")]
+  async fn clickwrap_agreement_html(&self, ctx: &Context<'_>) -> Result<Option<String>, Error> {
+    let Some(clickwrap_agreement) = self.model.clickwrap_agreement.as_deref() else {
+      return Ok(None);
+    };
+
+    let query_data = ctx.data::<QueryData>()?;
+    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
+    let cms_rendering_context =
+      CmsRenderingContext::new(object!({}), query_data, liquid_renderer.as_ref());
+
+    cms_rendering_context
+      .render_liquid(clickwrap_agreement, None)
+      .await
+      .map(Some)
+  }
+
   async fn cms_files(&self, ctx: &Context<'_>) -> Result<Vec<CmsFileType>, Error> {
     <Self as CmsParentImplementation<conventions::Model>>::cms_files(self, ctx).await
   }

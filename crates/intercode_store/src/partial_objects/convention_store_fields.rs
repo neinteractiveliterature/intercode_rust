@@ -1,17 +1,20 @@
 use std::{str::FromStr, sync::Arc};
 
 use async_graphql::*;
-use intercode_entities::{conventions, coupons, links::ConventionToOrders};
+use intercode_entities::{conventions, coupons, links::ConventionToOrders, products};
 use intercode_graphql_core::{
-  load_one_by_model_id, loader_result_to_many, model_backed_type, ModelPaginator,
+  lax_id::LaxId, load_one_by_model_id, loader_result_to_many, model_backed_type,
+  query_data::QueryData, ModelBackedType, ModelPaginator,
 };
-use intercode_policies::AuthorizedFromQueryBuilder;
+use intercode_policies::{
+  AuthorizationInfo, AuthorizedFromQueryBuilder, EntityPolicy, ReadManageAction,
+};
 use intercode_query_builders::sort_input::SortInput;
-use sea_orm::ModelTrait;
+use sea_orm::{ColumnTrait, ModelTrait, QueryFilter};
 
 use crate::{
   objects::{ProductType, StripeAccountType, TicketTypeType},
-  policies::{CouponPolicy, OrderPolicy},
+  policies::{CouponPolicy, OrderPolicy, ProductPolicy},
   query_builders::{
     CouponFiltersInput, CouponsQueryBuilder, OrderFiltersInput, OrdersQueryBuilder,
   },
@@ -61,9 +64,47 @@ impl ConventionStoreFields {
 
 #[Object]
 impl ConventionStoreFields {
-  async fn products(&self, ctx: &Context<'_>) -> Result<Vec<ProductType>> {
+  /// Finds a product by ID in this convention. If there is no product with that ID in this
+  /// convention, errors out.
+  async fn product(
+    &self,
+    ctx: &Context<'_>,
+    #[graphql(desc = "The ID of the product to find.")] id: ID,
+  ) -> Result<ProductType> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    let query_data = ctx.data::<QueryData>()?;
+    Ok(ProductType::new(
+      ProductPolicy::accessible_to(authorization_info, &ReadManageAction::Read)
+        .filter(products::Column::Id.eq(LaxId::parse(id)?))
+        .one(query_data.db())
+        .await?
+        .ok_or_else(|| Error::new("Product not found"))?,
+    ))
+  }
+
+  async fn products(
+    &self,
+    ctx: &Context<'_>,
+    #[graphql(name = "only_available")] only_available: Option<bool>,
+    #[graphql(name = "only_ticket_providing")] only_ticket_providing: Option<bool>,
+  ) -> Result<Vec<ProductType>> {
     let loader_result = load_one_by_model_id!(convention_products, ctx, self)?;
-    Ok(loader_result_to_many!(loader_result, ProductType))
+    let all_products: Vec<ProductType> = loader_result_to_many!(loader_result, ProductType);
+    let mut products_iter: Box<dyn Iterator<Item = ProductType>> =
+      Box::new(all_products.into_iter());
+
+    if only_available.unwrap_or(false) {
+      products_iter =
+        Box::new(products_iter.filter(|product| product.get_model().available.unwrap_or(false)));
+    }
+
+    if only_ticket_providing.unwrap_or(false) {
+      products_iter = Box::new(
+        products_iter.filter(|product| product.get_model().provides_ticket_type_id.is_some()),
+      );
+    }
+
+    Ok(products_iter.collect())
   }
 
   #[graphql(name = "stripe_account")]

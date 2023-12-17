@@ -1,7 +1,7 @@
 use async_graphql::*;
 use futures::future::try_join_all;
 use intercode_entities::{
-  conventions, event_proposals, events, model_ext::time_bounds::TimeBoundsSelectExt,
+  conventions, event_proposals, events, model_ext::time_bounds::TimeBoundsSelectExt, runs,
 };
 use intercode_graphql_core::{
   lax_id::LaxId, load_one_by_model_id, loader_result_to_many, model_backed_type,
@@ -14,7 +14,7 @@ use intercode_policies::{
   AuthorizationInfo, AuthorizedFromQueryBuilder, Policy,
 };
 use intercode_query_builders::{sort_input::SortInput, QueryBuilder};
-use sea_orm::{ColumnTrait, DbErr, EntityTrait, ModelTrait, QueryFilter};
+use sea_orm::{ColumnTrait, DbErr, EntityTrait, ModelTrait, QueryFilter, QuerySelect};
 
 use crate::query_builders::{
   EventFiltersInput, EventProposalFiltersInput, EventProposalsQueryBuilder, EventsQueryBuilder,
@@ -22,6 +22,7 @@ use crate::query_builders::{
 
 use super::{
   EventCategoryEventsFields, EventEventsFields, EventProposalEventsFields, RoomEventsFields,
+  RunEventsFields,
 };
 
 model_backed_type!(ConventionEventsFields, conventions::Model);
@@ -208,6 +209,31 @@ impl ConventionEventsFields {
   pub async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<RoomEventsFields>, Error> {
     let loader_result = load_one_by_model_id!(convention_rooms, ctx, self)?;
     Ok(loader_result_to_many!(loader_result, RoomEventsFields))
+  }
+
+  /// Finds an active run by ID in this convention. If there is no run with that ID in this
+  /// convention, or the run's event is no longer active, errors out.
+  pub async fn run(&self, ctx: &Context<'_>, id: ID) -> Result<RunEventsFields> {
+    let query_data = ctx.data::<QueryData>()?;
+    Ok(RunEventsFields::new(
+      runs::Entity::find()
+        .filter(
+          runs::Column::EventId.in_subquery(
+            QuerySelect::query(
+              &mut events::Entity::find()
+                .filter(events::Column::ConventionId.eq(self.model.id))
+                .filter(events::Column::Status.eq("active"))
+                .select_only()
+                .column(events::Column::Id),
+            )
+            .take(),
+          ),
+        )
+        .filter(runs::Column::Id.eq(LaxId::parse(id)?))
+        .one(query_data.db())
+        .await?
+        .ok_or_else(|| Error::new("Event not found"))?,
+    ))
   }
 }
 

@@ -5,7 +5,7 @@ use chrono::Utc;
 use intercode_entities::conventions;
 use intercode_graphql_core::{
   enums::{EmailMode, ShowSchedule, SiteMode, TicketMode, TimezoneMode},
-  load_one_by_model_id, loader_result_to_many, model_backed_type,
+  load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single, model_backed_type,
   objects::ActiveStorageAttachmentType,
   scalars::{DateScalar, JsonScalar},
   ModelBackedType,
@@ -15,7 +15,7 @@ use sea_orm::prelude::DateTimeUtc;
 
 use super::{
   user_activity_alert_conventions_fields::UserActivityAlertConventionsFields,
-  DepartmentConventionsFields,
+  DepartmentConventionsFields, OrganizationConventionsFields,
 };
 
 model_backed_type!(ConventionConventionsFields, conventions::Model);
@@ -26,6 +26,17 @@ impl ConventionConventionsFields {
     Ok(loader_result_to_many!(
       loader_result,
       DepartmentConventionsFields
+    ))
+  }
+
+  pub async fn organization(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Option<OrganizationConventionsFields>> {
+    let loader_result = load_one_by_model_id!(convention_organization, ctx, self)?;
+    Ok(loader_result_to_optional_single!(
+      loader_result,
+      OrganizationConventionsFields
     ))
   }
 
@@ -54,6 +65,11 @@ impl ConventionConventionsFields {
   #[graphql(name = "clickwrap_agreement")]
   async fn clickwrap_agreement(&self) -> Option<&str> {
     self.model.clickwrap_agreement.as_deref()
+  }
+
+  #[graphql(name = "created_at")]
+  async fn created_at(&self) -> Result<Option<DateScalar>> {
+    self.model.created_at.map(DateScalar::try_from).transpose()
   }
 
   async fn domain(&self) -> &str {
@@ -203,5 +219,10 @@ impl ConventionConventionsFields {
   #[graphql(name = "timezone_name")]
   async fn timezone_name(&self) -> Option<&str> {
     self.model.timezone_name.as_deref()
+  }
+
+  #[graphql(name = "updated_at")]
+  async fn updated_at(&self) -> Result<Option<DateScalar>> {
+    self.model.updated_at.map(DateScalar::try_from).transpose()
   }
 }

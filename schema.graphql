@@ -170,6 +170,7 @@ type ContactEmail {
 
 type Convention implements CmsParent {
 	id: ID!
+	clickwrap_agreement_html: String
 	cmsFiles: [CmsFile!]!
 	cmsFile(id: ID!): CmsFile!
 	cmsGraphqlQueries: [CmsGraphqlQuery!]!
@@ -192,6 +193,7 @@ type Convention implements CmsParent {
 	name: String!
 	canceled: Boolean!
 	clickwrap_agreement: String
+	created_at: Date
 	domain: String!
 	email_from: String!
 	email_mode: EmailMode!
@@ -212,6 +214,7 @@ type Convention implements CmsParent {
 	ticketNamePlural: String!
 	timezone_mode: TimezoneMode!
 	timezone_name: String
+	updated_at: Date
 	accepting_proposals: Boolean!
 	"""
 	Given a Liquid text string and a notification event, renders the Liquid to HTML using the
@@ -225,8 +228,8 @@ type Convention implements CmsParent {
 	): String!
 	bio_eligible_user_con_profiles: [UserConProfile!]!
 	catch_all_staff_position: StaffPosition
-	cms_content_groups: [CmsContentGroup!]!
-	cms_content_group(id: ID!): CmsContentGroup!
+	cmsContentGroups: [CmsContentGroup!]!
+	cmsContentGroup(id: ID!): CmsContentGroup!
 	coupons_paginated(page: Int, per_page: Int, filters: CouponFiltersInput, sort: [SortInput!]): CouponsPagination!
 	departments: [Department!]!
 	"""
@@ -253,7 +256,18 @@ type Convention implements CmsParent {
 	mailing_lists: MailingLists!
 	my_profile: UserConProfile
 	orders_paginated(page: Int, per_page: Int, filters: OrderFiltersInput, sort: [SortInput!]): OrdersPagination!
+	organization: Organization
 	rooms: [Room!]!
+	"""
+	Finds an active run by ID in this convention. If there is no run with that ID in this
+	convention, or the run's event is no longer active, errors out.
+	"""
+	run(
+		"""
+		The ID of the run to find
+		"""
+		id: ID!
+	): Run!
 	signup(id: ID): Signup!
 	signup_requests_paginated(page: Int, per_page: Int, filters: SignupRequestFiltersInput, sort: [SortInput!]): SignupRequestsPagination!
 	staff_position(id: ID): StaffPosition!
@@ -263,7 +277,17 @@ type Convention implements CmsParent {
 	maximum_event_signups: ScheduledValue
 	signup_mode: SignupMode!
 	signup_requests_open: Boolean!
-	products: [Product!]!
+	"""
+	Finds a product by ID in this convention. If there is no product with that ID in this
+	convention, errors out.
+	"""
+	product(
+		"""
+		The ID of the product to find.
+		"""
+		id: ID!
+	): Product!
+	products(only_available: Boolean, only_ticket_providing: Boolean): [Product!]!
 	stripe_account: StripeAccount
 	stripe_account_id: String
 	stripe_account_ready_to_charge: Boolean!
