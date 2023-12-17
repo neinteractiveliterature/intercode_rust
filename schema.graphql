@@ -255,6 +255,11 @@ type Convention implements CmsParent {
 	forms: [Form!]!
 	mailing_lists: MailingLists!
 	my_profile: UserConProfile
+	"""
+	Returns all signups for the current user within this convention. If no user is signed in,
+	returns an empty array.
+	"""
+	my_signups: [Signup!]!
 	orders_paginated(page: Int, per_page: Int, filters: OrderFiltersInput, sort: [SortInput!]): OrdersPagination!
 	organization: Organization
 	rooms: [Room!]!
@@ -272,8 +277,30 @@ type Convention implements CmsParent {
 	signup_requests_paginated(page: Int, per_page: Int, filters: SignupRequestFiltersInput, sort: [SortInput!]): SignupRequestsPagination!
 	staff_position(id: ID): StaffPosition!
 	staff_positions: [StaffPosition!]!
-	user_con_profile_form: Form!
+	user_activity_alert(id: ID!): UserActivityAlert!
 	user_activity_alerts: [UserActivityAlert!]!
+	"""
+	Finds a UserConProfile by ID in the convention associated with this convention. If there is
+	no UserConProfile with that ID in this convention, errors out.
+	"""
+	user_con_profile(
+		"""
+		The ID of the UserConProfile to find.
+		"""
+		id: ID!
+	): UserConProfile!
+	"""
+	Finds a UserConProfile by user ID in the convention associated with this convention. If
+	there is no UserConProfile with that user ID in this convention, errors out.
+	"""
+	user_con_profile_by_user_id(
+		"""
+		The user ID of the UserConProfile to find.
+		"""
+		userId: ID!
+	): UserConProfile!
+	user_con_profile_form: Form!
+	user_con_profiles_paginated(page: Int, per_page: Int, filters: UserConProfileFiltersInput, sort: [SortInput!]): UserConProfilesPagination!
 	maximum_event_signups: ScheduledValue
 	signup_mode: SignupMode!
 	signup_requests_open: Boolean!
@@ -410,8 +437,10 @@ type Event {
 	registration_policy: RegistrationPolicy
 	short_blurb: String
 	short_blurb_html: String!
+	slots_limited: Boolean!
 	status: String!
 	title: String!
+	total_slots: Int!
 	url: String
 	current_user_form_item_viewer_role: FormItemRole!
 	current_user_form_item_writer_role: FormItemRole!
@@ -420,10 +449,12 @@ type Event {
 }
 
 type EventCategory {
+	convention: Convention!
 	department: Department
 	event_form: Form!
 	event_proposal_form: Form
 	events_paginated(page: Int, per_page: Int, filters: EventFiltersInput, sort: [SortInput!]): EventsPagination!
+	proposable: Boolean!
 	id: ID!
 	can_provide_tickets: Boolean!
 	default_color: String!
@@ -474,11 +505,14 @@ input EventFiltersInput {
 }
 
 type EventProposal {
+	convention: Convention!
 	event: Event
 	event_category: EventCategory!
+	form: Form!
 	owner: UserConProfile!
 	id: ID!
 	admin_notes: String
+	created_at: Date!
 	images: [ActiveStorageAttachment!]!
 	length_seconds: Int
 	registration_policy: RegistrationPolicy!
@@ -542,16 +576,17 @@ type EventsPagination implements PaginationInterface {
 
 type Form {
 	event_categories: [EventCategory!]!
+	form_sections: [FormSection!]!
 	proposal_event_categories: [EventCategory!]!
 	user_con_profile_conventions: [Convention!]!
 	id: ID!
 	export_json: Json!
-	form_sections: [FormSection!]!
 	form_type: FormType!
 	title: String!
 }
 
 type FormItem {
+	form_section: FormSection!
 	id: ID!
 	admin_description: String
 	default_value: Json
@@ -580,8 +615,9 @@ enum FormItemRole {
 }
 
 type FormSection {
-	id: ID!
+	form: Form!
 	form_items: [FormItem!]!
+	id: ID!
 	position: Int!
 	title: String
 }
@@ -622,6 +658,7 @@ type MailingListsWaitlistsResult {
 }
 
 type MaximumEventProvidedTicketsOverride {
+	event: Event!
 	id: ID!
 	override_value: Int!
 	ticket_type: TicketType!
@@ -1304,6 +1341,41 @@ type UserConProfile {
 	form_response_attrs_json(itemIdentifiers: [String!]): Json!
 	form_response_attrs_json_with_rendered_markdown(itemIdentifiers: [String!]): Json!
 	order_summary: String!
+}
+
+input UserConProfileFiltersInput {
+	id: ID
+	attending: Boolean
+	email: String
+	first_name: String
+	is_team_member: Boolean
+	last_name: String
+	payment_amount: Float
+	privileges: String
+	name: String
+	event_title: [ID!]
+	ticket_type: [ID!]
+	userId: ID
+}
+
+type UserConProfilesPagination {
+	"""
+	The number of the page currently being returned in this query
+	"""
+	current_page: Int!
+	entries: [UserConProfile!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
+	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
+	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
+	total_pages: Int!
 }
 
 input UserFiltersInput {

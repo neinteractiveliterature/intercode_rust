@@ -1,5 +1,5 @@
 use async_graphql::{Context, Error, Object, Result, ID};
-use intercode_entities::{departments, event_categories, events, forms};
+use intercode_entities::{conventions, departments, event_categories, events, forms};
 use intercode_graphql_core::{
   enums::SchedulingUi, load_one_by_model_id, model_backed_type, query_data::QueryData,
   ModelPaginator,
@@ -20,6 +20,11 @@ use super::EventEventsFields;
 model_backed_type!(EventCategoryEventsFields, event_categories::Model);
 
 impl EventCategoryEventsFields {
+  pub async fn convention(&self, ctx: &Context<'_>) -> Result<conventions::Model, Error> {
+    let loader_result = load_one_by_model_id!(event_category_convention, ctx, self)?;
+    Ok(loader_result.expect_one()?.clone())
+  }
+
   pub async fn department(&self, ctx: &Context<'_>) -> Result<Option<departments::Model>, Error> {
     let loader_result = load_one_by_model_id!(event_category_department, ctx, self)?;
     Ok(loader_result.try_one().cloned())

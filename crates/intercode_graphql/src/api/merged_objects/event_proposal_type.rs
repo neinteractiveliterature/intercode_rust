@@ -10,11 +10,18 @@ use intercode_policies::{
 
 use crate::merged_model_backed_type;
 
-use super::{EventCategoryType, EventType, UserConProfileType};
+use super::{ConventionType, EventCategoryType, EventType, FormType, UserConProfileType};
 model_backed_type!(EventProposalGlueFields, event_proposals::Model);
 
 #[Object(guard = "EventProposalPolicy::model_guard(EventProposalAction::Read, self)")]
 impl EventProposalGlueFields {
+  pub async fn convention(&self, ctx: &Context<'_>) -> Result<ConventionType> {
+    EventProposalEventsFields::from_type(self.clone())
+      .convention(ctx)
+      .await
+      .map(ConventionType::from_type)
+  }
+
   #[graphql(name = "event")]
   async fn event(&self, ctx: &Context<'_>) -> Result<Option<EventType>> {
     EventProposalEventsFields::from_type(self.clone())
@@ -30,6 +37,14 @@ impl EventProposalGlueFields {
       .await
       .map(EventCategoryType::from_type)
   }
+
+  async fn form(&self, ctx: &Context<'_>) -> Result<FormType, Error> {
+    EventProposalFormsFields::from_type(self.clone())
+      .form(ctx)
+      .await
+      .map(FormType::from_type)
+  }
+
   async fn owner(&self, ctx: &Context<'_>) -> Result<UserConProfileType> {
     EventProposalEventsFields::from_type(self.clone())
       .owner(ctx)

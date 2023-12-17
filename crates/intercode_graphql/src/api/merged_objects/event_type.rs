@@ -11,11 +11,12 @@ use intercode_policies::{
   policies::{EventAction, EventPolicy},
   ModelBackedTypeGuardablePolicy,
 };
-use intercode_store::{
-  objects::MaximumEventProvidedTicketsOverrideType, partial_objects::EventStoreFields,
-};
+use intercode_store::partial_objects::EventStoreFields;
 
-use super::{run_type::RunType, ConventionType, EventCategoryType, TeamMemberType};
+use super::{
+  run_type::RunType, ConventionType, EventCategoryType, MaximumEventProvidedTicketsOverrideType,
+  TeamMemberType,
+};
 
 model_backed_type!(EventGlueFields, events::Model);
 

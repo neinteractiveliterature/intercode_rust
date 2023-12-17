@@ -32,7 +32,9 @@ use intercode_store::{
   partial_objects::ConventionStoreFields,
   query_builders::{CouponFiltersInput, OrderFiltersInput},
 };
-use intercode_users::partial_objects::ConventionUsersFields;
+use intercode_users::{
+  partial_objects::ConventionUsersFields, query_builders::UserConProfileFiltersInput,
+};
 
 model_backed_type!(ConventionGlueFields, conventions::Model);
 
@@ -221,6 +223,16 @@ impl ConventionGlueFields {
       .map(|res| res.map(UserConProfileType::from_type))
   }
 
+  /// Returns all signups for the current user within this convention. If no user is signed in,
+  /// returns an empty array.
+  #[graphql(name = "my_signups")]
+  pub async fn my_signups(&self, ctx: &Context<'_>) -> Result<Vec<SignupType>, Error> {
+    ConventionSignupsFields::from_type(self.clone())
+      .my_signups(ctx)
+      .await
+      .map(|res| res.into_iter().map(SignupType::from_type).collect())
+  }
+
   #[graphql(name = "orders_paginated")]
   pub async fn orders_paginated(
     &self,
@@ -305,12 +317,16 @@ impl ConventionGlueFields {
       .map(|res| res.into_iter().map(StaffPositionType::from_type).collect())
   }
 
-  #[graphql(name = "user_con_profile_form")]
-  pub async fn user_con_profile_form(&self, ctx: &Context<'_>) -> Result<FormType> {
-    ConventionFormsFields::from_type(self.clone())
-      .user_con_profile_form(ctx)
+  #[graphql(name = "user_activity_alert")]
+  pub async fn user_activity_alert(
+    &self,
+    ctx: &Context<'_>,
+    id: ID,
+  ) -> Result<UserActivityAlertType> {
+    ConventionConventionsFields::from_type(self.clone())
+      .user_activity_alert(ctx, id)
       .await
-      .map(FormType::from_type)
+      .map(UserActivityAlertType::from_type)
   }
 
   #[graphql(name = "user_activity_alerts")]
@@ -324,6 +340,57 @@ impl ConventionGlueFields {
           .map(UserActivityAlertType::from_type)
           .collect()
       })
+  }
+
+  /// Finds a UserConProfile by ID in the convention associated with this convention. If there is
+  /// no UserConProfile with that ID in this convention, errors out.
+  #[graphql(name = "user_con_profile")]
+  pub async fn user_con_profile(
+    &self,
+    ctx: &Context<'_>,
+    #[graphql(desc = "The ID of the UserConProfile to find.")] id: ID,
+  ) -> Result<UserConProfileType, Error> {
+    ConventionUsersFields::from_type(self.clone())
+      .user_con_profile(ctx, id)
+      .await
+      .map(UserConProfileType::from_type)
+  }
+
+  /// Finds a UserConProfile by user ID in the convention associated with this convention. If
+  /// there is no UserConProfile with that user ID in this convention, errors out.
+  #[graphql(name = "user_con_profile_by_user_id")]
+  pub async fn user_con_profile_by_user_id(
+    &self,
+    ctx: &Context<'_>,
+    #[graphql(desc = "The user ID of the UserConProfile to find.")] user_id: ID,
+  ) -> Result<UserConProfileType, Error> {
+    ConventionUsersFields::from_type(self.clone())
+      .user_con_profile_by_user_id(ctx, user_id)
+      .await
+      .map(UserConProfileType::from_type)
+  }
+
+  #[graphql(name = "user_con_profile_form")]
+  pub async fn user_con_profile_form(&self, ctx: &Context<'_>) -> Result<FormType> {
+    ConventionFormsFields::from_type(self.clone())
+      .user_con_profile_form(ctx)
+      .await
+      .map(FormType::from_type)
+  }
+
+  #[graphql(name = "user_con_profiles_paginated")]
+  pub async fn user_con_profiles_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
+    filters: Option<UserConProfileFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<ModelPaginator<UserConProfileType>, Error> {
+    ConventionUsersFields::from_type(self.clone())
+      .user_con_profiles_paginated(ctx, page, per_page, filters, sort)
+      .await
+      .map(|paginator| paginator.into_type())
   }
 }
 

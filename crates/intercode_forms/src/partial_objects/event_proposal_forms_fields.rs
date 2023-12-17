@@ -17,7 +17,15 @@ use crate::{
   form_response_implementation::FormResponseImplementation, policy_ext::FormResponsePolicy,
 };
 
+use super::FormFormsFields;
+
 model_backed_type!(EventProposalFormsFields, event_proposals::Model);
+
+impl EventProposalFormsFields {
+  pub async fn form(&self, ctx: &Context<'_>) -> Result<FormFormsFields, Error> {
+    self.get_form(ctx).await.map(FormFormsFields::new)
+  }
+}
 
 #[Object(guard = "EventProposalPolicy::model_guard(EventProposalAction::Read, self)")]
 impl EventProposalFormsFields {

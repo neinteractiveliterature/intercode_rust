@@ -322,6 +322,8 @@ loader_manager!(
   entity_relation(form_form_sections, forms, form_sections);
   entity_link(form_proposal_event_categories, FormToProposalEventCategories);
   entity_link(form_user_con_profile_conventions, FormToUserConProfileConventions);
+  entity_relation(form_item_form_section, form_items, form_sections);
+  entity_relation(form_section_form, form_sections, forms);
   entity_relation(form_section_form_items, form_sections, form_items);
   entity_relation(maximum_event_provided_tickets_override_event, maximum_event_provided_tickets_overrides, events);
   entity_relation(

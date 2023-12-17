@@ -24,6 +24,25 @@ use super::{SignupRequestSignupsFields, SignupSignupsFields};
 model_backed_type!(ConventionSignupsFields, conventions::Model);
 
 impl ConventionSignupsFields {
+  pub async fn my_signups(&self, ctx: &Context<'_>) -> Result<Vec<SignupSignupsFields>, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+    let Some(user_con_profile) = query_data.user_con_profile() else {
+      return Ok(vec![]);
+    };
+
+    Ok(
+      self
+        .model
+        .find_linked(ConventionToSignups)
+        .filter(signups::Column::UserConProfileId.eq(user_con_profile.id))
+        .all(query_data.db())
+        .await?
+        .into_iter()
+        .map(SignupSignupsFields::new)
+        .collect(),
+    )
+  }
+
   pub async fn signup(
     &self,
     ctx: &Context<'_>,

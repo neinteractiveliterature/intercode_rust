@@ -2,16 +2,18 @@ use std::sync::Arc;
 
 use async_graphql::*;
 use chrono::Utc;
-use intercode_entities::conventions;
+use intercode_entities::{conventions, user_activity_alerts};
 use intercode_graphql_core::{
   enums::{EmailMode, ShowSchedule, SiteMode, TicketMode, TimezoneMode},
+  lax_id::LaxId,
   load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single, model_backed_type,
   objects::ActiveStorageAttachmentType,
+  query_data::QueryData,
   scalars::{DateScalar, JsonScalar},
   ModelBackedType,
 };
 use intercode_graphql_loaders::LoaderManager;
-use sea_orm::prelude::DateTimeUtc;
+use sea_orm::{prelude::DateTimeUtc, ColumnTrait, ModelTrait, QueryFilter};
 
 use super::{
   user_activity_alert_conventions_fields::UserActivityAlertConventionsFields,
@@ -37,6 +39,23 @@ impl ConventionConventionsFields {
     Ok(loader_result_to_optional_single!(
       loader_result,
       OrganizationConventionsFields
+    ))
+  }
+
+  pub async fn user_activity_alert(
+    &self,
+    ctx: &Context<'_>,
+    id: ID,
+  ) -> Result<UserActivityAlertConventionsFields> {
+    let query_data = ctx.data::<QueryData>()?;
+    Ok(UserActivityAlertConventionsFields::new(
+      self
+        .model
+        .find_related(user_activity_alerts::Entity)
+        .filter(user_activity_alerts::Column::Id.eq(LaxId::parse(id)?))
+        .one(query_data.db())
+        .await?
+        .ok_or_else(|| Error::new("UserActivityAlert not found"))?,
     ))
   }
 

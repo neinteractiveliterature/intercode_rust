@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_graphql::*;
 use intercode_entities::{
-  conventions, event_categories, events, forms, tickets, RegistrationPolicy,
+  conventions, event_categories, events, forms, tickets, RegistrationPolicy, SlotCount,
 };
 use intercode_graphql_core::{
   lax_id::LaxId, load_one_by_id, load_one_by_model_id, loader_result_to_many, model_backed_type,
@@ -233,12 +233,35 @@ impl EventEventsFields {
     ))
   }
 
+  #[graphql(name = "slots_limited")]
+  async fn slots_limited(&self) -> Result<bool> {
+    let Some(ref json) = self.model.registration_policy else {
+      return Ok(false);
+    };
+
+    let registration_policy: RegistrationPolicy = serde_json::from_value(json.clone())?;
+    Ok(registration_policy.slots_limited())
+  }
+
   async fn status(&self) -> &str {
     &self.model.status
   }
 
   async fn title(&self) -> &String {
     &self.model.title
+  }
+
+  #[graphql(name = "total_slots")]
+  async fn total_slots(&self) -> Result<usize> {
+    let Some(ref json) = self.model.registration_policy else {
+      return Ok(0);
+    };
+
+    let registration_policy: RegistrationPolicy = serde_json::from_value(json.clone())?;
+    match registration_policy.total_slots() {
+      SlotCount::Unlimited => Ok(0),
+      SlotCount::Limited(count) => Ok(count),
+    }
   }
 
   async fn url(&self) -> Option<&str> {

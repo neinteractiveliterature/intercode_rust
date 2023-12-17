@@ -9,9 +9,22 @@ use intercode_graphql_core::{
 use intercode_graphql_loaders::LoaderManager;
 use seawater::loaders::ExpectModels;
 
-use crate::objects::FormSectionType;
+use super::FormSectionFormsFields;
 
 model_backed_type!(FormFormsFields, forms::Model);
+
+impl FormFormsFields {
+  pub async fn form_sections(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<FormSectionFormsFields>, Error> {
+    let loader_result = load_one_by_model_id!(form_form_sections, ctx, self)?;
+    Ok(loader_result_to_many!(
+      loader_result,
+      FormSectionFormsFields
+    ))
+  }
+}
 
 #[Object]
 impl FormFormsFields {
@@ -39,12 +52,6 @@ impl FormFormsFields {
     );
     let json = serde_json::to_value(export)?;
     Ok(JsonScalar(json))
-  }
-
-  #[graphql(name = "form_sections")]
-  async fn form_sections(&self, ctx: &Context<'_>) -> Result<Vec<FormSectionType>, Error> {
-    let loader_result = load_one_by_model_id!(form_form_sections, ctx, self)?;
-    Ok(loader_result_to_many!(loader_result, FormSectionType))
   }
 
   #[graphql(name = "form_type")]

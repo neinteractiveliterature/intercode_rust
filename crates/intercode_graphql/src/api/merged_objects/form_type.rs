@@ -7,7 +7,7 @@ use intercode_graphql_core::{model_backed_type, ModelBackedType};
 
 use crate::merged_model_backed_type;
 
-use super::{ConventionType, EventCategoryType};
+use super::{ConventionType, EventCategoryType, FormSectionType};
 
 model_backed_type!(FormGlueFields, forms::Model);
 
@@ -19,6 +19,14 @@ impl FormGlueFields {
       .event_categories(ctx)
       .await
       .map(|res| res.into_iter().map(EventCategoryType::from_type).collect())
+  }
+
+  #[graphql(name = "form_sections")]
+  pub async fn form_sections(&self, ctx: &Context<'_>) -> Result<Vec<FormSectionType>, Error> {
+    FormFormsFields::from_type(self.clone())
+      .form_sections(ctx)
+      .await
+      .map(|res| res.into_iter().map(FormSectionType::from_type).collect())
   }
 
   #[graphql(name = "proposal_event_categories")]

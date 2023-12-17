@@ -133,6 +133,28 @@ impl ConventionUsersFields {
       .map(UserConProfileUsersFields::new)
   }
 
+  pub async fn user_con_profile_by_user_id(
+    &self,
+    ctx: &Context<'_>,
+    user_id: ID,
+  ) -> Result<UserConProfileUsersFields, Error> {
+    let db = ctx.data::<QueryData>()?.db();
+
+    self
+      .model
+      .find_related(user_con_profiles::Entity)
+      .filter(user_con_profiles::Column::UserId.eq(user_id.parse::<u64>()?))
+      .one(db.as_ref())
+      .await?
+      .ok_or_else(|| {
+        Error::new(format!(
+          "No user con profile with ID {} in convention",
+          user_id.as_str()
+        ))
+      })
+      .map(UserConProfileUsersFields::new)
+  }
+
   pub async fn user_con_profiles_paginated(
     &self,
     ctx: &Context<'_>,
