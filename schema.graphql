@@ -135,6 +135,8 @@ interface CmsParent {
 	cmsVariables: [CmsVariable!]!
 	defaultLayout: CmsLayout!
 	effectiveCmsLayout(path: String!): CmsLayout!
+	host: String!
+	liquidAssigns: [LiquidAssign!]!
 	previewLiquid(content: String!): String!
 	previewMarkdown(markdown: String!, eventId: ID, eventProposalId: ID): String!
 	rootPage: Page!
@@ -184,6 +186,7 @@ type Convention implements CmsParent {
 	cmsVariables: [CmsVariable!]!
 	defaultLayout: CmsLayout!
 	effectiveCmsLayout(path: String!): CmsLayout!
+	liquidAssigns: [LiquidAssign!]!
 	notification_templates: [NotificationTemplate!]!
 	rootPage: Page!
 	typeaheadSearchCmsContent(name: String): [CmsContent!]!
@@ -261,6 +264,12 @@ type Convention implements CmsParent {
 	"""
 	my_signups: [Signup!]!
 	orders_paginated(page: Int, per_page: Int, filters: OrderFiltersInput, sort: [SortInput!]): OrdersPagination!
+	"""
+	Finds a product by ID in this convention. If there is no product with that ID in this
+	convention, errors out.
+	"""
+	product(id: ID!): Product!
+	products(only_available: Boolean, only_ticket_providing: Boolean): [Product!]!
 	organization: Organization
 	rooms: [Room!]!
 	"""
@@ -277,6 +286,7 @@ type Convention implements CmsParent {
 	signup_requests_paginated(page: Int, per_page: Int, filters: SignupRequestFiltersInput, sort: [SortInput!]): SignupRequestsPagination!
 	staff_position(id: ID): StaffPosition!
 	staff_positions: [StaffPosition!]!
+	ticket_types: [TicketType!]!
 	user_activity_alert(id: ID!): UserActivityAlert!
 	user_activity_alerts: [UserActivityAlert!]!
 	"""
@@ -632,6 +642,12 @@ scalar JSON
 
 scalar Json
 
+type LiquidAssign {
+	name: String!
+	drop_class_name: String!
+	cms_variable_value: JSON
+}
+
 type MailingLists {
 	event_proposers: MailingListsResult!
 	team_members: MailingListsResult!
@@ -654,6 +670,7 @@ type MailingListsWaitlistsResult {
 
 type MaximumEventProvidedTicketsOverride {
 	event: Event!
+	ticket_type: TicketType!
 	id: ID!
 	override_value: Int!
 }
@@ -990,6 +1007,8 @@ type RootSite implements CmsParent {
 	cmsVariables: [CmsVariable!]!
 	defaultLayout: CmsLayout!
 	effectiveCmsLayout(path: String!): CmsLayout!
+	host: String!
+	liquidAssigns: [LiquidAssign!]!
 	previewLiquid(content: String!): String!
 	previewMarkdown(markdown: String!, eventId: ID, eventProposalId: ID): String!
 	rootPage: Page!
@@ -1299,6 +1318,7 @@ type User {
 	name: String!
 	name_inverted: String!
 	privileges: [String!]!
+	event_proposals: [EventProposal!]!
 	user_con_profiles: [UserConProfile!]!
 }
 
@@ -1308,6 +1328,7 @@ type UserActivityAlert {
 	partial_name: String
 	trigger_on_ticket_create: Boolean!
 	trigger_on_user_con_profile_create: Boolean!
+	convention: Convention!
 	notification_destinations: [NotificationDestination!]!
 	user: User
 }
@@ -1316,16 +1337,21 @@ type UserConProfile {
 	ability: Ability!
 	convention: Convention!
 	current_pending_order: Order
+	orders: [Order!]!
 	signups: [Signup!]!
+	signup_requests: [SignupRequest!]!
 	staff_positions: [StaffPosition!]!
 	team_members: [TeamMember!]!
 	ticket: Ticket
+	user: User!
 	id: ID!
 	accepted_clickwrap_agreement: Boolean!
 	address: String
+	bio: String
 	bio_html: String
 	bio_name: String!
 	birth_date: Date
+	can_have_bio: Boolean!
 	city: String
 	country: String
 	email: String!
@@ -1339,6 +1365,7 @@ type UserConProfile {
 	name_inverted: String!
 	name_without_nickname: String!
 	nickname: String
+	show_nickname_in_bio: Boolean!
 	site_admin: Boolean!
 	state: String
 	user_id: ID!
@@ -1347,6 +1374,7 @@ type UserConProfile {
 	current_user_form_item_writer_role: FormItemRole!
 	form_response_attrs_json(itemIdentifiers: [String!]): Json!
 	form_response_attrs_json_with_rendered_markdown(itemIdentifiers: [String!]): Json!
+	can_override_maximum_event_provided_tickets: Boolean!
 	order_summary: String!
 }
 
@@ -1365,7 +1393,7 @@ input UserConProfileFiltersInput {
 	userId: ID
 }
 
-type UserConProfilesPagination {
+type UserConProfilesPagination implements PaginationInterface {
 	"""
 	The number of the page currently being returned in this query
 	"""

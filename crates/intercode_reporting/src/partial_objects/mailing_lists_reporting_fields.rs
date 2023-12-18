@@ -74,10 +74,10 @@ impl MailingListsResult {
 
 model_backed_type!(MailingListsReportingFields, conventions::Model);
 
-pub async fn waitlists(
+pub async fn waitlists<T: From<MailingListsWaitlistsResult>>(
   model: &conventions::Model,
   ctx: &Context<'_>,
-) -> Result<Vec<MailingListsWaitlistsResult>> {
+) -> Result<Vec<T>> {
   let db = ctx.data::<QueryData>()?.db();
   let signups = model
     .find_linked(ConventionToSignups)
@@ -137,7 +137,7 @@ pub async fn waitlists(
     .collect::<Vec<_>>();
 
   results.sort_by_key(|result| (result.run.starts_at, result.run.id));
-  Ok(results)
+  Ok(results.into_iter().map(T::from).collect())
 }
 
 #[Object]

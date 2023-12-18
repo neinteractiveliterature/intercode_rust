@@ -1,24 +1,33 @@
 use std::sync::Arc;
 
 use async_graphql::*;
+use axum::async_trait;
 use intercode_entities::{
-  conventions, signups, staff_positions, team_members, tickets, user_con_profiles, UserNames,
+  conventions, signup_requests, signups, staff_positions, team_members, tickets, user_con_profiles,
+  users, UserNames,
 };
 use intercode_graphql_core::query_data::QueryData;
 use intercode_graphql_core::scalars::DateScalar;
-use intercode_graphql_core::{load_one_by_model_id, model_backed_type};
+use intercode_graphql_core::{
+  load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single,
+  loader_result_to_required_single, model_backed_type, ModelBackedType,
+};
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::policies::{UserConProfileAction, UserConProfilePolicy};
 use intercode_policies::{AuthorizationInfo, ModelBackedTypeGuardablePolicy};
 use pulldown_cmark::{html, Options, Parser};
-use seawater::loaders::{ExpectModel, ExpectModels};
+use seawater::loaders::ExpectModel;
 
 use super::ability_users_fields::AbilityUsersFields;
 
 model_backed_type!(UserConProfileUsersFields, user_con_profiles::Model);
 
-impl UserConProfileUsersFields {
-  pub async fn ability(&self, ctx: &Context<'_>) -> Result<AbilityUsersFields> {
+#[async_trait]
+pub trait UserConProfileUsersExtensions
+where
+  Self: ModelBackedType<Model = user_con_profiles::Model>,
+{
+  async fn ability(&self, ctx: &Context<'_>) -> Result<AbilityUsersFields> {
     let query_data = ctx.data::<QueryData>()?;
     let user = load_one_by_model_id!(user_con_profile_user, ctx, self)?;
     let authorization_info =
@@ -27,33 +36,60 @@ impl UserConProfileUsersFields {
     Ok(AbilityUsersFields::new(Arc::new(authorization_info)))
   }
 
-  pub async fn convention(&self, ctx: &Context<'_>) -> Result<conventions::Model, Error> {
-    let loader = &ctx.data::<Arc<LoaderManager>>()?.conventions_by_id();
-    let loader_result = loader.load_one(self.model.convention_id).await?;
-    Ok(loader_result.expect_one()?.clone())
-  }
-
-  pub async fn signups(&self, ctx: &Context<'_>) -> Result<Vec<signups::Model>> {
-    let signups_result = load_one_by_model_id!(user_con_profile_signups, ctx, self)?;
-    signups_result.expect_models().cloned()
-  }
-
-  pub async fn staff_positions(
+  async fn convention<T: ModelBackedType<Model = conventions::Model>>(
     &self,
     ctx: &Context<'_>,
-  ) -> Result<Vec<staff_positions::Model>, Error> {
+  ) -> Result<T, Error> {
+    let loader_result = load_one_by_model_id!(user_con_profile_convention, ctx, self)?;
+    Ok(loader_result_to_required_single!(loader_result, T))
+  }
+
+  async fn signups<T: ModelBackedType<Model = signups::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<T>> {
+    let loader_result = load_one_by_model_id!(user_con_profile_signups, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, T))
+  }
+
+  async fn signup_requests<T: ModelBackedType<Model = signup_requests::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<T>> {
+    let loader_result = load_one_by_model_id!(user_con_profile_signup_requests, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, T))
+  }
+
+  async fn staff_positions<T: ModelBackedType<Model = staff_positions::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<T>, Error> {
     let loader_result = load_one_by_model_id!(user_con_profile_staff_positions, ctx, self)?;
-    loader_result.expect_models().cloned()
+    Ok(loader_result_to_many!(loader_result, T))
   }
 
-  pub async fn team_members(&self, ctx: &Context<'_>) -> Result<Vec<team_members::Model>, Error> {
+  async fn team_members<T: ModelBackedType<Model = team_members::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<T>, Error> {
     let loader_result = load_one_by_model_id!(user_con_profile_team_members, ctx, self)?;
-    loader_result.expect_models().cloned()
+    Ok(loader_result_to_many!(loader_result, T))
   }
 
-  pub async fn ticket(&self, ctx: &Context<'_>) -> Result<Option<tickets::Model>, Error> {
+  async fn ticket<T: ModelBackedType<Model = tickets::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Option<T>, Error> {
     let loader_result = load_one_by_model_id!(user_con_profile_ticket, ctx, self)?;
-    Ok(loader_result.try_one().cloned())
+    Ok(loader_result_to_optional_single!(loader_result, T))
+  }
+
+  async fn user<T: ModelBackedType<Model = users::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<T, Error> {
+    let loader_result = load_one_by_model_id!(user_con_profile_user, ctx, self)?;
+    Ok(loader_result_to_required_single!(loader_result, T))
   }
 }
 
@@ -70,6 +106,10 @@ impl UserConProfileUsersFields {
 
   async fn address(&self) -> Option<&str> {
     self.model.address.as_deref()
+  }
+
+  async fn bio(&self) -> Option<&str> {
+    self.model.bio.as_deref()
   }
 
   #[graphql(name = "bio_html")]
@@ -98,6 +138,16 @@ impl UserConProfileUsersFields {
   #[graphql(name = "birth_date")]
   async fn birth_date(&self) -> Result<Option<DateScalar>> {
     self.model.birth_date.map(DateScalar::try_from).transpose()
+  }
+
+  #[graphql(name = "can_have_bio")]
+  async fn can_have_bio(&self, ctx: &Context<'_>) -> Result<bool> {
+    let authorization_info = ctx.data::<AuthorizationInfo>()?;
+    Ok(
+      authorization_info
+        .is_user_con_profile_bio_eligible(self.model.id, self.model.convention_id)
+        .await?,
+    )
   }
 
   async fn city(&self) -> Option<&str> {
@@ -183,6 +233,11 @@ impl UserConProfileUsersFields {
 
   async fn nickname(&self) -> Option<&str> {
     self.model.nickname.as_deref()
+  }
+
+  #[graphql(name = "show_nickname_in_bio")]
+  async fn show_nickname_in_bio(&self) -> bool {
+    self.model.show_nickname_in_bio.unwrap_or(false)
   }
 
   #[graphql(name = "site_admin")]

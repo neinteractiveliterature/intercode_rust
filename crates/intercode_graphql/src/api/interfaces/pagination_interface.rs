@@ -11,7 +11,8 @@ use intercode_email::objects::EmailRouteType;
 use intercode_graphql_core::ModelPaginator;
 
 use crate::api::merged_objects::{
-  CouponType, EventProposalType, EventType, OrderType, SignupRequestType, SignupType, UserType,
+  CouponType, EventProposalType, EventType, OrderType, SignupRequestType, SignupType,
+  UserConProfileType, UserType,
 };
 
 #[allow(dead_code)]
@@ -23,6 +24,7 @@ pub enum PaginationInterface {
   OrdersPagination(ModelPaginator<OrderType>),
   SignupRequestsPagination(ModelPaginator<SignupRequestType>),
   SignupsPagination(ModelPaginator<SignupType>),
+  UserConProfilesPagination(ModelPaginator<UserConProfileType>),
   UsersPagination(ModelPaginator<UserType>),
 }
 
@@ -60,6 +62,7 @@ impl OutputType for PaginationInterface {
       ModelPaginator::<OrderType>::type_name().into_owned(),
       ModelPaginator::<SignupRequestType>::type_name().into_owned(),
       ModelPaginator::<SignupType>::type_name().into_owned(),
+      ModelPaginator::<UserConProfileType>::type_name().into_owned(),
       ModelPaginator::<UserType>::type_name().into_owned(),
     ];
 
@@ -122,6 +125,7 @@ impl OutputType for PaginationInterface {
       PaginationInterface::OrdersPagination(pagination) => pagination.resolve(ctx, field),
       PaginationInterface::SignupRequestsPagination(pagination) => pagination.resolve(ctx, field),
       PaginationInterface::SignupsPagination(pagination) => pagination.resolve(ctx, field),
+      PaginationInterface::UserConProfilesPagination(pagination) => pagination.resolve(ctx, field),
       PaginationInterface::UsersPagination(pagination) => pagination.resolve(ctx, field),
     }
   }
@@ -156,6 +160,7 @@ impl ContainerType for PaginationInterface {
       PaginationInterface::OrdersPagination(pagination) => pagination.resolve_field(ctx),
       PaginationInterface::SignupRequestsPagination(pagination) => pagination.resolve_field(ctx),
       PaginationInterface::SignupsPagination(pagination) => pagination.resolve_field(ctx),
+      PaginationInterface::UserConProfilesPagination(pagination) => pagination.resolve_field(ctx),
       PaginationInterface::UsersPagination(pagination) => pagination.resolve_field(ctx),
     }
   }

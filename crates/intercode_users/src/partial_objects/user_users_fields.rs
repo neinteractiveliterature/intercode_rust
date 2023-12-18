@@ -1,21 +1,31 @@
 use async_graphql::*;
-use intercode_entities::{users, UserNames};
-use intercode_graphql_core::{load_one_by_model_id, loader_result_to_many, model_backed_type};
-
-use super::UserConProfileUsersFields;
+use axum::async_trait;
+use intercode_entities::{event_proposals, user_con_profiles, users, UserNames};
+use intercode_graphql_core::{
+  load_one_by_model_id, loader_result_to_many, model_backed_type, ModelBackedType,
+};
 
 model_backed_type!(UserUsersFields, users::Model);
 
-impl UserUsersFields {
-  pub async fn user_con_profiles(
+#[async_trait]
+pub trait UserUsersExtensions
+where
+  Self: ModelBackedType<Model = users::Model>,
+{
+  async fn event_proposals<T: ModelBackedType<Model = event_proposals::Model>>(
     &self,
     ctx: &Context<'_>,
-  ) -> Result<Vec<UserConProfileUsersFields>> {
+  ) -> Result<Vec<T>> {
+    let loader_result = load_one_by_model_id!(user_event_proposals, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, T))
+  }
+
+  async fn user_con_profiles<T: ModelBackedType<Model = user_con_profiles::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<T>> {
     let loader_result = load_one_by_model_id!(user_user_con_profiles, ctx, self)?;
-    Ok(loader_result_to_many!(
-      loader_result,
-      UserConProfileUsersFields
-    ))
+    Ok(loader_result_to_many!(loader_result, T))
   }
 }
 

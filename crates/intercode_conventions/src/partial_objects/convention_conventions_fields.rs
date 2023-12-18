@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use async_graphql::*;
 use chrono::Utc;
-use intercode_entities::{conventions, user_activity_alerts};
+use intercode_entities::{conventions, departments, organizations, user_activity_alerts};
 use intercode_graphql_core::{
   enums::{EmailMode, ShowSchedule, SiteMode, TicketMode, TimezoneMode},
   lax_id::LaxId,
@@ -13,44 +13,43 @@ use intercode_graphql_core::{
   ModelBackedType,
 };
 use intercode_graphql_loaders::LoaderManager;
-use sea_orm::{prelude::DateTimeUtc, ColumnTrait, ModelTrait, QueryFilter};
-
-use super::{
-  user_activity_alert_conventions_fields::UserActivityAlertConventionsFields,
-  DepartmentConventionsFields, OrganizationConventionsFields,
+use sea_orm::{
+  prelude::{async_trait::async_trait, DateTimeUtc},
+  ColumnTrait, ModelTrait, QueryFilter,
 };
 
 model_backed_type!(ConventionConventionsFields, conventions::Model);
 
-impl ConventionConventionsFields {
-  pub async fn departments(&self, ctx: &Context<'_>) -> Result<Vec<DepartmentConventionsFields>> {
-    let loader_result = load_one_by_model_id!(convention_departments, ctx, self)?;
-    Ok(loader_result_to_many!(
-      loader_result,
-      DepartmentConventionsFields
-    ))
-  }
-
-  pub async fn organization(
+#[async_trait]
+pub trait ConventionConventionsExtensions
+where
+  Self: ModelBackedType<Model = conventions::Model>,
+{
+  async fn departments<T: ModelBackedType<Model = departments::Model>>(
     &self,
     ctx: &Context<'_>,
-  ) -> Result<Option<OrganizationConventionsFields>> {
-    let loader_result = load_one_by_model_id!(convention_organization, ctx, self)?;
-    Ok(loader_result_to_optional_single!(
-      loader_result,
-      OrganizationConventionsFields
-    ))
+  ) -> Result<Vec<T>> {
+    let loader_result = load_one_by_model_id!(convention_departments, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, T))
   }
 
-  pub async fn user_activity_alert(
+  async fn organization<T: ModelBackedType<Model = organizations::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Option<T>> {
+    let loader_result = load_one_by_model_id!(convention_organization, ctx, self)?;
+    Ok(loader_result_to_optional_single!(loader_result, T))
+  }
+
+  async fn user_activity_alert<T: ModelBackedType<Model = user_activity_alerts::Model>>(
     &self,
     ctx: &Context<'_>,
     id: ID,
-  ) -> Result<UserActivityAlertConventionsFields> {
+  ) -> Result<T> {
     let query_data = ctx.data::<QueryData>()?;
-    Ok(UserActivityAlertConventionsFields::new(
+    Ok(T::new(
       self
-        .model
+        .get_model()
         .find_related(user_activity_alerts::Entity)
         .filter(user_activity_alerts::Column::Id.eq(LaxId::parse(id)?))
         .one(query_data.db())
@@ -59,15 +58,12 @@ impl ConventionConventionsFields {
     ))
   }
 
-  pub async fn user_activity_alerts(
+  async fn user_activity_alerts<T: ModelBackedType<Model = user_activity_alerts::Model>>(
     &self,
     ctx: &Context<'_>,
-  ) -> Result<Vec<UserActivityAlertConventionsFields>> {
+  ) -> Result<Vec<T>> {
     let loader_result = load_one_by_model_id!(convention_user_activity_alerts, ctx, self)?;
-    Ok(loader_result_to_many!(
-      loader_result,
-      UserActivityAlertConventionsFields
-    ))
+    Ok(loader_result_to_many!(loader_result, T))
   }
 }
 

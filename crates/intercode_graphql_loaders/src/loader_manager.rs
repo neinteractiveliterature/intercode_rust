@@ -372,12 +372,14 @@ loader_manager!(
   entity_relation(ticket_type_convention, ticket_types, conventions);
   entity_relation(ticket_type_event, ticket_types, events);
   entity_relation(ticket_type_providing_products, ticket_types, products);
+  entity_relation(user_activity_alert_convention, user_activity_alerts, conventions);
   entity_link(user_activity_alert_notification_destinations, UserActivityAlertToNotificationDestinations);
   entity_relation(user_activity_alert_user, user_activity_alerts, users);
   entity_id(user_con_profiles_by_id, user_con_profiles);
   entity_relation(user_con_profile_convention, user_con_profiles, conventions);
   entity_relation(user_con_profile_orders, user_con_profiles, orders);
   entity_relation(user_con_profile_signups, user_con_profiles, signups);
+  entity_relation(user_con_profile_signup_requests, user_con_profiles, signup_requests);
   entity_link(
     user_con_profile_staff_positions,
     UserConProfileToStaffPositions
@@ -390,6 +392,7 @@ loader_manager!(
   entity_relation(user_con_profile_ticket, user_con_profiles, tickets);
   entity_relation(user_con_profile_user, user_con_profiles, users);
   entity_id(users_by_id, users);
+  entity_link(user_event_proposals, UserToEventProposals);
   entity_relation(user_user_con_profiles, users, user_con_profiles);
 );
 

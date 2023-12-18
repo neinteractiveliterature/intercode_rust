@@ -7,36 +7,47 @@ use crate::{
 };
 
 use super::{
-  coupon_type::CouponType, room_type::RoomType, user_activity_alert_type::UserActivityAlertType,
+  coupon_type::CouponType, product_type::ProductType, room_type::RoomType,
+  ticket_type_type::TicketTypeType, user_activity_alert_type::UserActivityAlertType,
   CmsContentGroupType, OrganizationType, RunType,
 };
 use async_graphql::*;
-use intercode_cms::api::partial_objects::ConventionCmsFields;
-use intercode_conventions::partial_objects::ConventionConventionsFields;
+use intercode_cms::{api::partial_objects::ConventionCmsFields, CmsParentImplementation};
+use intercode_conventions::partial_objects::{
+  ConventionConventionsExtensions, ConventionConventionsFields,
+};
 use intercode_entities::conventions;
 use intercode_events::{
-  partial_objects::ConventionEventsFields,
+  partial_objects::{ConventionEventsExtensions, ConventionEventsFields},
   query_builders::{EventFiltersInput, EventProposalFiltersInput},
 };
-use intercode_forms::partial_objects::ConventionFormsFields;
+use intercode_forms::partial_objects::ConventionFormsExtensions;
 use intercode_graphql_core::{
   model_backed_type, scalars::DateScalar, ModelBackedType, ModelPaginator,
 };
 use intercode_notifiers::partial_objects::ConventionNotifiersFields;
 use intercode_query_builders::sort_input::SortInput;
-use intercode_reporting::partial_objects::ConventionReportingFields;
 use intercode_signups::{
-  partial_objects::ConventionSignupsFields, query_builders::SignupRequestFiltersInput,
+  partial_objects::{ConventionSignupsExtensions, ConventionSignupsFields},
+  query_builders::SignupRequestFiltersInput,
 };
 use intercode_store::{
-  partial_objects::ConventionStoreFields,
+  partial_objects::{ConventionStoreExtensions, ConventionStoreFields},
   query_builders::{CouponFiltersInput, OrderFiltersInput},
 };
 use intercode_users::{
-  partial_objects::ConventionUsersFields, query_builders::UserConProfileFiltersInput,
+  partial_objects::ConventionUsersExtensions, query_builders::UserConProfileFiltersInput,
 };
 
 model_backed_type!(ConventionGlueFields, conventions::Model);
+
+impl CmsParentImplementation<conventions::Model> for ConventionGlueFields {}
+impl ConventionConventionsExtensions for ConventionGlueFields {}
+impl ConventionEventsExtensions for ConventionGlueFields {}
+impl ConventionFormsExtensions for ConventionGlueFields {}
+impl ConventionSignupsExtensions for ConventionGlueFields {}
+impl ConventionStoreExtensions for ConventionGlueFields {}
+impl ConventionUsersExtensions for ConventionGlueFields {}
 
 #[Object]
 impl ConventionGlueFields {
@@ -45,10 +56,7 @@ impl ConventionGlueFields {
     &self,
     ctx: &Context<'_>,
   ) -> Result<Vec<UserConProfileType>, Error> {
-    ConventionUsersFields::from_type(self.clone())
-      .bio_eligible_user_con_profiles(ctx)
-      .await
-      .map(|res| res.into_iter().map(UserConProfileType::from_type).collect())
+    ConventionUsersExtensions::bio_eligible_user_con_profiles(self, ctx).await
   }
 
   #[graphql(name = "catch_all_staff_position")]
@@ -56,22 +64,11 @@ impl ConventionGlueFields {
     &self,
     ctx: &Context<'_>,
   ) -> Result<Option<StaffPositionType>> {
-    ConventionUsersFields::from_type(self.clone())
-      .catch_all_staff_position(ctx)
-      .await
-      .map(|res| res.map(StaffPositionType::from_type))
+    ConventionUsersExtensions::catch_all_staff_position(self, ctx).await
   }
 
   async fn cms_content_groups(&self, ctx: &Context<'_>) -> Result<Vec<CmsContentGroupType>, Error> {
-    ConventionCmsFields::from_type(self.clone())
-      .cms_content_groups(ctx)
-      .await
-      .map(|partials| {
-        partials
-          .into_iter()
-          .map(CmsContentGroupType::from_type)
-          .collect()
-      })
+    CmsParentImplementation::cms_content_groups(self, ctx).await
   }
 
   async fn cms_content_group(
@@ -79,10 +76,7 @@ impl ConventionGlueFields {
     ctx: &Context<'_>,
     id: ID,
   ) -> Result<CmsContentGroupType, Error> {
-    ConventionCmsFields::from_type(self.clone())
-      .cms_content_group(ctx, id)
-      .await
-      .map(CmsContentGroupType::from_type)
+    CmsParentImplementation::cms_content_group(self, ctx, id).await
   }
 
   #[graphql(name = "coupons_paginated")]
@@ -94,26 +88,17 @@ impl ConventionGlueFields {
     filters: Option<CouponFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<ModelPaginator<CouponType>, Error> {
-    ConventionStoreFields::from_type(self.clone())
-      .coupons_paginated(ctx, page, per_page, filters, sort)
-      .await
-      .map(ModelPaginator::into_type)
+    ConventionStoreExtensions::coupons_paginated(self, ctx, page, per_page, filters, sort).await
   }
 
   async fn departments(&self, ctx: &Context<'_>) -> Result<Vec<DepartmentType>> {
-    ConventionConventionsFields::from_type(self.clone())
-      .departments(ctx)
-      .await
-      .map(|res| res.into_iter().map(DepartmentType::from_type).collect())
+    ConventionConventionsExtensions::departments(self, ctx).await
   }
 
   /// Finds an active event by ID in this convention. If there is no event with that ID in this
   /// convention, or the event is no longer active, errors out.
   pub async fn event(&self, ctx: &Context<'_>, id: Option<ID>) -> Result<EventType, Error> {
-    ConventionEventsFields::from_type(self.clone())
-      .event(ctx, id)
-      .await
-      .map(EventType::from_type)
+    ConventionEventsExtensions::event(self, ctx, id).await
   }
 
   pub async fn events(
@@ -124,10 +109,7 @@ impl ConventionGlueFields {
     include_dropped: Option<bool>,
     filters: Option<EventFiltersInput>,
   ) -> Result<Vec<EventType>, Error> {
-    ConventionEventsFields::from_type(self.clone())
-      .events(ctx, start, finish, include_dropped, filters)
-      .await
-      .map(|items| items.into_iter().map(EventType::from_type).collect())
+    ConventionEventsExtensions::events(self, ctx, start, finish, include_dropped, filters).await
   }
 
   #[graphql(name = "events_paginated")]
@@ -139,10 +121,7 @@ impl ConventionGlueFields {
     filters: Option<EventFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<ModelPaginator<EventType>, Error> {
-    ConventionEventsFields::from_type(self.clone())
-      .events_paginated(ctx, page, per_page, filters, sort)
-      .await
-      .map(ModelPaginator::into_type)
+    ConventionEventsExtensions::events_paginated(self, ctx, page, per_page, filters, sort).await
   }
 
   #[graphql(name = "event_categories")]
@@ -152,15 +131,12 @@ impl ConventionGlueFields {
     #[graphql(name = "current_ability_can_read_event_proposals")]
     current_ability_can_read_event_proposals: Option<bool>,
   ) -> Result<Vec<EventCategoryType>, Error> {
-    ConventionEventsFields::from_type(self.clone())
-      .event_categories(ctx, current_ability_can_read_event_proposals)
-      .await
-      .map(|items| {
-        items
-          .into_iter()
-          .map(EventCategoryType::from_type)
-          .collect()
-      })
+    ConventionEventsExtensions::event_categories(
+      self,
+      ctx,
+      current_ability_can_read_event_proposals,
+    )
+    .await
   }
 
   /// Finds an event proposal by ID in this convention. If there is no event proposal with that ID
@@ -171,10 +147,7 @@ impl ConventionGlueFields {
     ctx: &Context<'_>,
     #[graphql(desc = "The ID of the event proposal to find.")] id: Option<ID>,
   ) -> Result<EventProposalType> {
-    ConventionEventsFields::from_type(self.clone())
-      .event_proposal(ctx, id)
-      .await
-      .map(EventProposalType::from_type)
+    ConventionEventsExtensions::event_proposal(self, ctx, id).await
   }
 
   #[graphql(name = "event_proposals_paginated")]
@@ -186,51 +159,33 @@ impl ConventionGlueFields {
     filters: Option<EventProposalFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<ModelPaginator<EventProposalType>, Error> {
-    ConventionEventsFields::from_type(self.clone())
-      .event_proposals_paginated(ctx, page, per_page, filters, sort)
+    ConventionEventsExtensions::event_proposals_paginated(self, ctx, page, per_page, filters, sort)
       .await
-      .map(ModelPaginator::into_type)
   }
 
   pub async fn form(&self, ctx: &Context<'_>, id: Option<ID>) -> Result<FormType> {
-    ConventionFormsFields::from_type(self.clone())
-      .form(ctx, id)
-      .await
-      .map(FormType::from_type)
+    ConventionFormsExtensions::form(self, ctx, id).await
   }
 
   pub async fn forms(&self, ctx: &Context<'_>) -> Result<Vec<FormType>> {
-    ConventionFormsFields::from_type(self.clone())
-      .forms(ctx)
-      .await
-      .map(|items| items.into_iter().map(FormType::from_type).collect())
+    ConventionFormsExtensions::forms(self, ctx).await
   }
 
   #[graphql(name = "mailing_lists")]
   async fn mailing_lists(&self) -> MailingListsType {
-    MailingListsType::from_type(
-      ConventionReportingFields::from_type(self.clone())
-        .mailing_lists()
-        .await,
-    )
+    MailingListsType::from_type(self.clone())
   }
 
   #[graphql(name = "my_profile")]
   pub async fn my_profile(&self, ctx: &Context<'_>) -> Result<Option<UserConProfileType>, Error> {
-    ConventionUsersFields::from_type(self.clone())
-      .my_profile(ctx)
-      .await
-      .map(|res| res.map(UserConProfileType::from_type))
+    ConventionUsersExtensions::my_profile(self, ctx).await
   }
 
   /// Returns all signups for the current user within this convention. If no user is signed in,
   /// returns an empty array.
   #[graphql(name = "my_signups")]
   pub async fn my_signups(&self, ctx: &Context<'_>) -> Result<Vec<SignupType>, Error> {
-    ConventionSignupsFields::from_type(self.clone())
-      .my_signups(ctx)
-      .await
-      .map(|res| res.into_iter().map(SignupType::from_type).collect())
+    ConventionSignupsExtensions::my_signups(self, ctx).await
   }
 
   #[graphql(name = "orders_paginated")]
@@ -242,24 +197,30 @@ impl ConventionGlueFields {
     filters: Option<OrderFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<ModelPaginator<OrderType>, Error> {
-    ConventionStoreFields::from_type(self.clone())
-      .orders_paginated(ctx, page, per_page, filters, sort)
-      .await
-      .map(ModelPaginator::into_type)
+    ConventionStoreExtensions::orders_paginated(self, ctx, page, per_page, filters, sort).await
+  }
+
+  /// Finds a product by ID in this convention. If there is no product with that ID in this
+  /// convention, errors out.
+  async fn product(&self, ctx: &Context<'_>, id: ID) -> Result<ProductType> {
+    ConventionStoreExtensions::product(self, ctx, id).await
+  }
+
+  async fn products(
+    &self,
+    ctx: &Context<'_>,
+    #[graphql(name = "only_available")] only_available: Option<bool>,
+    #[graphql(name = "only_ticket_providing")] only_ticket_providing: Option<bool>,
+  ) -> Result<Vec<ProductType>> {
+    ConventionStoreExtensions::products(self, ctx, only_available, only_ticket_providing).await
   }
 
   pub async fn organization(&self, ctx: &Context<'_>) -> Result<Option<OrganizationType>> {
-    ConventionConventionsFields::from_type(self.clone())
-      .organization(ctx)
-      .await
-      .map(|opt| opt.map(OrganizationType::from_type))
+    ConventionConventionsExtensions::organization(self, ctx).await
   }
 
   pub async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<RoomType>, Error> {
-    ConventionEventsFields::from_type(self.clone())
-      .rooms(ctx)
-      .await
-      .map(|rooms| rooms.into_iter().map(RoomType::from_type).collect())
+    ConventionEventsExtensions::rooms(self, ctx).await
   }
 
   /// Finds an active run by ID in this convention. If there is no run with that ID in this
@@ -269,17 +230,11 @@ impl ConventionGlueFields {
     ctx: &Context<'_>,
     #[graphql(desc = "The ID of the run to find")] id: ID,
   ) -> Result<RunType> {
-    ConventionEventsFields::from_type(self.clone())
-      .run(ctx, id)
-      .await
-      .map(RunType::from_type)
+    ConventionEventsExtensions::run(self, ctx, id).await
   }
 
   async fn signup(&self, ctx: &Context<'_>, id: Option<ID>) -> Result<SignupType, Error> {
-    ConventionSignupsFields::from_type(self.clone())
-      .signup(ctx, id)
-      .await
-      .map(SignupType::from_type)
+    ConventionSignupsExtensions::signup(self, ctx, id).await
   }
 
   #[graphql(name = "signup_requests_paginated")]
@@ -291,10 +246,8 @@ impl ConventionGlueFields {
     filters: Option<SignupRequestFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<ModelPaginator<SignupRequestType>, Error> {
-    ConventionSignupsFields::from_type(self.clone())
-      .signup_requests_paginated(ctx, page, per_page, filters, sort)
+    ConventionSignupsExtensions::signup_requests_paginated(self, ctx, page, per_page, filters, sort)
       .await
-      .map(ModelPaginator::into_type)
   }
 
   #[graphql(name = "staff_position")]
@@ -303,18 +256,17 @@ impl ConventionGlueFields {
     ctx: &Context<'_>,
     id: Option<ID>,
   ) -> Result<StaffPositionType, Error> {
-    ConventionUsersFields::from_type(self.clone())
-      .staff_position(ctx, id)
-      .await
-      .map(StaffPositionType::from_type)
+    ConventionUsersExtensions::staff_position(self, ctx, id).await
   }
 
   #[graphql(name = "staff_positions")]
   pub async fn staff_positions(&self, ctx: &Context<'_>) -> Result<Vec<StaffPositionType>, Error> {
-    ConventionUsersFields::from_type(self.clone())
-      .staff_positions(ctx)
-      .await
-      .map(|res| res.into_iter().map(StaffPositionType::from_type).collect())
+    ConventionUsersExtensions::staff_positions(self, ctx).await
+  }
+
+  #[graphql(name = "ticket_types")]
+  pub async fn ticket_types(&self, ctx: &Context<'_>) -> Result<Vec<TicketTypeType>> {
+    ConventionStoreExtensions::ticket_types(self, ctx).await
   }
 
   #[graphql(name = "user_activity_alert")]
@@ -323,23 +275,12 @@ impl ConventionGlueFields {
     ctx: &Context<'_>,
     id: ID,
   ) -> Result<UserActivityAlertType> {
-    ConventionConventionsFields::from_type(self.clone())
-      .user_activity_alert(ctx, id)
-      .await
-      .map(UserActivityAlertType::from_type)
+    ConventionConventionsExtensions::user_activity_alert(self, ctx, id).await
   }
 
   #[graphql(name = "user_activity_alerts")]
   async fn user_activity_alerts(&self, ctx: &Context<'_>) -> Result<Vec<UserActivityAlertType>> {
-    ConventionConventionsFields::from_type(self.clone())
-      .user_activity_alerts(ctx)
-      .await
-      .map(|res| {
-        res
-          .into_iter()
-          .map(UserActivityAlertType::from_type)
-          .collect()
-      })
+    ConventionConventionsExtensions::user_activity_alerts(self, ctx).await
   }
 
   /// Finds a UserConProfile by ID in the convention associated with this convention. If there is
@@ -350,10 +291,7 @@ impl ConventionGlueFields {
     ctx: &Context<'_>,
     #[graphql(desc = "The ID of the UserConProfile to find.")] id: ID,
   ) -> Result<UserConProfileType, Error> {
-    ConventionUsersFields::from_type(self.clone())
-      .user_con_profile(ctx, id)
-      .await
-      .map(UserConProfileType::from_type)
+    ConventionUsersExtensions::user_con_profile(self, ctx, id).await
   }
 
   /// Finds a UserConProfile by user ID in the convention associated with this convention. If
@@ -364,18 +302,12 @@ impl ConventionGlueFields {
     ctx: &Context<'_>,
     #[graphql(desc = "The user ID of the UserConProfile to find.")] user_id: ID,
   ) -> Result<UserConProfileType, Error> {
-    ConventionUsersFields::from_type(self.clone())
-      .user_con_profile_by_user_id(ctx, user_id)
-      .await
-      .map(UserConProfileType::from_type)
+    ConventionUsersExtensions::user_con_profile_by_user_id(self, ctx, user_id).await
   }
 
   #[graphql(name = "user_con_profile_form")]
   pub async fn user_con_profile_form(&self, ctx: &Context<'_>) -> Result<FormType> {
-    ConventionFormsFields::from_type(self.clone())
-      .user_con_profile_form(ctx)
-      .await
-      .map(FormType::from_type)
+    ConventionFormsExtensions::user_con_profile_form(self, ctx).await
   }
 
   #[graphql(name = "user_con_profiles_paginated")]
@@ -387,10 +319,8 @@ impl ConventionGlueFields {
     filters: Option<UserConProfileFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> Result<ModelPaginator<UserConProfileType>, Error> {
-    ConventionUsersFields::from_type(self.clone())
-      .user_con_profiles_paginated(ctx, page, per_page, filters, sort)
+    ConventionUsersExtensions::user_con_profiles_paginated(self, ctx, page, per_page, filters, sort)
       .await
-      .map(|paginator| paginator.into_type())
   }
 }
 

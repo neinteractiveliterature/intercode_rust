@@ -1,38 +1,38 @@
 use crate::policies::MaximumEventProvidedTicketsOverridePolicy;
 use async_graphql::*;
-use intercode_entities::maximum_event_provided_tickets_overrides;
+use async_trait::async_trait;
+use intercode_entities::{events, maximum_event_provided_tickets_overrides, ticket_types};
 use intercode_graphql_core::{
-  load_one_by_model_id, loader_result_to_required_single, model_backed_type,
+  load_one_by_model_id, loader_result_to_required_single, model_backed_type, ModelBackedType,
 };
 use intercode_policies::{ModelBackedTypeGuardablePolicy, ReadManageAction};
-
-use super::{EventStoreFields, TicketTypeStoreFields};
 
 model_backed_type!(
   MaximumEventProvidedTicketsOverrideStoreFields,
   maximum_event_provided_tickets_overrides::Model
 );
 
-impl MaximumEventProvidedTicketsOverrideStoreFields {
-  pub async fn event(&self, ctx: &Context<'_>) -> Result<EventStoreFields> {
+#[async_trait]
+pub trait MaximumEventProvidedTicketsOverrideStoreExtensions
+where
+  Self: ModelBackedType<Model = maximum_event_provided_tickets_overrides::Model>,
+{
+  async fn event<T: ModelBackedType<Model = events::Model>>(&self, ctx: &Context<'_>) -> Result<T> {
     let loader_result =
       load_one_by_model_id!(maximum_event_provided_tickets_override_event, ctx, self)?;
-    Ok(loader_result_to_required_single!(
-      loader_result,
-      EventStoreFields
-    ))
+    Ok(loader_result_to_required_single!(loader_result, T))
   }
 
-  pub async fn ticket_type(&self, ctx: &Context<'_>) -> Result<TicketTypeStoreFields> {
+  async fn ticket_type<T: ModelBackedType<Model = ticket_types::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<T> {
     let loader_result = load_one_by_model_id!(
       maximum_event_provided_tickets_override_ticket_type,
       ctx,
       self
     )?;
-    Ok(loader_result_to_required_single!(
-      loader_result,
-      TicketTypeStoreFields
-    ))
+    Ok(loader_result_to_required_single!(loader_result, T))
   }
 }
 

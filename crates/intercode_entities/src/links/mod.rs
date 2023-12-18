@@ -10,6 +10,7 @@ mod staff_position_links;
 mod ticket_links;
 mod user_activity_alert_links;
 mod user_con_profile_links;
+mod user_links;
 
 pub use cms_navigation_item_links::*;
 pub use convention_links::*;
@@ -23,3 +24,4 @@ pub use staff_position_links::*;
 pub use ticket_links::*;
 pub use user_activity_alert_links::*;
 pub use user_con_profile_links::*;
+pub use user_links::*;

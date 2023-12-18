@@ -1,28 +1,48 @@
 use crate::policies::UserActivityAlertPolicy;
 use async_graphql::*;
-use intercode_entities::{notification_destinations, user_activity_alerts, users};
-use intercode_graphql_core::{load_one_by_model_id, model_backed_type};
+use intercode_entities::{conventions, notification_destinations, user_activity_alerts, users};
+use intercode_graphql_core::{
+  load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single,
+  loader_result_to_required_single, model_backed_type, ModelBackedType,
+};
 use intercode_policies::{ModelBackedTypeGuardablePolicy, ReadManageAction};
-use seawater::loaders::{ExpectModel, ExpectModels};
+use sea_orm::prelude::async_trait::async_trait;
 
 model_backed_type!(
   UserActivityAlertConventionsFields,
   user_activity_alerts::Model
 );
 
-impl UserActivityAlertConventionsFields {
-  pub async fn notification_destinations(
+#[async_trait]
+pub trait UserActivityAlertConventionsExtension
+where
+  Self: ModelBackedType<Model = user_activity_alerts::Model>,
+{
+  async fn convention<T: ModelBackedType<Model = conventions::Model>>(
     &self,
     ctx: &Context<'_>,
-  ) -> Result<Vec<notification_destinations::Model>> {
-    let loader_result =
-      load_one_by_model_id!(user_activity_alert_notification_destinations, ctx, self)?;
-    loader_result.expect_models().cloned()
+  ) -> Result<T> {
+    let loader_result = load_one_by_model_id!(user_activity_alert_convention, ctx, self)?;
+    Ok(loader_result_to_required_single!(loader_result, T))
   }
 
-  pub async fn user(&self, ctx: &Context<'_>) -> Result<Option<users::Model>> {
+  async fn notification_destinations<
+    T: ModelBackedType<Model = notification_destinations::Model>,
+  >(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<T>> {
+    let loader_result =
+      load_one_by_model_id!(user_activity_alert_notification_destinations, ctx, self)?;
+    Ok(loader_result_to_many!(loader_result, T))
+  }
+
+  async fn user<T: ModelBackedType<Model = users::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Option<T>> {
     let loader_result = load_one_by_model_id!(user_activity_alert_user, ctx, self)?;
-    Ok(loader_result.try_one().cloned())
+    Ok(loader_result_to_optional_single!(loader_result, T))
   }
 }
 
