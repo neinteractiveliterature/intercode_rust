@@ -369,6 +369,9 @@ loader_manager!(
   entity_id(runs_by_id, runs);
   entity_relation(signup_run, signups, runs);
   entity_relation(signup_user_con_profile, signups, user_con_profiles);
+  entity_relation(signup_change_run, signup_changes, runs);
+  entity_relation(signup_change_signup, signup_changes, signups);
+  entity_relation(signup_change_user_con_profile, signup_changes, user_con_profiles);
   entity_link(signup_request_replace_signup, SignupRequestToReplaceSignup);
   entity_link(signup_request_result_signup, SignupRequestToResultSignup);
   entity_relation(signup_request_target_run, signup_requests, runs);

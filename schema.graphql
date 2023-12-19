@@ -1077,6 +1077,7 @@ type Run {
 	my_signups: [Signup!]!
 	my_signup_requests: [SignupRequest!]!
 	rooms: [Room!]!
+	signup_changes_paginated(page: Int, per_page: Int, filters: SignupChangeFiltersInput, sort: [SortInput!]): SignupChangesPagination!
 	signups_paginated(page: Int, per_page: Int, filters: SignupFiltersInput, sort: [SortInput!]): SignupsPagination!
 	id: ID!
 	confirmed_signup_count: Int!
@@ -1124,6 +1125,58 @@ type Signup {
 	waitlist_position: Int
 	run: Run!
 	user_con_profile: UserConProfile!
+}
+
+type SignupChange {
+	id: ID!
+	action: SignupChangeAction!
+	bucket_key: String
+	counted: Boolean!
+	created_at: Date!
+	state: SignupState!
+	updated_at: Date!
+	previous_signup_change: SignupChange
+	run: Run!
+	signup: Signup!
+	user_con_profile: UserConProfile!
+}
+
+enum SignupChangeAction {
+	accept_signup_request
+	admin_create_signup
+	change_registration_policy
+	hold_expired
+	self_service_signup
+	ticket_purchase
+	unknown
+	vacancy_fill
+	withdraw
+}
+
+input SignupChangeFiltersInput {
+	name: String
+	event_title: String
+	action: [String!]
+}
+
+type SignupChangesPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
+	current_page: Int!
+	entries: [SignupChange!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
+	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
+	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
+	total_pages: Int!
 }
 
 input SignupFiltersInput {

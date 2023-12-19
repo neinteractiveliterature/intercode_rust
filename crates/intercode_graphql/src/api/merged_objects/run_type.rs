@@ -3,13 +3,18 @@ use intercode_entities::runs;
 use intercode_events::partial_objects::RunEventsFields;
 use intercode_graphql_core::{model_backed_type, ModelBackedType, ModelPaginator};
 use intercode_query_builders::sort_input::SortInput;
-use intercode_signups::{partial_objects::RunSignupsFields, query_builders::SignupFiltersInput};
+use intercode_signups::{
+  partial_objects::RunSignupsExtensions,
+  query_builders::{SignupChangeFiltersInput, SignupFiltersInput},
+};
 
 use crate::merged_model_backed_type;
 
-use super::{room_type::RoomType, EventType, SignupRequestType, SignupType};
+use super::{room_type::RoomType, EventType, SignupChangeType, SignupRequestType, SignupType};
 
 model_backed_type!(RunGlueFields, runs::Model);
+
+impl RunSignupsExtensions for RunGlueFields {}
 
 #[Object]
 impl RunGlueFields {
@@ -22,23 +27,12 @@ impl RunGlueFields {
 
   #[graphql(name = "my_signups")]
   async fn my_signups(&self, ctx: &Context<'_>) -> Result<Vec<SignupType>, Error> {
-    RunSignupsFields::from_type(self.clone())
-      .my_signups(ctx)
-      .await
-      .map(|items| items.into_iter().map(SignupType::from_type).collect())
+    RunSignupsExtensions::my_signups(self, ctx).await
   }
 
   #[graphql(name = "my_signup_requests")]
   async fn my_signup_requests(&self, ctx: &Context<'_>) -> Result<Vec<SignupRequestType>, Error> {
-    RunSignupsFields::from_type(self.clone())
-      .my_signup_requests(ctx)
-      .await
-      .map(|items| {
-        items
-          .into_iter()
-          .map(SignupRequestType::from_type)
-          .collect()
-      })
+    RunSignupsExtensions::my_signup_requests(self, ctx).await
   }
 
   pub async fn rooms(&self, ctx: &Context<'_>) -> Result<Vec<RoomType>, Error> {
@@ -46,6 +40,18 @@ impl RunGlueFields {
       .rooms(ctx)
       .await
       .map(|rooms| rooms.into_iter().map(RoomType::from_type).collect())
+  }
+
+  #[graphql(name = "signup_changes_paginated")]
+  async fn signup_changes_paginated(
+    &self,
+    ctx: &Context<'_>,
+    page: Option<u64>,
+    #[graphql(name = "per_page")] per_page: Option<u64>,
+    filters: Option<SignupChangeFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+  ) -> Result<ModelPaginator<SignupChangeType>, Error> {
+    RunSignupsExtensions::signup_changes_paginated(self, ctx, page, per_page, filters, sort)
   }
 
   #[graphql(name = "signups_paginated")]
@@ -56,9 +62,7 @@ impl RunGlueFields {
     filters: Option<SignupFiltersInput>,
     sort: Option<Vec<SortInput>>,
   ) -> ModelPaginator<SignupType> {
-    RunSignupsFields::from_type(self.clone())
-      .signups_paginated(page, per_page, filters, sort)
-      .into_type()
+    RunSignupsExtensions::signups_paginated(self, page, per_page, filters, sort)
   }
 }
 
