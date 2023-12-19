@@ -111,7 +111,7 @@ where
     let can_read_schedule = ConventionPolicy::action_permitted(
       ctx.data::<AuthorizationInfo>()?,
       &ConventionAction::Schedule,
-      &self.get_model(),
+      self.get_model(),
     )
     .await?;
 

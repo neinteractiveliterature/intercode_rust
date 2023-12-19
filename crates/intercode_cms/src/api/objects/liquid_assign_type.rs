@@ -45,7 +45,7 @@ impl LiquidAssignType {
       self
         .cms_variable_value
         .as_ref()
-        .map(|value| serde_json::to_string(value))
+        .map(serde_json::to_string)
         .transpose()?,
     )
   }

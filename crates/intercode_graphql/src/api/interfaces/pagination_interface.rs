@@ -15,7 +15,7 @@ use crate::api::merged_objects::{
   SignupRequestType, SignupType, UserConProfileType, UserType,
 };
 
-#[allow(dead_code)]
+#[allow(dead_code, clippy::enum_variant_names)]
 pub enum PaginationInterface {
   ConventionsPagination(ModelPaginator<ConventionType>),
   CouponsPagination(ModelPaginator<CouponType>),

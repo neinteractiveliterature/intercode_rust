@@ -66,7 +66,7 @@ impl EventProposalEventsFields {
 
   #[graphql(name = "created_at")]
   async fn created_at(&self) -> Result<DateScalar> {
-    Ok(self.model.created_at.try_into()?)
+    self.model.created_at.try_into()
   }
 
   async fn images(&self, ctx: &Context<'_>) -> Result<Vec<ActiveStorageAttachmentType>> {

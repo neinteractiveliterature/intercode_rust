@@ -32,10 +32,9 @@ impl QueryBuilder for SignupRequestsQueryBuilder {
       .state
       .as_ref()
       .map(|state| {
-        scope.clone().filter(
-          signup_requests::Column::State
-            .is_in(state.iter().map(|value| <&'static str>::from(value))),
-        )
+        scope
+          .clone()
+          .filter(signup_requests::Column::State.is_in(state.iter().map(<&'static str>::from)))
       })
       .unwrap_or(scope);
 

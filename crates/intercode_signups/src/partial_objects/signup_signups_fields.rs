@@ -102,12 +102,12 @@ impl SignupSignupsFields {
 
   #[graphql(name = "created_at")]
   async fn created_at(&self) -> Result<DateScalar> {
-    Ok(self.model.created_at.try_into()?)
+    self.model.created_at.try_into()
   }
 
   #[graphql(name = "expires_at")]
   async fn expires_at(&self) -> Result<Option<DateScalar>> {
-    Ok(self.model.expires_at.map(|dt| dt.try_into()).transpose()?)
+    self.model.expires_at.map(|dt| dt.try_into()).transpose()
   }
 
   #[graphql(name = "requested_bucket_key")]
@@ -121,7 +121,7 @@ impl SignupSignupsFields {
 
   #[graphql(name = "updated_at")]
   async fn updated_at(&self) -> Result<DateScalar> {
-    Ok(self.model.updated_at.try_into()?)
+    self.model.updated_at.try_into()
   }
 
   #[graphql(name = "waitlist_position")]

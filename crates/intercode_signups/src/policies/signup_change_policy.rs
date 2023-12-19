@@ -80,21 +80,17 @@ impl EntityPolicy<AuthorizationInfo, signup_changes::Model> for SignupChangePoli
           signup_changes::Entity::find().filter(
             Cond::any()
               .add_option(if principal.has_scope("read_signups") {
-                if let Some(user) = &principal.user {
-                  Some(
-                    signup_changes::Column::UserConProfileId.in_subquery(
-                      QuerySelect::query(
-                        &mut user_con_profiles::Entity::find()
-                          .filter(user_con_profiles::Column::UserId.eq(user.id))
-                          .select_only()
-                          .column(user_con_profiles::Column::Id),
-                      )
-                      .take(),
-                    ),
+                principal.user.as_ref().map(|user| {
+                  signup_changes::Column::UserConProfileId.in_subquery(
+                    QuerySelect::query(
+                      &mut user_con_profiles::Entity::find()
+                        .filter(user_con_profiles::Column::UserId.eq(user.id))
+                        .select_only()
+                        .column(user_con_profiles::Column::Id),
+                    )
+                    .take(),
                   )
-                } else {
-                  None
-                }
+                })
               } else {
                 None
               })

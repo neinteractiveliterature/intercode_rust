@@ -31,7 +31,7 @@ impl FormResponseChangeFormsFields {
 
   #[graphql(name = "created_at")]
   async fn created_at(&self) -> Result<DateScalar> {
-    Ok(self.model.created_at.try_into()?)
+    self.model.created_at.try_into()
   }
 
   #[graphql(name = "field_identifier")]
@@ -46,13 +46,7 @@ impl FormResponseChangeFormsFields {
 
   #[graphql(name = "notified_at")]
   async fn notified_at(&self) -> Result<Option<DateScalar>> {
-    Ok(
-      self
-        .model
-        .notified_at
-        .map(DateScalar::try_from)
-        .transpose()?,
-    )
+    self.model.notified_at.map(DateScalar::try_from).transpose()
   }
 
   #[graphql(name = "previous_value")]
@@ -62,6 +56,6 @@ impl FormResponseChangeFormsFields {
 
   #[graphql(name = "updated_at")]
   async fn updated_at(&self) -> Result<DateScalar> {
-    Ok(self.model.updated_at.try_into()?)
+    self.model.updated_at.try_into()
   }
 }
