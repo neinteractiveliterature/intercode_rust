@@ -1,6 +1,8 @@
 use async_graphql::Enum;
+use strum::EnumString;
 
-#[derive(Enum, Copy, Clone, Eq, PartialEq)]
+#[derive(Enum, Copy, Clone, Eq, PartialEq, EnumString)]
+#[strum(serialize_all = "snake_case")]
 pub enum PricingStrategy {
   /// Fixed price
   #[graphql(name = "fixed")]

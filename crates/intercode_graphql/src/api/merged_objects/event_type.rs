@@ -5,19 +5,23 @@ use crate::{
 use async_graphql::*;
 use intercode_entities::events;
 use intercode_events::partial_objects::EventEventsFields;
-use intercode_forms::partial_objects::EventFormsFields;
+use intercode_forms::partial_objects::{EventFormsExtensions, EventFormsFields};
 use intercode_graphql_core::{model_backed_type, scalars::DateScalar, ModelBackedType};
 use intercode_policies::{
   policies::{EventAction, EventPolicy},
   ModelBackedTypeGuardablePolicy,
 };
-use intercode_store::{
-  objects::MaximumEventProvidedTicketsOverrideType, partial_objects::EventStoreFields,
+use intercode_store::partial_objects::EventStoreExtensions;
+
+use super::{
+  run_type::RunType, ticket_type_type::TicketTypeType, ConventionType, EventCategoryType,
+  FormResponseChangeType, MaximumEventProvidedTicketsOverrideType, TeamMemberType,
 };
 
-use super::{run_type::RunType, ConventionType, EventCategoryType, TeamMemberType};
-
 model_backed_type!(EventGlueFields, events::Model);
+
+impl EventFormsExtensions for EventGlueFields {}
+impl EventStoreExtensions for EventGlueFields {}
 
 #[Object(guard = "EventPolicy::model_guard(EventAction::Read, self)")]
 impl EventGlueFields {
@@ -35,6 +39,11 @@ impl EventGlueFields {
       .map(FormType::new)
   }
 
+  #[graphql(name = "form_response_changes")]
+  async fn form_response_changes(&self, ctx: &Context<'_>) -> Result<Vec<FormResponseChangeType>> {
+    EventFormsExtensions::form_response_changes(self, ctx).await
+  }
+
   #[graphql(name = "event_category")]
   async fn event_category(&self, ctx: &Context<'_>) -> Result<EventCategoryType, Error> {
     EventEventsFields::from_type(self.clone())
@@ -48,15 +57,7 @@ impl EventGlueFields {
     &self,
     ctx: &Context<'_>,
   ) -> Result<Vec<MaximumEventProvidedTicketsOverrideType>> {
-    EventStoreFields::from_type(self.clone())
-      .maximum_event_provided_tickets_overrides(ctx)
-      .await
-      .map(|res| {
-        res
-          .into_iter()
-          .map(MaximumEventProvidedTicketsOverrideType::new)
-          .collect()
-      })
+    EventStoreExtensions::maximum_event_provided_tickets_overrides(self, ctx).await
   }
 
   #[graphql(name = "provided_tickets")]
@@ -93,6 +94,11 @@ impl EventGlueFields {
       .team_members(ctx)
       .await
       .map(|res| res.into_iter().map(TeamMemberType::from_type).collect())
+  }
+
+  #[graphql(name = "ticket_types")]
+  async fn ticket_types(&self, ctx: &Context<'_>) -> Result<Vec<TicketTypeType>> {
+    EventStoreExtensions::ticket_types(self, ctx).await
   }
 }
 

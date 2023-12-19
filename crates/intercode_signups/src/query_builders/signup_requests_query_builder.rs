@@ -1,11 +1,12 @@
 use async_graphql::InputObject;
 use intercode_entities::signup_requests;
+use intercode_graphql_core::enums::SignupRequestState;
 use intercode_query_builders::{sort_input::SortInput, QueryBuilder};
 use sea_orm::{sea_query::Expr, ColumnTrait, QueryFilter, QueryOrder, Select};
 
 #[derive(InputObject, Default)]
 pub struct SignupRequestFiltersInput {
-  pub state: Option<Vec<String>>,
+  pub state: Option<Vec<SignupRequestState>>,
 }
 
 pub struct SignupRequestsQueryBuilder {
@@ -33,7 +34,7 @@ impl QueryBuilder for SignupRequestsQueryBuilder {
       .map(|state| {
         scope
           .clone()
-          .filter(signup_requests::Column::State.is_in(state))
+          .filter(signup_requests::Column::State.is_in(state.iter().map(<&'static str>::from)))
       })
       .unwrap_or(scope);
 

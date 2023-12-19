@@ -105,6 +105,7 @@ type CmsLayout {
 	admin_notes: String
 	content: String
 	content_html(path: String): String
+	content_html_with_placeholders(path: String): String
 	current_ability_can_delete: Boolean!
 	current_ability_can_update: Boolean!
 	name: String
@@ -121,6 +122,7 @@ type CmsNavigationItem {
 
 interface CmsParent {
 	id: ID!
+	site_name: String!
 	cmsFiles: [CmsFile!]!
 	cmsFile(id: ID!): CmsFile!
 	cmsGraphqlQueries: [CmsGraphqlQuery!]!
@@ -134,10 +136,15 @@ interface CmsParent {
 	cmsVariables: [CmsVariable!]!
 	defaultLayout: CmsLayout!
 	effectiveCmsLayout(path: String!): CmsLayout!
-	notification_templates: [NotificationTemplate!]!
+	host: String!
+	liquidAssigns: [LiquidAssign!]!
+	previewLiquid(content: String!): String!
+	previewMarkdown(markdown: String!, eventId: ID, eventProposalId: ID): String!
 	rootPage: Page!
 	typeaheadSearchCmsContent(name: String): [CmsContent!]!
-	pre_schedule_content_html: String
+	url: String!
+	cmsContentGroups: [CmsContentGroup!]!
+	cmsContentGroup(id: ID!): CmsContentGroup!
 }
 
 type CmsPartial {
@@ -164,8 +171,9 @@ type ContactEmail {
 	name: String!
 }
 
-type Convention {
+type Convention implements CmsParent {
 	id: ID!
+	clickwrap_agreement_html: String
 	cmsFiles: [CmsFile!]!
 	cmsFile(id: ID!): CmsFile!
 	cmsGraphqlQueries: [CmsGraphqlQuery!]!
@@ -179,13 +187,17 @@ type Convention {
 	cmsVariables: [CmsVariable!]!
 	defaultLayout: CmsLayout!
 	effectiveCmsLayout(path: String!): CmsLayout!
+	liquidAssigns: [LiquidAssign!]!
 	notification_templates: [NotificationTemplate!]!
 	rootPage: Page!
 	typeaheadSearchCmsContent(name: String): [CmsContent!]!
 	pre_schedule_content_html: String
+	previewLiquid(content: String!): String!
+	previewMarkdown(markdown: String!, eventId: ID, eventProposalId: ID): String!
 	name: String!
 	canceled: Boolean!
 	clickwrap_agreement: String
+	created_at: Date
 	domain: String!
 	email_from: String!
 	email_mode: EmailMode!
@@ -206,6 +218,7 @@ type Convention {
 	ticketNamePlural: String!
 	timezone_mode: TimezoneMode!
 	timezone_name: String
+	updated_at: Date
 	accepting_proposals: Boolean!
 	"""
 	Given a Liquid text string and a notification event, renders the Liquid to HTML using the
@@ -219,8 +232,8 @@ type Convention {
 	): String!
 	bio_eligible_user_con_profiles: [UserConProfile!]!
 	catch_all_staff_position: StaffPosition
-	cms_content_groups: [CmsContentGroup!]!
-	cms_content_group(id: ID!): CmsContentGroup!
+	cmsContentGroups: [CmsContentGroup!]!
+	cmsContentGroup(id: ID!): CmsContentGroup!
 	coupons_paginated(page: Int, per_page: Int, filters: CouponFiltersInput, sort: [SortInput!]): CouponsPagination!
 	departments: [Department!]!
 	"""
@@ -246,24 +259,92 @@ type Convention {
 	forms: [Form!]!
 	mailing_lists: MailingLists!
 	my_profile: UserConProfile
+	"""
+	Returns all signups for the current user within this convention. If no user is signed in,
+	returns an empty array.
+	"""
+	my_signups: [Signup!]!
 	orders_paginated(page: Int, per_page: Int, filters: OrderFiltersInput, sort: [SortInput!]): OrdersPagination!
+	"""
+	Finds a product by ID in this convention. If there is no product with that ID in this
+	convention, errors out.
+	"""
+	product(id: ID!): Product!
+	products(only_available: Boolean, only_ticket_providing: Boolean): [Product!]!
+	organization: Organization
 	rooms: [Room!]!
+	"""
+	Finds an active run by ID in this convention. If there is no run with that ID in this
+	convention, or the run's event is no longer active, errors out.
+	"""
+	run(
+		"""
+		The ID of the run to find
+		"""
+		id: ID!
+	): Run!
 	signup(id: ID): Signup!
 	signup_requests_paginated(page: Int, per_page: Int, filters: SignupRequestFiltersInput, sort: [SortInput!]): SignupRequestsPagination!
 	staff_position(id: ID): StaffPosition!
 	staff_positions: [StaffPosition!]!
-	user_con_profile_form: Form!
+	ticket_types: [TicketType!]!
+	user_activity_alert(id: ID!): UserActivityAlert!
 	user_activity_alerts: [UserActivityAlert!]!
+	"""
+	Finds a UserConProfile by ID in the convention associated with this convention. If there is
+	no UserConProfile with that ID in this convention, errors out.
+	"""
+	user_con_profile(
+		"""
+		The ID of the UserConProfile to find.
+		"""
+		id: ID!
+	): UserConProfile!
+	"""
+	Finds a UserConProfile by user ID in the convention associated with this convention. If
+	there is no UserConProfile with that user ID in this convention, errors out.
+	"""
+	user_con_profile_by_user_id(
+		"""
+		The user ID of the UserConProfile to find.
+		"""
+		userId: ID!
+	): UserConProfile!
+	user_con_profile_form: Form!
+	user_con_profiles_paginated(page: Int, per_page: Int, filters: UserConProfileFiltersInput, sort: [SortInput!]): UserConProfilesPagination!
 	maximum_event_signups: ScheduledValue
 	signup_mode: SignupMode!
 	signup_requests_open: Boolean!
-	products: [Product!]!
 	stripe_account: StripeAccount
 	stripe_account_id: String
 	stripe_account_ready_to_charge: Boolean!
 	stripe_publishable_key: String
-	ticket_types: [TicketType!]!
 	tickets_available_for_purchase: Boolean!
+}
+
+input ConventionFiltersInput {
+	name: String
+	organization_name: String
+}
+
+type ConventionsPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
+	current_page: Int!
+	entries: [Convention!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
+	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
+	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
+	total_pages: Int!
 }
 
 type Coupon {
@@ -272,20 +353,39 @@ type Coupon {
 	expires_at: Date
 	fixed_amount: Money
 	percent_discount: BigDecimal
-	provides_product: Product
 	usage_limit: Int
 	convention: Convention!
+	provides_product: Product
+}
+
+type CouponApplication {
+	id: ID!
+	discount: Money!
+	coupon: Coupon!
+	order: Order!
 }
 
 input CouponFiltersInput {
 	code: String
 }
 
-type CouponsPagination {
+type CouponsPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
 	current_page: Int!
 	entries: [Coupon!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
 	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
 	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
 	total_pages: Int!
 }
 
@@ -320,23 +420,37 @@ input EmailRouteFiltersInput {
 	forward_addresses: String
 }
 
-type EmailRoutesPagination {
+type EmailRoutesPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
 	current_page: Int!
 	entries: [EmailRoute!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
 	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
 	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
 	total_pages: Int!
 }
 
 type Event {
 	convention: Convention!
 	form: Form!
+	form_response_changes: [FormResponseChange!]!
 	event_category: EventCategory!
 	maximum_event_provided_tickets_overrides: [MaximumEventProvidedTicketsOverride!]!
 	provided_tickets: [Ticket!]!
 	run(id: ID): Run!
 	runs(start: Date, finish: Date, exclude_conflicts: Date): [Run!]!
 	team_members: [TeamMember!]!
+	ticket_types: [TicketType!]!
 	id: ID!
 	admin_notes: String
 	author: String
@@ -356,8 +470,10 @@ type Event {
 	registration_policy: RegistrationPolicy
 	short_blurb: String
 	short_blurb_html: String!
+	slots_limited: Boolean!
 	status: String!
 	title: String!
+	total_slots: Int!
 	url: String
 	current_user_form_item_viewer_role: FormItemRole!
 	current_user_form_item_writer_role: FormItemRole!
@@ -366,10 +482,12 @@ type Event {
 }
 
 type EventCategory {
+	convention: Convention!
 	department: Department
 	event_form: Form!
 	event_proposal_form: Form
 	events_paginated(page: Int, per_page: Int, filters: EventFiltersInput, sort: [SortInput!]): EventsPagination!
+	proposable: Boolean!
 	id: ID!
 	can_provide_tickets: Boolean!
 	default_color: String!
@@ -420,11 +538,15 @@ input EventFiltersInput {
 }
 
 type EventProposal {
+	convention: Convention!
 	event: Event
 	event_category: EventCategory!
+	form: Form!
+	form_response_changes: [FormResponseChange!]!
 	owner: UserConProfile!
 	id: ID!
 	admin_notes: String
+	created_at: Date!
 	images: [ActiveStorageAttachment!]!
 	length_seconds: Int
 	registration_policy: RegistrationPolicy!
@@ -445,39 +567,65 @@ input EventProposalFiltersInput {
 	status: [String]
 }
 
-type EventProposalsPagination {
+type EventProposalsPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
 	current_page: Int!
 	entries: [EventProposal!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
 	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
 	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
 	total_pages: Int!
 }
 
-type EventsPagination {
+type EventsPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
 	current_page: Int!
 	entries: [Event!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
 	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
 	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
 	total_pages: Int!
 }
 
 
 type Form {
 	event_categories: [EventCategory!]!
+	form_section(id: ID!): FormSection!
+	form_sections: [FormSection!]!
 	proposal_event_categories: [EventCategory!]!
 	user_con_profile_conventions: [Convention!]!
 	id: ID!
 	export_json: Json!
-	form_sections: [FormSection!]!
-	form_type: String!
+	form_type: FormType!
 	title: String!
 }
 
 type FormItem {
+	form_section: FormSection!
 	id: ID!
 	admin_description: String
 	default_value: Json
-	expose_in: [String!]
+	expose_in: [FormItemExposeIn!]
 	identifier: String
 	item_type: String!
 	properties: Json!
@@ -488,6 +636,11 @@ type FormItem {
 	writeability: FormItemRole!
 }
 
+enum FormItemExposeIn {
+	event_catalog
+	schedule_popup
+}
+
 enum FormItemRole {
 	normal
 	confirmed_attendee
@@ -496,11 +649,29 @@ enum FormItemRole {
 	admin
 }
 
+type FormResponseChange {
+	compacted: Boolean!
+	created_at: Date!
+	field_identifier: String!
+	new_value: Json
+	notified_at: Date
+	previous_value: Json
+	updated_at: Date!
+	user_con_profile: UserConProfile!
+}
+
 type FormSection {
-	id: ID!
+	form: Form!
 	form_items: [FormItem!]!
+	id: ID!
 	position: Int!
 	title: String
+}
+
+enum FormType {
+	event
+	event_proposal
+	user_con_profile
 }
 
 
@@ -511,6 +682,12 @@ A scalar that can represent any JSON value.
 scalar JSON
 
 scalar Json
+
+type LiquidAssign {
+	name: String!
+	drop_class_name: String!
+	cms_variable_value_json: String
+}
 
 type MailingLists {
 	event_proposers: MailingListsResult!
@@ -533,9 +710,10 @@ type MailingListsWaitlistsResult {
 }
 
 type MaximumEventProvidedTicketsOverride {
+	event: Event!
+	ticket_type: TicketType!
 	id: ID!
 	override_value: Int!
-	ticket_type: TicketType!
 }
 
 type Money {
@@ -563,24 +741,26 @@ type NotificationTemplate {
 }
 
 type Order {
+	coupon_applications: [CouponApplication!]!
 	order_entries: [OrderEntry!]!
 	user_con_profile: UserConProfile!
 	id: ID!
 	charge_id: String
+	paid_at: Date
 	payment_amount: Money
 	payment_note: String
-	status: String!
+	status: OrderStatus!
 	submitted_at: Date
 	total_price: Money!
 }
 
 type OrderEntry {
 	order: Order!
+	product: Product!
+	productVariant: ProductVariant
 	id: ID!
 	describe_products: String!
 	price_per_item: Money!
-	product: Product!
-	product_variant: ProductVariant
 	quantity: Int!
 }
 
@@ -591,7 +771,7 @@ input OrderFiltersInput {
 }
 
 type OrderQuantityByStatus {
-	status: OrderStatus!
+	status: String!
 	quantity: Int!
 }
 
@@ -614,11 +794,23 @@ enum OrderStatus {
 	cancelled
 }
 
-type OrdersPagination {
+type OrdersPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
 	current_page: Int!
 	entries: [Order!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
 	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
 	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
 	total_pages: Int!
 }
 
@@ -633,6 +825,7 @@ type Organization {
 type OrganizationRole {
 	id: ID!
 	name: String!
+	organization: Organization!
 	permissions: [Permission!]!
 	users: [User!]!
 }
@@ -672,6 +865,41 @@ type PageInfo {
 	When paginating forwards, the cursor to continue.
 	"""
 	endCursor: String
+}
+
+"""
+PaginationInterface provides a way to use offset-based pagination on a list of objects. This
+is useful for UIs such as Intercode's table views, which provide a way to jump between numbered
+pages.
+
+Page numbers in PaginationInterface are 1-based (so, the first page is page 1, then page 2,
+etc.) The number of items per page can be controlled via the per_page argument on paginated
+fields. It defaults to 20, and can go up to 200.
+
+Offset-based pagination is different from
+[Relay's cursor-based pagination](https://relay.dev/graphql/connections.htm) that is more
+commonly used in GraphQL APIs. We chose to go with an offset-based approach due to our UI
+needs, but if a cursor-based approach is desirable in the future, we may also implement Relay
+connections alongside our existing pagination fields.
+
+"""
+interface PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
+	current_page: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
+	total_pages: Int!
+	"""
+	The number of items per page currently being returned in this query
+	"""
+	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
+	total_entries: Int!
 }
 
 type PayWhatYouWantValue {
@@ -715,6 +943,8 @@ type PricingStructure {
 union PricingStructureValue = Money | ScheduledMoneyValue | PayWhatYouWantValue
 
 type Product {
+	product_variants: [ProductVariant!]!
+	provides_ticket_type: TicketType
 	id: ID!
 	available: Boolean!
 	description: String
@@ -724,13 +954,13 @@ type Product {
 	order_quantities_by_status: [OrderQuantityByStatus!]!
 	payment_options: [String!]!
 	pricing_structure: PricingStructure!
-	product_variants: [ProductVariant!]!
-	provides_ticket_type: TicketType
 }
 
 type ProductVariant {
+	product: Product!
 	id: ID!
 	description: String
+	description_html: String!
 	image: ActiveStorageAttachment
 	name: String!
 	order_quantities_by_status: [OrderQuantityByStatus!]!
@@ -740,9 +970,13 @@ type ProductVariant {
 
 type Query {
 	assumedIdentityFromProfile: UserConProfile
+	cmsParentByDomain(domain: String!): CmsParent!
 	cmsParentByRequestHost: CmsParent!
+	conventionByDomain(domain: String!): Convention!
+	conventionById(id: ID!): Convention!
 	conventionByRequestHost: Convention!
 	conventionByRequestHostIfPresent: Convention
+	conventions_paginated(filters: ConventionFiltersInput, sort: [SortInput!], page: Int, perPage: Int): ConventionsPagination!
 	currentAbility: Ability!
 	currentUser: User
 	events(after: String, before: String, first: Int, last: Int): EventConnection!
@@ -751,9 +985,32 @@ type Query {
 	user(id: ID): User!
 	users(ids: [ID!]): [User!]!
 	users_paginated(page: Int, per_page: Int, filters: UserFiltersInput, sort: [SortInput!]): UsersPagination!
+	"""
+	If there is a CMS partial on the root site called `account_form_text`, renders it to HTML
+	and returns the result. Otherwise, returns null.
+	
+	This is used by the "update your account" pages as a way to clarify that your account is
+	shared between multiple conventions.
+	"""
+	accountFormContentHtml: String
 	previewLiquid(content: String!): String!
 	email_routes_paginated(page: Int, per_page: Int, filters: EmailRouteFiltersInput, sort: [SortInput!]): EmailRoutesPagination!
 	hasOauthApplications: Boolean!
+}
+
+enum ReceiveSignupEmail {
+	"""
+	Receive email for all signup activity
+	"""
+	ALL_SIGNUPS
+	"""
+	Receive email for signup activity affecting confirmed signups
+	"""
+	NON_WAITLIST_SIGNUPS
+	"""
+	Do not receive signup email
+	"""
+	NO
 }
 
 type RegistrationPolicy {
@@ -788,9 +1045,9 @@ type Room {
 	runs: [Run!]!
 }
 
-type RootSite {
+type RootSite implements CmsParent {
 	id: ID!
-	site_name: String
+	site_name: String!
 	cmsFiles: [CmsFile!]!
 	cmsFile(id: ID!): CmsFile!
 	cmsGraphqlQueries: [CmsGraphqlQuery!]!
@@ -804,6 +1061,10 @@ type RootSite {
 	cmsVariables: [CmsVariable!]!
 	defaultLayout: CmsLayout!
 	effectiveCmsLayout(path: String!): CmsLayout!
+	host: String!
+	liquidAssigns: [LiquidAssign!]!
+	previewLiquid(content: String!): String!
+	previewMarkdown(markdown: String!, eventId: ID, eventProposalId: ID): String!
 	rootPage: Page!
 	typeaheadSearchCmsContent(name: String): [CmsContent!]!
 	url: String!
@@ -816,6 +1077,7 @@ type Run {
 	my_signups: [Signup!]!
 	my_signup_requests: [SignupRequest!]!
 	rooms: [Room!]!
+	signup_changes_paginated(page: Int, per_page: Int, filters: SignupChangeFiltersInput, sort: [SortInput!]): SignupChangesPagination!
 	signups_paginated(page: Int, per_page: Int, filters: SignupFiltersInput, sort: [SortInput!]): SignupsPagination!
 	id: ID!
 	confirmed_signup_count: Int!
@@ -855,11 +1117,66 @@ type Signup {
 	age_restrictions_check: String!
 	bucket_key: String
 	counted: Boolean!
+	created_at: Date!
+	expires_at: Date
 	requested_bucket_key: String
 	state: SignupState!
+	updated_at: Date!
 	waitlist_position: Int
 	run: Run!
 	user_con_profile: UserConProfile!
+}
+
+type SignupChange {
+	id: ID!
+	action: SignupChangeAction!
+	bucket_key: String
+	counted: Boolean!
+	created_at: Date!
+	state: SignupState!
+	updated_at: Date!
+	previous_signup_change: SignupChange
+	run: Run!
+	signup: Signup!
+	user_con_profile: UserConProfile!
+}
+
+enum SignupChangeAction {
+	accept_signup_request
+	admin_create_signup
+	change_registration_policy
+	hold_expired
+	self_service_signup
+	ticket_purchase
+	unknown
+	vacancy_fill
+	withdraw
+}
+
+input SignupChangeFiltersInput {
+	name: String
+	event_title: String
+	action: [String!]
+}
+
+type SignupChangesPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
+	current_page: Int!
+	entries: [SignupChange!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
+	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
+	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
+	total_pages: Int!
 }
 
 input SignupFiltersInput {
@@ -885,22 +1202,56 @@ type SignupRequest {
 	id: ID!
 	created_at: Date!
 	requested_bucket_key: String
-	state: String!
+	state: SignupRequestState!
+	updated_at: Date!
 	replace_signup: Signup
 	result_signup: Signup
 	target_run: Run!
+	updated_by: User!
 	user_con_profile: UserConProfile!
 }
 
 input SignupRequestFiltersInput {
-	state: [String!]
+	state: [SignupRequestState!]
 }
 
-type SignupRequestsPagination {
+enum SignupRequestState {
+	"""
+	The request has not yet been reviewed by a moderator
+	"""
+	pending
+	"""
+	The request has been accepted and the requester has been signed up (see the result_signup
+	field for the actual signup)
+	"""
+	accepted
+	"""
+	The request has been rejected and the requester has not been signed up
+	"""
+	rejected
+	"""
+	The requester withdrew their request before it was accepted or rejected
+	"""
+	withdrawn
+}
+
+type SignupRequestsPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
 	current_page: Int!
 	entries: [SignupRequest!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
 	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
 	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
 	total_pages: Int!
 }
 
@@ -923,11 +1274,23 @@ enum SignupState {
 	withdrawn
 }
 
-type SignupsPagination {
+type SignupsPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
 	current_page: Int!
 	entries: [Signup!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
 	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
 	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
 	total_pages: Int!
 }
 
@@ -988,17 +1351,19 @@ type TeamMember {
 	display_team_member: Boolean!
 	email: String
 	receive_con_email: Boolean!
-	receive_signup_email: String!
+	receive_signup_email: ReceiveSignupEmail!
 	show_email: Boolean!
 }
 
 type Ticket {
 	id: ID!
 	created_at: Date!
-	ticket_type: TicketType!
 	updated_at: Date!
+	convention: Convention!
+	run: Run
 	order_entry: OrderEntry
 	provided_by_event: Event
+	ticket_type: TicketType!
 	user_con_profile: UserConProfile!
 }
 
@@ -1018,14 +1383,19 @@ enum TicketMode {
 }
 
 type TicketType {
+	convention: Convention
+	event: Event
+	parent: TicketTypeParent!
+	providing_products: [Product!]!
 	id: ID!
 	allows_event_signups: Boolean!
 	counts_towards_convention_maximum: Boolean!
 	description: String
 	maximum_event_provided_tickets(eventId: ID): Int!
 	name: String!
-	providing_products: [Product!]!
 }
+
+union TicketTypeParent = Convention | Event
 
 type TimespanWithMoneyValue {
 	finish: Date
@@ -1058,6 +1428,7 @@ type User {
 	name: String!
 	name_inverted: String!
 	privileges: [String!]!
+	event_proposals: [EventProposal!]!
 	user_con_profiles: [UserConProfile!]!
 }
 
@@ -1067,6 +1438,7 @@ type UserActivityAlert {
 	partial_name: String
 	trigger_on_ticket_create: Boolean!
 	trigger_on_user_con_profile_create: Boolean!
+	convention: Convention!
 	notification_destinations: [NotificationDestination!]!
 	user: User
 }
@@ -1075,16 +1447,21 @@ type UserConProfile {
 	ability: Ability!
 	convention: Convention!
 	current_pending_order: Order
+	orders: [Order!]!
 	signups: [Signup!]!
+	signup_requests: [SignupRequest!]!
 	staff_positions: [StaffPosition!]!
 	team_members: [TeamMember!]!
 	ticket: Ticket
+	user: User!
 	id: ID!
 	accepted_clickwrap_agreement: Boolean!
 	address: String
+	bio: String
 	bio_html: String
 	bio_name: String!
 	birth_date: Date
+	can_have_bio: Boolean!
 	city: String
 	country: String
 	email: String!
@@ -1098,6 +1475,7 @@ type UserConProfile {
 	name_inverted: String!
 	name_without_nickname: String!
 	nickname: String
+	show_nickname_in_bio: Boolean!
 	site_admin: Boolean!
 	state: String
 	user_id: ID!
@@ -1106,7 +1484,43 @@ type UserConProfile {
 	current_user_form_item_writer_role: FormItemRole!
 	form_response_attrs_json(itemIdentifiers: [String!]): Json!
 	form_response_attrs_json_with_rendered_markdown(itemIdentifiers: [String!]): Json!
+	can_override_maximum_event_provided_tickets: Boolean!
 	order_summary: String!
+}
+
+input UserConProfileFiltersInput {
+	id: ID
+	attending: Boolean
+	email: String
+	first_name: String
+	is_team_member: Boolean
+	last_name: String
+	payment_amount: Float
+	privileges: String
+	name: String
+	event_title: [ID!]
+	ticket_type: [ID!]
+	userId: ID
+}
+
+type UserConProfilesPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
+	current_page: Int!
+	entries: [UserConProfile!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
+	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
+	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
+	total_pages: Int!
 }
 
 input UserFiltersInput {
@@ -1117,11 +1531,23 @@ input UserFiltersInput {
 	name: String
 }
 
-type UsersPagination {
+type UsersPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
 	current_page: Int!
 	entries: [User!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
 	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
 	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
 	total_pages: Int!
 }
 

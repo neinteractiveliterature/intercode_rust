@@ -336,6 +336,29 @@ pub async fn load_all_team_member_event_ids_in_convention(
   Ok(events.iter().map(|event| event.id).collect())
 }
 
+pub async fn load_all_team_member_run_ids_in_convention(
+  db: &ConnectionWrapper,
+  convention_id: i64,
+  user_id: Option<i64>,
+) -> Result<HashSet<i64>, DbErr> {
+  let runs = runs::Entity::find()
+    .filter(
+      runs::Column::EventId.in_subquery(
+        QuerySelect::query(
+          &mut events_where_team_member(user_id)
+            .filter(events::Column::ConventionId.eq(convention_id))
+            .select_only()
+            .column(events::Column::Id),
+        )
+        .take(),
+      ),
+    )
+    .all(db)
+    .await?;
+
+  Ok(runs.iter().map(|run| run.id).collect())
+}
+
 pub fn conventions_with_permissions(
   permissions: &[&str],
   user_id: Option<i64>,

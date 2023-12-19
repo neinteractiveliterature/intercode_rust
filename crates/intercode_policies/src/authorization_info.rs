@@ -38,6 +38,7 @@ pub struct AuthorizationInfo {
   user_con_profile_ids: OnceCell<HashSet<i64>>,
   user_con_profile_ids_in_signed_up_runs: OnceCell<HashSet<i64>>,
   team_member_event_ids_by_convention_id: Mutex<UnboundCache<i64, HashSet<i64>>>,
+  team_member_run_ids_by_convention_id: Mutex<UnboundCache<i64, HashSet<i64>>>,
 }
 
 impl Clone for AuthorizationInfo {
@@ -54,6 +55,7 @@ impl Clone for AuthorizationInfo {
       user_con_profile_ids: OnceCell::new(),
       user_con_profile_ids_in_signed_up_runs: OnceCell::new(),
       team_member_event_ids_by_convention_id: Mutex::new(UnboundCache::new()),
+      team_member_run_ids_by_convention_id: Mutex::new(UnboundCache::new()),
     }
   }
 }
@@ -109,6 +111,7 @@ impl AuthorizationInfo {
       user_con_profile_ids: OnceCell::new(),
       user_con_profile_ids_in_signed_up_runs: OnceCell::new(),
       team_member_event_ids_by_convention_id: Mutex::new(UnboundCache::new()),
+      team_member_run_ids_by_convention_id: Mutex::new(UnboundCache::new()),
     }
   }
 
@@ -215,6 +218,22 @@ impl AuthorizationInfo {
       .await?;
 
     Ok(event_ids.clone())
+  }
+
+  pub async fn team_member_run_ids_in_convention(
+    &self,
+    convention_id: i64,
+  ) -> Result<HashSet<i64>, DbErr> {
+    let mut lock = self.team_member_run_ids_by_convention_id.lock().await;
+
+    let run_ids = lock
+      .try_get_or_set_with(convention_id, || {
+        let user_id = self.user.as_ref().as_ref().map(|user| user.id);
+        load_all_team_member_event_ids_in_convention(&self.db, convention_id, user_id)
+      })
+      .await?;
+
+    Ok(run_ids.clone())
   }
 
   pub async fn user_con_profile_ids(&self) -> Result<&HashSet<i64>, DbErr> {

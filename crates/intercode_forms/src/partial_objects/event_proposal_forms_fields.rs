@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use async_graphql::*;
 use async_trait::async_trait;
-use intercode_entities::{event_proposals, forms, model_ext::form_item_permissions::FormItemRole};
+use intercode_entities::{
+  event_proposals, form_response_changes, forms, model_ext::form_item_permissions::FormItemRole,
+};
 use intercode_graphql_core::{
   load_one_by_id, load_one_by_model_id, model_backed_type, scalars::JsonScalar, ModelBackedType,
 };
@@ -18,6 +20,39 @@ use crate::{
 };
 
 model_backed_type!(EventProposalFormsFields, event_proposals::Model);
+
+#[async_trait]
+pub trait EventProposalFormsExtensions
+where
+  Self: ModelBackedType<Model = event_proposals::Model> + Clone,
+{
+  async fn form_response_changes<T: ModelBackedType<Model = form_response_changes::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<T>> {
+    let loader_result = ctx
+      .data::<Arc<LoaderManager>>()?
+      .event_proposal_form_response_changes
+      .load_one(self.get_model().id)
+      .await?;
+    Ok(
+      loader_result
+        .unwrap_or_default()
+        .into_iter()
+        .map(T::new)
+        .collect(),
+    )
+  }
+
+  async fn form<T: ModelBackedType<Model = forms::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<T, Error> {
+    EventProposalFormsFields::get_form(&EventProposalFormsFields::from_type(self.clone()), ctx)
+      .await
+      .map(T::new)
+  }
+}
 
 #[Object(guard = "EventProposalPolicy::model_guard(EventProposalAction::Read, self)")]
 impl EventProposalFormsFields {

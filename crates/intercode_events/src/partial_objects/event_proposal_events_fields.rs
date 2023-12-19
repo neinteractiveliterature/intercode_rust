@@ -15,11 +15,19 @@ use seawater::loaders::ExpectModel;
 
 use crate::objects::RegistrationPolicyType;
 
-use super::{EventCategoryEventsFields, EventEventsFields};
+use super::{ConventionEventsFields, EventCategoryEventsFields, EventEventsFields};
 
 model_backed_type!(EventProposalEventsFields, event_proposals::Model);
 
 impl EventProposalEventsFields {
+  pub async fn convention(&self, ctx: &Context<'_>) -> Result<ConventionEventsFields> {
+    let loader_result = load_one_by_model_id!(event_proposal_convention, ctx, self)?;
+    Ok(loader_result_to_required_single!(
+      loader_result,
+      ConventionEventsFields
+    ))
+  }
+
   pub async fn event(&self, ctx: &Context<'_>) -> Result<Option<EventEventsFields>> {
     let loader_result = load_one_by_model_id!(event_proposal_event, ctx, self)?;
     Ok(loader_result_to_optional_single!(
@@ -54,6 +62,11 @@ impl EventProposalEventsFields {
   )]
   async fn admin_notes(&self) -> Option<&str> {
     self.model.admin_notes.as_deref()
+  }
+
+  #[graphql(name = "created_at")]
+  async fn created_at(&self) -> Result<DateScalar> {
+    self.model.created_at.try_into()
   }
 
   async fn images(&self, ctx: &Context<'_>) -> Result<Vec<ActiveStorageAttachmentType>> {

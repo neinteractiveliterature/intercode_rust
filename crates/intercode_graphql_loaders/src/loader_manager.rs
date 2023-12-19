@@ -3,15 +3,7 @@ use std::time::Duration;
 
 use async_graphql::dataloader::DataLoader;
 
-use intercode_entities::links::{
-  CmsNavigationItemToCmsNavigationSection, ConventionToCatchAllStaffPosition, ConventionToSignups,
-  ConventionToSingleEvent, ConventionToStaffPositions, EventCategoryToEventForm,
-  EventCategoryToEventProposalForm, EventToProvidedTickets, FormToEventCategories, FormToFormItems,
-  FormToProposalEventCategories, FormToUserConProfileConventions, PageToCmsPartials,
-  SignupRequestToReplaceSignup, SignupRequestToResultSignup, StaffPositionToUserConProfiles,
-  TicketToProvidedByEvent, UserActivityAlertToNotificationDestinations,
-  UserConProfileToStaffPositions,
-};
+use intercode_entities::links::*;
 use intercode_entities::model_ext::FormResponse;
 use intercode_entities::*;
 use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
@@ -22,6 +14,7 @@ use super::active_storage_attached_blobs_loader::ActiveStorageAttachedBlobsLoade
 use super::cms_content_group_contents_loader::CmsContentGroupContentsLoader;
 use super::event_user_con_profile_event_rating_loader::EventUserConProfileEventRatingLoader;
 use super::filtered_event_runs_loader::{EventRunsLoaderFilter, FilteredEventRunsLoader};
+use super::form_response_changes_loader::FormResponseChangesLoader;
 use super::loader_spawner::LoaderSpawner;
 use super::order_quantity_by_status_loader::{
   OrderQuantityByStatusLoader, OrderQuantityByStatusLoaderEntity,
@@ -59,7 +52,9 @@ macro_rules! loader_manager {
       pub convention_favicon: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub convention_open_graph_image: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub event_attached_images: DataLoader<ActiveStorageAttachedBlobsLoader>,
+      pub event_form_response_changes: DataLoader<FormResponseChangesLoader>,
       pub event_proposal_attached_images: DataLoader<ActiveStorageAttachedBlobsLoader>,
+      pub event_proposal_form_response_changes: DataLoader<FormResponseChangesLoader>,
       pub event_runs_filtered: LoaderSpawner<EventRunsLoaderFilter, i64, FilteredEventRunsLoader>,
       pub event_user_con_profile_event_ratings:
         LoaderSpawner<i64, i64, EventUserConProfileEventRatingLoader>,
@@ -74,6 +69,7 @@ macro_rules! loader_manager {
       pub run_user_con_profile_signup_requests:
         LoaderSpawner<i64, i64, RunUserConProfileSignupRequestsLoader>,
       pub signup_waitlist_position: DataLoader<WaitlistPositionLoader>,
+      pub user_con_profile_form_response_changes: DataLoader<FormResponseChangesLoader>,
       $($tail)*
     }
   };
@@ -140,11 +136,21 @@ macro_rules! loader_manager {
         tokio::spawn,
       )
       .delay($delay_millis),
+      event_form_response_changes: DataLoader::new(
+        FormResponseChangesLoader::new($db.clone(), form_response_changes::Entity::find()
+          .filter(form_response_changes::Column::ResponseType.eq("Event"))),
+        tokio::spawn
+      ).delay($delay_millis),
       event_proposal_attached_images: DataLoader::new(
         ActiveStorageAttachedBlobsLoader::new($db.clone(), event_proposals::Model::attached_images_scope()),
         tokio::spawn,
       )
       .delay($delay_millis),
+      event_proposal_form_response_changes: DataLoader::new(
+        FormResponseChangesLoader::new($db.clone(), form_response_changes::Entity::find()
+          .filter(form_response_changes::Column::ResponseType.eq("EventProposal"))),
+        tokio::spawn
+      ).delay($delay_millis),
       event_runs_filtered: LoaderSpawner::new(
         $db.clone(),
         $delay_millis,
@@ -199,6 +205,11 @@ macro_rules! loader_manager {
       ),
       signup_waitlist_position: DataLoader::new(WaitlistPositionLoader::new($db.clone()), tokio::spawn)
         .delay($delay_millis),
+      user_con_profile_form_response_changes: DataLoader::new(
+        FormResponseChangesLoader::new($db.clone(), form_response_changes::Entity::find()
+          .filter(form_response_changes::Column::ResponseType.eq("UserConProfile"))),
+        tokio::spawn
+      ).delay($delay_millis),
       $($tail)*
     }
   };
@@ -284,6 +295,7 @@ loader_manager!(
   entity_relation(convention_departments, conventions, departments);
   entity_relation(convention_event_categories, conventions, event_categories);
   entity_relation(convention_notification_templates, conventions, notification_templates);
+  entity_relation(convention_organization, conventions, organizations);
   entity_relation(convention_products, conventions, products);
   entity_relation(convention_rooms, conventions, rooms);
   entity_link(convention_signups, ConventionToSignups);
@@ -303,6 +315,7 @@ loader_manager!(
   entity_link(event_provided_tickets, EventToProvidedTickets);
   entity_relation(event_runs, events, runs);
   entity_relation(event_team_members, events, team_members);
+  entity_relation(event_ticket_types, events, ticket_types);
   entity_id(events_by_id, events);
   entity_relation(event_category_convention, event_categories, conventions);
   entity_relation(event_category_department, event_categories, departments);
@@ -321,7 +334,10 @@ loader_manager!(
   entity_relation(form_form_sections, forms, form_sections);
   entity_link(form_proposal_event_categories, FormToProposalEventCategories);
   entity_link(form_user_con_profile_conventions, FormToUserConProfileConventions);
+  entity_relation(form_item_form_section, form_items, form_sections);
+  entity_relation(form_section_form, form_sections, forms);
   entity_relation(form_section_form_items, form_sections, form_items);
+  entity_relation(form_response_change_user_con_profile, form_response_changes, user_con_profiles);
   entity_relation(maximum_event_provided_tickets_override_event, maximum_event_provided_tickets_overrides, events);
   entity_relation(
     maximum_event_provided_tickets_override_ticket_type,
@@ -338,12 +354,14 @@ loader_manager!(
   entity_relation(order_entry_product_variant, order_entries, product_variants);
   entity_relation(organization_conventions, organizations, conventions);
   entity_relation(organization_organization_roles, organizations, organization_roles);
+  entity_relation(organization_role_organization, organization_roles, organizations);
   entity_relation(organization_role_permissions, organization_roles, permissions);
   entity_relation(organization_role_users, organization_roles, users);
   entity_relation(pages_cms_layouts, pages, cms_layouts);
   entity_link(pages_referenced_partials, PageToCmsPartials);
   entity_relation(product_product_variants, products, product_variants);
   entity_relation(product_provides_ticket_type, products, ticket_types);
+  entity_relation(product_variant_product, product_variants, products);
   entity_relation(room_runs, rooms, runs);
   entity_relation(run_event, runs, events);
   entity_relation(run_rooms, runs, rooms);
@@ -351,9 +369,13 @@ loader_manager!(
   entity_id(runs_by_id, runs);
   entity_relation(signup_run, signups, runs);
   entity_relation(signup_user_con_profile, signups, user_con_profiles);
+  entity_relation(signup_change_run, signup_changes, runs);
+  entity_relation(signup_change_signup, signup_changes, signups);
+  entity_relation(signup_change_user_con_profile, signup_changes, user_con_profiles);
   entity_link(signup_request_replace_signup, SignupRequestToReplaceSignup);
   entity_link(signup_request_result_signup, SignupRequestToResultSignup);
   entity_relation(signup_request_target_run, signup_requests, runs);
+  entity_relation(signup_request_updated_by, signup_requests, users);
   entity_relation(signup_request_user_con_profile, signup_requests, user_con_profiles);
   entity_id(staff_positions_by_id, staff_positions);
   entity_relation(staff_position_permissions, staff_positions, permissions);
@@ -366,16 +388,22 @@ loader_manager!(
   );
   entity_id(team_members_by_id, team_members);
   entity_relation(ticket_order_entry, tickets, order_entries);
+  entity_link(ticket_convention, TicketToConvention);
   entity_link(ticket_provided_by_event, TicketToProvidedByEvent);
+  entity_link(ticket_run, TicketToRun);
   entity_relation(ticket_ticket_type, tickets, ticket_types);
   entity_relation(ticket_user_con_profile, tickets, user_con_profiles);
+  entity_relation(ticket_type_convention, ticket_types, conventions);
+  entity_relation(ticket_type_event, ticket_types, events);
   entity_relation(ticket_type_providing_products, ticket_types, products);
+  entity_relation(user_activity_alert_convention, user_activity_alerts, conventions);
   entity_link(user_activity_alert_notification_destinations, UserActivityAlertToNotificationDestinations);
   entity_relation(user_activity_alert_user, user_activity_alerts, users);
   entity_id(user_con_profiles_by_id, user_con_profiles);
   entity_relation(user_con_profile_convention, user_con_profiles, conventions);
   entity_relation(user_con_profile_orders, user_con_profiles, orders);
   entity_relation(user_con_profile_signups, user_con_profiles, signups);
+  entity_relation(user_con_profile_signup_requests, user_con_profiles, signup_requests);
   entity_link(
     user_con_profile_staff_positions,
     UserConProfileToStaffPositions
@@ -388,6 +416,7 @@ loader_manager!(
   entity_relation(user_con_profile_ticket, user_con_profiles, tickets);
   entity_relation(user_con_profile_user, user_con_profiles, users);
   entity_id(users_by_id, users);
+  entity_link(user_event_proposals, UserToEventProposals);
   entity_relation(user_user_con_profiles, users, user_con_profiles);
 );
 

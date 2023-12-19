@@ -2,14 +2,16 @@ use async_graphql::*;
 use intercode_conventions::partial_objects::FormConventionsFields;
 use intercode_entities::forms;
 use intercode_events::partial_objects::FormEventsFields;
-use intercode_forms::partial_objects::FormFormsFields;
+use intercode_forms::partial_objects::{FormFormsExtensions, FormFormsFields};
 use intercode_graphql_core::{model_backed_type, ModelBackedType};
 
 use crate::merged_model_backed_type;
 
-use super::{ConventionType, EventCategoryType};
+use super::{ConventionType, EventCategoryType, FormSectionType};
 
 model_backed_type!(FormGlueFields, forms::Model);
+
+impl FormFormsExtensions for FormGlueFields {}
 
 #[Object]
 impl FormGlueFields {
@@ -19,6 +21,16 @@ impl FormGlueFields {
       .event_categories(ctx)
       .await
       .map(|res| res.into_iter().map(EventCategoryType::from_type).collect())
+  }
+
+  #[graphql(name = "form_section")]
+  pub async fn form_section(&self, ctx: &Context<'_>, id: ID) -> Result<FormSectionType, Error> {
+    FormFormsExtensions::form_section(self, ctx, id).await
+  }
+
+  #[graphql(name = "form_sections")]
+  pub async fn form_sections(&self, ctx: &Context<'_>) -> Result<Vec<FormSectionType>, Error> {
+    FormFormsExtensions::form_sections(self, ctx).await
   }
 
   #[graphql(name = "proposal_event_categories")]

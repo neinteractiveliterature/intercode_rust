@@ -1,4 +1,7 @@
-use api::{interfaces::CmsParentInterface, MutationRoot, QueryRoot};
+use api::{
+  interfaces::{CmsParentInterface, PaginationInterface},
+  MutationRoot, QueryRoot,
+};
 use async_graphql::{EmptySubscription, Schema, SchemaBuilder};
 use intercode_graphql_core::schema_data::SchemaData;
 
@@ -13,6 +16,7 @@ pub fn build_intercode_graphql_schema_minimal(
     EmptySubscription,
   )
   .register_output_type::<CmsParentInterface>()
+  .register_output_type::<PaginationInterface>()
 }
 
 pub fn build_intercode_graphql_schema(

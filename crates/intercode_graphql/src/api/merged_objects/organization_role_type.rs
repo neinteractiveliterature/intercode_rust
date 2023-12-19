@@ -8,10 +8,19 @@ use crate::{
   merged_model_backed_type,
 };
 
+use super::OrganizationType;
+
 model_backed_type!(OrganizationRoleGlueFields, organization_roles::Model);
 
 #[Object]
 impl OrganizationRoleGlueFields {
+  async fn organization(&self, ctx: &Context<'_>) -> Result<OrganizationType> {
+    OrganizationRoleConventionsFields::from_type(self.clone())
+      .organization(ctx)
+      .await
+      .map(OrganizationType::new)
+  }
+
   async fn permissions(&self, ctx: &Context<'_>) -> Result<Vec<PermissionType>> {
     OrganizationRoleConventionsFields::from_type(self.clone())
       .permissions(ctx)

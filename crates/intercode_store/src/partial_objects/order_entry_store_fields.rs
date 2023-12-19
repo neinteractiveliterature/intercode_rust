@@ -1,31 +1,41 @@
-use std::sync::Arc;
-
 use async_graphql::*;
-use intercode_entities::order_entries;
-use intercode_graphql_core::{model_backed_type, objects::MoneyType, ModelBackedType};
-use intercode_graphql_loaders::LoaderManager;
-use seawater::loaders::ExpectModel;
-
-use crate::{
-  objects::{ProductType, ProductVariantType},
-  order_summary_presenter::load_and_describe_order_entry,
+use async_trait::async_trait;
+use intercode_entities::{order_entries, orders, product_variants, products};
+use intercode_graphql_core::{
+  load_one_by_model_id, loader_result_to_optional_single, loader_result_to_required_single,
+  model_backed_type, objects::MoneyType, ModelBackedType,
 };
 
-use super::OrderStoreFields;
+use crate::order_summary_presenter::load_and_describe_order_entry;
 
-model_backed_type!(OrderEntryStoreFields, order_entries::Model);
+#[async_trait]
+pub trait OrderEntryStoreExtensions
+where
+  Self: ModelBackedType<Model = order_entries::Model>,
+{
+  async fn order<T: ModelBackedType<Model = orders::Model>>(&self, ctx: &Context<'_>) -> Result<T> {
+    let loader_result = load_one_by_model_id!(order_entry_order, ctx, self)?;
+    Ok(loader_result_to_required_single!(loader_result, T))
+  }
 
-impl OrderEntryStoreFields {
-  pub async fn order(&self, ctx: &Context<'_>) -> Result<OrderStoreFields> {
-    let loader_result = ctx
-      .data::<Arc<LoaderManager>>()?
-      .order_entry_order()
-      .load_one(self.model.id)
-      .await?;
+  async fn product<T: ModelBackedType<Model = products::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<T> {
+    let loader_result = load_one_by_model_id!(order_entry_product, ctx, self)?;
+    Ok(loader_result_to_required_single!(loader_result, T))
+  }
 
-    Ok(OrderStoreFields::new(loader_result.expect_one()?.clone()))
+  async fn product_variant<T: ModelBackedType<Model = product_variants::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Option<T>> {
+    let loader_result = load_one_by_model_id!(order_entry_product_variant, ctx, self)?;
+    Ok(loader_result_to_optional_single!(loader_result, T))
   }
 }
+
+model_backed_type!(OrderEntryStoreFields, order_entries::Model);
 
 #[Object]
 impl OrderEntryStoreFields {
@@ -45,32 +55,6 @@ impl OrderEntryStoreFields {
       self.model.price_per_item_currency.as_deref(),
     )
     .unwrap_or_default()
-  }
-
-  async fn product(&self, ctx: &Context<'_>) -> Result<ProductType> {
-    let product_result = ctx
-      .data::<Arc<LoaderManager>>()?
-      .order_entry_product()
-      .load_one(self.model.id)
-      .await?;
-
-    Ok(ProductType::new(product_result.expect_one()?.clone()))
-  }
-
-  #[graphql(name = "product_variant")]
-  async fn product_variant(&self, ctx: &Context<'_>) -> Result<Option<ProductVariantType>> {
-    let product_variant_result = ctx
-      .data::<Arc<LoaderManager>>()?
-      .order_entry_product_variant()
-      .load_one(self.model.id)
-      .await?;
-
-    Ok(
-      product_variant_result
-        .try_one()
-        .cloned()
-        .map(ProductVariantType::new),
-    )
   }
 
   async fn quantity(&self) -> i32 {

@@ -1,6 +1,8 @@
-use async_graphql::{resolver_utils::parse_enum, Enum};
+use async_graphql::Enum;
+use strum::EnumString;
 
-#[derive(Enum, Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Enum, Copy, Clone, Eq, PartialEq, Debug, EnumString)]
+#[strum(serialize_all = "snake_case")]
 pub enum OrderStatus {
   /// Order has not yet been submitted
   #[graphql(name = "pending")]
@@ -17,13 +19,4 @@ pub enum OrderStatus {
   /// Order has been cancelled
   #[graphql(name = "cancelled")]
   Cancelled,
-}
-
-impl TryFrom<&str> for OrderStatus {
-  type Error = async_graphql::Error;
-
-  fn try_from(value: &str) -> Result<Self, Self::Error> {
-    parse_enum(value.into())
-      .map_err(|err| Self::Error::new(err.into_server_error(Default::default()).message))
-  }
 }

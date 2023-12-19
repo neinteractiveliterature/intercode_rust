@@ -1,21 +1,51 @@
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use async_graphql::*;
+use intercode_cms::CmsRenderingContext;
 use intercode_entities::products;
 use intercode_graphql_core::{
-  load_one_by_model_id, loader_result_to_many, loader_result_to_optional_single, model_backed_type,
-  objects::ActiveStorageAttachmentType, ModelBackedType,
+  liquid_renderer::LiquidRenderer, load_one_by_model_id, loader_result_to_many,
+  loader_result_to_optional_single, model_backed_type, objects::ActiveStorageAttachmentType,
+  query_data::QueryData, ModelBackedType,
 };
 use intercode_graphql_loaders::{
   order_quantity_by_status_loader::OrderQuantityByStatusType, LoaderManager,
 };
-use intercode_liquid::render_markdown;
 
-use super::{pricing_structure_type::PricingStructureType, ProductVariantType, TicketTypeType};
-model_backed_type!(ProductType, products::Model);
+use crate::objects::PricingStructureType;
 
-#[Object(name = "Product")]
-impl ProductType {
+use super::{ProductVariantStoreFields, TicketTypeStoreFields};
+
+model_backed_type!(ProductStoreFields, products::Model);
+
+impl ProductStoreFields {
+  pub async fn product_variants(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<ProductVariantStoreFields>> {
+    let loader_result = load_one_by_model_id!(product_product_variants, ctx, self)?;
+
+    Ok(loader_result_to_many!(
+      loader_result,
+      ProductVariantStoreFields
+    ))
+  }
+
+  pub async fn provides_ticket_type(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Option<TicketTypeStoreFields>> {
+    let loader_result = load_one_by_model_id!(product_provides_ticket_type, ctx, self)?;
+
+    Ok(loader_result_to_optional_single!(
+      loader_result,
+      TicketTypeStoreFields
+    ))
+  }
+}
+
+#[Object]
+impl ProductStoreFields {
   async fn id(&self) -> ID {
     self.model.id.into()
   }
@@ -29,11 +59,15 @@ impl ProductType {
   }
 
   #[graphql(name = "description_html")]
-  async fn description_html(&self) -> String {
-    render_markdown(
-      self.model.description.as_deref().unwrap_or(""),
-      &HashMap::default(),
-    )
+  async fn description_html(&self, ctx: &Context<'_>) -> Result<String> {
+    let query_data = ctx.data::<QueryData>()?;
+    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
+    let cms_rendering_context =
+      CmsRenderingContext::new(liquid::object!({}), query_data, liquid_renderer.as_ref());
+
+    cms_rendering_context
+      .render_liquid(self.model.description.as_deref().unwrap_or(""), None)
+      .await
   }
 
   async fn image(&self, ctx: &Context<'_>) -> Result<Option<ActiveStorageAttachmentType>> {
@@ -84,22 +118,5 @@ impl ProductType {
     Ok(PricingStructureType::new(serde_json::from_value(
       self.model.pricing_structure.clone(),
     )?))
-  }
-
-  #[graphql(name = "product_variants")]
-  async fn product_variants(&self, ctx: &Context<'_>) -> Result<Vec<ProductVariantType>> {
-    let loader_result = load_one_by_model_id!(product_product_variants, ctx, self)?;
-
-    Ok(loader_result_to_many!(loader_result, ProductVariantType))
-  }
-
-  #[graphql(name = "provides_ticket_type")]
-  async fn provides_ticket_type(&self, ctx: &Context<'_>) -> Result<Option<TicketTypeType>> {
-    let loader_result = load_one_by_model_id!(product_provides_ticket_type, ctx, self)?;
-
-    Ok(loader_result_to_optional_single!(
-      loader_result,
-      TicketTypeType
-    ))
   }
 }

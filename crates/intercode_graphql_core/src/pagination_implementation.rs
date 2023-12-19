@@ -100,7 +100,9 @@ where
         "current_page".to_string(),
         MetaField {
           name: "current_page".to_string(),
-          description: None,
+          description: Some(
+            "The number of the page currently being returned in this query".to_string(),
+          ),
           args: IndexMap::default(),
           ty: "Int!".to_string(),
           deprecation: Deprecation::NoDeprecated,
@@ -144,7 +146,9 @@ where
         "per_page".to_string(),
         MetaField {
           name: "per_page".to_string(),
-          description: None,
+          description: Some(
+            "The number of items per page currently being returned in this query".to_string(),
+          ),
           args: IndexMap::default(),
           ty: "Int!".to_string(),
           deprecation: Deprecation::NoDeprecated,
@@ -166,7 +170,9 @@ where
         "total_entries".to_string(),
         MetaField {
           name: "total_entries".to_string(),
-          description: None,
+          description: Some(
+            "The total number of items in the paginated list (across all pages)".to_string(),
+          ),
           args: IndexMap::default(),
           ty: "Int!".to_string(),
           deprecation: Deprecation::NoDeprecated,
@@ -188,7 +194,7 @@ where
         "total_pages".to_string(),
         MetaField {
           name: "total_pages".to_string(),
-          description: None,
+          description: Some("The total number of pages in the paginated list".to_string()),
           args: IndexMap::default(),
           ty: "Int!".to_string(),
           deprecation: Deprecation::NoDeprecated,

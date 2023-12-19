@@ -14,21 +14,17 @@ use intercode_liquid::render_markdown;
 use sea_orm::{ColumnTrait, QueryFilter};
 
 use crate::{
-  api::objects::{
-    CmsContentType, CmsFileType, CmsGraphqlQueryType, CmsLayoutType, CmsNavigationItemType,
-    CmsPartialType, CmsVariableType, LiquidAssignType, PageType,
-  },
-  api::partial_objects::CmsContentGroupCmsFields,
+  api::objects::{CmsContentType, CmsLayoutType, LiquidAssignType, PageType},
   CmsRenderingContext,
 };
 
 macro_rules! assoc_getter {
-  ($name: ident, $ty: ident) => {
-    fn $name<'life0, 'async_trait>(
+  ($name: ident) => {
+    fn $name<'life0, 'async_trait, T: ModelBackedType<Model = ::intercode_entities::$name::Model>>(
       &'life0 self,
       ctx: &'async_trait Context<'_>,
     ) -> std::pin::Pin<
-      Box<dyn std::future::Future<Output = Result<Vec<$ty>, Error>> + Send + 'async_trait>,
+      Box<dyn std::future::Future<Output = Result<Vec<T>, Error>> + Send + 'async_trait>,
     >
     where
       'life0: 'async_trait,
@@ -43,7 +39,7 @@ macro_rules! assoc_getter {
             .all(query_data.db())
             .await?
             .iter()
-            .map(|item| $ty::new(item.to_owned()))
+            .map(|item| T::new(item.to_owned()))
             .collect(),
         )
       })
@@ -52,13 +48,13 @@ macro_rules! assoc_getter {
 }
 
 macro_rules! id_getter {
-  ($name: ident, $model_name: ident, $ty: ident) => {
-    fn $name<'life0, 'async_trait>(
+  ($name: ident, $model_name: ident) => {
+    fn $name<'life0, 'async_trait, T: ModelBackedType<Model = ::intercode_entities::$model_name::Model>>(
       &'life0 self,
       ctx: &'async_trait Context<'_>,
       id: ID,
     ) -> std::pin::Pin<
-      Box<dyn std::future::Future<Output = Result<$ty, Error>> + Send + 'async_trait>,
+      Box<dyn std::future::Future<Output = Result<T, Error>> + Send + 'async_trait>,
     >
     where
       'life0: 'async_trait,
@@ -67,7 +63,7 @@ macro_rules! id_getter {
       Box::pin(async move {
         let query_data = ctx.data::<QueryData>()?;
         let id = id.parse::<i64>()?;
-        Ok($ty::new(
+        Ok(T::new(
           self
             .get_model()
             .$model_name()
@@ -87,25 +83,21 @@ where
   Self: ModelBackedType<Model = M>,
   M: CmsParentTrait + sea_orm::ModelTrait + Sync,
 {
-  assoc_getter!(cms_content_groups, CmsContentGroupCmsFields);
-  id_getter!(
-    cms_content_group,
-    cms_content_groups,
-    CmsContentGroupCmsFields
-  );
+  assoc_getter!(cms_content_groups);
+  id_getter!(cms_content_group, cms_content_groups);
 
-  assoc_getter!(cms_files, CmsFileType);
-  id_getter!(cms_file, cms_files, CmsFileType);
+  assoc_getter!(cms_files);
+  id_getter!(cms_file, cms_files);
 
-  assoc_getter!(cms_graphql_queries, CmsGraphqlQueryType);
-  id_getter!(cms_graphql_query, cms_graphql_queries, CmsGraphqlQueryType);
+  assoc_getter!(cms_graphql_queries);
+  id_getter!(cms_graphql_query, cms_graphql_queries);
 
-  assoc_getter!(cms_layouts, CmsLayoutType);
-  id_getter!(cms_layout, cms_layouts, CmsLayoutType);
+  assoc_getter!(cms_layouts);
+  id_getter!(cms_layout, cms_layouts);
 
-  assoc_getter!(cms_navigation_items, CmsNavigationItemType);
+  assoc_getter!(cms_navigation_items);
 
-  assoc_getter!(cms_partials, CmsPartialType);
+  assoc_getter!(cms_partials);
 
   async fn cms_pages(&self, ctx: &Context<'_>) -> Result<Vec<PageType>, Error> {
     let query_data = ctx.data::<QueryData>()?;
@@ -154,7 +146,7 @@ where
       .map(PageType::new)
   }
 
-  assoc_getter!(cms_variables, CmsVariableType);
+  assoc_getter!(cms_variables);
 
   async fn default_layout(&self, ctx: &Context<'_>) -> Result<CmsLayoutType, Error> {
     let query_data = ctx.data::<QueryData>()?;

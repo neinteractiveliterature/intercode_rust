@@ -1,21 +1,28 @@
 use async_graphql::*;
 use intercode_entities::order_entries;
-use intercode_graphql_core::{model_backed_type, ModelBackedType};
-use intercode_store::partial_objects::OrderEntryStoreFields;
+use intercode_graphql_core::model_backed_type;
+use intercode_store::partial_objects::{OrderEntryStoreExtensions, OrderEntryStoreFields};
 
 use crate::merged_model_backed_type;
 
-use super::OrderType;
+use super::{product_type::ProductType, product_variant_type::ProductVariantType, OrderType};
 
 model_backed_type!(OrderEntryGlueFields, order_entries::Model);
+
+impl OrderEntryStoreExtensions for OrderEntryGlueFields {}
 
 #[Object]
 impl OrderEntryGlueFields {
   pub async fn order(&self, ctx: &Context<'_>) -> Result<OrderType> {
-    OrderEntryStoreFields::from_type(self.clone())
-      .order(ctx)
-      .await
-      .map(OrderType::from_type)
+    OrderEntryStoreExtensions::order(self, ctx).await
+  }
+
+  pub async fn product(&self, ctx: &Context<'_>) -> Result<ProductType> {
+    OrderEntryStoreExtensions::product(self, ctx).await
+  }
+
+  pub async fn product_variant(&self, ctx: &Context<'_>) -> Result<Option<ProductVariantType>> {
+    OrderEntryStoreExtensions::product_variant(self, ctx).await
   }
 }
 

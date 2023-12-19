@@ -1,10 +1,9 @@
-use std::sync::Arc;
+use std::{env, sync::Arc};
 
 use async_graphql::*;
 use intercode_entities::cms_layouts;
 use intercode_graphql_core::{
   liquid_renderer::LiquidRenderer, model_backed_type, query_data::QueryData,
-  schema_data::SchemaData,
 };
 use intercode_liquid::{cms_parent_partial_source::PreloadPartialsStrategy, react_component_tag};
 use intercode_policies::{
@@ -45,7 +44,6 @@ impl CmsLayoutType {
     ctx: &Context<'_>,
     path: Option<String>,
   ) -> Result<Option<String>, Error> {
-    let schema_data = ctx.data::<SchemaData>()?;
     let query_data = ctx.data::<QueryData>()?;
     let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
 
@@ -56,6 +54,42 @@ impl CmsLayoutType {
           "navbarClasses": self.model.navbar_classes.as_deref().unwrap_or(DEFAULT_NAVBAR_CLASSES)
         })),
         "content_for_layout": react_component_tag("AppRouter", json!({}))
+      }),
+      query_data,
+      liquid_renderer.as_ref(),
+    );
+
+    cms_rendering_context
+      .render_liquid(
+        self.model.content.as_deref().unwrap_or(""),
+        Some(PreloadPartialsStrategy::ByLayout(&self.model)),
+      )
+      .await
+      .map(Some)
+  }
+
+  #[graphql(name = "content_html_with_placeholders")]
+  #[allow(unused_variables)]
+  async fn content_html_with_placeholders(
+    &self,
+    ctx: &Context<'_>,
+    path: Option<String>,
+  ) -> Result<Option<String>, Error> {
+    let query_data = ctx.data::<QueryData>()?;
+    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
+
+    let styles_url = url::Url::parse(
+      format!(
+        "https://{}/packs/application-styles.js",
+        env::var("ASSETS_HOST")?
+      )
+      .as_str(),
+    )?;
+    let cms_rendering_context = CmsRenderingContext::new(
+      object!({
+        "content_for_head": format!("<script src=\"{}\">{{{{ content_for_head }}}}", styles_url),
+        "content_for_navbar": "{{ content_for_navbar }}",
+        "content_for_layout": "{{ content_for_layout }}"
       }),
       query_data,
       liquid_renderer.as_ref(),

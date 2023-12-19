@@ -8,12 +8,19 @@ use intercode_query_builders::sort_input::SortInput;
 
 use crate::{api::merged_objects::FormType, merged_model_backed_type};
 
-use super::{DepartmentType, EventType};
+use super::{ConventionType, DepartmentType, EventType};
 
 model_backed_type!(EventCategoryGlueFields, event_categories::Model);
 
 #[Object]
 impl EventCategoryGlueFields {
+  pub async fn convention(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {
+    EventCategoryEventsFields::from_type(self.clone())
+      .convention(ctx)
+      .await
+      .map(ConventionType::new)
+  }
+
   pub async fn department(&self, ctx: &Context<'_>) -> Result<Option<DepartmentType>, Error> {
     EventCategoryEventsFields::from_type(self.clone())
       .department(ctx)
@@ -50,6 +57,11 @@ impl EventCategoryGlueFields {
       .events_paginated(ctx, page, per_page, filters, sort)
       .await
       .map(ModelPaginator::into_type)
+  }
+
+  async fn proposable(&self, ctx: &Context<'_>) -> Result<bool, Error> {
+    let proposal_form = self.event_proposal_form(ctx).await?;
+    Ok(proposal_form.is_some())
   }
 }
 

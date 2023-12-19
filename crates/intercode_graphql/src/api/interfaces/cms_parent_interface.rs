@@ -6,7 +6,6 @@ use async_graphql::{
   ContainerType, Context, ContextSelectionSet, InterfaceType, OutputType, Positioned,
 };
 use async_graphql_value::indexmap::IndexMap;
-use intercode_cms::api::partial_objects::ConventionCmsFields;
 use intercode_entities::cms_parent::CmsParent;
 use intercode_graphql_core::ModelBackedType;
 
@@ -37,8 +36,8 @@ impl From<CmsParent> for CmsParentInterface {
   }
 }
 
-// Hacks: Interface doesn't support MergedObject, so instead we're going to declare ConventionCmsFields as the canonical
-// implementation of this interface, and assume that RootSiteType implements everything ConventionCmsFields does.
+// Hacks: Interface doesn't support MergedObject, so instead we're going to declare RootSite as the canonical
+// implementation of this interface, and assume that ConventionType implements everything RootSite does.
 // This loses some type safety but it does let us maintain compatibility with the Ruby version of the schema.
 impl OutputType for CmsParentInterface {
   #[doc = " Type the name."]
@@ -48,12 +47,17 @@ impl OutputType for CmsParentInterface {
 
   #[doc = " Create type information in the registry and return qualified typename."]
   fn create_type_info(registry: &mut Registry) -> String {
-    registry.create_output_type::<Self, _>(MetaTypeId::Interface, |registry| {
+    let possible_types: Vec<String> = vec![
+      ConventionType::type_name().into_owned(),
+      RootSiteType::type_name().into_owned(),
+    ];
+
+    let output_type = registry.create_output_type::<Self, _>(MetaTypeId::Interface, |registry| {
       let mut fields: IndexMap<String, MetaField> = Default::default();
 
       if let MetaType::Object {
         fields: obj_fields, ..
-      } = registry.create_fake_output_type::<ConventionCmsFields>()
+      } = registry.create_fake_output_type::<RootSiteType>()
       {
         fields = obj_fields;
       }
@@ -62,10 +66,7 @@ impl OutputType for CmsParentInterface {
         name: Self::type_name().into_owned(),
         description: None,
         fields,
-        possible_types: vec!["RootSite", "Convention"]
-          .into_iter()
-          .map(String::from)
-          .collect(),
+        possible_types: possible_types.iter().cloned().collect(),
         extends: false,
         inaccessible: false,
         tags: vec![],
@@ -73,7 +74,13 @@ impl OutputType for CmsParentInterface {
         visible: None,
         rust_typename: Some(std::any::type_name::<Self>()),
       }
-    })
+    });
+
+    for possible_type in possible_types {
+      registry.add_implements(&possible_type, Self::type_name().as_ref());
+    }
+
+    output_type
   }
 
   #[doc = " Resolve an output value to `async_graphql::Value`."]

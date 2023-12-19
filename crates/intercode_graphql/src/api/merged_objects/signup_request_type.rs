@@ -5,7 +5,7 @@ use intercode_signups::partial_objects::SignupRequestSignupsFields;
 
 use crate::{api::merged_objects::RunType, merged_model_backed_type};
 
-use super::{SignupType, UserConProfileType};
+use super::{SignupType, UserConProfileType, UserType};
 
 model_backed_type!(SignupRequestGlueFields, signup_requests::Model);
 
@@ -33,6 +33,14 @@ impl SignupRequestGlueFields {
       .target_run(ctx)
       .await
       .map(RunType::new)
+  }
+
+  #[graphql(name = "updated_by")]
+  async fn updated_by(&self, ctx: &Context<'_>) -> Result<UserType> {
+    SignupRequestSignupsFields::from_type(self.clone())
+      .updated_by(ctx)
+      .await
+      .map(UserType::new)
   }
 
   #[graphql(name = "user_con_profile")]

@@ -1,6 +1,8 @@
 use async_graphql::Enum;
+use strum::EnumString;
 
-#[derive(Enum, Copy, Clone, Eq, PartialEq)]
+#[derive(Enum, Copy, Clone, Eq, PartialEq, EnumString)]
+#[strum(serialize_all = "snake_case")]
 pub enum SchedulingUi {
   #[graphql(name = "regular")]
   Regular,
@@ -8,20 +10,4 @@ pub enum SchedulingUi {
   Recurring,
   #[graphql(name = "single_run")]
   SingleRun,
-}
-
-impl TryFrom<&str> for SchedulingUi {
-  type Error = async_graphql::Error;
-
-  fn try_from(value: &str) -> Result<Self, Self::Error> {
-    match value {
-      "regular" => Ok(Self::Regular),
-      "recurring" => Ok(Self::Recurring),
-      "single_run" => Ok(Self::SingleRun),
-      _ => Err(Self::Error::new(format!(
-        "Unknown scheduling UI: {}",
-        value
-      ))),
-    }
-  }
 }

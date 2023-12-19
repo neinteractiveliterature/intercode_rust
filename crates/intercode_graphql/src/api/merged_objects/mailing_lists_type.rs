@@ -28,18 +28,18 @@ impl MailingListsWaitlistsResultWrapper {
   }
 }
 
+impl From<MailingListsWaitlistsResult> for MailingListsWaitlistsResultWrapper {
+  fn from(value: MailingListsWaitlistsResult) -> Self {
+    Self(value)
+  }
+}
+
 model_backed_type!(MailingListsGlueFields, conventions::Model);
 
 #[Object]
 impl MailingListsGlueFields {
   async fn waitlists(&self, ctx: &Context<'_>) -> Result<Vec<MailingListsWaitlistsResultWrapper>> {
-    Ok(
-      waitlists(&self.model, ctx)
-        .await?
-        .into_iter()
-        .map(MailingListsWaitlistsResultWrapper)
-        .collect(),
-    )
+    waitlists(&self.model, ctx).await
   }
 }
 

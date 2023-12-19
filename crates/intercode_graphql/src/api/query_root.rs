@@ -7,6 +7,7 @@ use async_graphql::connection::Connection;
 use async_graphql::*;
 use intercode_cms::api::partial_objects::QueryRootCmsFields;
 use intercode_conventions::partial_objects::QueryRootConventionsFields;
+use intercode_conventions::query_builders::ConventionFiltersInput;
 use intercode_email::partial_objects::QueryRootEmailFields;
 use intercode_events::partial_objects::QueryRootEventsFields;
 use intercode_graphql_core::entity_relay_connection::type_converting_query;
@@ -29,28 +30,53 @@ impl QueryRootGlueFields {
       .map(|res| res.map(UserConProfileType::from_type))
   }
 
+  pub async fn cms_parent_by_domain(
+    &self,
+    ctx: &Context<'_>,
+    domain: String,
+  ) -> Result<CmsParentInterface, Error> {
+    QueryRootCmsFields::cms_parent_by_domain(ctx, &domain).await
+  }
+
   pub async fn cms_parent_by_request_host(
     &self,
     ctx: &Context<'_>,
   ) -> Result<CmsParentInterface, Error> {
-    QueryRootCmsFields::cms_parent_by_request_host(ctx)
-      .await
-      .map(CmsParentInterface::from)
+    QueryRootCmsFields::cms_parent_by_request_host(ctx).await
+  }
+
+  async fn convention_by_domain(
+    &self,
+    ctx: &Context<'_>,
+    domain: String,
+  ) -> Result<ConventionType, Error> {
+    QueryRootConventionsFields::convention_by_domain(ctx, domain).await
+  }
+
+  async fn convention_by_id(&self, ctx: &Context<'_>, id: ID) -> Result<ConventionType, Error> {
+    QueryRootConventionsFields::convention_by_id(ctx, id).await
   }
 
   async fn convention_by_request_host(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {
-    QueryRootConventionsFields::convention_by_request_host(ctx)
-      .await
-      .map(ConventionType::from_type)
+    QueryRootConventionsFields::convention_by_request_host(ctx).await
   }
 
   async fn convention_by_request_host_if_present(
     &self,
     ctx: &Context<'_>,
   ) -> Result<Option<ConventionType>, Error> {
-    QueryRootConventionsFields::convention_by_request_host_if_present(ctx)
-      .await
-      .map(|res| res.map(ConventionType::from_type))
+    QueryRootConventionsFields::convention_by_request_host_if_present(ctx).await
+  }
+
+  #[graphql(name = "conventions_paginated")]
+  pub async fn conventions_paginated(
+    &self,
+    filters: Option<ConventionFiltersInput>,
+    sort: Option<Vec<SortInput>>,
+    page: Option<u64>,
+    per_page: Option<u64>,
+  ) -> ModelPaginator<ConventionType> {
+    QueryRootConventionsFields::conventions_paginated(filters, sort, page, per_page).await
   }
 
   pub async fn current_ability(&self, ctx: &Context<'_>) -> Result<AbilityType> {
@@ -80,15 +106,11 @@ impl QueryRootGlueFields {
   }
 
   async fn organizations(&self, ctx: &Context<'_>) -> Result<Vec<OrganizationType>> {
-    QueryRootConventionsFields::organizations(ctx)
-      .await
-      .map(|res| res.into_iter().map(OrganizationType::from_type).collect())
+    QueryRootConventionsFields::organizations(ctx).await
   }
 
   async fn root_site(&self, ctx: &Context<'_>) -> Result<RootSiteType, Error> {
-    QueryRootCmsFields::root_site(ctx)
-      .await
-      .map(RootSiteType::from_type)
+    QueryRootCmsFields::root_site(ctx).await
   }
 
   pub async fn user(&self, ctx: &Context<'_>, id: Option<ID>) -> Result<UserType, Error> {

@@ -5,7 +5,7 @@ use async_graphql::{futures_util::try_join, *};
 use chrono::{Datelike, NaiveDate};
 use intercode_entities::{runs, signups, user_con_profiles};
 use intercode_graphql_core::{
-  enums::SignupState, load_one_by_model_id, model_backed_type, ModelBackedType,
+  enums::SignupState, load_one_by_model_id, model_backed_type, scalars::DateScalar, ModelBackedType,
 };
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::ModelBackedTypeGuardablePolicy;
@@ -100,13 +100,28 @@ impl SignupSignupsFields {
     self.model.counted.unwrap_or(false)
   }
 
+  #[graphql(name = "created_at")]
+  async fn created_at(&self) -> Result<DateScalar> {
+    self.model.created_at.try_into()
+  }
+
+  #[graphql(name = "expires_at")]
+  async fn expires_at(&self) -> Result<Option<DateScalar>> {
+    self.model.expires_at.map(|dt| dt.try_into()).transpose()
+  }
+
   #[graphql(name = "requested_bucket_key")]
   async fn requested_bucket_key(&self) -> Option<&str> {
     self.model.requested_bucket_key.as_deref()
   }
 
   async fn state(&self) -> Result<SignupState> {
-    SignupState::try_from(self.model.state.as_str())
+    SignupState::try_from(self.model.state.as_str()).map_err(Error::from)
+  }
+
+  #[graphql(name = "updated_at")]
+  async fn updated_at(&self) -> Result<DateScalar> {
+    self.model.updated_at.try_into()
   }
 
   #[graphql(name = "waitlist_position")]

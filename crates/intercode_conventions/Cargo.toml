@@ -13,6 +13,7 @@ intercode_graphql_core = {workspace = true}
 intercode_graphql_loaders = {workspace = true}
 intercode_inflector = {workspace = true}
 intercode_policies = {workspace = true}
+intercode_query_builders = {workspace = true}
 sea-orm = {workspace = true}
 seawater = {workspace = true}
 serde_json = {workspace = true}

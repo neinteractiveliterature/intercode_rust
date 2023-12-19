@@ -4,7 +4,6 @@ use aws_sdk_sesv2::{
   operation::send_email::{SendEmailError, SendEmailOutput},
   types::{Body, Content, Destination, EmailContent, Message},
 };
-use aws_smithy_runtime_api::client::orchestrator::HttpResponse;
 use tokio::sync::OnceCell;
 
 static AWS_CONFIG: OnceCell<SdkConfig> = OnceCell::const_new();
@@ -31,7 +30,7 @@ pub async fn send_email(
   subject: &str,
   body_html: Option<&str>,
   body_text: Option<&str>,
-) -> Result<SendEmailOutput, SdkError<SendEmailError, HttpResponse>> {
+) -> Result<SendEmailOutput, SdkError<SendEmailError>> {
   let client = get_ses_client().await;
   let mut body = Body::builder();
   if let Some(body_html) = body_html {

@@ -1,23 +1,37 @@
 use async_graphql::*;
-use intercode_entities::{conventions, coupons};
+use async_trait::async_trait;
+use intercode_entities::{conventions, coupons, products};
 use intercode_graphql_core::{
-  load_one_by_model_id, model_backed_type,
+  load_one_by_model_id, loader_result_to_optional_single, loader_result_to_required_single,
+  model_backed_type,
   objects::MoneyType,
   scalars::{BigDecimalScalar, DateScalar},
   ModelBackedType,
 };
-use seawater::loaders::ExpectModel;
 
-use crate::objects::ProductType;
-
-model_backed_type!(CouponStoreFields, coupons::Model);
-
-impl CouponStoreFields {
-  pub async fn convention(&self, ctx: &Context<'_>) -> Result<conventions::Model> {
+#[async_trait]
+pub trait CouponStoreExtensions
+where
+  Self: ModelBackedType<Model = coupons::Model>,
+{
+  async fn convention<T: ModelBackedType<Model = conventions::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<T> {
     let result = load_one_by_model_id!(coupon_convention, ctx, self)?;
-    result.expect_one().cloned()
+    Ok(loader_result_to_required_single!(result, T))
+  }
+
+  async fn provides_product<T: ModelBackedType<Model = products::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Option<T>> {
+    let loader_result = load_one_by_model_id!(coupon_provides_product, ctx, self)?;
+    Ok(loader_result_to_optional_single!(loader_result, T))
   }
 }
+
+model_backed_type!(CouponStoreFields, coupons::Model);
 
 #[Object]
 impl CouponStoreFields {
@@ -52,12 +66,6 @@ impl CouponStoreFields {
         .transpose()
         .map_err(|err| err.into_server_error(Pos::default()))?,
     )
-  }
-
-  #[graphql(name = "provides_product")]
-  async fn provides_product(&self, ctx: &Context<'_>) -> Result<Option<ProductType>> {
-    let loader_result = load_one_by_model_id!(coupon_provides_product, ctx, self)?;
-    Ok(loader_result.try_one().cloned().map(ProductType::new))
   }
 
   #[graphql(name = "usage_limit")]
