@@ -11,12 +11,13 @@ use intercode_email::objects::EmailRouteType;
 use intercode_graphql_core::ModelPaginator;
 
 use crate::api::merged_objects::{
-  CouponType, EventProposalType, EventType, OrderType, SignupRequestType, SignupType,
-  UserConProfileType, UserType,
+  ConventionType, CouponType, EventProposalType, EventType, OrderType, SignupRequestType,
+  SignupType, UserConProfileType, UserType,
 };
 
 #[allow(dead_code)]
 pub enum PaginationInterface {
+  ConventionsPagination(ModelPaginator<ConventionType>),
   CouponsPagination(ModelPaginator<CouponType>),
   EmailRoutesPagination(ModelPaginator<EmailRouteType>),
   EventProposalsPagination(ModelPaginator<EventProposalType>),
@@ -55,6 +56,7 @@ impl OutputType for PaginationInterface {
 
   fn create_type_info(registry: &mut Registry) -> String {
     let possible_types: Vec<String> = vec![
+      ModelPaginator::<ConventionType>::type_name().into_owned(),
       ModelPaginator::<CouponType>::type_name().into_owned(),
       ModelPaginator::<EmailRouteType>::type_name().into_owned(),
       ModelPaginator::<EventProposalType>::type_name().into_owned(),
@@ -118,6 +120,7 @@ impl OutputType for PaginationInterface {
     Self: 'async_trait,
   {
     match self {
+      PaginationInterface::ConventionsPagination(pagination) => pagination.resolve(ctx, field),
       PaginationInterface::CouponsPagination(pagination) => pagination.resolve(ctx, field),
       PaginationInterface::EmailRoutesPagination(pagination) => pagination.resolve(ctx, field),
       PaginationInterface::EventProposalsPagination(pagination) => pagination.resolve(ctx, field),
@@ -153,6 +156,7 @@ impl ContainerType for PaginationInterface {
     Self: 'async_trait,
   {
     match self {
+      PaginationInterface::ConventionsPagination(pagination) => pagination.resolve_field(ctx),
       PaginationInterface::CouponsPagination(pagination) => pagination.resolve_field(ctx),
       PaginationInterface::EmailRoutesPagination(pagination) => pagination.resolve_field(ctx),
       PaginationInterface::EventProposalsPagination(pagination) => pagination.resolve_field(ctx),

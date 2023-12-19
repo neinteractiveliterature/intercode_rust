@@ -105,6 +105,7 @@ type CmsLayout {
 	admin_notes: String
 	content: String
 	content_html(path: String): String
+	content_html_with_placeholders(path: String): String
 	current_ability_can_delete: Boolean!
 	current_ability_can_update: Boolean!
 	name: String
@@ -319,6 +320,31 @@ type Convention implements CmsParent {
 	stripe_account_ready_to_charge: Boolean!
 	stripe_publishable_key: String
 	tickets_available_for_purchase: Boolean!
+}
+
+input ConventionFiltersInput {
+	name: String
+	organization_name: String
+}
+
+type ConventionsPagination implements PaginationInterface {
+	"""
+	The number of the page currently being returned in this query
+	"""
+	current_page: Int!
+	entries: [Convention!]!
+	"""
+	The number of items per page currently being returned in this query
+	"""
+	per_page: Int!
+	"""
+	The total number of items in the paginated list (across all pages)
+	"""
+	total_entries: Int!
+	"""
+	The total number of pages in the paginated list
+	"""
+	total_pages: Int!
 }
 
 type Coupon {
@@ -934,6 +960,7 @@ type ProductVariant {
 	product: Product!
 	id: ID!
 	description: String
+	description_html: String!
 	image: ActiveStorageAttachment
 	name: String!
 	order_quantities_by_status: [OrderQuantityByStatus!]!
@@ -945,8 +972,11 @@ type Query {
 	assumedIdentityFromProfile: UserConProfile
 	cmsParentByDomain(domain: String!): CmsParent!
 	cmsParentByRequestHost: CmsParent!
+	conventionByDomain(domain: String!): Convention!
+	conventionById(id: ID!): Convention!
 	conventionByRequestHost: Convention!
 	conventionByRequestHostIfPresent: Convention
+	conventions_paginated(filters: ConventionFiltersInput, sort: [SortInput!], page: Int, perPage: Int): ConventionsPagination!
 	currentAbility: Ability!
 	currentUser: User
 	events(after: String, before: String, first: Int, last: Int): EventConnection!
@@ -1302,6 +1332,7 @@ enum TicketMode {
 type TicketType {
 	convention: Convention
 	event: Event
+	parent: TicketTypeParent!
 	providing_products: [Product!]!
 	id: ID!
 	allows_event_signups: Boolean!
@@ -1310,6 +1341,8 @@ type TicketType {
 	maximum_event_provided_tickets(eventId: ID): Int!
 	name: String!
 }
+
+union TicketTypeParent = Convention | Event
 
 type TimespanWithMoneyValue {
 	finish: Date

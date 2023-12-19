@@ -3,7 +3,7 @@ use intercode_entities::ticket_types;
 use intercode_graphql_core::model_backed_type;
 use intercode_store::partial_objects::{TicketTypeStoreExtensions, TicketTypeStoreFields};
 
-use crate::merged_model_backed_type;
+use crate::{api::unions::TicketTypeParentType, merged_model_backed_type};
 
 use super::{product_type::ProductType, ConventionType, EventType};
 
@@ -19,6 +19,20 @@ impl TicketTypeGlueFields {
 
   pub async fn event(&self, ctx: &Context<'_>) -> Result<Option<EventType>, Error> {
     TicketTypeStoreExtensions::event(self, ctx).await
+  }
+
+  pub async fn parent(&self, ctx: &Context<'_>) -> Result<TicketTypeParentType, Error> {
+    if self.model.convention_id.is_some() {
+      Ok(TicketTypeParentType::Convention(
+        self.convention(ctx).await?.unwrap(),
+      ))
+    } else if self.model.event_id.is_some() {
+      Ok(TicketTypeParentType::Event(self.event(ctx).await?.unwrap()))
+    } else {
+      Err(Error::new(
+        "Ticket type does not belong to a convention or an event",
+      ))
+    }
   }
 
   #[graphql(name = "providing_products")]

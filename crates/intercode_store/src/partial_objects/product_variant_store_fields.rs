@@ -1,10 +1,11 @@
 use std::sync::Arc;
 
 use async_graphql::*;
+use intercode_cms::CmsRenderingContext;
 use intercode_entities::product_variants;
 use intercode_graphql_core::{
-  load_one_by_model_id, loader_result_to_required_single, model_backed_type,
-  objects::ActiveStorageAttachmentType, ModelBackedType,
+  liquid_renderer::LiquidRenderer, load_one_by_model_id, loader_result_to_required_single,
+  model_backed_type, objects::ActiveStorageAttachmentType, query_data::QueryData, ModelBackedType,
 };
 use intercode_graphql_loaders::{
   order_quantity_by_status_loader::OrderQuantityByStatusType, LoaderManager,
@@ -34,6 +35,18 @@ impl ProductVariantStoreFields {
 
   async fn description(&self) -> Option<&str> {
     self.model.description.as_deref()
+  }
+
+  #[graphql(name = "description_html")]
+  async fn description_html(&self, ctx: &Context<'_>) -> Result<String> {
+    let query_data = ctx.data::<QueryData>()?;
+    let liquid_renderer = ctx.data::<Arc<dyn LiquidRenderer>>()?;
+    let cms_rendering_context =
+      CmsRenderingContext::new(liquid::object!({}), query_data, liquid_renderer.as_ref());
+
+    cms_rendering_context
+      .render_liquid(self.model.description.as_deref().unwrap_or(""), None)
+      .await
   }
 
   async fn image(&self, ctx: &Context<'_>) -> Result<Option<ActiveStorageAttachmentType>> {

@@ -10,6 +10,7 @@ async-graphql = {workspace = true}
 async-trait = {workspace = true}
 chrono = {workspace = true}
 futures = {workspace = true}
+intercode_cms = {workspace = true}
 intercode_entities = {workspace = true}
 intercode_graphql_core = {workspace = true}
 intercode_graphql_loaders = {workspace = true}
@@ -17,6 +18,7 @@ intercode_inflector = {workspace = true}
 intercode_liquid = {workspace = true}
 intercode_policies = {workspace = true}
 intercode_query_builders = {workspace = true}
+liquid = {workspace = true}
 once_cell = {workspace = true}
 rusty-money = {workspace = true}
 sea-orm = {workspace = true}
