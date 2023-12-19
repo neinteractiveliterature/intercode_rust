@@ -29,13 +29,19 @@ impl QueryRootGlueFields {
       .map(|res| res.map(UserConProfileType::from_type))
   }
 
+  pub async fn cms_parent_by_domain(
+    &self,
+    ctx: &Context<'_>,
+    domain: String,
+  ) -> Result<CmsParentInterface, Error> {
+    QueryRootCmsFields::cms_parent_by_domain(ctx, &domain).await
+  }
+
   pub async fn cms_parent_by_request_host(
     &self,
     ctx: &Context<'_>,
   ) -> Result<CmsParentInterface, Error> {
-    QueryRootCmsFields::cms_parent_by_request_host(ctx)
-      .await
-      .map(CmsParentInterface::from)
+    QueryRootCmsFields::cms_parent_by_request_host(ctx).await
   }
 
   async fn convention_by_request_host(&self, ctx: &Context<'_>) -> Result<ConventionType, Error> {
@@ -86,9 +92,7 @@ impl QueryRootGlueFields {
   }
 
   async fn root_site(&self, ctx: &Context<'_>) -> Result<RootSiteType, Error> {
-    QueryRootCmsFields::root_site(ctx)
-      .await
-      .map(RootSiteType::from_type)
+    QueryRootCmsFields::root_site(ctx).await
   }
 
   pub async fn user(&self, ctx: &Context<'_>, id: Option<ID>) -> Result<UserType, Error> {

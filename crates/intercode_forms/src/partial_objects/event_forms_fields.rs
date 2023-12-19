@@ -2,7 +2,9 @@ use std::sync::Arc;
 
 use async_graphql::*;
 use async_trait::async_trait;
-use intercode_entities::{events, forms, model_ext::form_item_permissions::FormItemRole};
+use intercode_entities::{
+  events, form_response_changes, forms, model_ext::form_item_permissions::FormItemRole,
+};
 use intercode_graphql_core::{model_backed_type, scalars::JsonScalar, ModelBackedType};
 use intercode_graphql_loaders::LoaderManager;
 use intercode_policies::{
@@ -14,6 +16,30 @@ use seawater::loaders::ExpectModel;
 use crate::{
   form_response_implementation::FormResponseImplementation, policy_ext::FormResponsePolicy,
 };
+
+#[async_trait]
+pub trait EventFormsExtensions
+where
+  Self: ModelBackedType<Model = events::Model>,
+{
+  async fn form_response_changes<T: ModelBackedType<Model = form_response_changes::Model>>(
+    &self,
+    ctx: &Context<'_>,
+  ) -> Result<Vec<T>> {
+    let loader_result = ctx
+      .data::<Arc<LoaderManager>>()?
+      .event_form_response_changes
+      .load_one(self.get_model().id)
+      .await?;
+    Ok(
+      loader_result
+        .unwrap_or_default()
+        .into_iter()
+        .map(T::new)
+        .collect(),
+    )
+  }
+}
 
 model_backed_type!(EventFormsFields, events::Model);
 

@@ -14,6 +14,7 @@ use super::active_storage_attached_blobs_loader::ActiveStorageAttachedBlobsLoade
 use super::cms_content_group_contents_loader::CmsContentGroupContentsLoader;
 use super::event_user_con_profile_event_rating_loader::EventUserConProfileEventRatingLoader;
 use super::filtered_event_runs_loader::{EventRunsLoaderFilter, FilteredEventRunsLoader};
+use super::form_response_changes_loader::FormResponseChangesLoader;
 use super::loader_spawner::LoaderSpawner;
 use super::order_quantity_by_status_loader::{
   OrderQuantityByStatusLoader, OrderQuantityByStatusLoaderEntity,
@@ -51,7 +52,9 @@ macro_rules! loader_manager {
       pub convention_favicon: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub convention_open_graph_image: DataLoader<ActiveStorageAttachedBlobsLoader>,
       pub event_attached_images: DataLoader<ActiveStorageAttachedBlobsLoader>,
+      pub event_form_response_changes: DataLoader<FormResponseChangesLoader>,
       pub event_proposal_attached_images: DataLoader<ActiveStorageAttachedBlobsLoader>,
+      pub event_proposal_form_response_changes: DataLoader<FormResponseChangesLoader>,
       pub event_runs_filtered: LoaderSpawner<EventRunsLoaderFilter, i64, FilteredEventRunsLoader>,
       pub event_user_con_profile_event_ratings:
         LoaderSpawner<i64, i64, EventUserConProfileEventRatingLoader>,
@@ -66,6 +69,7 @@ macro_rules! loader_manager {
       pub run_user_con_profile_signup_requests:
         LoaderSpawner<i64, i64, RunUserConProfileSignupRequestsLoader>,
       pub signup_waitlist_position: DataLoader<WaitlistPositionLoader>,
+      pub user_con_profile_form_response_changes: DataLoader<FormResponseChangesLoader>,
       $($tail)*
     }
   };
@@ -132,11 +136,21 @@ macro_rules! loader_manager {
         tokio::spawn,
       )
       .delay($delay_millis),
+      event_form_response_changes: DataLoader::new(
+        FormResponseChangesLoader::new($db.clone(), form_response_changes::Entity::find()
+          .filter(form_response_changes::Column::ResponseType.eq("Event"))),
+        tokio::spawn
+      ).delay($delay_millis),
       event_proposal_attached_images: DataLoader::new(
         ActiveStorageAttachedBlobsLoader::new($db.clone(), event_proposals::Model::attached_images_scope()),
         tokio::spawn,
       )
       .delay($delay_millis),
+      event_proposal_form_response_changes: DataLoader::new(
+        FormResponseChangesLoader::new($db.clone(), form_response_changes::Entity::find()
+          .filter(form_response_changes::Column::ResponseType.eq("EventProposal"))),
+        tokio::spawn
+      ).delay($delay_millis),
       event_runs_filtered: LoaderSpawner::new(
         $db.clone(),
         $delay_millis,
@@ -191,6 +205,11 @@ macro_rules! loader_manager {
       ),
       signup_waitlist_position: DataLoader::new(WaitlistPositionLoader::new($db.clone()), tokio::spawn)
         .delay($delay_millis),
+      user_con_profile_form_response_changes: DataLoader::new(
+        FormResponseChangesLoader::new($db.clone(), form_response_changes::Entity::find()
+          .filter(form_response_changes::Column::ResponseType.eq("UserConProfile"))),
+        tokio::spawn
+      ).delay($delay_millis),
       $($tail)*
     }
   };
@@ -296,6 +315,7 @@ loader_manager!(
   entity_link(event_provided_tickets, EventToProvidedTickets);
   entity_relation(event_runs, events, runs);
   entity_relation(event_team_members, events, team_members);
+  entity_relation(event_ticket_types, events, ticket_types);
   entity_id(events_by_id, events);
   entity_relation(event_category_convention, event_categories, conventions);
   entity_relation(event_category_department, event_categories, departments);
@@ -317,6 +337,7 @@ loader_manager!(
   entity_relation(form_item_form_section, form_items, form_sections);
   entity_relation(form_section_form, form_sections, forms);
   entity_relation(form_section_form_items, form_sections, form_items);
+  entity_relation(form_response_change_user_con_profile, form_response_changes, user_con_profiles);
   entity_relation(maximum_event_provided_tickets_override_event, maximum_event_provided_tickets_overrides, events);
   entity_relation(
     maximum_event_provided_tickets_override_ticket_type,

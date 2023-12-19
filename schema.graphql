@@ -417,12 +417,14 @@ type EmailRoutesPagination implements PaginationInterface {
 type Event {
 	convention: Convention!
 	form: Form!
+	form_response_changes: [FormResponseChange!]!
 	event_category: EventCategory!
 	maximum_event_provided_tickets_overrides: [MaximumEventProvidedTicketsOverride!]!
 	provided_tickets: [Ticket!]!
 	run(id: ID): Run!
 	runs(start: Date, finish: Date, exclude_conflicts: Date): [Run!]!
 	team_members: [TeamMember!]!
+	ticket_types: [TicketType!]!
 	id: ID!
 	admin_notes: String
 	author: String
@@ -514,6 +516,7 @@ type EventProposal {
 	event: Event
 	event_category: EventCategory!
 	form: Form!
+	form_response_changes: [FormResponseChange!]!
 	owner: UserConProfile!
 	id: ID!
 	admin_notes: String
@@ -581,6 +584,7 @@ type EventsPagination implements PaginationInterface {
 
 type Form {
 	event_categories: [EventCategory!]!
+	form_section(id: ID!): FormSection!
 	form_sections: [FormSection!]!
 	proposal_event_categories: [EventCategory!]!
 	user_con_profile_conventions: [Convention!]!
@@ -619,6 +623,17 @@ enum FormItemRole {
 	admin
 }
 
+type FormResponseChange {
+	compacted: Boolean!
+	created_at: Date!
+	field_identifier: String!
+	new_value: Json
+	notified_at: Date
+	previous_value: Json
+	updated_at: Date!
+	user_con_profile: UserConProfile!
+}
+
 type FormSection {
 	form: Form!
 	form_items: [FormItem!]!
@@ -645,7 +660,7 @@ scalar Json
 type LiquidAssign {
 	name: String!
 	drop_class_name: String!
-	cms_variable_value: JSON
+	cms_variable_value_json: String
 }
 
 type MailingLists {
@@ -928,6 +943,7 @@ type ProductVariant {
 
 type Query {
 	assumedIdentityFromProfile: UserConProfile
+	cmsParentByDomain(domain: String!): CmsParent!
 	cmsParentByRequestHost: CmsParent!
 	conventionByRequestHost: Convention!
 	conventionByRequestHostIfPresent: Convention
@@ -939,6 +955,14 @@ type Query {
 	user(id: ID): User!
 	users(ids: [ID!]): [User!]!
 	users_paginated(page: Int, per_page: Int, filters: UserFiltersInput, sort: [SortInput!]): UsersPagination!
+	"""
+	If there is a CMS partial on the root site called `account_form_text`, renders it to HTML
+	and returns the result. Otherwise, returns null.
+	
+	This is used by the "update your account" pages as a way to clarify that your account is
+	shared between multiple conventions.
+	"""
+	accountFormContentHtml: String
 	previewLiquid(content: String!): String!
 	email_routes_paginated(page: Int, per_page: Int, filters: EmailRouteFiltersInput, sort: [SortInput!]): EmailRoutesPagination!
 	hasOauthApplications: Boolean!

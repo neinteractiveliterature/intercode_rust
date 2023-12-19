@@ -20,18 +20,12 @@ model_backed_type!(UserConProfileFormsFields, user_con_profiles::Model);
 impl UserConProfileFormsFields {
   #[graphql(name = "current_user_form_item_viewer_role")]
   async fn form_item_viewer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole> {
-    <Self as FormResponseImplementation<user_con_profiles::Model>>::current_user_form_item_viewer_role(
-      self, ctx,
-    )
-    .await
+    FormResponseImplementation::current_user_form_item_viewer_role(self, ctx).await
   }
 
   #[graphql(name = "current_user_form_item_writer_role")]
   async fn form_item_writer_role(&self, ctx: &Context<'_>) -> Result<FormItemRole> {
-    <Self as FormResponseImplementation<user_con_profiles::Model>>::current_user_form_item_writer_role(
-      self, ctx,
-    )
-    .await
+    FormResponseImplementation::current_user_form_item_writer_role(self, ctx).await
   }
 
   #[graphql(name = "form_response_attrs_json")]
@@ -40,12 +34,7 @@ impl UserConProfileFormsFields {
     ctx: &Context<'_>,
     item_identifiers: Option<Vec<String>>,
   ) -> Result<JsonScalar, Error> {
-    <Self as FormResponseImplementation<user_con_profiles::Model>>::form_response_attrs_json(
-      self,
-      ctx,
-      item_identifiers,
-    )
-    .await
+    FormResponseImplementation::form_response_attrs_json(self, ctx, item_identifiers).await
   }
 
   #[graphql(name = "form_response_attrs_json_with_rendered_markdown")]
@@ -54,7 +43,7 @@ impl UserConProfileFormsFields {
     ctx: &Context<'_>,
     item_identifiers: Option<Vec<String>>,
   ) -> Result<JsonScalar, Error> {
-    <Self as FormResponseImplementation<user_con_profiles::Model>>::form_response_attrs_json_with_rendered_markdown(
+    FormResponseImplementation::form_response_attrs_json_with_rendered_markdown(
       self,
       ctx,
       item_identifiers,

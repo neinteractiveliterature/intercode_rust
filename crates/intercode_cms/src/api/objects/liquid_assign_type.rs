@@ -39,8 +39,14 @@ impl LiquidAssignType {
     self.drop_class_name.as_str()
   }
 
-  #[graphql(name = "cms_variable_value")]
-  async fn cms_variable_value(&self) -> Option<&serde_json::Value> {
-    self.cms_variable_value.as_ref()
+  #[graphql(name = "cms_variable_value_json")]
+  async fn cms_variable_value_json(&self) -> Result<Option<String>> {
+    Ok(
+      self
+        .cms_variable_value
+        .as_ref()
+        .map(|value| serde_json::to_string(value))
+        .transpose()?,
+    )
   }
 }

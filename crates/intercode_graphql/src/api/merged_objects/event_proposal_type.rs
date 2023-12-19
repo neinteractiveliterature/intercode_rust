@@ -1,7 +1,7 @@
 use async_graphql::*;
 use intercode_entities::event_proposals;
 use intercode_events::partial_objects::EventProposalEventsFields;
-use intercode_forms::partial_objects::EventProposalFormsFields;
+use intercode_forms::partial_objects::{EventProposalFormsExtensions, EventProposalFormsFields};
 use intercode_graphql_core::{model_backed_type, ModelBackedType};
 use intercode_policies::{
   policies::{EventProposalAction, EventProposalPolicy},
@@ -10,8 +10,13 @@ use intercode_policies::{
 
 use crate::merged_model_backed_type;
 
-use super::{ConventionType, EventCategoryType, EventType, FormType, UserConProfileType};
+use super::{
+  ConventionType, EventCategoryType, EventType, FormResponseChangeType, FormType,
+  UserConProfileType,
+};
 model_backed_type!(EventProposalGlueFields, event_proposals::Model);
+
+impl EventProposalFormsExtensions for EventProposalGlueFields {}
 
 #[Object(guard = "EventProposalPolicy::model_guard(EventProposalAction::Read, self)")]
 impl EventProposalGlueFields {
@@ -39,10 +44,12 @@ impl EventProposalGlueFields {
   }
 
   async fn form(&self, ctx: &Context<'_>) -> Result<FormType, Error> {
-    EventProposalFormsFields::from_type(self.clone())
-      .form(ctx)
-      .await
-      .map(FormType::from_type)
+    EventProposalFormsExtensions::form(self, ctx).await
+  }
+
+  #[graphql(name = "form_response_changes")]
+  async fn form_response_changes(&self, ctx: &Context<'_>) -> Result<Vec<FormResponseChangeType>> {
+    EventProposalFormsExtensions::form_response_changes(self, ctx).await
   }
 
   async fn owner(&self, ctx: &Context<'_>) -> Result<UserConProfileType> {
