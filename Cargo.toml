@@ -73,7 +73,7 @@ futures = "0.3.29"
 hex = "0.4.3"
 html-escape = "0.2.13"
 http = "1.0.0"
-hyper = "1.0.1"
+hyper = "1.1.0"
 i18n-embed = {version = "0.14.1", features = ["fluent-system"]}
 i18n-embed-fl = "0.7"
 ics = "0.5.8"
