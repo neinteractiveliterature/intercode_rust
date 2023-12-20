@@ -115,7 +115,7 @@ opentelemetry = {version = "0.20.0", features = ["rt-tokio"]}
 oxide-auth = "0.5.4"
 parking_lot = "0.12.1"
 phonenumber = "0.3"
-proc-macro2 = "1.0.69"
+proc-macro2 = "1.0.70"
 pulldown-cmark = "0.9.3"
 quote = "1.0.33"
 regex = "*"
