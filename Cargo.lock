@@ -2877,7 +2877,7 @@ dependencies = [
  "chrono",
  "indexmap 2.1.0",
  "intercode_timespan",
- "itertools 0.11.0",
+ "itertools 0.12.1",
  "once_cell",
  "paste",
  "regex",
@@ -2996,7 +2996,7 @@ dependencies = [
  "futures",
  "intercode_entities",
  "intercode_graphql_core",
- "itertools 0.11.0",
+ "itertools 0.12.1",
  "sea-orm",
  "seawater",
  "serde",
@@ -3100,7 +3100,7 @@ dependencies = [
  "intercode_policies",
  "intercode_server",
  "intercode_timespan",
- "itertools 0.11.0",
+ "itertools 0.12.1",
  "liquid",
  "liquid-core",
  "once_cell",
@@ -3151,7 +3151,7 @@ dependencies = [
  "intercode_graphql_core",
  "intercode_graphql_loaders",
  "intercode_query_builders",
- "itertools 0.11.0",
+ "itertools 0.12.1",
  "oxide-auth",
  "sea-orm",
  "seawater",
@@ -3185,7 +3185,7 @@ dependencies = [
  "intercode_inflector",
  "intercode_policies",
  "intercode_server",
- "itertools 0.11.0",
+ "itertools 0.12.1",
  "mailparse",
  "sea-orm",
  "seawater",
@@ -3292,7 +3292,7 @@ dependencies = [
  "intercode_query_builders",
  "intercode_server",
  "intercode_timespan",
- "itertools 0.11.0",
+ "itertools 0.12.1",
  "once_cell",
  "sea-orm",
  "seawater",
@@ -3392,9 +3392,9 @@ dependencies = [
 
 [[package]]
 name = "itertools"
-version = "0.11.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
+checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
 dependencies = [
  "either",
 ]
@@ -4434,7 +4434,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "265baba7fabd416cf5078179f7d2cbeca4ce7a9041111900675ea7c4cb8a4c32"
 dependencies = [
  "anyhow",
- "itertools 0.11.0",
+ "itertools 0.10.5",
  "proc-macro2",
  "quote",
  "syn 2.0.41",
