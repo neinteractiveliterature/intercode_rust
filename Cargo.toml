@@ -104,7 +104,7 @@ intercode_signups = {path = "./crates/intercode_signups"}
 intercode_store = {path = "./crates/intercode_store"}
 intercode_timespan = {path = "./crates/intercode_timespan"}
 intercode_users = {path = "./crates/intercode_users"}
-itertools = "0.11.0"
+itertools = "0.12.1"
 linkify = "~0.10.0"
 liquid = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
 liquid-core = {git = "https://github.com/nbudin/liquid-rust.git", branch = "lax-nulls"}
