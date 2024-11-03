@@ -59,6 +59,10 @@ type Ability {
 	can_withdraw_all_user_con_profile_signups(userConProfileId: ID): Boolean!
 }
 
+type AcceptClickwrapAgreementPayload {
+	myProfile: UserConProfile!
+}
+
 """
 Despite the name, this actually represents an active_storage_blob model.  Whoops...
 """
@@ -722,7 +726,7 @@ type Money {
 }
 
 type Mutation {
-	deleteMe: Boolean!
+	acceptClickwrapAgreement: AcceptClickwrapAgreementPayload!
 }
 
 type NotificationDestination {

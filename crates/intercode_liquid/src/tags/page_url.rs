@@ -46,6 +46,7 @@ struct PageUrl {
 impl Renderable for PageUrl {
   fn render_to(&self, writer: &mut dyn Write, runtime: &dyn Runtime) -> Result<()> {
     let slug = self.slug.evaluate(runtime)?;
+    eprintln!("slug is {:?}", slug);
     if !slug.is_scalar() {
       return Error::with_msg("slug must be a string")
         .context("page_url", format!("{}", slug.source()))
