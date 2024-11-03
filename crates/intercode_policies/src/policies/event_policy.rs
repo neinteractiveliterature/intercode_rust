@@ -58,7 +58,10 @@ async fn has_applicable_permission(
 pub struct EventPolicy;
 
 #[async_trait]
-impl Policy<AuthorizationInfo, (conventions::Model, events::Model)> for EventPolicy {
+impl Policy<AuthorizationInfo, (conventions::Model, events::Model)> for EventPolicy
+where
+  AuthorizationInfo: Send,
+{
   type Action = EventAction;
   type Error = DbErr;
 

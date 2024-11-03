@@ -1,4 +1,4 @@
-use async_graphql::{async_trait, dataloader::Loader};
+use async_graphql::dataloader::Loader;
 use intercode_entities::{active_storage_attachments, active_storage_blobs};
 use sea_orm::{ColumnTrait, DbErr, QueryFilter, Select};
 use seawater::ConnectionWrapper;
@@ -15,7 +15,6 @@ impl ActiveStorageAttachedBlobsLoader {
   }
 }
 
-#[async_trait::async_trait]
 impl Loader<i64> for ActiveStorageAttachedBlobsLoader {
   type Value = Vec<active_storage_blobs::Model>;
   type Error = Arc<DbErr>;

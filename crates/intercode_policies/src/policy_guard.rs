@@ -1,7 +1,7 @@
+use async_trait::async_trait;
 use std::{future::Future, pin::Pin};
 
 use async_graphql::{Context, ErrorExtensions, Guard, Result};
-use async_trait::async_trait;
 use intercode_graphql_core::query_data::QueryData;
 
 use crate::{AuthorizationInfo, Policy};
@@ -37,7 +37,10 @@ pub trait PolicyGuard<'a, P: Policy<AuthorizationInfo, R>, R: Send + Sync, M: Se
   fn get_model(&self) -> &M;
   async fn get_resource(&self, model: &M, ctx: &Context<'_>) -> Result<R>;
 
-  async fn check(&self, ctx: &Context<'_>) -> Result<()> {
+  async fn check(&self, ctx: &Context<'_>) -> Result<()>
+  where
+    P::Error: 'static,
+  {
     let principal = ctx.data::<AuthorizationInfo>()?;
     let resource = self.get_resource(self.get_model(), ctx).await?;
     let permitted = P::action_permitted(principal, self.get_action(), &resource).await?;
@@ -67,9 +70,10 @@ pub trait PolicyGuard<'a, P: Policy<AuthorizationInfo, R>, R: Send + Sync, M: Se
   }
 }
 
-#[async_trait]
 impl<'a, P: Policy<AuthorizationInfo, R>, R: Send + Sync, M: Send + Sync + 'static> Guard
   for Box<dyn PolicyGuard<'a, P, R, M> + Send + Sync>
+where
+  P::Error: 'static,
 {
   async fn check(&self, ctx: &Context<'_>) -> Result<()> {
     self.as_ref().check(ctx).await

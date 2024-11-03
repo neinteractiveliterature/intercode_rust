@@ -1,5 +1,4 @@
 use async_graphql::dataloader::Loader;
-use async_trait::async_trait;
 use chrono::NaiveDateTime;
 use intercode_entities::{model_ext::time_bounds::TimeBoundsSelectExt, runs};
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter};
@@ -23,7 +22,6 @@ pub struct EventRunsLoaderFilter {
   pub finish: Option<NaiveDateTime>,
 }
 
-#[async_trait]
 impl Loader<i64> for FilteredEventRunsLoader {
   type Value = Vec<runs::Model>;
   type Error = Arc<DbErr>;

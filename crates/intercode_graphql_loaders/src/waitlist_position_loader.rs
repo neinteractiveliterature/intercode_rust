@@ -1,5 +1,4 @@
 use async_graphql::dataloader::Loader;
-use async_trait::async_trait;
 use intercode_entities::signups;
 use sea_orm::{
   ColumnTrait, DbErr, EntityTrait, FromQueryResult, QueryFilter, QueryOrder, QuerySelect,
@@ -32,7 +31,6 @@ impl WaitlistPositionLoader {
   }
 }
 
-#[async_trait]
 impl Loader<WaitlistPositionLoaderKey> for WaitlistPositionLoader {
   type Value = Option<usize>;
   type Error = Arc<DbErr>;

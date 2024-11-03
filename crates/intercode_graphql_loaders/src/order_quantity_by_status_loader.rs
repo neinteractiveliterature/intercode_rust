@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use async_graphql::{dataloader::Loader, EnumType, Object};
-use async_trait::async_trait;
 use intercode_entities::{order_entries, orders};
 use intercode_graphql_core::enums::OrderStatus;
 use itertools::Itertools;
@@ -47,7 +46,6 @@ impl OrderQuantityByStatusLoader {
   }
 }
 
-#[async_trait]
 impl Loader<i64> for OrderQuantityByStatusLoader {
   type Value = Vec<OrderQuantityByStatusType>;
   type Error = async_graphql::Error;

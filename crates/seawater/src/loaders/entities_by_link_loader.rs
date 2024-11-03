@@ -1,4 +1,4 @@
-use async_graphql::{async_trait, dataloader::Loader};
+use async_graphql::dataloader::Loader;
 use sea_orm::{
   sea_query::{IntoValueTuple, ValueTuple},
   DbErr, EntityTrait, Linked, PrimaryKeyToColumn, PrimaryKeyTrait, QuerySelect, TryGetable,
@@ -222,7 +222,6 @@ impl<Link: Linked> EntityLinkLoader<Link> {
   }
 }
 
-#[async_trait::async_trait]
 impl<Link: Linked>
   Loader<<<Link::FromEntity as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType>
   for EntityLinkLoader<Link>
@@ -243,7 +242,7 @@ where
   ) -> Result<
     HashMap<
       <<Link::FromEntity as EntityTrait>::PrimaryKey as PrimaryKeyTrait>::ValueType,
-      EntityLinkLoaderResult<Link::FromEntity, Link::ToEntity>,
+      Self::Value,
     >,
     Self::Error,
   > {

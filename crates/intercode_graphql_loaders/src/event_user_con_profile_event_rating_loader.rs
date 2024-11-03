@@ -1,5 +1,4 @@
 use async_graphql::dataloader::Loader;
-use async_trait::async_trait;
 use intercode_entities::event_ratings;
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter};
 use seawater::ConnectionWrapper;
@@ -19,7 +18,6 @@ impl EventUserConProfileEventRatingLoader {
   }
 }
 
-#[async_trait]
 impl Loader<i64> for EventUserConProfileEventRatingLoader {
   type Value = event_ratings::Model;
   type Error = Arc<DbErr>;

@@ -34,7 +34,6 @@ impl<'a, M: sea_orm::ModelTrait + Sync + 'static, P: Policy<AuthorizationInfo, M
   }
 }
 
-#[async_trait]
 impl<M: sea_orm::ModelTrait + Sync + 'static, P: Policy<AuthorizationInfo, M> + 'static> Guard
   for SimplePolicyGuard<M, P>
 {

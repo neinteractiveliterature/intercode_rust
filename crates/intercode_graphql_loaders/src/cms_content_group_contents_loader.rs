@@ -1,7 +1,6 @@
 use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use async_graphql::dataloader::{DataLoader, Loader};
-use async_trait::async_trait;
 use futures::try_join;
 use intercode_entities::{cms_content_group_associations, cms_layouts, cms_partials, pages};
 use itertools::Itertools;
@@ -70,7 +69,6 @@ impl CmsContentGroupContentsLoader {
   }
 }
 
-#[async_trait]
 impl Loader<i64> for CmsContentGroupContentsLoader {
   type Value = Vec<CmsContentGroupItem>;
   type Error = Arc<DbErr>;

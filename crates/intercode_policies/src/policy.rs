@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use axum::async_trait;
+use async_trait::async_trait;
 use intercode_graphql_core::ModelBackedType;
 use sea_orm::{ColumnTrait, EntityTrait, ModelTrait, QueryFilter, QuerySelect, Select};
 

@@ -1,4 +1,4 @@
-use async_graphql::{async_trait, dataloader::Loader};
+use async_graphql::dataloader::Loader;
 use sea_orm::{
   sea_query::{IntoValueTuple, ValueTuple},
   EntityTrait, ModelTrait, PrimaryKeyToColumn, PrimaryKeyTrait,
@@ -71,7 +71,6 @@ impl<E: EntityTrait> EntityIdLoader<E> {
   }
 }
 
-#[async_trait::async_trait]
 impl<E: EntityTrait> Loader<<E::PrimaryKey as PrimaryKeyTrait>::ValueType> for EntityIdLoader<E>
 where
   <E as sea_orm::EntityTrait>::Model: Sync,

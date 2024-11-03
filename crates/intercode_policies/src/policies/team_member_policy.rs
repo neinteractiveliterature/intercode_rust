@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_graphql::{Context, Error};
-use axum::async_trait;
+use async_trait::async_trait;
 use intercode_entities::{conventions, events, team_members, user_con_profiles};
 use intercode_graphql_loaders::LoaderManager;
 use sea_orm::{

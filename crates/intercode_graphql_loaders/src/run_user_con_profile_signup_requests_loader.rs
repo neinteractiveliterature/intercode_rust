@@ -1,5 +1,4 @@
 use async_graphql::dataloader::Loader;
-use async_trait::async_trait;
 use intercode_entities::signup_requests;
 use sea_orm::{ColumnTrait, DbErr, EntityTrait, QueryFilter};
 use seawater::ConnectionWrapper;
@@ -19,7 +18,6 @@ impl RunUserConProfileSignupRequestsLoader {
   }
 }
 
-#[async_trait]
 impl Loader<i64> for RunUserConProfileSignupRequestsLoader {
   type Value = Vec<signup_requests::Model>;
   type Error = Arc<DbErr>;

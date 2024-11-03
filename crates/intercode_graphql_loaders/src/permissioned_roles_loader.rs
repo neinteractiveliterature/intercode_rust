@@ -1,7 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_graphql::dataloader::{DataLoader, Loader};
-use async_trait::async_trait;
 use futures::try_join;
 use intercode_entities::{
   model_ext::permissions::PermissionedRoleRef, organization_roles, staff_positions,
@@ -62,7 +61,6 @@ exclusive_arc_variant_loader!(
   PermissionedRole::StaffPosition
 );
 
-#[async_trait]
 impl Loader<PermissionedRoleRef> for PermissionedRolesLoader {
   type Value = PermissionedRole;
   type Error = Arc<DbErr>;

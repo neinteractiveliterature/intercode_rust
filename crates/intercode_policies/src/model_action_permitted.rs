@@ -13,7 +13,10 @@ pub async fn model_action_permitted<
   ctx: &'a Context<'_>,
   action: &P::Action,
   get_model: impl FnOnce(&'a Context<'_>) -> Result<Option<R>, Error>,
-) -> Result<bool, Error> {
+) -> Result<bool, Error>
+where
+  P::Error: 'static,
+{
   let model_ref = get_model(ctx)?;
 
   if let Some(model_ref) = model_ref {

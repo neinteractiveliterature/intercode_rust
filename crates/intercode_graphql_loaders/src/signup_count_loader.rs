@@ -1,5 +1,4 @@
 use async_graphql::dataloader::Loader;
-use async_trait::async_trait;
 use sea_orm::DbErr;
 use seawater::ConnectionWrapper;
 use std::sync::Arc;
@@ -16,7 +15,6 @@ impl SignupCountLoader {
   }
 }
 
-#[async_trait]
 impl Loader<i64> for SignupCountLoader {
   type Value = RunSignupCounts;
   type Error = Arc<DbErr>;

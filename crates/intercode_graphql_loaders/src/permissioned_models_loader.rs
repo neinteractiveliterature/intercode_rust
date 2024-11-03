@@ -1,7 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
 use async_graphql::dataloader::{DataLoader, Loader};
-use async_trait::async_trait;
 use futures::try_join;
 use intercode_entities::{
   cms_content_groups, conventions, event_categories, model_ext::permissions::PermissionedModelRef,
@@ -78,7 +77,6 @@ exclusive_arc_variant_loader!(
   PermissionedModel::EventCategory
 );
 
-#[async_trait]
 impl Loader<PermissionedModelRef> for PermissionedModelsLoader {
   type Value = PermissionedModel;
   type Error = Arc<DbErr>;

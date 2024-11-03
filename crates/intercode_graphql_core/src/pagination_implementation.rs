@@ -8,7 +8,6 @@ use async_graphql::{
   CacheControl, ContainerType, Context, ContextSelectionSet, Error, ObjectType, OutputType,
   Positioned, ServerResult, Value,
 };
-use async_trait::async_trait;
 use intercode_inflector::inflector::string::pluralize;
 use sea_orm::{
   ConnectionTrait, EntityTrait, FromQueryResult, ModelTrait, Paginator, PaginatorTrait, Select,
@@ -72,7 +71,6 @@ where
   }
 }
 
-#[async_trait]
 impl<Item: ModelBackedType + OutputType> OutputType for ModelPaginator<Item>
 where
   Item::Model: Send + Sync + FromQueryResult,
@@ -244,7 +242,6 @@ where
   }
 }
 
-#[async_trait]
 impl<Item: ModelBackedType + OutputType> ContainerType for ModelPaginator<Item>
 where
   Item::Model: Sync + FromQueryResult,
@@ -324,7 +321,6 @@ where
   }
 }
 
-#[async_trait]
 pub trait PaginationImplementation<Model: ModelTrait + Send + Sync> {
   type Selector: SelectorTrait<Item = Model> + Send + Sync;
 
@@ -335,23 +331,55 @@ pub trait PaginationImplementation<Model: ModelTrait + Send + Sync> {
     db: &'s C,
   ) -> (Paginator<'s, C, Self::Selector>, u64);
 
-  async fn total_entries(&self, ctx: &Context) -> Result<u64, Error> {
-    let db = ctx.data::<QueryData>()?.db();
-    Ok(self.paginator_and_page_size(db).0.num_items().await?)
+  fn total_entries(
+    &self,
+    ctx: &Context<'_>,
+  ) -> impl std::future::Future<Output = Result<u64, Error>> + Send
+  where
+    Self: Sync,
+  {
+    async {
+      let db = ctx.data::<QueryData>()?.db();
+      Ok(self.paginator_and_page_size(db).0.num_items().await?)
+    }
   }
 
-  async fn total_pages(&self, ctx: &Context) -> Result<u64, Error> {
-    let db = ctx.data::<QueryData>()?.db();
-    Ok(self.paginator_and_page_size(db).0.num_pages().await?)
+  fn total_pages(
+    &self,
+    ctx: &Context<'_>,
+  ) -> impl std::future::Future<Output = Result<u64, Error>> + Send
+  where
+    Self: Sync,
+  {
+    async {
+      let db = ctx.data::<QueryData>()?.db();
+      Ok(self.paginator_and_page_size(db).0.num_pages().await?)
+    }
   }
 
-  async fn current_page(&self, ctx: &Context) -> Result<u64, Error> {
-    let db = ctx.data::<QueryData>()?.db();
-    Ok(self.paginator_and_page_size(db).0.cur_page())
+  fn current_page(
+    &self,
+    ctx: &Context<'_>,
+  ) -> impl std::future::Future<Output = Result<u64, Error>> + Send
+  where
+    Self: Sync,
+  {
+    async {
+      let db = ctx.data::<QueryData>()?.db();
+      Ok(self.paginator_and_page_size(db).0.cur_page())
+    }
   }
 
-  async fn per_page(&self, ctx: &Context) -> Result<u64, Error> {
-    let db = ctx.data::<QueryData>()?.db();
-    Ok(self.paginator_and_page_size(db).1)
+  fn per_page(
+    &self,
+    ctx: &Context<'_>,
+  ) -> impl std::future::Future<Output = Result<u64, Error>> + Send
+  where
+    Self: Sync,
+  {
+    async {
+      let db = ctx.data::<QueryData>()?.db();
+      Ok(self.paginator_and_page_size(db).1)
+    }
   }
 }

@@ -1,4 +1,4 @@
-use async_graphql::{async_trait, dataloader::Loader};
+use async_graphql::dataloader::Loader;
 use intercode_entities::form_response_changes;
 use sea_orm::{ColumnTrait, DbErr, QueryFilter, Select};
 use seawater::ConnectionWrapper;
@@ -15,7 +15,6 @@ impl FormResponseChangesLoader {
   }
 }
 
-#[async_trait::async_trait]
 impl Loader<i64> for FormResponseChangesLoader {
   type Value = Vec<form_response_changes::Model>;
   type Error = Arc<DbErr>;

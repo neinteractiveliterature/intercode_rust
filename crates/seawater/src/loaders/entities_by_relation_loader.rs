@@ -1,4 +1,4 @@
-use async_graphql::{async_trait, dataloader::Loader};
+use async_graphql::dataloader::Loader;
 use sea_orm::{
   sea_query::{IntoValueTuple, ValueTuple},
   DbErr, EntityTrait, PrimaryKeyToColumn, PrimaryKeyTrait, QuerySelect, Related, RelationDef,
@@ -239,7 +239,6 @@ impl<From: EntityTrait + Related<To>, To: EntityTrait> EntityRelationLoader<From
   }
 }
 
-#[async_trait::async_trait]
 impl<From: EntityTrait + Related<To>, To: EntityTrait>
   Loader<<From::PrimaryKey as PrimaryKeyTrait>::ValueType> for EntityRelationLoader<From, To>
 where
